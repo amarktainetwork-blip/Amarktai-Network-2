@@ -4,10 +4,16 @@ import path from 'path'
 import { promisify } from 'util'
 import { prisma } from '@/lib/prisma'
 import { createArtifact } from '@/lib/artifact-store'
-import { getStorageStatus, verifyStorage } from '@/lib/storage-driver'
 import { MODEL_REGISTRY } from '@/lib/model-registry'
 import { listGenXModels } from '@/lib/genx-client'
 import { routeWorkspaceTask } from '@/lib/workspace-executor'
+import {
+  assertInsideWorkspace,
+  redactSecretsFromLogs,
+  resolveWorkspacePath,
+  sanitizeBranchName as sanitizeSecureBranchName,
+  validateCommand,
+} from '@/lib/workspace-security'
 
 const execFileAsync = promisify(execFile)
 
@@ -123,12 +129,7 @@ export function sanitizeName(value: string, label = 'value'): string {
 }
 
 export function sanitizeBranchName(value: string): string {
-  const branch = (value || 'main').trim()
-  if (!branch || branch.includes('..') || branch.startsWith('/') || branch.endsWith('/')) {
-    throw new Error('Invalid branch name')
-  }
-  if (!/^[a-zA-Z0-9/_@{}#.-]+$/.test(branch)) throw new Error('Invalid branch name')
-  return branch
+  return sanitizeSecureBranchName(value || 'main')
 }
 
 export function sanitizeLocalBranch(value: string): string {
@@ -136,8 +137,7 @@ export function sanitizeLocalBranch(value: string): string {
 }
 
 export function getRepoStorageRoot(): string {
-  const status = getStorageStatus()
-  return path.resolve(status.basePath, 'repos')
+  return resolveWorkspacePath('repos')
 }
 
 export function workspaceDirectory(owner: string, repo: string, branch: string): string {
@@ -184,7 +184,8 @@ export async function getGitHubToken(): Promise<string | null> {
   }
 }
 
-async function runGit(cwd: string, args: string[], timeoutMs = 120_000, token?: string) {
+export async function runGit(cwd: string, args: string[], timeoutMs = 120_000, token?: string) {
+  assertInsideWorkspace(cwd)
   const safeArgs = token ? ['-c', `http.extraHeader=Authorization: Bearer ${token}`, ...args] : args
   try {
     const result = await execFileAsync('git', safeArgs, {
@@ -209,17 +210,10 @@ async function runGit(cwd: string, args: string[], timeoutMs = 120_000, token?: 
 }
 
 export function scrubSecrets(text: string): string {
-  return text
-    .replace(/gh[pousr]_[A-Za-z0-9_]+/g, '[redacted-github-token]')
-    .replace(/(api[_-]?key|token|secret|password)=([^\s]+)/gi, '$1=[redacted]')
+  return redactSecretsFromLogs(text)
 }
 
 export async function importRepo(repoUrl: string, branchInput = 'main') {
-  const storage = await verifyStorage()
-  if (!storage.configured || !storage.writable) {
-    throw new Error(`Repo storage is not ready: ${storage.error ?? storage.note}`)
-  }
-
   const { owner, repo, remoteUrl } = parseGitHubRepoUrl(repoUrl)
   const branch = sanitizeBranchName(branchInput)
   const localPath = workspaceDirectory(owner, repo, branch)
@@ -442,6 +436,7 @@ RULES:
 6. ALWAYS THINK STEP-BY-STEP BEFORE MAKING CHANGES
 7. MINIMIZE CHANGES BUT MAXIMIZE IMPACT
 8. NEVER EXPOSE OR MODIFY SECRETS (.env, keys, tokens)
+9. Do not remove working features. Do not fake success. Make surgical changes. Preserve UI style unless explicitly asked. Run/build/test instructions must be included.
 
 ---
 
@@ -724,6 +719,7 @@ ${agent.prompt}
 Rules:
 - Do not invent successful commands, commits, pushes, or PRs.
 - Do not expose secrets or .env values.
+- Do not remove working features. Do not fake success. Make surgical changes. Preserve UI style unless explicitly asked. Run/build/test instructions must be included.
 - Output valid JSON only.
 - For patch tasks, output a unified diff in "diffText" and do not claim it was applied.
 - Include selectedModel, capability, fallbackUsed, fallbackReason, verificationCommands, riskNotes, and affectedFiles.`
@@ -898,10 +894,14 @@ export async function applyPatch(workspaceId: string, patchId: string) {
   if (patch.diffText.includes('\n--- a/.env') || patch.diffText.includes('\n+++ b/.env')) {
     throw new Error('Patches touching .env files require a separate explicit secrets workflow')
   }
+  for (const match of patch.diffText.matchAll(/^(?:---|\+\+\+) [ab]\/(.+)$/gm)) {
+    const filePath = match[1]
+    if (filePath && filePath !== '/dev/null') resolveRepoPath(workspace.localPath, filePath)
+  }
   // execFile does not pipe stdin here; write the proposed diff to a storage log
   // file first, then pass the file path to git apply.
-  const patchFile = path.resolve(getStorageStatus().basePath, 'logs', `repo-patch-${patch.id}.diff`)
-  assertInside(path.resolve(getStorageStatus().basePath, 'logs'), patchFile)
+  const patchFile = resolveWorkspacePath('patches', `${patch.id}.patch`)
+  assertInsideWorkspace(patchFile)
   await fs.mkdir(path.dirname(patchFile), { recursive: true })
   await fs.writeFile(patchFile, patch.diffText, 'utf8')
   const verify = await runGit(workspace.localPath, ['apply', '--check', '--whitespace=fix', patchFile], 60_000)
@@ -984,8 +984,13 @@ export async function commitPatch(workspaceId: string, patchId: string, message:
   const patch = await prisma.repoPatch.findFirst({ where: { id: patchId, repoWorkspaceId: workspaceId } })
   if (!patch) throw new Error('Patch not found')
   const branch = sanitizeLocalBranch(branchName || `repo-workbench/${patch.id.slice(0, 8)}`)
+  if (branch === 'main' && process.env.REPO_WORKBENCH_ALLOW_MAIN_PUSH !== 'true') {
+    throw new Error('Committing directly on main is disabled')
+  }
   const checkout = await runGit(workspace.localPath, ['checkout', '-B', branch], 60_000)
   if (!checkout.ok) throw new Error(`Branch creation failed: ${checkout.stderr}`)
+  await runGit(workspace.localPath, ['config', 'user.name', process.env.GIT_AUTHOR_NAME || 'Amarktai Agent'], 30_000)
+  await runGit(workspace.localPath, ['config', 'user.email', process.env.GIT_AUTHOR_EMAIL || 'amarktainetwork@gmail.com'], 30_000)
   const add = await runGit(workspace.localPath, ['add', '--all'], 60_000)
   if (!add.ok) throw new Error(`git add failed: ${add.stderr}`)
   const diff = await runGit(workspace.localPath, ['diff', '--cached', '--name-only'], 30_000)
@@ -1017,6 +1022,9 @@ export async function pushWorkspaceBranch(workspaceId: string) {
   if (!token) throw new Error('GitHub token required for push')
   const branch = (await runGit(workspace.localPath, ['branch', '--show-current'], 30_000)).stdout.trim()
   if (!branch) throw new Error('No current branch to push')
+  if (branch === 'main' && process.env.REPO_WORKBENCH_ALLOW_MAIN_PUSH !== 'true') {
+    throw new Error('Pushing main is disabled. Create a feature branch first.')
+  }
   const push = await runGit(workspace.localPath, ['push', '-u', 'origin', branch], 180_000, token)
   if (!push.ok) throw new Error(`git push failed: ${push.stderr || push.stdout}`)
   const artifact = await saveRepoArtifact({
@@ -1060,4 +1068,284 @@ export async function createWorkspacePr(workspaceId: string, title: string, body
   })
   await prisma.repoPatch.updateMany({ where: { repoWorkspaceId: workspaceId, branchName: branch }, data: { status: 'pr_created', prUrl } })
   return { prUrl, branch, artifact }
+}
+
+export async function getWorkspaceGitStatus(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const [branch, sha, status, remotes] = await Promise.all([
+    runGit(workspace.localPath, ['branch', '--show-current'], 30_000),
+    runGit(workspace.localPath, ['rev-parse', 'HEAD'], 30_000),
+    runGit(workspace.localPath, ['status', '--short'], 30_000),
+    runGit(workspace.localPath, ['remote', '-v'], 30_000),
+  ])
+  const dirtyFiles = status.stdout.split(/\r?\n/).filter(Boolean)
+  return {
+    workspace,
+    currentBranch: branch.stdout.trim() || workspace.branch,
+    currentCommit: sha.stdout.trim() || workspace.currentCommit,
+    dirty: dirtyFiles.length > 0,
+    dirtyFiles,
+    remotes: remotes.stdout.split(/\r?\n/).filter(Boolean),
+  }
+}
+
+export async function pullWorkspaceLatest(workspaceId: string, force = false) {
+  const workspace = await getWorkspace(workspaceId)
+  const before = await getWorkspaceGitStatus(workspaceId)
+  if (before.dirty && !force) {
+    return { success: false, blocker: 'Worktree has uncommitted changes. Commit or pass force=true before pulling.', dirtyFiles: before.dirtyFiles }
+  }
+  const token = await getGitHubToken()
+  const fetch = await runGit(workspace.localPath, ['fetch', 'origin', '--prune'], 180_000, token ?? undefined)
+  if (!fetch.ok) throw new Error(`git fetch failed: ${fetch.stderr || fetch.stdout}`)
+  const pull = await runGit(workspace.localPath, ['pull', '--ff-only'], 180_000, token ?? undefined)
+  if (!pull.ok) throw new Error(`git pull failed: ${pull.stderr || pull.stdout}`)
+  const after = await getWorkspaceGitStatus(workspaceId)
+  await prisma.repoWorkspace.update({
+    where: { id: workspaceId },
+    data: { currentCommit: after.currentCommit, branch: after.currentBranch, lastSyncedAt: new Date(), status: after.dirty ? 'dirty' : 'ready' },
+  })
+  const artifact = await saveRepoArtifact({
+    workspaceId,
+    type: 'report',
+    subType: 'pull_log',
+    title: `Pull: ${workspace.owner}/${workspace.repo}`,
+    description: after.currentCommit,
+    content: JSON.stringify({ before: before.currentCommit, after: after.currentCommit, fetch, pull }, null, 2),
+  })
+  return { success: true, before: before.currentCommit, after: after.currentCommit, dirty: after.dirty, artifact }
+}
+
+export async function listWorkspaceBranches(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const local = await runGit(workspace.localPath, ['branch', '--format=%(refname:short)'], 30_000)
+  const remote = await runGit(workspace.localPath, ['branch', '-r', '--format=%(refname:short)'], 30_000)
+  if (!local.ok && !remote.ok) throw new Error('Unable to list branches')
+  return {
+    local: local.stdout.split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+    remote: remote.stdout.split(/\r?\n/).map((x) => x.trim()).filter(Boolean),
+  }
+}
+
+export async function createWorkspaceBranch(workspaceId: string, branchName: string, checkout = true) {
+  const workspace = await getWorkspace(workspaceId)
+  const branch = sanitizeLocalBranch(branchName)
+  if (branch === 'main' && process.env.REPO_WORKBENCH_ALLOW_MAIN_PUSH !== 'true') {
+    throw new Error('Creating or using main directly is disabled')
+  }
+  const result = await runGit(workspace.localPath, [checkout ? 'checkout' : 'branch', '-B', branch], 60_000)
+  if (!result.ok) throw new Error(`Branch creation failed: ${result.stderr || result.stdout}`)
+  await prisma.repoWorkspace.update({ where: { id: workspaceId }, data: { branch, status: 'ready' } }).catch(() => null)
+  return { branch, output: result.stdout || result.stderr }
+}
+
+export async function writeRepoFile(workspaceId: string, filePath: string, content: string) {
+  const workspace = await getWorkspace(workspaceId)
+  if (isSecretPath(filePath)) throw new Error('Editing secret/env files is blocked in Repo Workbench')
+  if (isBinaryPath(filePath)) throw new Error('Binary files cannot be edited in Repo Workbench')
+  const full = resolveRepoPath(workspace.localPath, filePath)
+  await fs.mkdir(path.dirname(full), { recursive: true })
+  const before = await fs.readFile(full, 'utf8').catch(() => '')
+  await fs.writeFile(full, content, 'utf8')
+  const diff = await runGit(workspace.localPath, ['diff', '--', filePath], 30_000)
+  const task = await prisma.repoTask.create({
+    data: {
+      repoWorkspaceId: workspaceId,
+      title: `Edit ${filePath}`,
+      userRequest: `Manual file edit: ${filePath}`,
+      agentMode: 'manual_edit',
+      status: 'completed',
+      changedFilesJson: JSON.stringify([filePath]),
+    },
+  })
+  const artifact = await saveRepoArtifact({
+    workspaceId,
+    taskId: task.id,
+    type: 'code',
+    subType: 'file_edit_diff',
+    title: `File edit: ${filePath}`,
+    description: `${before.length} -> ${content.length} bytes`,
+    content: diff.stdout || `Edited ${filePath}`,
+  })
+  return { path: filePath, size: Buffer.byteLength(content), diffText: diff.stdout, taskId: task.id, artifact }
+}
+
+export async function getWorkspaceDiff(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const [stat, diff] = await Promise.all([
+    runGit(workspace.localPath, ['diff', '--stat'], 30_000),
+    runGit(workspace.localPath, ['diff'], 60_000),
+  ])
+  return { stat: stat.stdout, diffText: diff.stdout }
+}
+
+export async function runWorkbenchCommand(workspaceId: string, commandLabel: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const spec = validateCommand(commandLabel)
+  const startedAt = Date.now()
+  const task = await prisma.repoTask.create({
+    data: {
+      repoWorkspaceId: workspaceId,
+      title: `Run ${spec.label}`,
+      userRequest: spec.label,
+      agentMode: 'check_runner',
+      status: 'running',
+    },
+  })
+  const logPath = resolveWorkspacePath('logs', `${task.id}.log`)
+  await fs.mkdir(path.dirname(logPath), { recursive: true })
+  await fs.writeFile(logPath, `[${new Date().toISOString()}] $ ${spec.label}\n`, 'utf8')
+  let ok = false
+  let output = ''
+  let exitCode: number | null = null
+  try {
+    const result = await execFileAsync(spec.command, spec.args, {
+      cwd: workspace.localPath,
+      timeout: spec.timeoutMs,
+      maxBuffer: 1024 * 1024 * 16,
+      windowsHide: true,
+    })
+    ok = true
+    exitCode = 0
+    output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  } catch (error) {
+    const err = error as { stdout?: string; stderr?: string; message?: string; code?: number }
+    exitCode = typeof err.code === 'number' ? err.code : 1
+    output = `${err.stdout ?? ''}\n${err.stderr ?? err.message ?? ''}`
+  }
+  output = redactSecretsFromLogs(output)
+  await fs.appendFile(logPath, `${output}\n[${new Date().toISOString()}] exit=${exitCode} durationMs=${Date.now() - startedAt}\n`, 'utf8')
+  const artifact = await saveRepoArtifact({
+    workspaceId,
+    taskId: task.id,
+    type: 'report',
+    subType: 'command_log',
+    title: `Command: ${spec.label}`,
+    description: ok ? 'passed' : 'failed',
+    content: JSON.stringify({ command: spec.label, ok, exitCode, durationMs: Date.now() - startedAt, output }, null, 2),
+  })
+  await prisma.repoTask.update({
+    where: { id: task.id },
+    data: {
+      status: ok ? 'completed' : 'failed',
+      testStatus: spec.label === 'npm test' ? (ok ? 'passed' : 'failed') : '',
+      buildStatus: spec.label === 'npm run build' ? (ok ? 'passed' : 'failed') : '',
+      artifactIdsJson: JSON.stringify([artifact.id]),
+    },
+  })
+  return { jobId: task.id, status: ok ? 'passed' : 'failed', ok, exitCode, durationMs: Date.now() - startedAt, logsPath: logPath, output }
+}
+
+export async function getWorkbenchJob(jobId: string) {
+  const task = await prisma.repoTask.findUnique({ where: { id: jobId } })
+  if (!task) throw new Error('Job not found')
+  return {
+    id: task.id,
+    workspaceId: task.repoWorkspaceId,
+    title: task.title,
+    status: task.status === 'completed' ? 'passed' : task.status,
+    artifactIds: JSON.parse(task.artifactIdsJson || '[]') as string[],
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  }
+}
+
+export async function getWorkbenchJobLogs(jobId: string) {
+  const logPath = resolveWorkspacePath('logs', `${jobId}.log`)
+  try {
+    return redactSecretsFromLogs(await fs.readFile(logPath, 'utf8'))
+  } catch {
+    return ''
+  }
+}
+
+async function githubApi(workspaceId: string, apiPath: string, init?: RequestInit) {
+  const workspace = await getWorkspace(workspaceId)
+  const token = await getGitHubToken()
+  if (!token) throw new Error('GitHub token required')
+  const res = await fetch(`https://api.github.com/repos/${workspace.owner}/${workspace.repo}${apiPath}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json',
+      ...((init?.headers as Record<string, string>) ?? {}),
+    },
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(String((data as { message?: string }).message ?? `GitHub API failed with ${res.status}`))
+  return data
+}
+
+export async function getWorkspacePrStatus(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const branch = (await runGit(workspace.localPath, ['branch', '--show-current'], 30_000)).stdout.trim()
+  const pulls = await githubApi(workspaceId, `/pulls?head=${encodeURIComponent(`${workspace.owner}:${branch}`)}&state=open`)
+  const pr = Array.isArray(pulls) ? pulls[0] : null
+  if (!pr) return { pr: null, checksPass: false, mergeable: false, blocker: 'No open PR found for current branch' }
+  return {
+    pr: {
+      number: pr.number,
+      url: pr.html_url,
+      state: pr.state,
+      draft: pr.draft,
+      mergeable: pr.mergeable,
+      title: pr.title,
+    },
+    checksPass: false,
+    mergeable: pr.mergeable === true && pr.draft !== true,
+    blocker: pr.mergeable === true ? null : 'GitHub has not marked this PR mergeable yet or checks are incomplete',
+  }
+}
+
+export async function mergeWorkspacePr(workspaceId: string, prNumber: number, override = false) {
+  if (process.env.REPO_WORKBENCH_ALLOW_MERGE !== 'true') throw new Error('Merge is disabled. Set REPO_WORKBENCH_ALLOW_MERGE=true to enable.')
+  const gitStatus = await getWorkspaceGitStatus(workspaceId)
+  if (gitStatus.dirty && !override) throw new Error('Merge refused while local worktree is dirty')
+  const status = await getWorkspacePrStatus(workspaceId)
+  if (!status.mergeable && !override) throw new Error(status.blocker ?? 'PR is not safe to merge')
+  const data = await githubApi(workspaceId, `/pulls/${prNumber}/merge`, {
+    method: 'PUT',
+    body: JSON.stringify({ merge_method: 'squash' }),
+  })
+  return { merged: Boolean((data as { merged?: boolean }).merged), response: data }
+}
+
+export async function deployWorkspace(workspaceId: string, confirmation: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const expected = `DEPLOY ${workspace.owner}/${workspace.repo}`
+  if (process.env.REPO_WORKBENCH_ALLOW_DEPLOY !== 'true') throw new Error('Deploy is disabled. Set REPO_WORKBENCH_ALLOW_DEPLOY=true to enable.')
+  if (confirmation !== expected) throw new Error(`Confirmation must exactly match: ${expected}`)
+  const script = path.resolve(process.cwd(), 'scripts', 'deploy_vps.sh')
+  const task = await prisma.repoTask.create({
+    data: {
+      repoWorkspaceId: workspaceId,
+      title: `Deploy ${workspace.owner}/${workspace.repo}`,
+      userRequest: confirmation,
+      agentMode: 'deployment',
+      status: 'running',
+    },
+  })
+  const logPath = resolveWorkspacePath('logs', `${task.id}.log`)
+  await fs.mkdir(path.dirname(logPath), { recursive: true })
+  let ok = false
+  let output = ''
+  try {
+    const result = await execFileAsync('bash', [script], {
+      cwd: process.cwd(),
+      timeout: 900_000,
+      maxBuffer: 1024 * 1024 * 20,
+      windowsHide: true,
+    })
+    ok = true
+    output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  } catch (error) {
+    const err = error as { stdout?: string; stderr?: string; message?: string }
+    output = `${err.stdout ?? ''}\n${err.stderr ?? err.message ?? ''}`
+  }
+  output = redactSecretsFromLogs(output)
+  await fs.writeFile(logPath, output, 'utf8')
+  await prisma.repoTask.update({ where: { id: task.id }, data: { status: ok ? 'completed' : 'failed' } })
+  return { jobId: task.id, status: ok ? 'passed' : 'failed', ok, output }
 }
