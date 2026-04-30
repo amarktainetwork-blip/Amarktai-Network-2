@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { timingSafeEqual } from 'crypto'
 import { getDefaultModelForProvider, MODEL_REGISTRY } from '@/lib/model-registry'
 import { decryptVaultKey } from '@/lib/crypto-vault'
+import { isUsableServiceKey } from '@/lib/service-vault'
 
 // ── Request / Response Contracts ─────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ function defaultModelFor(providerKey: string): string {
 const BEARER_PREFIX = 'bearer '
 
 function normalizeProviderApiKey(raw: string | null | undefined): string | null {
-  if (!raw) return null
+  if (!isUsableServiceKey(raw)) return null
   const trimmed = raw.trim()
   if (!trimmed) return null
   if (trimmed.toLowerCase().startsWith(BEARER_PREFIX)) {
@@ -197,6 +198,8 @@ export async function getVaultApiKey(providerKey: string): Promise<string | null
     nvidia:      'NVIDIA_API_KEY',
     huggingface: 'HUGGINGFACE_API_KEY',
     replicate:   'REPLICATE_API_KEY',
+    suno:        'SUNO_API_KEY',
+    github:      'GITHUB_TOKEN',
     cohere:      'COHERE_API_KEY',
     mistral:     'MISTRAL_API_KEY',
     genx:        'GENX_API_KEY',
@@ -204,6 +207,9 @@ export async function getVaultApiKey(providerKey: string): Promise<string | null
   }
   const envVar = envMap[providerKey]
   if (envVar && process.env[envVar]) return normalizeProviderApiKey(process.env[envVar]!) ?? null
+  if (providerKey === 'replicate' && process.env.REPLICATE_API_TOKEN) {
+    return normalizeProviderApiKey(process.env.REPLICATE_API_TOKEN) ?? null
+  }
 
   return null
 }

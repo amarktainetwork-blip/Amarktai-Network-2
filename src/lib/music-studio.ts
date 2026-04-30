@@ -21,21 +21,28 @@
 
 import { randomUUID } from 'crypto'
 import { getVaultApiKey } from '@/lib/brain'
+import { isUsableServiceKey } from '@/lib/service-vault'
+import { callGenXMedia, GENX_AUDIO_MODELS, getGenXStatusAsync } from '@/lib/genx-client'
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Constants Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Maximum characters from generated lyrics sent to the Suno API as a prompt.
  *  The Suno API accepts prompts up to ~3000 characters. */
 const SUNO_MAX_PROMPT_LENGTH = 3_000
 
 /** Number of polling iterations when waiting for a Replicate prediction.
- *  Each iteration waits REPLICATE_POLL_INTERVAL_MS → total max wait = 60 s. */
+ *  Each iteration waits REPLICATE_POLL_INTERVAL_MS Ã¢â€ â€™ total max wait = 60 s. */
 const REPLICATE_POLL_ITERATIONS = 12
 
 /** Milliseconds to wait between Replicate prediction polling attempts. */
 const REPLICATE_POLL_INTERVAL_MS = 5_000
+const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
 
-// ── Types ────────────────────────────────────────────────────────────────────
+function usableKey(raw: string | null | undefined): string | null {
+  return isUsableServiceKey(raw) ? raw.trim() : null
+}
+
+// Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Supported music genres. */
 export type MusicGenre =
@@ -80,12 +87,12 @@ export type SongSection = 'intro' | 'verse' | 'pre_chorus' | 'chorus' | 'bridge'
 export interface MusicCreationRequest {
   /** App this music is created for. */
   appSlug: string
-  /** Song title (optional — will be auto-generated if omitted). */
+  /** Song title (optional Ã¢â‚¬â€ will be auto-generated if omitted). */
   title?: string
   /** Theme or mood of the song (e.g. "hope and redemption"). */
   theme: string
   /**
-   * Primary genre (legacy single-genre field — still supported).
+   * Primary genre (legacy single-genre field Ã¢â‚¬â€ still supported).
    * When `genres` is provided and non-empty, `genre` is ignored; `genres[0]` is used.
    */
   genre: MusicGenre
@@ -111,9 +118,9 @@ export interface MusicCreationRequest {
   instrumental?: boolean
   /**
    * Cover art generation preference:
-   *   "auto"   — generate cover art if image provider is configured (default)
-   *   "custom" — skip AI generation; admin will supply art manually
-   *   "none"   — do not generate cover art
+   *   "auto"   Ã¢â‚¬â€ generate cover art if image provider is configured (default)
+   *   "custom" Ã¢â‚¬â€ skip AI generation; admin will supply art manually
+   *   "none"   Ã¢â‚¬â€ do not generate cover art
    */
   coverArtChoice?: 'auto' | 'custom' | 'none'
   /** Existing lyrics to use (skips lyrics generation step). */
@@ -231,7 +238,7 @@ export interface MusicStudioSummary {
   providersUsed: string[]
 }
 
-// ── DB-backed artifact persistence ────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ DB-backed artifact persistence Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // Uses the platform's Artifact model (type='music') instead of an in-memory Map.
 // Falls back gracefully to empty results if the DB is unavailable.
 
@@ -245,7 +252,7 @@ async function saveMusicArtifactToDB(artifact: MusicArtifact): Promise<void> {
         type: 'music',
         subType: artifact.artifactType,
         title: artifact.title,
-        description: `${artifact.genre} • ${artifact.vocalStyle} • ${artifact.theme}`,
+        description: `${artifact.genre} Ã¢â‚¬Â¢ ${artifact.vocalStyle} Ã¢â‚¬Â¢ ${artifact.theme}`,
         provider: artifact.musicProvider,
         model: artifact.lyricsModel,
         storageDriver: 'url',
@@ -273,7 +280,7 @@ async function saveMusicArtifactToDB(artifact: MusicArtifact): Promise<void> {
       },
     })
   } catch {
-    // DB write failure is non-fatal — log only, do not throw
+    // DB write failure is non-fatal Ã¢â‚¬â€ log only, do not throw
   }
 }
 
@@ -315,7 +322,7 @@ async function loadMusicArtifactsFromDB(appSlug?: string, limit = 50): Promise<M
   }
 }
 
-// ── Genre display names ───────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Genre display names Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 const GENRE_DISPLAY: Record<MusicGenre, string> = {
   pop: 'Pop',
@@ -341,7 +348,7 @@ const GENRE_DISPLAY: Record<MusicGenre, string> = {
   custom: 'Custom',
 }
 
-// ── Genre defaults (BPM, key, production notes) ───────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Genre defaults (BPM, key, production notes) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 interface GenreDefaults {
   typicalBpm: number
@@ -374,7 +381,7 @@ const GENRE_DEFAULTS: Record<string, GenreDefaults> = {
   custom:     { typicalBpm: 100, typicalKey: 'C major', timeSignature: '4/4', productionStyle: 'genre-blending, experimental approach' },
 }
 
-// ── Lyrics Generation ────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Lyrics Generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /**
  * Build a detailed lyrics generation prompt for an AI language model.
@@ -517,24 +524,47 @@ export function parseLyricsOutput(
   }
 }
 
-// ── Music Generation API ──────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Music Generation API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Providers that support real music audio generation (currently external services). */
-export type MusicProvider = 'suno' | 'udio' | 'musicgen_replicate' | 'blueprint_only'
+export type MusicProvider = 'genx' | 'suno' | 'udio' | 'musicgen_replicate' | 'blueprint_only'
 
 /**
  * Attempt to generate audio via a configured music provider.
  * Returns null when no provider is available (falls back to blueprint_only).
  *
- * Key resolution order: DB vault (set via Admin → AI Providers UI) first,
+ * Key resolution order: DB vault (set via Admin Ã¢â€ â€™ AI Providers UI) first,
  * then raw environment variable fallback (for local dev / CI).
  */
 async function generateAudio(
   request: MusicCreationRequest,
   lyrics: LyricsResult,
 ): Promise<{ audioUrl: string; mimeType: 'audio/mpeg' | 'audio/wav' | 'audio/ogg'; provider: MusicProvider } | null> {
-  // Suno API — resolve key from vault first, then env fallback
-  const sunoKey = (await getVaultApiKey('suno').catch(() => null)) ?? process.env.SUNO_API_KEY?.trim() ?? null
+  if (IS_TEST_RUNTIME) return null
+
+  try {
+    const genxStatus = await getGenXStatusAsync()
+    if (genxStatus.available) {
+      const genxResult = await callGenXMedia({
+        model: GENX_AUDIO_MODELS[0],
+        prompt: `${lyrics.title}\n\n${lyrics.lyrics}`,
+        type: 'audio',
+        duration: request.durationSeconds,
+        params: {
+          style: GENRE_DISPLAY[resolveGenre(request)] ?? resolveGenre(request),
+          lyrics: lyrics.lyrics,
+        },
+      })
+      if (genxResult.success && genxResult.url) {
+        return { audioUrl: genxResult.url, mimeType: 'audio/mpeg', provider: 'genx' }
+      }
+    }
+  } catch {
+    // Fall through to direct audio providers.
+  }
+
+  // Suno API Ã¢â‚¬â€ resolve key from vault first, then env fallback
+  const sunoKey = usableKey((await getVaultApiKey('suno').catch(() => null)) ?? process.env.SUNO_API_KEY)
   if (sunoKey) {
     try {
       const res = await fetch('https://studio-api.suno.ai/api/generate/v2/', {
@@ -558,7 +588,7 @@ async function generateAudio(
     } catch { /* fall through */ }
   }
 
-  // Replicate MusicGen — resolve key from vault first, then env fallback
+  // Replicate MusicGen Ã¢â‚¬â€ resolve key from vault first, then env fallback
   const replicateKey = (await getVaultApiKey('replicate').catch(() => null)) ?? process.env.REPLICATE_API_TOKEN?.trim() ?? null
   if (replicateKey) {
     try {
@@ -580,7 +610,7 @@ async function generateAudio(
       if (createRes.ok) {
         const pred = await createRes.json() as { id: string; output?: string | null }
         if (pred.id) {
-          // Poll for up to REPLICATE_POLL_ITERATIONS × REPLICATE_POLL_INTERVAL_MS
+          // Poll for up to REPLICATE_POLL_ITERATIONS Ãƒâ€” REPLICATE_POLL_INTERVAL_MS
           for (let i = 0; i < REPLICATE_POLL_ITERATIONS; i++) {
             await new Promise((r) => setTimeout(r, REPLICATE_POLL_INTERVAL_MS))
             const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
@@ -602,7 +632,7 @@ async function generateAudio(
   return null
 }
 
-// ── Cover Art ────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Cover Art Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /**
  * Generate cover art for the track using the platform's image generation route.
@@ -645,21 +675,21 @@ async function generateCoverArt(
   return null
 }
 
-// ── Lyrics-only Generation ────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Lyrics-only Generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /**
  * Generate lyrics by calling the platform's internal chat API.
  *
  * Provider resolution order:
- * 1. OpenAI key from DB vault (set via Admin → AI Providers UI)
+ * 1. OpenAI key from DB vault (set via Admin Ã¢â€ â€™ AI Providers UI)
  * 2. OPENAI_API_KEY environment variable fallback (local dev / CI)
- * 3. Groq fallback via vault → env (cheap, fast, supports long output)
+ * 3. Groq fallback via vault Ã¢â€ â€™ env (cheap, fast, supports long output)
  * 4. Template fallback when no key is available anywhere
  */
 async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
-  // Try OpenAI first (vault → env)
+  // Try OpenAI first (vault Ã¢â€ â€™ env)
   const openAiKey = (await getVaultApiKey('openai').catch(() => null)) ?? process.env.OPENAI_API_KEY?.trim() ?? null
   if (openAiKey) {
     const prompt = buildLyricsPrompt(request)
@@ -685,7 +715,7 @@ async function generateLyricsViaChat(
     } catch { /* fall through to Groq */ }
   }
 
-  // Groq fallback (vault → env) — fast and cost-effective for text generation
+  // Groq fallback (vault Ã¢â€ â€™ env) Ã¢â‚¬â€ fast and cost-effective for text generation
   const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
   if (groqKey) {
     const prompt = buildLyricsPrompt(request)
@@ -711,13 +741,13 @@ async function generateLyricsViaChat(
     } catch { /* fall through to template */ }
   }
 
-  // Template fallback — no AI key available anywhere
+  // Template fallback Ã¢â‚¬â€ no AI key available anywhere
   return { lyrics: buildFallbackLyrics(request), model: 'template' }
 }
 
 /**
  * Build a structured lyrics template when AI generation is unavailable.
- * This is a real, usable starting point — not a placeholder.
+ * This is a real, usable starting point Ã¢â‚¬â€ not a placeholder.
  */
 function buildFallbackLyrics(request: MusicCreationRequest): string {
   const primaryGenre = resolveGenre(request)
@@ -739,7 +769,7 @@ STRUCTURE:
 
 LYRICS:
 [Intro]
-(Instrumental introduction — ${defs.productionStyle})
+(Instrumental introduction Ã¢â‚¬â€ ${defs.productionStyle})
 
 [Verse 1]
 In the silence of the morning light,
@@ -766,18 +796,18 @@ Every note a step along the way,
 Turning yesterday to today.
 
 [Bridge]
-(Hold on, let it go — the feeling you know,
+(Hold on, let it go Ã¢â‚¬â€ the feeling you know,
 ${request.theme} is the rhythm of the soul.)
 
 [Outro]
-(Fade out — ${defs.productionStyle})
+(Fade out Ã¢â‚¬â€ ${defs.productionStyle})
 
 PRODUCTION NOTES:
 ${genreName} track in ${defs.typicalKey} at ${defs.typicalBpm} BPM. ${defs.productionStyle}. 
 Vocal style: ${request.vocalStyle.replace(/_/g, ' ')}. Arrange for maximum emotional impact.`
 }
 
-// ── Main Pipeline ─────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Main Pipeline Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 // In-memory cache for artifacts created in the current server process lifetime.
 // Production persistence uses the Artifact DB model (see saveMusicArtifactToDB).
@@ -816,7 +846,7 @@ export async function createMusic(
   // Step 2: Attempt audio generation
   const audioResult = await generateAudio(request, lyricsResult)
 
-  // Step 3: Optional cover art — honour coverArtChoice (defaults to "auto")
+  // Step 3: Optional cover art Ã¢â‚¬â€ honour coverArtChoice (defaults to "auto")
   let coverArtUrl: string | null = null
   let coverArtModel: string | null = null
   const coverArtChoice = request.coverArtChoice ?? (request.generateCoverArt === false ? 'none' : 'auto')
@@ -871,7 +901,7 @@ export async function createMusic(
   }
 }
 
-// ── Lyrics-only Pipeline ─────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Lyrics-only Pipeline Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Generate only lyrics and song structure (no audio generation). */
 export async function generateLyrics(
@@ -881,7 +911,7 @@ export async function generateLyrics(
   return parseLyricsOutput(rawLyrics, request, model)
 }
 
-// ── Artifact Accessors ────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Artifact Accessors Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 // These are async wrappers over DB reads with an in-memory cache for
 // artifacts created in the current server process lifetime.
 
@@ -903,7 +933,7 @@ export async function getAllMusicArtifactsAsync(limit = 50): Promise<MusicArtifa
   return loadMusicArtifactsFromDB(undefined, limit)
 }
 
-/** @deprecated Use getMusicArtifactsByAppAsync — falls back to in-process cache only */
+/** @deprecated Use getMusicArtifactsByAppAsync Ã¢â‚¬â€ falls back to in-process cache only */
 export function getMusicArtifactsByApp(appSlug: string, limit = 20): MusicArtifact[] {
   return Array.from(artifactStore.values())
     .filter((a) => a.appSlug === appSlug)
@@ -911,14 +941,14 @@ export function getMusicArtifactsByApp(appSlug: string, limit = 20): MusicArtifa
     .slice(0, limit)
 }
 
-/** @deprecated Use getAllMusicArtifactsAsync — falls back to in-process cache only */
+/** @deprecated Use getAllMusicArtifactsAsync Ã¢â‚¬â€ falls back to in-process cache only */
 export function getAllMusicArtifacts(limit = 50): MusicArtifact[] {
   return Array.from(artifactStore.values())
     .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
     .slice(0, limit)
 }
 
-// ── Genre/Style Lists ────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Genre/Style Lists Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export const AVAILABLE_GENRES: Array<{ id: MusicGenre; name: string }> = Object.entries(
   GENRE_DISPLAY,
@@ -936,7 +966,7 @@ export const AVAILABLE_VOCAL_STYLES: Array<{ id: VocalStyle; name: string }> = [
   { id: 'instrumental_only', name: 'Instrumental Only' },
 ]
 
-// ── Studio Status ────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Studio Status Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export interface MusicStudioStatus {
   lyricsGeneration: 'available' | 'needs_key'
@@ -947,12 +977,12 @@ export interface MusicStudioStatus {
 }
 
 export function getMusicStudioStatus(): MusicStudioStatus {
-  const hasChatKey = Boolean(process.env.OPENAI_API_KEY?.trim()) ||
-    Boolean(process.env.GROQ_API_KEY?.trim()) ||
-    Boolean(process.env.TOGETHER_API_KEY?.trim())
-  const hasSuno = Boolean(process.env.SUNO_API_KEY?.trim())
-  const hasReplicate = Boolean(process.env.REPLICATE_API_TOKEN?.trim())
-  const hasImageKey = Boolean(process.env.OPENAI_API_KEY?.trim())
+  const hasChatKey = Boolean(usableKey(process.env.OPENAI_API_KEY)) ||
+    Boolean(usableKey(process.env.GROQ_API_KEY)) ||
+    Boolean(usableKey(process.env.TOGETHER_API_KEY))
+  const hasSuno = Boolean(usableKey(process.env.SUNO_API_KEY))
+  const hasReplicate = Boolean(usableKey(process.env.REPLICATE_API_TOKEN))
+  const hasImageKey = Boolean(usableKey(process.env.OPENAI_API_KEY))
 
   const audioProvider: MusicProvider | null = hasSuno
     ? 'suno'
@@ -968,14 +998,14 @@ export function getMusicStudioStatus(): MusicStudioStatus {
     message: hasChatKey
       ? audioProvider
         ? `Lyrics, audio (${audioProvider}), and cover art generation available.`
-        : 'Lyrics and cover art available. Set SUNO_API_KEY or REPLICATE_API_TOKEN for audio generation.'
-      : 'Set at least one AI provider key (OPENAI_API_KEY, GROQ_API_KEY, or TOGETHER_API_KEY) to enable music studio.',
+        : 'Lyrics and blueprint generation available. Real audio is not configured; set SUNO_API_KEY, REPLICATE_API_TOKEN, or GenX music generation for audio.'
+      : 'Template blueprint generation is available. Configure an AI text provider for richer lyrics and Suno/Replicate/GenX for real audio.',
   }
 }
 
 /**
  * Vault-aware variant of getMusicStudioStatus.
- * Checks the DB vault (Admin → AI Providers) first, then environment variable
+ * Checks the DB vault (Admin Ã¢â€ â€™ AI Providers) first, then environment variable
  * fallbacks. Use this from API routes where async is available.
  */
 export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & { available: boolean; audioProviderConfigured: boolean; lyricsProviderConfigured: boolean; coverArtProviderConfigured: boolean; configuredProviders: string[]; note: string }> {
@@ -984,24 +1014,29 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
     return Boolean(vaultVal) || Boolean(process.env[envVar]?.trim())
   }
 
-  const [hasOpenAi, hasGroq, hasTogether, hasSuno, hasReplicate] = await Promise.all([
+  const [hasOpenAi, hasGroq, hasTogether, hasSuno, hasReplicate, genxStatus] = await Promise.all([
     resolveKey('openai', 'OPENAI_API_KEY'),
     resolveKey('groq', 'GROQ_API_KEY'),
     resolveKey('together', 'TOGETHER_API_KEY'),
     getVaultApiKey('suno').catch(() => null).then(k => Boolean(k) || Boolean(process.env.SUNO_API_KEY?.trim())),
     getVaultApiKey('replicate').catch(() => null).then(k => Boolean(k) || Boolean(process.env.REPLICATE_API_TOKEN?.trim())),
+    getGenXStatusAsync().catch(() => ({ available: false })),
   ])
 
-  const hasChatKey = hasOpenAi || hasGroq || hasTogether
+  const hasGenX = Boolean(genxStatus.available)
+  const hasChatKey = hasGenX || hasOpenAi || hasGroq || hasTogether
   const hasImageKey = hasOpenAi
 
-  const audioProvider: MusicProvider | null = hasSuno
+  const audioProvider: MusicProvider | null = hasGenX
+    ? 'genx'
+    : hasSuno
     ? 'suno'
     : hasReplicate
     ? 'musicgen_replicate'
     : null
 
   const configuredProviders: string[] = []
+  if (hasGenX) configuredProviders.push('genx')
   if (hasOpenAi) configuredProviders.push('openai')
   if (hasGroq) configuredProviders.push('groq')
   if (hasTogether) configuredProviders.push('together')
@@ -1011,8 +1046,8 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
   const note = hasChatKey
     ? audioProvider
       ? `Lyrics, audio (${audioProvider}), and cover art generation available.`
-      : 'Lyrics and cover art available. Configure SUNO_API_KEY or Replicate in Admin → AI Providers for audio generation.'
-    : 'Configure at least one AI provider (OpenAI, Groq, or Together AI) in Admin → AI Providers to enable Music Studio.'
+      : 'Lyrics and blueprint generation available. Real audio is not configured; configure GenX music, Suno, or Replicate for audio generation.'
+    : 'Template blueprint generation is available. Configure GenX or a text provider for richer lyrics, and GenX/Suno/Replicate for real audio.'
 
   return {
     lyricsGeneration: hasChatKey ? 'available' : 'needs_key',
@@ -1029,7 +1064,7 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
   }
 }
 
-// ── Summary ───────────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Summary Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 export async function getMusicStudioSummaryAsync(): Promise<MusicStudioSummary> {
   const all = await loadMusicArtifactsFromDB(undefined, 1000)
@@ -1074,7 +1109,7 @@ export function getMusicStudioSummary(): MusicStudioSummary {
   }
 }
 
-// ── Async Job API ─────────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Async Job API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 //
 // Provides a fire-and-poll pattern for music generation jobs.
 // The job record is created immediately and returns a jobId.
@@ -1145,7 +1180,7 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
     })
     jobId = row.id
   } catch {
-    // DB not available — fall back to a random ID (in-memory only)
+    // DB not available Ã¢â‚¬â€ fall back to a random ID (in-memory only)
     jobId = randomUUID()
   }
 

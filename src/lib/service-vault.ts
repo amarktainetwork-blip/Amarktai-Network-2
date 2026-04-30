@@ -12,6 +12,32 @@
 import { prisma } from '@/lib/prisma'
 import { decryptVaultKey } from '@/lib/crypto-vault'
 
+const PLACEHOLDER_KEY_PATTERNS = [
+  /^test$/i,
+  /^demo$/i,
+  /^fake$/i,
+  /^dummy$/i,
+  /^placeholder$/i,
+  /^changeme$/i,
+  /^your[-_ ]?(api[-_ ]?)?key$/i,
+  /(^|[-_])test($|[-_])/i,
+  /(^|[-_])demo($|[-_])/i,
+  /placeholder/i,
+  /example/i,
+  /changeme/i,
+]
+
+export function isUsableServiceKey(raw: string | null | undefined): raw is string {
+  if (!raw) return false
+  const trimmed = raw.trim()
+  if (!trimmed) return false
+  const normalized = trimmed.toLowerCase().startsWith('bearer ')
+    ? trimmed.slice('bearer '.length).trim()
+    : trimmed
+  if (!normalized || normalized.length < 8) return false
+  return !PLACEHOLDER_KEY_PATTERNS.some((pattern) => pattern.test(normalized))
+}
+
 /**
  * Resolves an API key for a third-party service integration.
  *
@@ -28,7 +54,7 @@ export async function getServiceKey(integrationKey: string, envVar: string): Pro
     })
     if (row?.apiKey) {
       const decrypted = decryptVaultKey(row.apiKey)
-      if (decrypted) return decrypted
+      if (isUsableServiceKey(decrypted)) return decrypted.trim()
     }
   } catch {
     // DB unavailable — fall through to env
@@ -36,7 +62,16 @@ export async function getServiceKey(integrationKey: string, envVar: string): Pro
 
   // Env-var fallback for local dev / CI
   const envValue = process.env[envVar]
-  return envValue || null
+  return isUsableServiceKey(envValue) ? envValue.trim() : null
+}
+
+/**
+ * Synchronous environment-only key lookup for code paths that cannot touch the
+ * DB. Prefer getServiceKey/getProviderKey for request handlers.
+ */
+export function getEnvServiceKey(envVar: string): string | null {
+  const envValue = process.env[envVar]
+  return isUsableServiceKey(envValue) ? envValue.trim() : null
 }
 
 /**

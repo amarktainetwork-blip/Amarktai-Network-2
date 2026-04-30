@@ -21,7 +21,7 @@ import { randomUUID } from 'crypto'
 import {
   selectGenXModel,
   callGenXChat,
-  getGenXStatus,
+  getGenXStatusAsync,
   type GenXModelPolicy,
   type GenXCapability,
   type GenXOperationType,
@@ -196,7 +196,7 @@ export async function routeWorkspaceTask(
   messages.push({ role: 'user', content: input.task })
 
   // 5. Call GenX
-  const genxStatus = getGenXStatus()
+  const genxStatus = await getGenXStatusAsync()
   let result: WorkspaceTaskResult
 
   if (genxStatus.available) {

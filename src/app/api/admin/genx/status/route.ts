@@ -27,8 +27,8 @@ export async function GET() {
   const status = await getGenXStatusAsync()
   const adultStatus = await getAdultCapabilityStatusAsync()
 
-  let modelCount = 0
-  if (status.available) {
+  let modelCount = status.modelCount ?? 0
+  if (status.available && modelCount === 0) {
     try {
       const models = await listGenXModels()
       modelCount = models.length
@@ -53,7 +53,7 @@ export async function GET() {
   const profile = getCachedEndpointProfile()
 
   return NextResponse.json({
-    configured:     status.available,
+    configured:     status.configured,
     available:      status.available,
     error:          status.error,
     apiUrl:         maskedUrl,

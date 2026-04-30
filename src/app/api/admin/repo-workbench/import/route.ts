@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { importRepo } from '@/lib/repo-workbench'
+import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 
 export async function POST(req: Request) {
   const session = await getSession()
@@ -9,6 +10,10 @@ export async function POST(req: Request) {
   try {
     const body = await req.json() as { repoUrl?: string; branch?: string }
     if (!body.repoUrl) return NextResponse.json({ error: 'repoUrl is required' }, { status: 400 })
+    const status = await getRepoWorkbenchStatus()
+    if (!status.canImport) {
+      return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo import prerequisites are not ready' }, { status: 503 })
+    }
     const workspace = await importRepo(body.repoUrl, body.branch || 'main')
     return NextResponse.json({
       success: true,

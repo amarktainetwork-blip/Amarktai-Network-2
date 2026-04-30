@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { runMagicPipeline, type QualityTier } from '@/lib/repo-workbench'
+import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 
 export async function POST(req: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await getSession()
@@ -9,6 +10,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ workspa
     const { workspaceId } = await params
     const body = await req.json() as { instruction?: string; quality?: QualityTier }
     if (!body.instruction?.trim()) return NextResponse.json({ error: 'instruction is required' }, { status: 400 })
+    const status = await getRepoWorkbenchStatus()
+    if (!status.canPatch) {
+      return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo AI prerequisites are not ready' }, { status: 503 })
+    }
     const quality: QualityTier = (['best', 'good', 'balanced', 'cheap'] as const).includes(body.quality as QualityTier)
       ? (body.quality as QualityTier)
       : 'balanced'

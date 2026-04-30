@@ -31,7 +31,7 @@ set -euo pipefail
 
 APP_DIR="/var/www/amarktai/repo"
 SERVICE_NAME="amarktai-web"
-SERVICE_USER="admin"
+SERVICE_USER="www-data"
 NODE_BIN="$(command -v node)"
 NPM_BIN="$(command -v npm)"
 
@@ -80,7 +80,7 @@ log "Generating Prisma client..."
 # prisma db push is preferred over migrate deploy for SQLite / prototype setups.
 # Replace with `prisma migrate deploy` if using a migration-based workflow.
 log "Pushing Prisma schema to database..."
-"$NPM_BIN" exec -- prisma db push || warn "prisma db push failed — DB may not be reachable yet."
+"$NPM_BIN" exec -- prisma db push
 
 # ── 7. Build the Next.js app ──────────────────────────────────────────────────
 log "Building Next.js application (standalone output)..."
@@ -109,8 +109,7 @@ log "Static assets in place."
 # by a different user (e.g. root or another account) and raises
 # "Operation not permitted".
 log "Setting ownership of .next/ to ${SERVICE_USER}..."
-chown -R "${SERVICE_USER}:${SERVICE_USER}" .next/ 2>/dev/null || \
-  warn "chown .next/ failed — service may still work if it already has read access."
+chown -R "${SERVICE_USER}:${SERVICE_USER}" .next/
 
 # ── 10. Install/update systemd unit if it has changed ────────────────────────
 UNIT_SRC="$APP_DIR/deploy/amarktai-web.service"
@@ -132,7 +131,7 @@ fi
 
 # ── 11. Start (or restart) the service ───────────────────────────────────────
 log "Starting ${SERVICE_NAME} ..."
-systemctl enable "${SERVICE_NAME}" --quiet 2>/dev/null || true
+systemctl enable "${SERVICE_NAME}" --quiet 2>/dev/null
 systemctl restart "${SERVICE_NAME}"
 
 # ── 12. Verify the service came up ───────────────────────────────────────────
@@ -145,15 +144,9 @@ log "${SERVICE_NAME} is active."
 systemctl status "${SERVICE_NAME}" --no-pager -l --lines=20
 
 # ── 13. Health-check endpoints ───────────────────────────────────────────────
-log "Checking /api/health ..."
-curl -sf --max-time 10 http://localhost:3000/api/health \
-  && log "/api/health  ✓" \
-  || warn "/api/health returned non-200 (app may still be warming up)"
-
 log "Checking /api/health/ping ..."
-curl -sf --max-time 10 http://localhost:3000/api/health/ping \
-  && log "/api/health/ping  ✓" \
-  || warn "/api/health/ping returned non-200 (app may still be warming up)"
+curl -sf --max-time 10 http://localhost:3000/api/health/ping
+log "/api/health/ping OK"
 
 log ""
 log "══════════════════════════════════════════════════════"
