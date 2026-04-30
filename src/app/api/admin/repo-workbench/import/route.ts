@@ -8,13 +8,14 @@ export async function POST(req: Request) {
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
-    const body = await req.json() as { repoUrl?: string; branch?: string }
-    if (!body.repoUrl) return NextResponse.json({ error: 'repoUrl is required' }, { status: 400 })
+    const body = await req.json() as { repoUrl?: string; repoFullName?: string; branch?: string; defaultBranch?: string }
+    const repoUrl = body.repoUrl || (body.repoFullName ? `https://github.com/${body.repoFullName}` : '')
+    if (!repoUrl) return NextResponse.json({ success: false, error: 'repoUrl or repoFullName is required' }, { status: 400 })
     const status = await getRepoWorkbenchStatus()
     if (!status.canImport) {
       return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo import prerequisites are not ready' }, { status: 503 })
     }
-    const workspace = await importRepo(body.repoUrl, body.branch || 'main')
+    const workspace = await importRepo(repoUrl, body.branch || body.defaultBranch || 'main')
     return NextResponse.json({
       success: true,
       workspaceId: workspace.id,

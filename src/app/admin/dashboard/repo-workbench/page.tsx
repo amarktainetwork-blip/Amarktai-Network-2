@@ -1,496 +1,366 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CheckCircle,
   ChevronDown,
-  ChevronRight,
+  Code2,
+  FileText,
   GitBranch,
   GitCommit,
   GitPullRequest,
   Loader2,
-  RotateCcw,
-  Sparkles,
+  Play,
+  RefreshCcw,
+  Rocket,
+  Save,
+  ShieldAlert,
   UploadCloud,
   XCircle,
 } from 'lucide-react'
 
-// Git convention: subject line ≤ 72 characters
-const MAX_COMMIT_MESSAGE_LENGTH = 72
+type StatusMap = Record<string, boolean | string | string[] | null | undefined>
+type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string; lastSyncedAt?: string | null }
+type Repo = { full_name: string; default_branch: string; private?: boolean; description?: string | null }
+type TreeEntry = { path: string; type: 'file' | 'dir'; size: number }
+type RunResult = { taskId?: string; patchId?: string | null; summary?: string; diffText?: string; filesAffected?: string[]; logs?: string[]; error?: string }
 
-type Quality = 'best' | 'good' | 'balanced' | 'cheap'
+const CHECKS = ['npm ci', 'npm install', 'npm run lint', 'npm test', 'npm run build', 'npx prisma generate', 'npx prisma db push', 'git status', 'git diff --stat']
 
-interface Workspace {
-  id: string
-  owner: string
-  repo: string
-  branch: string
-  status: string
-  lastSyncedAt: string | null
+async function api<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init)
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok || data.success === false) throw new Error(data.error || data.blocker || `Request failed (${res.status})`)
+  return data as T
 }
-
-interface ChangeEntry {
-  file: string
-  description: string
-}
-
-interface RunResult {
-  taskId: string
-  patchId: string | null
-  summary: string
-  changes: ChangeEntry[]
-  filesAffected: string[]
-  risks: string[]
-  nextSteps: string[]
-  diffText: string
-  model: string
-  logs: string[]
-}
-
-const QUALITY_OPTIONS: Array<{ id: Quality; label: string; hint: string }> = [
-  { id: 'best', label: 'Best', hint: 'Most powerful' },
-  { id: 'good', label: 'Good', hint: 'High quality' },
-  { id: 'balanced', label: 'Balanced', hint: 'Default' },
-  { id: 'cheap', label: 'Cheap', hint: 'Fast & light' },
-]
 
 export default function RepoWorkbenchPage() {
-  const [repoUrl, setRepoUrl] = useState('')
+  const [status, setStatus] = useState<StatusMap | null>(null)
+  const [githubStatus, setGithubStatus] = useState<Record<string, unknown> | null>(null)
+  const [token, setToken] = useState('')
+  const [repos, setRepos] = useState<Repo[]>([])
+  const [repoFullName, setRepoFullName] = useState('')
   const [branch, setBranch] = useState('main')
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
-  const [githubConnected, setGithubConnected] = useState(false)
-  const [quality, setQuality] = useState<Quality>('balanced')
+  const [tree, setTree] = useState<TreeEntry[]>([])
+  const [selectedPath, setSelectedPath] = useState('')
+  const [fileContent, setFileContent] = useState('')
   const [instruction, setInstruction] = useState('')
   const [result, setResult] = useState<RunResult | null>(null)
+  const [diffText, setDiffText] = useState('')
+  const [patchId, setPatchId] = useState('')
   const [commitMessage, setCommitMessage] = useState('')
-  const [workBranch, setWorkBranch] = useState('feature/ai-workbench')
-  const [status, setStatus] = useState<'idle' | 'importing' | 'running' | 'committing' | 'pushing' | 'pr' | 'done' | 'error'>('idle')
+  const [workBranch, setWorkBranch] = useState('repo-workbench/fix')
+  const [customCommand, setCustomCommand] = useState('')
+  const [deployConfirm, setDeployConfirm] = useState('')
+  const [mergePrNumber, setMergePrNumber] = useState('')
+  const [logs, setLogs] = useState('')
+  const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
-  const [logsOpen, setLogsOpen] = useState(false)
-  const [actionResult, setActionResult] = useState<{ label: string; detail: string } | null>(null)
+  const [notice, setNotice] = useState('')
+  const [openLogs, setOpenLogs] = useState(false)
 
-  const isBusy = status === 'importing' || status === 'running' || status === 'committing' || status === 'pushing' || status === 'pr'
+  const repoLabel = workspace ? `${workspace.owner}/${workspace.repo}` : 'No workspace selected'
+  const deployPhrase = workspace ? `DEPLOY ${workspace.owner}/${workspace.repo}` : 'DEPLOY owner/repo'
+
+  const loadStatus = useCallback(async () => {
+    const data = await api<StatusMap>('/api/admin/repo-workbench/status')
+    setStatus(data)
+    const gh = await api<Record<string, unknown>>('/api/admin/repo-workbench/github/status').catch((err) => ({ success: false, blocker: err.message }))
+    setGithubStatus(gh)
+  }, [])
 
   const loadRepos = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/repo-workbench/repos')
-      if (!res.ok) return
-      const data = await res.json()
-      setGithubConnected(!!data.github?.connected)
-      const list: Workspace[] = data.workspaces ?? []
-      setWorkspaces(list)
-      if (!workspace && list[0]) {
-        setWorkspace(list[0])
-        setRepoUrl(`https://github.com/${list[0].owner}/${list[0].repo}`)
-        setBranch(list[0].branch)
-      }
-    } catch {
-      // ignore
-    }
+    const data = await api<{ github?: { repos?: Repo[] }; workspaces?: Workspace[] }>('/api/admin/repo-workbench/repos')
+    setRepos(data.github?.repos ?? [])
+    setWorkspaces(data.workspaces ?? [])
+    if (!workspace && data.workspaces?.[0]) setWorkspace(data.workspaces[0])
   }, [workspace])
 
-  useEffect(() => { loadRepos() }, [loadRepos])
+  const refreshAll = useCallback(async () => {
+    setError('')
+    await Promise.all([loadStatus(), loadRepos()])
+  }, [loadStatus, loadRepos])
+
+  useEffect(() => { refreshAll().catch((err) => setError(err.message)) }, [refreshAll])
+
+  async function runAction(label: string, fn: () => Promise<string | void>) {
+    setBusy(label)
+    setError('')
+    setNotice('')
+    try {
+      const message = await fn()
+      if (message) setNotice(message)
+      await refreshAll()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : `${label} failed`)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const selectedRepo = useMemo(() => repos.find((repo) => repo.full_name === repoFullName), [repos, repoFullName])
+
+  async function saveToken() {
+    await runAction('github-token', async () => {
+      await api('/api/admin/repo-workbench/github/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      setToken('')
+      return 'GitHub token saved and validated.'
+    })
+  }
 
   async function importRepo() {
-    if (!repoUrl.trim()) return
-    setStatus('importing')
-    setError('')
-    setResult(null)
-    try {
-      const res = await fetch('/api/admin/repo-workbench/import', {
+    await runAction('import', async () => {
+      const repo = repoFullName || selectedRepo?.full_name
+      if (!repo) throw new Error('Choose or enter a repo first')
+      const data = await api<{ workspace: Workspace }>('/api/admin/repo-workbench/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl: repoUrl.trim(), branch: branch.trim() || 'main' }),
+        body: JSON.stringify({ repoFullName: repo, branch: branch || selectedRepo?.default_branch || 'main' }),
       })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? 'Import failed')
-      await loadRepos()
       setWorkspace(data.workspace)
-      setStatus('idle')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Import failed')
-      setStatus('error')
-    }
+      return `Imported ${repo}`
+    })
   }
 
-  async function runAI() {
-    if (!workspace || !instruction.trim()) return
-    setStatus('running')
-    setError('')
-    setResult(null)
-    setActionResult(null)
-    try {
-      const res = await fetch(`/api/admin/repo-workbench/${workspace.id}/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ instruction: instruction.trim(), quality }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? 'AI run failed')
-      setResult(data as RunResult)
-      if (data.summary) setCommitMessage(String(data.summary).slice(0, MAX_COMMIT_MESSAGE_LENGTH))
-      setStatus('done')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'AI run failed')
-      setStatus('error')
-    }
+  async function loadTree(target = workspace) {
+    if (!target) return
+    await runAction('tree', async () => {
+      const data = await api<{ entries: TreeEntry[] }>(`/api/admin/repo-workbench/${target.id}/tree`)
+      setTree(data.entries ?? [])
+      return 'File tree loaded.'
+    })
   }
 
-  async function commitChanges() {
-    if (!workspace || !result?.patchId) return
-    setStatus('committing')
-    setError('')
-    try {
-      const res = await fetch(`/api/admin/repo-workbench/${workspace.id}/commit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patchId: result.patchId, message: commitMessage || 'AI workbench changes', branchName: workBranch, confirm: true }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? 'Commit failed')
-      setActionResult({ label: 'Committed', detail: `Branch: ${data.branch} · ${data.files?.length ?? 0} file(s)` })
-      setStatus('done')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Commit failed')
-      setStatus('error')
-    }
-  }
-
-  async function pushChanges() {
+  async function openFile(path: string) {
     if (!workspace) return
-    setStatus('pushing')
-    setError('')
-    try {
-      const res = await fetch(`/api/admin/repo-workbench/${workspace.id}/push`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? 'Push failed')
-      setActionResult({ label: 'Pushed', detail: data.remoteBranchUrl ? `View branch: ${data.remoteBranchUrl}` : `Branch: ${data.branch}` })
-      setStatus('done')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Push failed')
-      setStatus('error')
-    }
+    await runAction('file', async () => {
+      const data = await api<{ content: string; path: string }>(`/api/admin/repo-workbench/${workspace.id}/file?path=${encodeURIComponent(path)}`)
+      setSelectedPath(data.path)
+      setFileContent(data.content)
+    })
   }
 
-  async function createPR() {
+  async function saveFile() {
+    if (!workspace || !selectedPath) return
+    await runAction('save-file', async () => {
+      await api(`/api/admin/repo-workbench/${workspace.id}/file`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: selectedPath, content: fileContent, confirm: true }),
+      })
+      return `Saved ${selectedPath}`
+    })
+  }
+
+  async function agent(kind: 'audit' | 'plan' | 'patch' | 'run') {
     if (!workspace) return
-    setStatus('pr')
-    setError('')
-    try {
-      const res = await fetch(`/api/admin/repo-workbench/${workspace.id}/pr`, {
+    await runAction(kind, async () => {
+      const url = kind === 'run' ? `/api/admin/repo-workbench/${workspace.id}/run` : `/api/admin/repo-workbench/${workspace.id}/${kind}`
+      const body = kind === 'audit'
+        ? { agentMode: 'repo_auditor', depth: 'standard' }
+        : kind === 'plan'
+          ? { request: instruction, scope: 'auto', agentMode: 'fullstack_builder' }
+          : kind === 'patch'
+            ? { request: instruction, files: selectedPath ? [selectedPath] : [], agentMode: 'fullstack_builder' }
+            : { instruction, quality: 'balanced' }
+      const data = await api<RunResult>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      setResult(data)
+      if (data.patchId) setPatchId(data.patchId)
+      if (data.diffText) setDiffText(data.diffText)
+      if (data.logs?.length) setLogs(data.logs.join('\n'))
+      return `${kind} completed.`
+    })
+  }
+
+  async function refreshDiff() {
+    if (!workspace) return
+    await runAction('diff', async () => {
+      const data = await api<{ diffText: string; stat: string }>(`/api/admin/repo-workbench/${workspace.id}/diff`)
+      setDiffText(data.diffText || data.stat)
+      return 'Diff refreshed.'
+    })
+  }
+
+  async function runCheck(command: string) {
+    if (!workspace) return
+    await runAction(command, async () => {
+      const data = await api<{ jobId: string; output: string; status: string }>(`/api/admin/repo-workbench/${workspace.id}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: commitMessage || 'AI workbench changes', body: instruction, confirm: true }),
+        body: JSON.stringify({ command }),
       })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error ?? 'PR creation failed')
-      setActionResult({ label: 'PR Created', detail: data.prUrl ?? '' })
-      setStatus('done')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'PR failed')
-      setStatus('error')
-    }
+      setLogs(data.output)
+      return `${command}: ${data.status}`
+    })
   }
 
-  function resetAll() {
-    setResult(null)
-    setError('')
-    setStatus('idle')
-    setActionResult(null)
-  }
-
-  const repoLabel = workspace ? `${workspace.owner}/${workspace.repo} @ ${workspace.branch}` : null
+  const can = (key: string) => Boolean(status?.[key])
+  const blocks = [...((status?.blockers as string[] | undefined) ?? []), ...((status?.warnings as string[] | undefined) ?? [])]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 py-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl space-y-5 py-4 text-slate-100">
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-white">
-            <Sparkles className="h-6 w-6 text-cyan-400" />
-            AI Coding Agent
-          </h1>
-          <p className="mt-0.5 text-sm text-slate-500">Powered by GenX — Import a repo, type an instruction, hit Run.</p>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-white"><Code2 className="h-6 w-6 text-cyan-300" /> Repo Workbench</h1>
+          <p className="text-sm text-slate-400">Import repos, inspect code, run the Amarktai Coding Agent, verify, commit, push, and create PRs with guardrails.</p>
         </div>
-        {(result || error) && (
-          <button onClick={resetAll} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 hover:text-white">
-            <RotateCcw className="h-3.5 w-3.5" /> New run
-          </button>
-        )}
+        <Button label="Refresh status" icon={RefreshCcw} onClick={refreshAll} busy={busy === 'refresh'} />
+      </header>
+
+      <section className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-4 md:grid-cols-3 xl:grid-cols-6">
+        <StatusPill label="Workspace" ok={can('workspaceWritable')} />
+        <StatusPill label="GitHub" ok={Boolean(githubStatus?.authenticated)} />
+        <StatusPill label="AI" ok={can('genxAvailable') || can('directProviderAvailable')} />
+        <StatusPill label="Patch" ok={can('canPatch')} />
+        <StatusPill label="PR" ok={can('canCreatePr')} />
+        <StatusPill label="Deploy" ok={can('canDeploy')} />
+        {blocks.length > 0 && <div className="md:col-span-3 xl:col-span-6 rounded-md bg-amber-500/10 p-3 text-xs text-amber-200">{blocks.join(' | ')}</div>}
+      </section>
+
+      {error && <Alert tone="error" text={error} />}
+      {notice && <Alert tone="success" text={notice} />}
+
+      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="space-y-5">
+          <Panel title="GitHub Connection">
+            <div className="space-y-2">
+              <input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="GitHub token" className="input" />
+              <div className="flex gap-2">
+                <Button label="Save token" icon={Save} onClick={saveToken} busy={busy === 'github-token'} disabled={!token.trim()} />
+                <Button label="Validate" icon={ShieldAlert} onClick={loadStatus} />
+              </div>
+              <p className="text-xs text-slate-500">{githubStatus?.authenticated ? `Connected as ${githubStatus.username}` : String(githubStatus?.blocker ?? 'Token not validated')}</p>
+            </div>
+          </Panel>
+
+          <Panel title="Repo Selector">
+            <div className="space-y-2">
+              <select value={repoFullName} onChange={(e) => { setRepoFullName(e.target.value); const repo = repos.find((r) => r.full_name === e.target.value); if (repo) setBranch(repo.default_branch) }} className="input">
+                <option value="">Select accessible repo</option>
+                {repos.map((repo) => <option key={repo.full_name} value={repo.full_name}>{repo.full_name}{repo.private ? ' (private)' : ''}</option>)}
+              </select>
+              <input value={repoFullName} onChange={(e) => setRepoFullName(e.target.value)} placeholder="owner/repo" className="input" />
+              <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" className="input" />
+              <div className="grid grid-cols-2 gap-2">
+                <Button label="Refresh repos" icon={RefreshCcw} onClick={loadRepos} />
+                <Button label="Import/sync" icon={UploadCloud} onClick={importRepo} busy={busy === 'import'} disabled={!repoFullName} />
+              </div>
+              <select value={workspace?.id ?? ''} onChange={(e) => setWorkspace(workspaces.find((w) => w.id === e.target.value) ?? null)} className="input">
+                <option value="">Select workspace</option>
+                {workspaces.map((w) => <option key={w.id} value={w.id}>{w.owner}/{w.repo} @ {w.branch}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-2">
+                <Button label="Pull latest" icon={RefreshCcw} onClick={() => workspace && runAction('pull', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/pull`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: false }) }); return 'Pulled latest changes.' })} disabled={!workspace} />
+                <Button label="Load files" icon={FileText} onClick={() => loadTree()} disabled={!workspace} />
+              </div>
+              <input value={workBranch} onChange={(e) => setWorkBranch(e.target.value)} placeholder="repo-workbench/fix" className="input" />
+              <Button label="Create branch" icon={GitBranch} onClick={() => workspace && runAction('branch', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/branch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branchName: workBranch, confirm: true }) }); return `Created ${workBranch}` })} disabled={!workspace || !workBranch} />
+              <p className="text-xs text-slate-500">{repoLabel}</p>
+            </div>
+          </Panel>
+
+          <Panel title="File Explorer">
+            <div className="max-h-[420px] space-y-1 overflow-auto pr-1">
+              {tree.filter((item) => item.type === 'file').slice(0, 400).map((item) => (
+                <button key={item.path} onClick={() => openFile(item.path)} className={`block w-full truncate rounded px-2 py-1 text-left text-xs ${selectedPath === item.path ? 'bg-cyan-500/20 text-cyan-100' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                  {item.path}
+                </button>
+              ))}
+              {tree.length === 0 && <p className="text-xs text-slate-500">Load a workspace tree to browse files.</p>}
+            </div>
+          </Panel>
+        </aside>
+
+        <main className="space-y-5">
+          <Panel title="File Viewer / Editor">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="truncate font-mono text-xs text-cyan-200">{selectedPath || 'No file selected'}</span>
+              <Button label="Save file" icon={Save} onClick={saveFile} disabled={!workspace || !selectedPath} />
+            </div>
+            <textarea value={fileContent} onChange={(e) => setFileContent(e.target.value)} rows={14} className="h-80 w-full resize-y rounded-md border border-white/10 bg-black/30 p-3 font-mono text-xs text-slate-100 outline-none focus:border-cyan-500/50" />
+          </Panel>
+
+          <Panel title="Agent Task">
+            <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={4} placeholder="Ask the coding agent to audit, plan, or patch this repo..." className="input min-h-28 resize-y" />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button label="Audit" icon={ShieldAlert} onClick={() => agent('audit')} disabled={!workspace || !can('canPlan')} />
+              <Button label="Plan" icon={FileText} onClick={() => agent('plan')} disabled={!workspace || !instruction.trim() || !can('canPlan')} />
+              <Button label="Generate patch" icon={Code2} onClick={() => agent('patch')} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
+              <Button label="Run AI" icon={Play} onClick={() => agent('run')} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
+              <Button label="Refresh diff" icon={RefreshCcw} onClick={refreshDiff} disabled={!workspace} />
+              <Button label="Apply patch" icon={CheckCircle} onClick={() => workspace && runAction('apply', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/apply-patch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patchId: patchId || result?.patchId, confirm: true }) }); return 'Patch applied.' })} disabled={!workspace || !(patchId || result?.patchId)} />
+            </div>
+            {result?.summary && <p className="mt-3 rounded-md bg-white/5 p-3 text-sm text-slate-200">{result.summary}</p>}
+          </Panel>
+
+          <Panel title="Diff Preview">
+            <pre className="max-h-80 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-slate-300">{diffText || result?.diffText || 'No diff loaded yet.'}</pre>
+          </Panel>
+
+          <Panel title="Checks">
+            <div className="flex flex-wrap gap-2">
+              {CHECKS.map((command) => <Button key={command} label={command} icon={Play} onClick={() => runCheck(command)} disabled={!workspace || !can('canRunChecks')} />)}
+            </div>
+            <div className="mt-3 flex gap-2">
+              <input value={customCommand} onChange={(e) => setCustomCommand(e.target.value)} placeholder="custom command (requires env enable)" className="input" />
+              <Button label="Run custom" icon={Play} onClick={() => runCheck(customCommand)} disabled={!workspace || !customCommand.trim()} />
+            </div>
+          </Panel>
+
+          <Panel title="Commit / Push / PR / Merge">
+            <div className="grid gap-2 md:grid-cols-[1fr_auto]">
+              <input value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} placeholder="Commit message" className="input" />
+              <Button label="Commit" icon={GitCommit} onClick={() => workspace && runAction('commit', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/commit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patchId: patchId || result?.patchId, message: commitMessage, branchName: workBranch, confirm: true }) }); return 'Changes committed.' })} disabled={!workspace || !commitMessage || !(patchId || result?.patchId)} />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button label="Push" icon={UploadCloud} onClick={() => workspace && runAction('push', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/push`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) }); return 'Branch pushed.' })} disabled={!workspace || !can('canPush')} />
+              <Button label="Create PR" icon={GitPullRequest} onClick={() => workspace && runAction('pr', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/pr`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: commitMessage || 'Repo Workbench changes', body: `${instruction}\n\nGenerated by Repo Workbench.`, confirm: true }) }); return 'PR created.' })} disabled={!workspace || !can('canCreatePr')} />
+              <Button label="PR status" icon={RefreshCcw} onClick={() => workspace && runAction('pr-status', async () => { const data = await api<Record<string, unknown>>(`/api/admin/repo-workbench/${workspace.id}/pr-status`); setLogs(JSON.stringify(data, null, 2)); return 'PR status loaded.' })} disabled={!workspace} />
+              <input value={mergePrNumber} onChange={(e) => setMergePrNumber(e.target.value)} placeholder="PR #" className="input max-w-28" />
+              <Button label="Merge" icon={GitPullRequest} onClick={() => workspace && runAction('merge', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prNumber: Number(mergePrNumber), confirm: true }) }); return 'PR merged.' })} disabled={!workspace || !can('canMergePr') || !mergePrNumber} />
+            </div>
+          </Panel>
+
+          <Panel title="Deploy">
+            <p className="mb-2 text-xs text-slate-500">Deploy is disabled unless `REPO_WORKBENCH_ALLOW_DEPLOY=true`. Confirmation must match: <span className="font-mono text-slate-300">{deployPhrase}</span></p>
+            <div className="flex gap-2">
+              <input value={deployConfirm} onChange={(e) => setDeployConfirm(e.target.value)} placeholder={deployPhrase} className="input" />
+              <Button label="Deploy" icon={Rocket} onClick={() => workspace && runAction('deploy', async () => { const data = await api<{ output?: string }>(`/api/admin/repo-workbench/${workspace.id}/deploy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: deployConfirm, confirm: true }) }); setLogs(data.output || ''); return 'Deploy finished.' })} disabled={!workspace || !can('canDeploy') || deployConfirm !== deployPhrase} />
+            </div>
+          </Panel>
+
+          <section>
+            <button onClick={() => setOpenLogs((v) => !v)} className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+              <span>Logs</span><ChevronDown className={`h-4 w-4 transition ${openLogs ? 'rotate-180' : ''}`} />
+            </button>
+            {openLogs && <pre className="mt-2 max-h-96 overflow-auto rounded-lg border border-white/10 bg-black/40 p-4 text-xs text-slate-300">{logs || 'No logs yet.'}</pre>}
+          </section>
+        </main>
       </div>
 
-      {/* Step 1: Repo Import */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">1 · Import Repo</p>
-        <div className="flex gap-2">
-          <input
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && importRepo()}
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-500/50"
-            placeholder="https://github.com/owner/repo"
-          />
-          <input
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            className="w-28 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600"
-            placeholder="main"
-          />
-          <button
-            onClick={importRepo}
-            disabled={isBusy || !repoUrl.trim()}
-            className="rounded-lg bg-cyan-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {status === 'importing' ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Import'}
-          </button>
-        </div>
-
-        {workspaces.length > 1 && (
-          <select
-            value={workspace?.id ?? ''}
-            onChange={(e) => {
-              const w = workspaces.find((x) => x.id === e.target.value) ?? null
-              setWorkspace(w)
-              if (w) { setRepoUrl(`https://github.com/${w.owner}/${w.repo}`); setBranch(w.branch) }
-            }}
-            className="mt-3 w-full rounded-lg border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white"
-          >
-            {workspaces.map((w) => <option key={w.id} value={w.id}>{w.owner}/{w.repo} @ {w.branch}</option>)}
-          </select>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          {repoLabel
-            ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-300"><CheckCircle className="h-3 w-3" />{repoLabel}</span>
-            : <span className="rounded-full bg-slate-700/40 px-2.5 py-1 text-slate-500">No repo imported</span>
-          }
-          {githubConnected
-            ? <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-emerald-300">GitHub token connected</span>
-            : <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-amber-400">No token — push/PR disabled</span>
-          }
-        </div>
-      </section>
-
-      {/* Step 2: Quality + Instruction */}
-      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-slate-500">2 · Instruction</p>
-
-        <div className="mb-4 grid grid-cols-4 gap-2">
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q.id}
-              onClick={() => setQuality(q.id)}
-              className={`rounded-lg border px-3 py-2.5 text-center transition-colors ${
-                quality === q.id
-                  ? 'border-cyan-400/60 bg-cyan-400/10 text-white'
-                  : 'border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20 hover:text-slate-300'
-              }`}
-            >
-              <span className="block text-sm font-semibold">{q.label}</span>
-              <span className="block text-[11px] text-slate-500">{q.hint}</span>
-            </button>
-          ))}
-        </div>
-
-        <textarea
-          value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
-          rows={4}
-          disabled={isBusy}
-          className="w-full resize-none rounded-lg border border-white/10 bg-black/20 p-3.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-500/40 disabled:opacity-60"
-          placeholder="Tell the AI what you want to do with this repo…"
-        />
-
-        <button
-          onClick={runAI}
-          disabled={isBusy || !workspace || !instruction.trim()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 py-3 text-base font-bold text-white shadow-lg shadow-cyan-900/30 hover:from-cyan-500 hover:to-blue-500 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
-        >
-          {status === 'running' ? (
-            <><Loader2 className="h-5 w-5 animate-spin" /> Running AI…</>
-          ) : (
-            <><Sparkles className="h-5 w-5" /> RUN AI</>
-          )}
-        </button>
-
-        {status === 'running' && (
-          <p className="mt-2 text-center text-xs animate-pulse text-slate-500">
-            Auditing repo · Planning fixes · Generating patch…
-          </p>
-        )}
-      </section>
-
-      {/* Error */}
-      {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-500/20 bg-red-500/5 p-4">
-          <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-          <p className="text-sm text-red-300">{error}</p>
-        </div>
-      )}
-
-      {/* Step 3: Results */}
-      {result && (
-        <section className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">3 · Results</p>
-
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-            <p className="mb-2 text-xs font-semibold text-cyan-400">Summary</p>
-            <p className="text-sm leading-relaxed text-slate-200">{result.summary || 'No summary returned.'}</p>
-            {result.model && <p className="mt-2 text-xs text-slate-600">Model: {result.model}</p>}
-          </div>
-
-          {result.changes.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="mb-3 text-xs font-semibold text-cyan-400">Changes</p>
-              <ul className="space-y-2">
-                {result.changes.map((c, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <span className="mt-0.5 shrink-0 rounded bg-cyan-500/10 px-1.5 py-0.5 font-mono text-[11px] text-cyan-300">{c.file}</span>
-                    <span className="text-slate-400">{c.description}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {result.filesAffected.length > 0 && (
-            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-              <p className="mb-3 text-xs font-semibold text-cyan-400">Files Affected</p>
-              <div className="flex flex-wrap gap-1.5">
-                {result.filesAffected.map((f, i) => (
-                  <span key={i} className="rounded bg-white/5 px-2 py-1 font-mono text-[11px] text-slate-300">{f}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {result.risks.length > 0 && (
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-              <p className="mb-2 text-xs font-semibold text-amber-400">Risks</p>
-              <ul className="space-y-1">
-                {result.risks.map((r, i) => <li key={i} className="text-sm text-amber-200">· {r}</li>)}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Step 4: Actions */}
-      {result && (
-        <section className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-500">4 · Actions</p>
-
-          <div className="mb-4 space-y-2">
-            <input
-              value={workBranch}
-              onChange={(e) => setWorkBranch(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600"
-              placeholder="feature/branch-name"
-            />
-            <input
-              value={commitMessage}
-              onChange={(e) => setCommitMessage(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600"
-              placeholder="Commit message"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <ActionBtn
-              onClick={commitChanges}
-              disabled={isBusy || !result.patchId}
-              icon={GitCommit}
-              label={status === 'committing' ? 'Committing…' : 'Commit'}
-              spinning={status === 'committing'}
-            />
-            <ActionBtn
-              onClick={pushChanges}
-              disabled={isBusy || !githubConnected}
-              icon={UploadCloud}
-              label={status === 'pushing' ? 'Pushing…' : 'Push'}
-              spinning={status === 'pushing'}
-              tip={!githubConnected ? 'GitHub token required' : undefined}
-            />
-            <ActionBtn
-              onClick={createPR}
-              disabled={isBusy || !githubConnected}
-              icon={GitPullRequest}
-              label={status === 'pr' ? 'Creating PR…' : 'Create PR'}
-              spinning={status === 'pr'}
-              tip={!githubConnected ? 'GitHub token required' : undefined}
-            />
-          </div>
-
-          {!githubConnected && (
-            <p className="mt-3 text-xs text-amber-400">Push and PR require a GitHub token. Configure it in Settings → Integrations.</p>
-          )}
-
-          {actionResult && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-4 py-3">
-              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-300">{actionResult.label}</p>
-                {actionResult.detail && (
-                  actionResult.detail.startsWith('https://')
-                    ? <a href={actionResult.detail} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-400 underline">{actionResult.detail}</a>
-                    : <p className="text-xs text-emerald-400">{actionResult.detail}</p>
-                )}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Logs (collapsed) */}
-      {result && result.logs.length > 0 && (
-        <section>
-          <button
-            onClick={() => setLogsOpen((o) => !o)}
-            className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-400 hover:text-slate-300"
-          >
-            <span className="flex items-center gap-2"><GitBranch className="h-3.5 w-3.5" /> Run Logs ({result.logs.length} lines)</span>
-            {logsOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          </button>
-          {logsOpen && (
-            <pre className="mt-1 max-h-60 overflow-auto rounded-xl border border-white/10 bg-black/30 p-4 text-[11px] leading-relaxed text-slate-400">
-              {result.logs.join('\n')}
-            </pre>
-          )}
-        </section>
-      )}
+      {busy && <div className="fixed bottom-5 right-5 flex items-center gap-2 rounded-lg border border-cyan-400/20 bg-slate-950 px-4 py-3 text-sm text-cyan-100 shadow-xl"><Loader2 className="h-4 w-4 animate-spin" /> {busy}</div>}
     </div>
   )
 }
 
-function ActionBtn({
-  onClick,
-  disabled,
-  icon: Icon,
-  label,
-  spinning,
-  tip,
-}: {
-  onClick: () => void
-  disabled?: boolean
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-  label: string
-  spinning?: boolean
-  tip?: string
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      title={tip}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {spinning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}
-      {label}
-    </button>
-  )
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="rounded-lg border border-white/10 bg-white/[0.03] p-4"><h2 className="mb-3 text-sm font-semibold text-white">{title}</h2>{children}</section>
+}
+
+function Button({ label, icon: Icon, onClick, disabled, busy }: { label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; onClick: () => unknown; disabled?: boolean; busy?: boolean }) {
+  return <button onClick={onClick} disabled={disabled || busy} className="inline-flex items-center justify-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40">{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Icon className="h-4 w-4" />}{label}</button>
+}
+
+function StatusPill({ label, ok }: { label: string; ok: boolean }) {
+  return <div className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs ${ok ? 'bg-emerald-500/10 text-emerald-200' : 'bg-amber-500/10 text-amber-200'}`}>{ok ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}{label}</div>
+}
+
+function Alert({ tone, text }: { tone: 'success' | 'error'; text: string }) {
+  return <div className={`rounded-lg border p-3 text-sm ${tone === 'success' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200' : 'border-red-500/20 bg-red-500/10 text-red-200'}`}>{text}</div>
 }

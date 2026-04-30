@@ -4,6 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .input {
+    @apply w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500/50 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}
+
 /* ─── Design Tokens ──────────────────────────────── */
 :root {
   --bg-primary: #030712;
