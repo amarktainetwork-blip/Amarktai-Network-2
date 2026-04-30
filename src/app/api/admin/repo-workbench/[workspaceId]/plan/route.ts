@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createPlanTask, type AgentMode } from '@/lib/repo-workbench'
+import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 
 export async function POST(req: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await getSession()
@@ -9,6 +10,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ workspa
     const { workspaceId } = await params
     const body = await req.json() as { request?: string; scope?: string; agentMode?: AgentMode; modelId?: string }
     if (!body.request?.trim()) return NextResponse.json({ error: 'request is required' }, { status: 400 })
+    const status = await getRepoWorkbenchStatus()
+    if (!status.canPatch) {
+      return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo planning prerequisites are not ready' }, { status: 503 })
+    }
     const result = await createPlanTask({
       workspaceId,
       request: body.request,

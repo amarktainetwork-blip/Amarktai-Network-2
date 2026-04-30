@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { commitPatch } from '@/lib/repo-workbench'
+import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 
 export async function POST(req: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await getSession()
@@ -11,6 +12,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ workspa
     if (!body.confirm) return NextResponse.json({ error: 'confirm=true is required to commit changes' }, { status: 400 })
     if (!body.patchId) return NextResponse.json({ error: 'patchId is required' }, { status: 400 })
     if (!body.message?.trim()) return NextResponse.json({ error: 'message is required' }, { status: 400 })
+    const status = await getRepoWorkbenchStatus()
+    if (!status.canCommit) {
+      return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo commit prerequisites are not ready' }, { status: 503 })
+    }
     const result = await commitPatch(workspaceId, body.patchId, body.message, body.branchName)
     return NextResponse.json({ success: true, ...result })
   } catch (err) {

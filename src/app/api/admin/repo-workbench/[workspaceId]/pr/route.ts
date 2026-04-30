@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createWorkspacePr } from '@/lib/repo-workbench'
+import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 
 export async function POST(req: Request, { params }: { params: Promise<{ workspaceId: string }> }) {
   const session = await getSession()
@@ -10,6 +11,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ workspa
     const body = await req.json() as { title?: string; body?: string; confirm?: boolean }
     if (!body.confirm) return NextResponse.json({ error: 'confirm=true is required to create a PR' }, { status: 400 })
     if (!body.title?.trim()) return NextResponse.json({ error: 'title is required' }, { status: 400 })
+    const status = await getRepoWorkbenchStatus()
+    if (!status.canCreatePr) {
+      return NextResponse.json({ success: false, setupRequired: true, error: status.blockers.join('; ') || 'Repo PR prerequisites are not ready' }, { status: 503 })
+    }
     const result = await createWorkspacePr(workspaceId, body.title, body.body || '')
     return NextResponse.json({ success: true, ...result })
   } catch (err) {

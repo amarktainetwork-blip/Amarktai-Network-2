@@ -154,9 +154,11 @@ export interface GenXMediaResult {
 }
 
 export interface GenXStatus {
+  configured: boolean
   available: boolean
   apiUrl: string | null
   error: string | null
+  modelCount?: number
 }
 
 // ── Known GenX model catalog (static fallback when live catalog unavailable) ──
@@ -265,7 +267,7 @@ export function invalidateEndpointProfile(): void {
  * This allows the admin to configure GenX via the Settings UI without
  * redeploying.
  */
-async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: string }> {
+export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: string; configured: boolean }> {
   let apiUrl = process.env.GENX_API_URL ?? ''
   let apiKey = process.env.GENX_API_KEY ?? ''
 
@@ -283,7 +285,10 @@ async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: string }> 
     // DB unavailable — fall through to env vars
   }
 
-  return { apiUrl, apiKey }
+  const { isUsableServiceKey } = await import('@/lib/service-vault')
+  const normalizedUrl = normaliseBaseUrl(apiUrl) ?? ''
+  const normalizedKey = isUsableServiceKey(apiKey) ? apiKey.trim() : ''
+  return { apiUrl: normalizedUrl, apiKey: normalizedKey, configured: !!normalizedUrl && !!normalizedKey }
 }
 
 /**
@@ -406,14 +411,16 @@ async function buildHeaders(): Promise<Record<string, string>> {
 
 export function getGenXStatus(): GenXStatus {
   const envUrl = process.env.GENX_API_URL ?? ''
-  if (!envUrl) {
+  const envKey = process.env.GENX_API_KEY ?? ''
+  if (!envUrl || !envKey) {
     return {
+      configured: false,
       available: false,
       apiUrl: null,
-      error: 'GENX_API_URL not configured',
+      error: 'GenX not configured (GENX_API_URL and GENX_API_KEY are required)',
     }
   }
-  return { available: true, apiUrl: envUrl, error: null }
+  return { configured: true, available: false, apiUrl: normaliseBaseUrl(envUrl), error: 'GenX has not been live-probed in this sync status path' }
 }
 
 /**
@@ -421,11 +428,45 @@ export function getGenXStatus(): GenXStatus {
  * Used by routes that need accurate status including DB-saved settings.
  */
 export async function getGenXStatusAsync(): Promise<GenXStatus> {
-  const { apiUrl } = await resolveGenXConfig()
-  if (!apiUrl) {
-    return { available: false, apiUrl: null, error: 'GenX not configured (GENX_API_URL not set and no DB config)' }
+  const { apiUrl, apiKey, configured } = await resolveGenXConfig()
+  if (!configured) {
+    return {
+      configured: false,
+      available: false,
+      apiUrl: apiUrl || null,
+      error: 'GenX not configured (GENX_API_URL and GENX_API_KEY are required)',
+      modelCount: 0,
+    }
   }
-  return { available: true, apiUrl, error: null }
+
+  try {
+    const profile = await discoverEndpointProfile(apiUrl, apiKey)
+    _endpointProfile = profile
+    const res = await fetch(`${profile.baseUrl}${profile.catalogPath}`, {
+      headers: await buildHeaders(),
+      signal: AbortSignal.timeout(PROBE_TIMEOUT),
+    })
+    if (!res.ok) {
+      return {
+        configured,
+        available: false,
+        apiUrl,
+        error: `GenX catalog probe failed with HTTP ${res.status}`,
+        modelCount: 0,
+      }
+    }
+    const data = await res.json().catch(() => null) as unknown
+    const models = extractModelList(data)
+    return { configured, available: true, apiUrl, error: null, modelCount: models.length }
+  } catch (error) {
+    return {
+      configured,
+      available: false,
+      apiUrl,
+      error: error instanceof Error ? error.message : 'GenX catalog probe failed',
+      modelCount: 0,
+    }
+  }
 }
 
 // ── Model Catalog ─────────────────────────────────────────────────────────────

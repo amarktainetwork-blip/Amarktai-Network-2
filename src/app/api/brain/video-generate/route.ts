@@ -366,33 +366,23 @@ export async function POST(req: Request): Promise<NextResponse> {
   }
 
   if (!providerJobId) {
-    // No video provider available — fall back to video planning (script/storyboard)
     const fallback = await generateVideoPlanningFallback(prompt, style, duration, req);
-    if (fallback) {
-      return NextResponse.json(
-        {
-          capability: 'video_plan',
-          outputType: 'video_plan',
-          executed: true,
-          fallbackMode: 'video_planning',
-          warning: 'No real video provider configured — storyboard returned instead of generated video',
-          note: fallback.note,
-          script: fallback.script,
-          error: null,
-        },
-        { status: 200 },
-      );
-    }
     return NextResponse.json(
       {
         capability: 'video_generation',
         executed: false,
-        error:
-          'Video generation is not available: no video provider is configured. ' +
-          'Configure GenX, Replicate, Together AI, or Qwen/DashScope (Wan) in Admin → AI Providers to enable video generation. ' +
-          'Note: Gemini Veo 2 requires Vertex AI enterprise tier and is not supported via the standard API key.',
+        generation_available: false,
+        planning_available: true,
+        fallbackMode: fallback ? 'video_planning' : null,
+        video_plan: fallback?.script ?? null,
+        blocker: 'No real video generation provider is configured. Configure GenX video model or a supported video provider.',
+        error: 'No real video generation provider is configured. Configure GenX video model or a supported video provider.',
+        engine: fallback ? 'direct_provider' : null,
+        provider: null,
+        model: null,
+        fallbackUsed: Boolean(fallback),
       },
-      { status: 503 },
+      { status: 501 },
     );
   }
 
@@ -419,6 +409,9 @@ export async function POST(req: Request): Promise<NextResponse> {
       status: job.status,
       provider: usedProvider,
       model: usedModel,
+      engine: usedProvider === 'genx' ? 'genx' : 'direct_provider',
+      fallbackUsed: usedProvider !== 'genx',
+      blocker: null,
       prompt: enhancedPrompt,
       pollUrl: `/api/brain/video-generate/${job.id}`,
     },
