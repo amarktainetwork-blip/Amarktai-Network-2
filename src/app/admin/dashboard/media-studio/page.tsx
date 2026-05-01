@@ -32,6 +32,23 @@ interface GenxStatus {
   available?: boolean
 }
 
+type MediaModel = {
+  id: string
+  label: string
+  provider: string
+  category?: 'image' | 'video' | 'voice' | 'music'
+  available: boolean
+  blocker: string | null
+}
+
+interface MediaModels {
+  genx?: { configured?: boolean; available?: boolean; modelCount?: number; blocker?: string | null }
+  image: MediaModel[]
+  video: MediaModel[]
+  voice: MediaModel[]
+  music: MediaModel[]
+}
+
 function BlockerCard({ title, reason, action }: { title: string; reason: string; action?: string }) {
   return (
     <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
@@ -54,10 +71,11 @@ export default function MediaStudioPage() {
   const [genx, setGenx] = useState<GenxStatus | null>(null)
   const [loading, setLoading] = useState(false)
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
+  const [models, setModels] = useState<MediaModels | null>(null)
 
   // Image generation state
   const [imagePrompt, setImagePrompt] = useState('')
-  const [imageModel, setImageModel] = useState('recraft-v3')
+  const [imageModel, setImageModel] = useState('gpt-image-2')
   const [imageRunning, setImageRunning] = useState(false)
   const [imageResult, setImageResult] = useState<{ url?: string; error?: string; provider?: string; model?: string } | null>(null)
 
@@ -77,8 +95,17 @@ export default function MediaStudioPage() {
   const [musicPrompt, setMusicPrompt] = useState('')
 
   const loadGenx = useCallback(async () => {
-    const res = await fetch('/api/admin/genx/status').catch(() => null)
-    if (res?.ok) setGenx(await res.json())
+    const [genxRes, modelsRes] = await Promise.all([
+      fetch('/api/admin/genx/status').catch(() => null),
+      fetch('/api/admin/media-studio/models').catch(() => null),
+    ])
+    if (genxRes?.ok) setGenx(await genxRes.json())
+    if (modelsRes?.ok) {
+      const data = await modelsRes.json()
+      setModels(data)
+      const firstImage = data?.image?.find((model: MediaModel) => model.available)?.id ?? data?.image?.[0]?.id
+      if (firstImage) setImageModel(firstImage)
+    }
   }, [])
 
   const loadHistory = useCallback(async () => {
@@ -108,8 +135,24 @@ export default function MediaStudioPage() {
       })
       const d = await res.json()
       const url = d.imageUrl ?? d.imageBase64 ?? d.url
-      if (res.ok && d.executed && url) setImageResult({ url, provider: d.provider, model: d.model })
-      else setImageResult({ error: d.error ?? d.blocker ?? 'Generation failed' })
+      if (res.ok && d.executed && url) {
+        setImageResult({ url, provider: d.provider, model: d.model ?? imageModel })
+        await fetch('/api/admin/artifacts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            appSlug: 'media-studio',
+            type: 'image',
+            subType: 'generation',
+            title: imagePrompt.slice(0, 80) || 'Generated image',
+            description: imagePrompt,
+            provider: d.provider,
+            model: d.model ?? imageModel,
+            contentUrl: url,
+            metadata: { route: '/api/brain/image', prompt: imagePrompt },
+          }),
+        }).catch(() => null)
+      } else setImageResult({ error: d.error ?? d.blocker ?? 'Generation failed' })
     } catch (e) {
       setImageResult({ error: String(e) })
     } finally {
@@ -126,7 +169,7 @@ export default function MediaStudioPage() {
           <h1 className="text-2xl font-bold text-white">Media Studio</h1>
         </div>
         <p className="text-sm text-slate-400">
-          Generate images, video, voice, and music through GenX. All generation routes through GenX first.
+          Generate media through the live runtime truth layer. Unverified video, music, and adult flows stay disabled until providers pass.
         </p>
       </div>
 
@@ -171,10 +214,16 @@ export default function MediaStudioPage() {
                   onChange={e => setImageModel(e.target.value)}
                   className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/40"
                 >
-                  <option value="recraft-v3">Recraft v3 (GenX)</option>
-                  <option value="grok-imagine">Grok Imagine (GenX)</option>
-                  <option value="dalle-3">DALL-E 3 (GenX)</option>
+                  {(models?.image?.length ? models.image : [
+                    { id: 'gpt-image-2', label: 'GPT Image 2', provider: 'GenX', available: genxReady, blocker: null },
+                    { id: 'grok-imagine', label: 'Grok Imagine', provider: 'GenX', available: genxReady, blocker: null },
+                  ]).map((model) => (
+                    <option key={model.id} value={model.id} disabled={!model.available}>
+                      {model.label} ({model.provider}){model.available ? '' : ' - unavailable'}
+                    </option>
+                  ))}
                 </select>
+                {models?.genx?.blocker && <p className="mt-1 text-[11px] text-amber-400">{models.genx.blocker}</p>}
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Prompt</label>
@@ -223,8 +272,7 @@ export default function MediaStudioPage() {
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
             <h2 className="text-sm font-semibold text-white">Video Generation</h2>
             <p className="text-xs text-slate-400">
-              GenX video models available: Veo 2, Kling, Seedance, PixVerse, Grok Video.
-              Video generation is expensive — confirm cost before running.
+              Video must run as an async job with submit, polling, and artifact persistence. It stays disabled unless live video models are confirmed.
             </p>
             <div>
               <label className="block text-xs text-slate-400 mb-1">Prompt (text-to-video)</label>
@@ -236,8 +284,17 @@ export default function MediaStudioPage() {
                 className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/40 resize-none"
               />
             </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Available video models</label>
+              <select disabled className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-slate-500">
+                {(models?.video?.length ? models.video : []).map((model) => (
+                  <option key={model.id}>{model.label} ({model.provider}){model.available ? '' : ' - disabled'}</option>
+                ))}
+                {!models?.video?.length && <option>No live video model confirmed</option>}
+              </select>
+            </div>
             <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-400">
-              Video generation is disabled tonight until a real render provider, quota check, polling, and artifact flow are verified.
+              Video generation is disabled until a real render provider, quota check, polling, and artifact flow are verified.
             </div>
             <button
               disabled
@@ -284,20 +341,15 @@ export default function MediaStudioPage() {
                   onChange={e => setVoiceModel(e.target.value)}
                   className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/40"
                 >
-                  <optgroup label="Groq (PlayAI)">
-                    <option value="Arista-PlayAI">Arista (Female)</option>
-                    <option value="Atlas-PlayAI">Atlas (Male)</option>
-                  </optgroup>
-                  <optgroup label="OpenAI TTS">
-                    <option value="nova">Nova (Female)</option>
-                    <option value="onyx">Onyx (Male)</option>
-                    <option value="alloy">Alloy (Neutral)</option>
-                  </optgroup>
-                  <optgroup label="Deepgram Aura 2 (via GenX)">
-                    <option value="aura-2-asteria-en">Asteria (EN)</option>
-                    <option value="aura-2-zeus-en">Zeus (EN Male)</option>
-                    <option value="aura-2-luna-en">Luna (EN Female)</option>
-                  </optgroup>
+                  {(models?.voice?.length ? models.voice : [
+                    { id: 'grok-tts', label: 'Grok TTS', provider: 'GenX', available: genxReady, blocker: null },
+                    { id: 'aura-2', label: 'Aura 2', provider: 'GenX', available: genxReady, blocker: null },
+                    { id: 'genxlm-voice-v1', label: 'GenX Voice v1', provider: 'GenX', available: genxReady, blocker: null },
+                  ]).map((model) => (
+                    <option key={model.id} value={model.id} disabled={!model.available}>
+                      {model.label} ({model.provider}){model.available ? '' : ' - unavailable'}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -399,6 +451,15 @@ export default function MediaStudioPage() {
             <p className="text-xs text-slate-400">
               Music generation is disabled tonight until a real audio provider, job polling, and artifact flow are verified.
             </p>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Available music/audio models</label>
+              <select disabled className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-slate-500">
+                {(models?.music?.length ? models.music : []).map((model) => (
+                  <option key={model.id}>{model.label} ({model.provider}){model.available ? '' : ' - disabled'}</option>
+                ))}
+                {!models?.music?.length && <option>No live music model confirmed</option>}
+              </select>
+            </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1">Prompt / Style Description</label>
               <textarea
