@@ -1,12 +1,10 @@
-'use client'
+import { redirect } from 'next/navigation'
 
-import { useEffect, useState, useCallback } from 'react'
-import { motion } from 'framer-motion'
-import {
-  Settings, Shield, Key, Globe, Database, Bell, Lock,
-  RefreshCw, AlertCircle, CheckCircle, ShieldAlert, Loader2,
-} from 'lucide-react'
-import Link from 'next/link'
+/** Access control page consolidated into Settings. */
+export default function AccessPage() {
+  redirect('/admin/dashboard/settings')
+}
+
 
 const fadeUp = {
   hidden: { opacity: 0, y: 12 },
