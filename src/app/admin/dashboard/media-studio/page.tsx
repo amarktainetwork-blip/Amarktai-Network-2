@@ -67,6 +67,11 @@ export default function MediaStudioPage() {
   // Voice state
   const [voiceText, setVoiceText] = useState('')
   const [voiceModel, setVoiceModel] = useState('aura-2-asteria-en')
+  const [voiceProvider, setVoiceProvider] = useState<'groq' | 'openai' | 'gemini' | 'auto'>('auto')
+  const [voiceSpeed, setVoiceSpeed] = useState(1.0)
+  const [voiceMode, setVoiceMode] = useState<'batch' | 'streaming'>('batch')
+  const [voiceRunning, setVoiceRunning] = useState(false)
+  const [voiceResult, setVoiceResult] = useState<{ url?: string; error?: string } | null>(null)
 
   // Music state
   const [musicPrompt, setMusicPrompt] = useState('')
@@ -248,42 +253,137 @@ export default function MediaStudioPage() {
         <div className="space-y-4">
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
             <h2 className="text-sm font-semibold text-white">Voice / TTS</h2>
-            <p className="text-xs text-slate-400">
-              GenX voice models: Grok TTS, Aura 2 (Deepgram via GenX), GenX LM Voice v1.
-              Fallback: ElevenLabs, Resemble (configure in Settings).
-            </p>
-            <div className="space-y-3">
+            {/* Mode status banner */}
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-300">
+              <strong>Batch TTS:</strong> Ready — routes to /api/brain/tts (Groq, OpenAI, Gemini, HuggingFace).
+              &nbsp;|&nbsp;
+              <strong>Streaming TTS:</strong> Pending — requires REALTIME_SERVICE_URL to be set and realtime service running.
+              Streaming is <span className="text-amber-400">not yet available</span>. No fake streaming.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Model / Voice</label>
+                <label className="block text-xs text-slate-400 mb-1">Provider</label>
+                <select
+                  value={voiceProvider}
+                  onChange={e => setVoiceProvider(e.target.value as typeof voiceProvider)}
+                  className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/40"
+                >
+                  <option value="auto">Auto (Groq → OpenAI → HuggingFace)</option>
+                  <option value="groq">Groq TTS (fast, low-cost)</option>
+                  <option value="openai">OpenAI TTS (premium)</option>
+                  <option value="gemini">Gemini TTS (multimodal)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Voice / Model</label>
                 <select
                   value={voiceModel}
                   onChange={e => setVoiceModel(e.target.value)}
                   className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500/40"
                 >
-                  <option value="aura-2-asteria-en">Aura 2 – Asteria (EN) via GenX</option>
-                  <option value="grok-tts">Grok TTS via GenX</option>
-                  <option value="genx-lm-voice-v1">GenX LM Voice v1</option>
+                  <optgroup label="Groq (PlayAI)">
+                    <option value="Arista-PlayAI">Arista (Female)</option>
+                    <option value="Atlas-PlayAI">Atlas (Male)</option>
+                  </optgroup>
+                  <optgroup label="OpenAI TTS">
+                    <option value="nova">Nova (Female)</option>
+                    <option value="onyx">Onyx (Male)</option>
+                    <option value="alloy">Alloy (Neutral)</option>
+                  </optgroup>
+                  <optgroup label="Deepgram Aura 2 (via GenX)">
+                    <option value="aura-2-asteria-en">Asteria (EN)</option>
+                    <option value="aura-2-zeus-en">Zeus (EN Male)</option>
+                    <option value="aura-2-luna-en">Luna (EN Female)</option>
+                  </optgroup>
                 </select>
               </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Text</label>
-                <textarea
-                  value={voiceText}
-                  onChange={e => setVoiceText(e.target.value)}
-                  placeholder="Text to convert to speech…"
-                  rows={4}
-                  className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/40 resize-none"
+                <label className="block text-xs text-slate-400 mb-1">Mode</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setVoiceMode('batch')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition ${voiceMode === 'batch' ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-white/10 text-slate-400 hover:text-white'}`}
+                  >
+                    Batch TTS ✓
+                  </button>
+                  <button
+                    disabled
+                    title="Streaming TTS requires realtime service"
+                    className="flex-1 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-slate-600 cursor-not-allowed opacity-50"
+                  >
+                    Streaming (pending)
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Speed ({voiceSpeed.toFixed(1)}x)</label>
+                <input
+                  type="range" min={0.5} max={2.0} step={0.1}
+                  value={voiceSpeed}
+                  onChange={e => setVoiceSpeed(Number(e.target.value))}
+                  className="w-full accent-cyan-400"
                 />
               </div>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Text</label>
+              <textarea
+                value={voiceText}
+                onChange={e => setVoiceText(e.target.value)}
+                placeholder="Text to convert to speech…"
+                rows={4}
+                className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/40 resize-none"
+              />
+            </div>
+            <div className="flex gap-3">
               <button
-                disabled
-                title="GenX key required"
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 opacity-40 cursor-not-allowed"
+                onClick={async () => {
+                  if (!voiceText.trim() || voiceRunning) return
+                  setVoiceRunning(true)
+                  setVoiceResult(null)
+                  try {
+                    const res = await fetch('/api/brain/tts', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        text: voiceText,
+                        voiceId: voiceModel,
+                        provider: voiceProvider,
+                        speed: voiceSpeed,
+                      }),
+                    })
+                    if (!res.ok) {
+                      const d = await res.json().catch(() => ({}))
+                      setVoiceResult({ error: d.error ?? d.blocker ?? `TTS failed (${res.status})` })
+                    } else {
+                      const blob = await res.blob()
+                      const url = URL.createObjectURL(blob)
+                      setVoiceResult({ url })
+                    }
+                  } catch (e) {
+                    setVoiceResult({ error: String(e) })
+                  } finally {
+                    setVoiceRunning(false)
+                  }
+                }}
+                disabled={!voiceText.trim() || voiceRunning}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-cyan-500/20 transition-colors"
               >
-                <Mic className="h-4 w-4" />
-                Generate Voice — GenX key required
+                {voiceRunning ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Mic className="h-4 w-4" />}
+                {voiceRunning ? 'Generating…' : 'Generate Batch TTS'}
               </button>
             </div>
+            {voiceResult && (
+              <div className="mt-2">
+                {voiceResult.error
+                  ? <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-xs text-red-400">{voiceResult.error}</div>
+                  : voiceResult.url
+                    ? <audio controls src={voiceResult.url} className="w-full mt-1" />
+                    : null}
+              </div>
+            )}
           </div>
         </div>
       )}

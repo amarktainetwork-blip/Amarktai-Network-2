@@ -314,7 +314,7 @@ export default function RepoWorkbenchPage() {
               <input value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="main" className="input" />
               <div className="grid grid-cols-2 gap-2">
                 <Button label="Refresh repos" icon={RefreshCcw} onClick={loadRepos} />
-                <Button label="Import / sync" icon={UploadCloud} onClick={importRepo} busy={busy === 'import'} disabled={!repoFullName} />
+                <Button label="Import/sync" icon={UploadCloud} onClick={importRepo} busy={busy === 'import'} disabled={!repoFullName} />
               </div>
             </div>
           </Panel>
