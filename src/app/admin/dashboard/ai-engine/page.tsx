@@ -497,7 +497,7 @@ export default function AIEnginePage() {
                       return (
                         <tr key={cap.name} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                           <td className="px-3 py-2 text-slate-300 font-medium">{cap.name}</td>
-                          <td className="px-3 py-2 text-cyan-400">{staticRow?.genxModel ?? cap.models[0] ?? '—'}</td>
+                          <td className="px-3 py-2 text-cyan-400">{cap.models[0] ?? staticRow?.genxModel ?? '—'}</td>
                           <td className="px-3 py-2 text-slate-400">{staticRow?.fallback ?? '—'}</td>
                           <td className="px-3 py-2">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] border ${

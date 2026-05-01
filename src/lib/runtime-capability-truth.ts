@@ -274,10 +274,10 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
       name: 'Video Generation',
       status: genxConfigured ? 'available' : 'blocked',
       blocker: genxConfigured
-        ? 'Needs video quota confirmation before generating'
+        ? null
         : 'GenX key required for video generation',
       models: genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)', 'Grok Video (via GenX)'] : [],
-      nextAction: genxConfigured ? 'Confirm video quota in Settings → AI Engine' : 'Add GenX key in Settings',
+      nextAction: genxConfigured ? 'Confirm video quota before generating (high cost)' : 'Add GenX key in Settings',
     },
     {
       name: 'Voice TTS',
@@ -311,7 +311,7 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
         ? null
         : 'No music provider configured. Suno or Udio key required. GenX music (Lyria) not yet wired.',
       models: [
-        ...(genxConfigured ? ['Lyria (via GenX — not yet wired)'] : []),
+        ...(genxConfigured ? ['Lyria (via GenX — pending route implementation)', 'GenX audio models'] : []),
         ...(hasSuno ? ['Suno'] : []),
         ...(hasUdio ? ['Udio'] : []),
       ],
