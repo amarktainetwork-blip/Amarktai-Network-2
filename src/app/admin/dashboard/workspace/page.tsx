@@ -1,4 +1,7 @@
-'use client'
+import { redirect } from 'next/navigation'
+export default function WorkspacePage() {
+  redirect('/admin/dashboard')
+}
 
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
