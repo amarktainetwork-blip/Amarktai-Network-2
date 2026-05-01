@@ -31,6 +31,13 @@ type RunResult = {
   filesAffected?: string[]; logs?: string[]; error?: string
   model?: string; provider?: string; estimatedCostUsd?: number
 }
+type SafeTestResult = {
+  summary?: string
+  branch?: string
+  mode?: string
+  artifactId?: string | null
+  steps?: Array<{ name: string; ok: boolean; output: string; command?: string }>
+}
 
 // ── Agent/model presets ───────────────────────────────────────────────────────
 
@@ -86,6 +93,7 @@ export default function RepoWorkbenchPage() {
   const [deployConfirm, setDeployConfirm] = useState('')
   const [mergePrNumber, setMergePrNumber] = useState('')
   const [logs, setLogs] = useState('')
+  const [safeTest, setSafeTest] = useState<SafeTestResult | null>(null)
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -259,6 +267,20 @@ export default function RepoWorkbenchPage() {
     })
   }
 
+  async function runSafeTest() {
+    await runAction('safe-test', async () => {
+      const data = await api<SafeTestResult>('/api/admin/repo-workbench/safe-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cleanup: false }),
+      })
+      setSafeTest(data)
+      setLogs((data.steps ?? []).map((item) => `[${item.ok ? 'ok' : 'fail'}] ${item.name}\n${item.output}`).join('\n\n'))
+      setOpenLogs(true)
+      return data.summary ?? 'Safe Repo Workbench Test completed.'
+    })
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-5 py-4 text-slate-100">
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
@@ -362,6 +384,23 @@ export default function RepoWorkbenchPage() {
 
         <main className="space-y-5">
           <Panel title="④ Coding Agent / Model">
+            <div className="mb-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-cyan-100">Safe Repo Workbench Test</p>
+                  <p className="text-xs text-slate-400">
+                    Runs a harmless local git healthcheck, creates a test branch and commit, writes logs to artifacts, and simulates PR unless remote safe-test push is explicitly configured.
+                  </p>
+                </div>
+                <Button label="Run Safe Repo Workbench Test" icon={Play} onClick={runSafeTest} busy={busy === 'safe-test'} disabled={!can('workspaceWritable')} />
+              </div>
+              {safeTest && (
+                <div className="mt-3 rounded-md bg-black/20 p-2 text-xs text-slate-300">
+                  <p>{safeTest.summary}</p>
+                  <p className="mt-1 text-slate-500">Mode: {safeTest.mode ?? 'local'} | Branch: {safeTest.branch ?? 'n/a'} | Artifact: {safeTest.artifactId ?? 'not persisted'}</p>
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mb-3">
               {AGENT_PRESETS.map((preset) => {
                 const Icon = preset.icon

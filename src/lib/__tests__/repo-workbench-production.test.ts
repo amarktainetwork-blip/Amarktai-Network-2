@@ -41,8 +41,28 @@ describe('repo workbench production hardening', () => {
 
   it('repo workbench page wires required action labels', () => {
     const page = fs.readFileSync(path.resolve('src/app/admin/dashboard/repo-workbench/page.tsx'), 'utf8')
-    for (const label of ['Save token', 'Import/sync', 'Create branch', 'Generate patch', 'Apply patch', 'Push', 'Create PR', 'Merge', 'Deploy']) {
+    for (const label of ['Save token', 'Import/sync', 'Create branch', 'Run Safe Repo Workbench Test', 'Generate patch', 'Apply patch', 'Push', 'Create PR', 'Merge', 'Deploy']) {
       expect(page).toContain(label)
     }
+  })
+
+  it('adds safe test and live readiness routes', () => {
+    expect(fs.existsSync(path.resolve('src/app/api/admin/repo-workbench/safe-test/route.ts'))).toBe(true)
+    expect(fs.existsSync(path.resolve('src/app/api/admin/system/live-readiness/route.ts'))).toBe(true)
+    const safeTestRoute = fs.readFileSync(path.resolve('src/app/api/admin/repo-workbench/safe-test/route.ts'), 'utf8')
+    expect(safeTestRoute).toContain('test/repo-workbench-healthcheck')
+    expect(safeTestRoute).toContain('GitHub PAT is required')
+    expect(safeTestRoute).toContain('createArtifact')
+  })
+
+  it('media studio uses runtime-backed model choices and artifact persistence', () => {
+    const mediaPage = fs.readFileSync(path.resolve('src/app/admin/dashboard/media-studio/page.tsx'), 'utf8')
+    const modelsRoute = fs.readFileSync(path.resolve('src/app/api/admin/media-studio/models/route.ts'), 'utf8')
+    expect(mediaPage).toContain('/api/admin/media-studio/models')
+    expect(mediaPage).toContain('/api/admin/artifacts')
+    expect(modelsRoute).toContain('GENX_IMAGE_MODELS')
+    expect(modelsRoute).toContain('GENX_VIDEO_MODELS')
+    expect(modelsRoute).toContain('GENX_TTS_MODELS')
+    expect(modelsRoute).toContain('GENX_AUDIO_MODELS')
   })
 })

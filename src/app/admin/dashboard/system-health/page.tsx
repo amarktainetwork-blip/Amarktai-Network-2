@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Activity, RefreshCw, Server, Cpu, MemoryStick, HardDrive, Wifi, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react'
 
-type TabId = 'vps' | 'services' | 'providers' | 'jobs' | 'apps' | 'mcp'
+type TabId = 'readiness' | 'vps' | 'services' | 'providers' | 'jobs' | 'apps' | 'mcp'
 
 interface VpsData {
   cpuPercent?: number
@@ -40,6 +40,21 @@ interface GenxStatus {
   modelCount?: number
 }
 
+type ReadinessStatus = 'PASS' | 'FAIL' | 'OPTIONAL' | 'DISABLED'
+
+interface LiveReadiness {
+  overall: 'PASS' | 'FAIL'
+  generatedAt: string
+  checks: Array<{
+    key: string
+    label: string
+    status: ReadinessStatus
+    evidence: string
+    blocker: string | null
+  }>
+  counts: Record<string, number>
+}
+
 function StatusBadge({ ok, label }: { ok: boolean | null; label?: string }) {
   if (ok === null) return <span className="text-[11px] text-slate-500 animate-pulse">Checking…</span>
   const cls = ok ? 'text-emerald-400' : 'text-red-400'
@@ -66,6 +81,7 @@ function MetricBar({ pct }: { pct: number }) {
 }
 
 const TABS: { id: TabId; label: string }[] = [
+  { id: 'readiness', label: 'Live Readiness' },
   { id: 'vps',       label: 'VPS'       },
   { id: 'services',  label: 'Services'  },
   { id: 'providers', label: 'Providers' },
@@ -75,21 +91,23 @@ const TABS: { id: TabId; label: string }[] = [
 ]
 
 export default function SystemHealthPage() {
-  const [tab, setTab] = useState<TabId>('vps')
+  const [tab, setTab] = useState<TabId>('readiness')
   const [loading, setLoading] = useState(false)
   const [vps, setVps] = useState<VpsData | null>(null)
   const [jobs, setJobs] = useState<JobStats | null>(null)
   const [apps, setApps] = useState<AppHealthEntry[]>([])
   const [genx, setGenx] = useState<GenxStatus | null>(null)
+  const [readiness, setReadiness] = useState<LiveReadiness | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [vpsRes, jobsRes, appsRes, genxRes] = await Promise.allSettled([
+      const [vpsRes, jobsRes, appsRes, genxRes, readinessRes] = await Promise.allSettled([
         fetch('/api/admin/vps'),
         fetch('/api/admin/jobs'),
         fetch('/api/admin/app-health'),
         fetch('/api/admin/genx/status'),
+        fetch('/api/admin/system/live-readiness'),
       ])
       if (vpsRes.status === 'fulfilled' && vpsRes.value.ok) setVps(await vpsRes.value.json())
       else setVps({ error: 'VPS data unavailable — check server connection' })
@@ -102,6 +120,7 @@ export default function SystemHealthPage() {
       }
 
       if (genxRes.status === 'fulfilled' && genxRes.value.ok) setGenx(await genxRes.value.json())
+      if (readinessRes.status === 'fulfilled' && readinessRes.value.ok) setReadiness(await readinessRes.value.json())
     } finally {
       setLoading(false)
     }
@@ -144,6 +163,53 @@ export default function SystemHealthPage() {
           </button>
         ))}
       </div>
+
+      {/* Live Readiness Tab */}
+      {tab === 'readiness' && (
+        <div className="space-y-4">
+          <div className={`rounded-xl border p-4 ${readiness?.overall === 'PASS' ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}`}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className={`text-sm font-semibold ${readiness?.overall === 'PASS' ? 'text-emerald-300' : 'text-red-300'}`}>
+                  {readiness ? `Live readiness: ${readiness.overall}` : 'Live readiness: checking'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  This page checks runtime truth only. Disabled media or adult gates stay disabled until real providers pass.
+                </p>
+              </div>
+              {readiness?.generatedAt && (
+                <span className="text-[11px] text-slate-600">Generated {new Date(readiness.generatedAt).toLocaleString()}</span>
+              )}
+            </div>
+          </div>
+
+          {readiness ? (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {readiness.checks.map((item) => (
+                <div key={item.key} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-white">{item.label}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      item.status === 'PASS' ? 'bg-emerald-500/10 text-emerald-300'
+                      : item.status === 'FAIL' ? 'bg-red-500/10 text-red-300'
+                      : item.status === 'DISABLED' ? 'bg-slate-500/10 text-slate-300'
+                      : 'bg-amber-500/10 text-amber-300'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-400">{item.evidence}</p>
+                  {item.blocker && <p className="mt-2 text-xs text-amber-300">{item.blocker}</p>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center text-sm text-slate-500">
+              {loading ? 'Running live readiness checks...' : 'Live readiness data unavailable.'}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* VPS Tab */}
       {tab === 'vps' && (
