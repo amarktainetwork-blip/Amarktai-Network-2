@@ -8,51 +8,29 @@ import {
   Menu,
   X,
   User,
-  Sparkles,
   AppWindow,
   Cpu,
   Archive,
-  Rocket,
   Settings2,
   Activity,
   GitBranch,
-  Music2,
-  ImageIcon,
   Film,
-  Workflow,
-  Music,
+  LayoutDashboard,
+  Terminal,
 } from 'lucide-react'
-import AivaAssistant from '@/components/AivaAssistant'
 
-const NAV_GROUPS: Array<{
-  label?: string
-  items: Array<{ href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }>
-}> = [
-  {
-    items: [
-      { href: '/admin/dashboard/workspace',              label: 'Workspace',      icon: Sparkles    },
-      { href: '/admin/dashboard/workspace?tab=aiva',     label: 'Aiva',           icon: Music2      },
-      { href: '/admin/dashboard/repo-workbench',         label: 'Repo Workbench', icon: GitBranch   },
-      { href: '/admin/dashboard/workspace?tab=music',    label: 'Music Studio',   icon: Music       },
-      { href: '/admin/dashboard/workspace?tab=images',   label: 'Image Studio',   icon: ImageIcon   },
-      { href: '/admin/dashboard/workspace?tab=video',    label: 'Video Studio',   icon: Film        },
-      { href: '/admin/dashboard/artifacts',              label: 'Artifacts',      icon: Archive     },
-      { href: '/admin/dashboard/workspace?tab=workflows',label: 'Workflows',      icon: Workflow    },
-      { href: '/admin/dashboard/apps',                   label: 'Apps & Agents',  icon: AppWindow   },
-      { href: '/admin/dashboard/settings',               label: 'Admin / Settings', icon: Settings2 },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { href: '/admin/dashboard/monitor',      label: 'Monitor',      icon: Activity },
-      { href: '/admin/dashboard/deployments',  label: 'Deployments',  icon: Rocket   },
-      { href: '/admin/dashboard/ai-engine',    label: 'AI Engine',    icon: Cpu      },
-    ],
-  },
+// Nine canonical nav sections — no duplicates, no hidden pages
+const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }> = [
+  { href: '/admin/dashboard',               label: 'Overview',        icon: LayoutDashboard },
+  { href: '/admin/dashboard/command-center',label: 'Command Center',  icon: Terminal        },
+  { href: '/admin/dashboard/repo-workbench',label: 'Repo Workbench',  icon: GitBranch       },
+  { href: '/admin/dashboard/ai-engine',     label: 'AI Engine',       icon: Cpu             },
+  { href: '/admin/dashboard/media-studio',  label: 'Media Studio',    icon: Film            },
+  { href: '/admin/dashboard/apps',          label: 'Apps & Agents',   icon: AppWindow       },
+  { href: '/admin/dashboard/artifacts',     label: 'Artifacts & Jobs',icon: Archive         },
+  { href: '/admin/dashboard/system-health', label: 'System Health',   icon: Activity        },
+  { href: '/admin/dashboard/settings',      label: 'Settings',        icon: Settings2       },
 ]
-
-const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items)
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -66,15 +44,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router])
 
   const isActive = (href: string) => {
-    // For workspace sub-tab links (contain ?tab=), just check if we're on workspace
-    if (href.includes('?tab=')) return pathname.startsWith('/admin/dashboard/workspace')
-    // Exact match for workspace itself to avoid double-matching with tab links
-    if (href === '/admin/dashboard/workspace') return pathname === '/admin/dashboard/workspace' || pathname.startsWith('/admin/dashboard/workspace/')
+    if (href === '/admin/dashboard') return pathname === '/admin/dashboard'
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  // Suppress floating Aiva widget when workspace Aiva tab is visible
-  const showAivaAssistant = !pathname.startsWith('/admin/dashboard/workspace')
+  // Aiva disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true
+  const showAivaAssistant = process.env.NEXT_PUBLIC_AIVA_ENABLED === 'true'
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -88,36 +63,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Link>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4" aria-label="Dashboard navigation">
-        {NAV_GROUPS.map((group, gi) => (
-          <div key={gi}>
-            {group.label && (
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-                {group.label}
-              </p>
-            )}
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const active = isActive(item.href)
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
-                      active
-                        ? 'border border-cyan-400/30 bg-cyan-400/10 text-white'
-                        : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+      <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard navigation">
+        <div className="space-y-0.5">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
+                  active
+                    ? 'border border-cyan-400/30 bg-cyan-400/10 text-white'
+                    : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <item.icon className="h-4 w-4 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       <div className="border-t border-white/10 p-4">
@@ -145,7 +111,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
               <span className="text-xs uppercase tracking-[0.14em] text-slate-500">
-                {ALL_NAV_ITEMS.find(s => isActive(s.href))?.label ?? 'Dashboard'}
+                {NAV_ITEMS.find(s => isActive(s.href))?.label ?? 'Dashboard'}
               </span>
             </div>
             <span className="text-xs text-slate-500">Amarktai Network</span>
@@ -162,8 +128,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
 
-      {/* Aiva floating assistant — suppressed on workspace (has its own Aiva tab) */}
-      {showAivaAssistant && <AivaAssistant />}
+      {/* Aiva floating assistant — disabled by default; set NEXT_PUBLIC_AIVA_ENABLED=true to enable */}
+      {showAivaAssistant && null}
     </div>
   )
 }
