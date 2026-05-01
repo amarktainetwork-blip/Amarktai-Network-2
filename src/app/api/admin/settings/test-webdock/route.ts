@@ -49,9 +49,18 @@ export async function POST(req: NextRequest) {
     const latencyMs = Date.now() - start
 
     if (!res.ok) {
+      const is404 = res.status === 404
       return NextResponse.json({
         success: false,
-        error: `Webdock API responded with HTTP ${res.status}`,
+        error: is404
+          ? 'Webdock key saved, but endpoint/account/server lookup failed. Check API base URL, account ID, server UUID, or Webdock route implementation.'
+          : `Webdock API responded with HTTP ${res.status}`,
+        blocker: is404
+          ? 'HTTP 404 — endpoint not found. Verify WEBDOCK_API_KEY is valid and the Webdock account has servers.'
+          : undefined,
+        nextAction: is404
+          ? 'Check your Webdock API key, account ID, and server UUID in Settings. Ensure the Webdock account has at least one server.'
+          : undefined,
         latencyMs,
       })
     }

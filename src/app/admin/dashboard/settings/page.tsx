@@ -74,6 +74,7 @@ interface IntegrationsData {
   storage: StorageConfig
   adult: AdultConfig
   aiva: AivaConfig
+  aivaEnabled?: boolean
   webdock?: { configured: boolean; source: string }
   firecrawl?: { configured: boolean; source: string }
   qdrant?: { configured: boolean; url: string; hasApiKey: boolean; source: string }
@@ -161,7 +162,7 @@ export default function SettingsPage() {
       ) : data ? (
         <>
           <AIEngineSection config={data.genx} onSaved={load} />
-          <AivaSection config={data.aiva} onSaved={load} />
+          {data.aivaEnabled && <AivaSection config={data.aiva} onSaved={load} />}
           <GitHubSection config={data.github} onSaved={load} />
           <WebdockSection />
           <ServiceIntegrationsSection data={data} onSaved={load} />
@@ -1552,11 +1553,28 @@ function WebdockSection() {
               </Field>
 
               {testResult && (
-                <TestResultBanner result={testResult} extra={
-                  testResult.success && testResult.serverCount != null
-                    ? `${testResult.serverCount} server${Number(testResult.serverCount) !== 1 ? 's' : ''} · ${testResult.latencyMs ?? 0}ms`
-                    : undefined
-                } />
+                <div className={`rounded-xl border p-3 text-xs space-y-1 ${
+                  testResult.success
+                    ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                    : 'border-red-500/20 bg-red-500/5 text-red-400'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    {testResult.success
+                      ? <CheckCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      : <XCircle className="h-4 w-4 shrink-0 mt-0.5" />}
+                    <span>
+                      {testResult.success
+                        ? `Connected · ${testResult.serverCount} server${Number(testResult.serverCount) !== 1 ? 's' : ''} · ${testResult.latencyMs ?? 0}ms`
+                        : (testResult.error as string | undefined) ?? 'Test failed'}
+                    </span>
+                  </div>
+                  {!testResult.success && typeof testResult.blocker === 'string' && testResult.blocker && (
+                    <p className="text-[10px] text-amber-400 pl-6">{testResult.blocker}</p>
+                  )}
+                  {!testResult.success && typeof testResult.nextAction === 'string' && testResult.nextAction && (
+                    <p className="text-[10px] text-slate-400 pl-6">Next: {testResult.nextAction}</p>
+                  )}
+                </div>
               )}
 
               <div className="flex items-center gap-2 pt-1">

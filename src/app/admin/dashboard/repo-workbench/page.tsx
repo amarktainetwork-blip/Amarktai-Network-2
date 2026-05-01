@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  Archive,
   CheckCircle,
   ChevronDown,
   Code2,
+  DollarSign,
   FileText,
   GitBranch,
   GitCommit,
@@ -15,15 +17,43 @@ import {
   Rocket,
   Save,
   ShieldAlert,
+  Trash2,
   UploadCloud,
   XCircle,
+  Zap,
 } from 'lucide-react'
 
 type StatusMap = Record<string, boolean | string | string[] | null | undefined>
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string; lastSyncedAt?: string | null }
 type Repo = { full_name: string; default_branch: string; private?: boolean; description?: string | null }
 type TreeEntry = { path: string; type: 'file' | 'dir'; size: number }
-type RunResult = { taskId?: string; patchId?: string | null; summary?: string; diffText?: string; filesAffected?: string[]; logs?: string[]; error?: string }
+type RunResult = {
+  taskId?: string; patchId?: string | null; summary?: string; diffText?: string
+  filesAffected?: string[]; logs?: string[]; error?: string
+  model?: string; provider?: string; estimatedCostUsd?: number
+}
+
+// ── Agent/model presets ───────────────────────────────────────────────────────
+
+interface AgentPreset {
+  id: string; label: string; description: string
+  agentMode: string; quality: string
+  estimatedCostPerKtokens: number  // USD per 1k tokens
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+}
+
+const AGENT_PRESETS: AgentPreset[] = [
+  { id: 'genx_best', label: 'GenX Best',  description: 'Automatically picks best GenX model for the task', agentMode: 'fullstack_builder', quality: 'best',    estimatedCostPerKtokens: 0.015, icon: Zap        },
+  { id: 'cheap',     label: 'Cheap',      description: 'Fastest, lowest cost — DeepSeek or Qwen via GenX',   agentMode: 'fullstack_builder', quality: 'cheap',   estimatedCostPerKtokens: 0.001, icon: DollarSign },
+  { id: 'balanced',  label: 'Balanced',   description: 'Good quality and cost — Claude Haiku or GPT-4o-mini', agentMode: 'fullstack_builder', quality: 'balanced',estimatedCostPerKtokens: 0.005, icon: CheckCircle},
+  { id: 'premium',   label: 'Premium',    description: 'Highest quality — Claude Sonnet / GPT-4.1 (confirm)',agentMode: 'fullstack_builder', quality: 'premium', estimatedCostPerKtokens: 0.030, icon: Rocket     },
+]
+
+function estimateCost(instruction: string, preset: AgentPreset): string {
+  const tokens = Math.max(500, instruction.length * 3)
+  const cost = (tokens / 1000) * preset.estimatedCostPerKtokens
+  return cost < 0.001 ? '<$0.001' : `~$${cost.toFixed(3)}`
+}
 
 const CHECKS = ['npm ci', 'npm install', 'npm run lint', 'npm test', 'npm run build', 'npx prisma generate', 'npx prisma db push', 'git status', 'git diff --stat']
 
@@ -47,6 +77,7 @@ export default function RepoWorkbenchPage() {
   const [selectedPath, setSelectedPath] = useState('')
   const [fileContent, setFileContent] = useState('')
   const [instruction, setInstruction] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState<AgentPreset>(AGENT_PRESETS[0])
   const [result, setResult] = useState<RunResult | null>(null)
   const [diffText, setDiffText] = useState('')
   const [patchId, setPatchId] = useState('')
@@ -60,14 +91,23 @@ export default function RepoWorkbenchPage() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [openLogs, setOpenLogs] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [showWorkspaceActions, setShowWorkspaceActions] = useState(false)
 
   const repoLabel = workspace ? `${workspace.owner}/${workspace.repo}` : 'No workspace selected'
   const deployPhrase = workspace ? `DEPLOY ${workspace.owner}/${workspace.repo}` : 'DEPLOY owner/repo'
+  const deletePhrase = 'DELETE WORKSPACE'
+  const deployEnabled = process.env.NEXT_PUBLIC_ENABLE_DEPLOY_ACTIONS === 'true'
+  const deployBlocker = !deployEnabled
+    ? 'Deploy disabled — set ENABLE_DEPLOY_ACTIONS=true to enable'
+    : !workspace ? 'No workspace selected'
+    : !can('canDeploy') ? 'No deploy target, checks failed, or no active PR'
+    : null
 
   const loadStatus = useCallback(async () => {
     const data = await api<StatusMap>('/api/admin/repo-workbench/status')
     setStatus(data)
-    const gh = await api<Record<string, unknown>>('/api/admin/repo-workbench/github/status').catch((err) => ({ success: false, blocker: err.message }))
+    const gh = await api<Record<string, unknown>>('/api/admin/repo-workbench/github/status').catch((err) => ({ success: false, blocker: err instanceof Error ? err.message : 'GitHub status unavailable' }))
     setGithubStatus(gh)
   }, [])
 
@@ -83,7 +123,7 @@ export default function RepoWorkbenchPage() {
     await Promise.all([loadStatus(), loadRepos()])
   }, [loadStatus, loadRepos])
 
-  useEffect(() => { refreshAll().catch((err) => setError(err.message)) }, [refreshAll])
+  useEffect(() => { refreshAll().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load')) }, [refreshAll])
 
   async function runAction(label: string, fn: () => Promise<string | void>) {
     setBusy(label)
@@ -102,13 +142,12 @@ export default function RepoWorkbenchPage() {
 
   const selectedRepo = useMemo(() => repos.find((repo) => repo.full_name === repoFullName), [repos, repoFullName])
 
+  function can(key: string) { return Boolean(status?.[key]) }
+  const blocks = [...((status?.blockers as string[] | undefined) ?? []), ...((status?.warnings as string[] | undefined) ?? [])]
+
   async function saveToken() {
     await runAction('github-token', async () => {
-      await api('/api/admin/repo-workbench/github/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
-      })
+      await api('/api/admin/repo-workbench/github/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
       setToken('')
       return 'GitHub token saved and validated.'
     })
@@ -118,11 +157,7 @@ export default function RepoWorkbenchPage() {
     await runAction('import', async () => {
       const repo = repoFullName || selectedRepo?.full_name
       if (!repo) throw new Error('Choose or enter a repo first')
-      const data = await api<{ workspace: Workspace }>('/api/admin/repo-workbench/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoFullName: repo, branch: branch || selectedRepo?.default_branch || 'main' }),
-      })
+      const data = await api<{ workspace: Workspace }>('/api/admin/repo-workbench/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ repoFullName: repo, branch: branch || selectedRepo?.default_branch || 'main' }) })
       setWorkspace(data.workspace)
       return `Imported ${repo}`
     })
@@ -149,32 +184,32 @@ export default function RepoWorkbenchPage() {
   async function saveFile() {
     if (!workspace || !selectedPath) return
     await runAction('save-file', async () => {
-      await api(`/api/admin/repo-workbench/${workspace.id}/file`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: selectedPath, content: fileContent, confirm: true }),
-      })
+      await api(`/api/admin/repo-workbench/${workspace.id}/file`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: selectedPath, content: fileContent, confirm: true }) })
       return `Saved ${selectedPath}`
     })
   }
 
   async function agent(kind: 'audit' | 'plan' | 'patch' | 'run') {
     if (!workspace) return
+    if (selectedPreset.id === 'premium') {
+      const ok = confirm(`Premium model selected. Estimated cost: ${estimateCost(instruction, selectedPreset)}. Proceed?`)
+      if (!ok) return
+    }
     await runAction(kind, async () => {
       const url = kind === 'run' ? `/api/admin/repo-workbench/${workspace.id}/run` : `/api/admin/repo-workbench/${workspace.id}/${kind}`
       const body = kind === 'audit'
-        ? { agentMode: 'repo_auditor', depth: 'standard' }
-        : kind === 'plan'
-          ? { request: instruction, scope: 'auto', agentMode: 'fullstack_builder' }
-          : kind === 'patch'
-            ? { request: instruction, files: selectedPath ? [selectedPath] : [], agentMode: 'fullstack_builder' }
-            : { instruction, quality: 'balanced' }
+        ? { agentMode: selectedPreset.agentMode, depth: 'standard', quality: selectedPreset.quality }
+        : kind === 'plan'   ? { request: instruction, scope: 'auto', agentMode: selectedPreset.agentMode, quality: selectedPreset.quality }
+        : kind === 'patch'  ? { request: instruction, files: selectedPath ? [selectedPath] : [], agentMode: selectedPreset.agentMode, quality: selectedPreset.quality }
+        : { instruction, quality: selectedPreset.quality, agentMode: selectedPreset.agentMode }
       const data = await api<RunResult>(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       setResult(data)
       if (data.patchId) setPatchId(data.patchId)
       if (data.diffText) setDiffText(data.diffText)
       if (data.logs?.length) setLogs(data.logs.join('\n'))
-      return `${kind} completed.`
+      const modelInfo = data.model ? ` · ${data.provider ?? ''}/${data.model}` : ''
+      const costInfo = data.estimatedCostUsd != null ? ` · $${data.estimatedCostUsd.toFixed(4)}` : ''
+      return `${kind} completed${modelInfo}${costInfo}.`
     })
   }
 
@@ -190,27 +225,57 @@ export default function RepoWorkbenchPage() {
   async function runCheck(command: string) {
     if (!workspace) return
     await runAction(command, async () => {
-      const data = await api<{ jobId: string; output: string; status: string }>(`/api/admin/repo-workbench/${workspace.id}/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
-      })
+      const data = await api<{ jobId: string; output: string; status: string }>(`/api/admin/repo-workbench/${workspace.id}/run`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) })
       setLogs(data.output)
       return `${command}: ${data.status}`
     })
   }
 
-  const can = (key: string) => Boolean(status?.[key])
-  const blocks = [...((status?.blockers as string[] | undefined) ?? []), ...((status?.warnings as string[] | undefined) ?? [])]
+  async function deleteWorkspace() {
+    if (!workspace || deleteConfirm !== deletePhrase) return
+    if (!confirm('This will permanently delete the workspace. Cannot be undone.')) return
+    await runAction('delete-workspace', async () => {
+      await api(`/api/admin/repo-workbench/${workspace.id}`, { method: 'DELETE' })
+      setWorkspace(null); setTree([]); setDeleteConfirm(''); setShowWorkspaceActions(false)
+      return 'Workspace deleted.'
+    })
+  }
+
+  async function archiveWorkspace() {
+    if (!workspace) return
+    await runAction('archive-workspace', async () => {
+      await api(`/api/admin/repo-workbench/${workspace.id}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+      setShowWorkspaceActions(false)
+      return 'Workspace archived.'
+    })
+  }
+
+  async function resetWorkspace() {
+    if (!workspace) return
+    if (!confirm('Reset workspace? Uncommitted changes will be lost.')) return
+    await runAction('reset-workspace', async () => {
+      await api(`/api/admin/repo-workbench/${workspace.id}/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+      setDiffText(''); setPatchId(''); setResult(null)
+      return 'Workspace reset.'
+    })
+  }
+
+  async function clearFailedJobs() {
+    if (!workspace) return
+    await runAction('clear-failed', async () => {
+      const data = await api<{ cleared: number }>(`/api/admin/repo-workbench/${workspace.id}/clear-failed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+      return `Cleared ${data.cleared ?? 0} failed job(s).`
+    })
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 py-4 text-slate-100">
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold text-white"><Code2 className="h-6 w-6 text-cyan-300" /> Repo Workbench</h1>
-          <p className="text-sm text-slate-400">Import repos, inspect code, run the Amarktai Coding Agent, verify, commit, push, and create PRs with guardrails.</p>
+          <p className="text-sm text-slate-400">Connect GitHub · select repo · choose agent · run AI · review diff · commit · push · PR · deploy</p>
         </div>
-        <Button label="Refresh status" icon={RefreshCcw} onClick={refreshAll} busy={busy === 'refresh'} />
+        <Button label="Refresh" icon={RefreshCcw} onClick={refreshAll} busy={busy === 'refresh'} />
       </header>
 
       <section className="grid gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-4 md:grid-cols-3 xl:grid-cols-6">
@@ -219,7 +284,7 @@ export default function RepoWorkbenchPage() {
         <StatusPill label="AI" ok={can('genxAvailable') || can('directProviderAvailable')} />
         <StatusPill label="Patch" ok={can('canPatch')} />
         <StatusPill label="PR" ok={can('canCreatePr')} />
-        <StatusPill label="Deploy" ok={can('canDeploy')} />
+        <StatusPill label="Deploy" ok={deployEnabled && can('canDeploy')} />
         {blocks.length > 0 && <div className="md:col-span-3 xl:col-span-6 rounded-md bg-amber-500/10 p-3 text-xs text-amber-200">{blocks.join(' | ')}</div>}
       </section>
 
@@ -228,18 +293,18 @@ export default function RepoWorkbenchPage() {
 
       <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-5">
-          <Panel title="GitHub Connection">
+          <Panel title="① Connect GitHub">
             <div className="space-y-2">
-              <input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="GitHub token" className="input" />
+              <input value={token} onChange={(e) => setToken(e.target.value)} type="password" placeholder="GitHub PAT (ghp_…)" className="input" />
               <div className="flex gap-2">
                 <Button label="Save token" icon={Save} onClick={saveToken} busy={busy === 'github-token'} disabled={!token.trim()} />
                 <Button label="Validate" icon={ShieldAlert} onClick={loadStatus} />
               </div>
-              <p className="text-xs text-slate-500">{githubStatus?.authenticated ? `Connected as ${githubStatus.username}` : String(githubStatus?.blocker ?? 'Token not validated')}</p>
+              <p className="text-xs text-slate-500">{githubStatus?.authenticated ? `✓ Connected as ${githubStatus.username}` : String(githubStatus?.blocker ?? 'Token not validated')}</p>
             </div>
           </Panel>
 
-          <Panel title="Repo Selector">
+          <Panel title="② Select Repo & Branch">
             <div className="space-y-2">
               <select value={repoFullName} onChange={(e) => { setRepoFullName(e.target.value); const repo = repos.find((r) => r.full_name === e.target.value); if (repo) setBranch(repo.default_branch) }} className="input">
                 <option value="">Select accessible repo</option>
@@ -251,17 +316,45 @@ export default function RepoWorkbenchPage() {
                 <Button label="Refresh repos" icon={RefreshCcw} onClick={loadRepos} />
                 <Button label="Import/sync" icon={UploadCloud} onClick={importRepo} busy={busy === 'import'} disabled={!repoFullName} />
               </div>
+            </div>
+          </Panel>
+
+          <Panel title="③ Workspace">
+            <div className="space-y-2">
               <select value={workspace?.id ?? ''} onChange={(e) => setWorkspace(workspaces.find((w) => w.id === e.target.value) ?? null)} className="input">
                 <option value="">Select workspace</option>
                 {workspaces.map((w) => <option key={w.id} value={w.id}>{w.owner}/{w.repo} @ {w.branch}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-2">
-                <Button label="Pull latest" icon={RefreshCcw} onClick={() => workspace && runAction('pull', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/pull`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: false }) }); return 'Pulled latest changes.' })} disabled={!workspace} />
+                <Button label="Pull latest" icon={RefreshCcw} onClick={() => workspace && runAction('pull', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/pull`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: false }) }); return 'Pulled latest.' })} disabled={!workspace} />
                 <Button label="Load files" icon={FileText} onClick={() => loadTree()} disabled={!workspace} />
               </div>
-              <input value={workBranch} onChange={(e) => setWorkBranch(e.target.value)} placeholder="repo-workbench/fix" className="input" />
+              <input value={workBranch} onChange={(e) => setWorkBranch(e.target.value)} placeholder="feature/my-branch" className="input" />
               <Button label="Create branch" icon={GitBranch} onClick={() => workspace && runAction('branch', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/branch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ branchName: workBranch, confirm: true }) }); return `Created ${workBranch}` })} disabled={!workspace || !workBranch} />
               <p className="text-xs text-slate-500">{repoLabel}</p>
+
+              {workspace && (
+                <div className="pt-2 border-t border-white/10">
+                  <button onClick={() => setShowWorkspaceActions((v) => !v)} className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition">
+                    <ChevronDown className={`h-3.5 w-3.5 transition ${showWorkspaceActions ? 'rotate-180' : ''}`} /> Workspace actions
+                  </button>
+                  {showWorkspaceActions && (
+                    <div className="mt-3 space-y-2">
+                      <Button label="Reset workspace" icon={RefreshCcw} onClick={resetWorkspace} busy={busy === 'reset-workspace'} />
+                      <Button label="Archive workspace" icon={Archive} onClick={archiveWorkspace} busy={busy === 'archive-workspace'} />
+                      <Button label="Clear failed jobs" icon={XCircle} onClick={clearFailedJobs} busy={busy === 'clear-failed'} />
+                      <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                        <p className="text-xs text-red-400 font-medium">Danger zone</p>
+                        <p className="text-[10px] text-slate-500">Type <span className="font-mono text-red-300">{deletePhrase}</span> to confirm permanent deletion.</p>
+                        <input value={deleteConfirm} onChange={(e) => setDeleteConfirm(e.target.value)} placeholder={deletePhrase} className="input text-xs" />
+                        <button onClick={deleteWorkspace} disabled={deleteConfirm !== deletePhrase || busy === 'delete-workspace'} className="flex w-full items-center justify-center gap-2 rounded-md border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-500/20 disabled:opacity-40">
+                          {busy === 'delete-workspace' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Delete workspace
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Panel>
 
@@ -272,12 +365,59 @@ export default function RepoWorkbenchPage() {
                   {item.path}
                 </button>
               ))}
-              {tree.length === 0 && <p className="text-xs text-slate-500">Load a workspace tree to browse files.</p>}
+              {tree.length === 0 && <p className="text-xs text-slate-500">Load a workspace to browse files.</p>}
             </div>
           </Panel>
         </aside>
 
         <main className="space-y-5">
+          <Panel title="④ Coding Agent / Model">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mb-3">
+              {AGENT_PRESETS.map((preset) => {
+                const Icon = preset.icon
+                const active = selectedPreset.id === preset.id
+                return (
+                  <button key={preset.id} onClick={() => setSelectedPreset(preset)} className={`flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition ${active ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.06] hover:text-white'}`}>
+                    <div className="flex items-center gap-1.5"><Icon className="h-3.5 w-3.5" /><span className="text-xs font-semibold">{preset.label}</span></div>
+                    <span className="text-[10px] leading-tight opacity-70">{preset.description}</span>
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-[10px] text-slate-500">
+              Selected: <span className="text-white font-medium">{selectedPreset.label}</span> · Est. cost:{' '}
+              <span className="font-mono text-amber-300">{instruction ? estimateCost(instruction, selectedPreset) : '—'}</span>
+              {selectedPreset.id === 'premium' && <span className="ml-2 text-amber-400">Premium requires confirmation before run.</span>}
+            </p>
+          </Panel>
+
+          <Panel title="⑤ Agent Task">
+            <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={4} placeholder="Describe what you want the coding agent to do…" className="input min-h-28 resize-y" />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button label="Audit" icon={ShieldAlert} onClick={() => agent('audit')} disabled={!workspace || !can('canPlan')} />
+              <Button label="Plan" icon={FileText} onClick={() => agent('plan')} disabled={!workspace || !instruction.trim() || !can('canPlan')} />
+              <Button label="Generate patch" icon={Code2} onClick={() => agent('patch')} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
+              <Button label="Run AI" icon={Play} onClick={() => agent('run')} busy={busy === 'run'} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
+              <Button label="Refresh diff" icon={RefreshCcw} onClick={refreshDiff} disabled={!workspace} />
+              <Button label="Apply patch" icon={CheckCircle} onClick={() => workspace && runAction('apply', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/apply-patch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patchId: patchId || result?.patchId, confirm: true }) }); return 'Patch applied.' })} disabled={!workspace || !(patchId || result?.patchId)} />
+            </div>
+            {result?.summary && (
+              <div className="mt-3 rounded-md bg-white/5 p-3 text-sm text-slate-200">
+                <p>{result.summary}</p>
+                {(result.model || result.estimatedCostUsd != null) && (
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {result.model && `Model: ${result.provider ?? ''}/${result.model}`}
+                    {result.estimatedCostUsd != null && ` · Cost: $${result.estimatedCostUsd.toFixed(4)}`}
+                  </p>
+                )}
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="⑥ Diff Preview">
+            <pre className="max-h-80 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-slate-300">{diffText || result?.diffText || 'No diff loaded yet.'}</pre>
+          </Panel>
+
           <Panel title="File Viewer / Editor">
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="truncate font-mono text-xs text-cyan-200">{selectedPath || 'No file selected'}</span>
@@ -286,34 +426,17 @@ export default function RepoWorkbenchPage() {
             <textarea value={fileContent} onChange={(e) => setFileContent(e.target.value)} rows={14} className="h-80 w-full resize-y rounded-md border border-white/10 bg-black/30 p-3 font-mono text-xs text-slate-100 outline-none focus:border-cyan-500/50" />
           </Panel>
 
-          <Panel title="Agent Task">
-            <textarea value={instruction} onChange={(e) => setInstruction(e.target.value)} rows={4} placeholder="Ask the coding agent to audit, plan, or patch this repo..." className="input min-h-28 resize-y" />
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button label="Audit" icon={ShieldAlert} onClick={() => agent('audit')} disabled={!workspace || !can('canPlan')} />
-              <Button label="Plan" icon={FileText} onClick={() => agent('plan')} disabled={!workspace || !instruction.trim() || !can('canPlan')} />
-              <Button label="Generate patch" icon={Code2} onClick={() => agent('patch')} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
-              <Button label="Run AI" icon={Play} onClick={() => agent('run')} disabled={!workspace || !instruction.trim() || !can('canPatch')} />
-              <Button label="Refresh diff" icon={RefreshCcw} onClick={refreshDiff} disabled={!workspace} />
-              <Button label="Apply patch" icon={CheckCircle} onClick={() => workspace && runAction('apply', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/apply-patch`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patchId: patchId || result?.patchId, confirm: true }) }); return 'Patch applied.' })} disabled={!workspace || !(patchId || result?.patchId)} />
-            </div>
-            {result?.summary && <p className="mt-3 rounded-md bg-white/5 p-3 text-sm text-slate-200">{result.summary}</p>}
-          </Panel>
-
-          <Panel title="Diff Preview">
-            <pre className="max-h-80 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-slate-300">{diffText || result?.diffText || 'No diff loaded yet.'}</pre>
-          </Panel>
-
-          <Panel title="Checks">
+          <Panel title="⑦ Run Checks">
             <div className="flex flex-wrap gap-2">
               {CHECKS.map((command) => <Button key={command} label={command} icon={Play} onClick={() => runCheck(command)} disabled={!workspace || !can('canRunChecks')} />)}
             </div>
             <div className="mt-3 flex gap-2">
-              <input value={customCommand} onChange={(e) => setCustomCommand(e.target.value)} placeholder="custom command (requires env enable)" className="input" />
+              <input value={customCommand} onChange={(e) => setCustomCommand(e.target.value)} placeholder="custom command" className="input" />
               <Button label="Run custom" icon={Play} onClick={() => runCheck(customCommand)} disabled={!workspace || !customCommand.trim()} />
             </div>
           </Panel>
 
-          <Panel title="Commit / Push / PR / Merge">
+          <Panel title="⑧ Commit → Push → PR">
             <div className="grid gap-2 md:grid-cols-[1fr_auto]">
               <input value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} placeholder="Commit message" className="input" />
               <Button label="Commit" icon={GitCommit} onClick={() => workspace && runAction('commit', async () => { await api(`/api/admin/repo-workbench/${workspace.id}/commit`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ patchId: patchId || result?.patchId, message: commitMessage, branchName: workBranch, confirm: true }) }); return 'Changes committed.' })} disabled={!workspace || !commitMessage || !(patchId || result?.patchId)} />
@@ -327,12 +450,19 @@ export default function RepoWorkbenchPage() {
             </div>
           </Panel>
 
-          <Panel title="Deploy">
-            <p className="mb-2 text-xs text-slate-500">Deploy is disabled unless `REPO_WORKBENCH_ALLOW_DEPLOY=true`. Confirmation must match: <span className="font-mono text-slate-300">{deployPhrase}</span></p>
-            <div className="flex gap-2">
-              <input value={deployConfirm} onChange={(e) => setDeployConfirm(e.target.value)} placeholder={deployPhrase} className="input" />
-              <Button label="Deploy" icon={Rocket} onClick={() => workspace && runAction('deploy', async () => { const data = await api<{ output?: string }>(`/api/admin/repo-workbench/${workspace.id}/deploy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: deployConfirm, confirm: true }) }); setLogs(data.output || ''); return 'Deploy finished.' })} disabled={!workspace || !can('canDeploy') || deployConfirm !== deployPhrase} />
-            </div>
+          <Panel title="⑨ Deploy">
+            {deployBlocker
+              ? <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300"><span className="font-medium">Deploy disabled: </span>{deployBlocker}</div>
+              : (
+                <>
+                  <p className="mb-2 text-xs text-slate-500">Confirmation must match: <span className="font-mono text-slate-300">{deployPhrase}</span></p>
+                  <div className="flex gap-2">
+                    <input value={deployConfirm} onChange={(e) => setDeployConfirm(e.target.value)} placeholder={deployPhrase} className="input" />
+                    <Button label="Deploy" icon={Rocket} onClick={() => workspace && runAction('deploy', async () => { const data = await api<{ output?: string }>(`/api/admin/repo-workbench/${workspace.id}/deploy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: deployConfirm, confirm: true }) }); setLogs(data.output || ''); return 'Deploy finished.' })} disabled={!workspace || !can('canDeploy') || deployConfirm !== deployPhrase} />
+                  </div>
+                </>
+              )
+            }
           </Panel>
 
           <section>

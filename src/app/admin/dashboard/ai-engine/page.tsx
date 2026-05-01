@@ -29,6 +29,41 @@ interface GenxStatus {
   adultCapability?: { supported: boolean; route: string | null; reason: string | null }
 }
 
+// ── Runtime truth types (mirrors runtime-capability-truth.ts exports) ─────────
+
+interface RuntimeProviderEntry {
+  key: string
+  displayName: string
+  reason: string
+  configured: boolean
+  coveredByGenX: boolean
+  keySource: 'vault' | 'env' | 'missing'
+  status: 'configured_wired' | 'configured_not_wired' | 'not_configured_optional' | 'covered_by_genx' | 'blocked'
+}
+
+interface RuntimeCapabilityEntry {
+  name: string
+  status: 'available' | 'blocked' | 'not_implemented'
+  blocker: string | null
+  models: string[]
+  nextAction: string | null
+}
+
+interface RuntimeTruth {
+  success: boolean
+  genx: {
+    configured: boolean
+    available: boolean
+    keySource: 'vault' | 'env' | 'missing'
+    modelCount: number
+    capabilities: string[]
+    apiUrl: string | null
+  }
+  providers: RuntimeProviderEntry[]
+  capabilities: RuntimeCapabilityEntry[]
+  blockers: string[]
+}
+
 interface ModelEntry {
   id: string
   displayName: string
@@ -145,6 +180,7 @@ function StatusDot({ ok }: { ok: boolean | null }) {
 export default function AIEnginePage() {
   const [tab, setTab] = useState<TabId>('genx')
   const [status, setStatus] = useState<GenxStatus | null>(null)
+  const [runtimeTruth, setRuntimeTruth] = useState<RuntimeTruth | null>(null)
   const [models, setModels] = useState<ModelEntry[]>([])
   const [budgets, setBudgets] = useState<BudgetData | null>(null)
   const [learning, setLearning] = useState<LearningData | null>(null)
@@ -153,13 +189,15 @@ export default function AIEnginePage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [statusRes, modelsRes, budgetsRes, learningRes] = await Promise.allSettled([
+      const [statusRes, runtimeRes, modelsRes, budgetsRes, learningRes] = await Promise.allSettled([
         fetch('/api/admin/genx/status'),
+        fetch('/api/admin/runtime-truth'),
         fetch('/api/admin/models'),
         fetch('/api/admin/budgets'),
         fetch('/api/admin/learning'),
       ])
       if (statusRes.status === 'fulfilled' && statusRes.value.ok) setStatus(await statusRes.value.json())
+      if (runtimeRes.status === 'fulfilled' && runtimeRes.value.ok) setRuntimeTruth(await runtimeRes.value.json())
       if (modelsRes.status === 'fulfilled' && modelsRes.value.ok) {
         const d = await modelsRes.value.json()
         setModels(Array.isArray(d) ? d : (d?.models ?? []))
@@ -289,19 +327,43 @@ export default function AIEnginePage() {
           {/* Group 2 */}
           <div>
             <h2 className="text-xs uppercase tracking-[0.14em] text-slate-500 mb-3">2. Optional Fallback Providers</h2>
-            <p className="text-xs text-slate-600 mb-3">Configure only if GenX is insufficient. Each has a specific reason for existing.</p>
+            <p className="text-xs text-slate-600 mb-3">Configure only if GenX is insufficient. Status reflects keys stored in Settings vault.</p>
             <div className="grid gap-2 sm:grid-cols-2">
-              {FALLBACK_PROVIDERS.map(p => (
-                <div key={p.name} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-white">{p.name}</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">{p.reason}</p>
-                  </div>
-                  <span className="text-[10px] text-slate-600 shrink-0 mt-1 text-right">
-                    {p.wired ? 'Wired' : 'Not wired yet'}
-                  </span>
-                </div>
-              ))}
+              {runtimeTruth?.providers
+                ? runtimeTruth.providers.filter(p => !p.coveredByGenX).map(p => {
+                    const statusLabel =
+                      p.status === 'configured_wired'      ? { label: 'Configured + Wired',       color: 'text-emerald-400' } :
+                      p.status === 'configured_not_wired'  ? { label: 'Configured — Not wired',    color: 'text-amber-400'  } :
+                      p.status === 'not_configured_optional'? { label: 'Not configured — Optional', color: 'text-slate-500'  } :
+                      p.status === 'blocked'                ? { label: 'Blocked',                   color: 'text-red-400'    } :
+                                                             { label: p.status,                     color: 'text-slate-500'  }
+                    return (
+                      <div key={p.key} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-white">{p.displayName}</p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">{p.reason}</p>
+                          {p.configured && p.keySource && (
+                            <p className="text-[10px] text-slate-600 mt-0.5">Key source: {p.keySource}</p>
+                          )}
+                        </div>
+                        <span className={`text-[10px] shrink-0 mt-1 text-right ${statusLabel.color}`}>
+                          {statusLabel.label}
+                        </span>
+                      </div>
+                    )
+                  })
+                : FALLBACK_PROVIDERS.map(p => (
+                    <div key={p.name} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-white">{p.name}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">{p.reason}</p>
+                      </div>
+                      <span className="text-[10px] text-slate-600 shrink-0 mt-1 text-right">
+                        {p.wired ? 'Wired' : 'Not wired yet'}
+                      </span>
+                    </div>
+                  ))
+              }
             </div>
           </div>
 
@@ -425,24 +487,59 @@ export default function AIEnginePage() {
                 </tr>
               </thead>
               <tbody>
-                {CAPABILITIES_TABLE.map(row => (
-                  <tr key={row.cap} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                    <td className="px-3 py-2 text-slate-300 font-medium">{row.cap}</td>
-                    <td className="px-3 py-2 text-cyan-400">{row.genxModel}</td>
-                    <td className="px-3 py-2 text-slate-400">{row.fallback}</td>
-                    <td className="px-3 py-2">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] border ${
-                        row.status === 'Ready' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' :
-                        row.status === 'Blocked' ? 'text-red-400 border-red-500/20 bg-red-500/5' :
-                        'text-amber-400 border-amber-500/20 bg-amber-500/5'
-                      }`}>{row.status}</span>
-                    </td>
-                    <td className="px-3 py-2 text-slate-600">{row.blocker || '—'}</td>
-                  </tr>
-                ))}
+                {runtimeTruth?.capabilities
+                  ? runtimeTruth.capabilities.map(cap => {
+                      const staticRow = CAPABILITIES_TABLE.find(r => r.cap === cap.name)
+                      const statusLabel =
+                        cap.status === 'available'       ? 'Ready'      :
+                        cap.status === 'not_implemented' ? 'Blueprint'  :
+                                                           'Needs Setup'
+                      return (
+                        <tr key={cap.name} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                          <td className="px-3 py-2 text-slate-300 font-medium">{cap.name}</td>
+                          <td className="px-3 py-2 text-cyan-400">{cap.models[0] ?? staticRow?.genxModel ?? '—'}</td>
+                          <td className="px-3 py-2 text-slate-400">{staticRow?.fallback ?? '—'}</td>
+                          <td className="px-3 py-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] border ${
+                              cap.status === 'available'       ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' :
+                              cap.status === 'not_implemented' ? 'text-slate-400 border-slate-500/20 bg-slate-500/5'     :
+                                                                 'text-amber-400 border-amber-500/20 bg-amber-500/5'
+                            }`}>{statusLabel}</span>
+                          </td>
+                          <td className="px-3 py-2 text-slate-600">{cap.blocker ?? '—'}</td>
+                        </tr>
+                      )
+                    })
+                  : CAPABILITIES_TABLE.map(row => (
+                      <tr key={row.cap} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                        <td className="px-3 py-2 text-slate-300 font-medium">{row.cap}</td>
+                        <td className="px-3 py-2 text-cyan-400">{row.genxModel}</td>
+                        <td className="px-3 py-2 text-slate-400">{row.fallback}</td>
+                        <td className="px-3 py-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] border ${
+                            row.status === 'Ready' ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' :
+                            row.status === 'Blocked' ? 'text-red-400 border-red-500/20 bg-red-500/5' :
+                            'text-amber-400 border-amber-500/20 bg-amber-500/5'
+                          }`}>{row.status}</span>
+                        </td>
+                        <td className="px-3 py-2 text-slate-600">{row.blocker || '—'}</td>
+                      </tr>
+                    ))
+                }
               </tbody>
             </table>
           </div>
+          {runtimeTruth?.blockers && runtimeTruth.blockers.length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-1">
+              <p className="text-xs font-semibold text-amber-400 mb-2">Active blockers</p>
+              {runtimeTruth.blockers.map(b => (
+                <p key={b} className="text-xs text-slate-400 flex items-start gap-2">
+                  <AlertTriangle className="h-3 w-3 text-amber-400 mt-0.5 shrink-0" />
+                  {b}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

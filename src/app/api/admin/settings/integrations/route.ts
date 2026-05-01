@@ -193,6 +193,8 @@ export async function GET() {
       configured: !!(posthogRow?.apiKey || process.env.POSTHOG_API_KEY),
       source: posthogRow?.apiKey ? 'database' : (process.env.POSTHOG_API_KEY ? 'env' : 'none'),
     },
+    // Feature flags
+    aivaEnabled: process.env.AIVA_ENABLED === 'true',
   })
 }
 

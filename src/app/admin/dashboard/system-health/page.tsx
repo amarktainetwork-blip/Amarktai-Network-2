@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Activity, RefreshCw, Server, Cpu, MemoryStick, HardDrive, Wifi, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react'
 
-type TabId = 'vps' | 'services' | 'providers' | 'jobs' | 'apps'
+type TabId = 'vps' | 'services' | 'providers' | 'jobs' | 'apps' | 'mcp'
 
 interface VpsData {
   cpuPercent?: number
@@ -71,6 +71,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'providers', label: 'Providers' },
   { id: 'jobs',      label: 'Job Queue' },
   { id: 'apps',      label: 'App Uptime'},
+  { id: 'mcp',       label: 'MCP / Tools'},
 ]
 
 export default function SystemHealthPage() {
@@ -310,6 +311,55 @@ export default function SystemHealthPage() {
               Manage all apps →
             </Link>
           )}
+        </div>
+      )}
+
+      {/* MCP / Tools Tab */}
+      {tab === 'mcp' && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-3">
+            <div className="flex items-center gap-2 text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              <h2 className="text-sm font-semibold">MCP / Tool Registry — Not Wired Yet</h2>
+            </div>
+            <p className="text-xs text-slate-400">
+              Model Context Protocol (MCP) servers, the tool registry, webhooks, and per-agent tool permissions
+              are <strong className="text-slate-300">not yet implemented</strong> in this platform.
+              No fake tool calls are made. See <code className="font-mono text-slate-300">docs/forensic/mcp-tools-webhooks-audit.md</code> for the full audit.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
+            <h3 className="text-sm font-semibold text-white">Required Tool Architecture (pending)</h3>
+            <ul className="space-y-2 text-xs text-slate-400">
+              {[
+                { label: 'Tool registry', status: 'not-wired' },
+                { label: 'Per-app allowed tools', status: 'not-wired' },
+                { label: 'Per-agent allowed tools', status: 'not-wired' },
+                { label: 'Confirmation for destructive tools', status: 'not-wired' },
+                { label: 'Tool call logs', status: 'not-wired' },
+                { label: 'Budget / cost tracking per model call', status: 'partial' },
+                { label: 'GitHub tools (create PR, push, commit)', status: 'partial' },
+                { label: 'Repo tools (clone, tree, diff, patch)', status: 'partial' },
+                { label: 'Webhook registry', status: 'not-wired' },
+                { label: 'MCP server connections', status: 'not-wired' },
+                { label: 'Media tools (image gen, video gen, TTS)', status: 'partial' },
+                { label: 'Crawler tools (Firecrawl, Crawl4AI)', status: 'partial' },
+                { label: 'VPS tools (server health, restart)', status: 'partial' },
+              ].map(item => (
+                <li key={item.label} className="flex items-center justify-between">
+                  <span>{item.label}</span>
+                  <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full ${
+                    item.status === 'partial'
+                      ? 'bg-amber-500/10 text-amber-400'
+                      : 'bg-red-500/10 text-red-400'
+                  }`}>
+                    {item.status === 'partial' ? 'partial' : 'not wired'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
     </div>
