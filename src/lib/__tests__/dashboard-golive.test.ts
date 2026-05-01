@@ -155,19 +155,14 @@ describe('Repo Workbench — agent/model selector', () => {
     expect(src).toContain('deleteWorkspace')
   })
 
-  it('has Archive Workspace button', () => {
-    expect(src).toContain('archiveWorkspace')
-    expect(src).toContain('Archive workspace')
-  })
-
   it('has Reset Workspace button', () => {
     expect(src).toContain('resetWorkspace')
     expect(src).toContain('Reset workspace')
   })
 
-  it('has Clear Failed Jobs button', () => {
-    expect(src).toContain('clearFailedJobs')
-    expect(src).toContain('Clear failed jobs')
+  it('has Clear Logs button', () => {
+    expect(src).toContain('clearLogs')
+    expect(src).toContain('Clear logs')
   })
 
   it('Deploy section shows blocker when ENABLE_DEPLOY_ACTIONS not set', () => {

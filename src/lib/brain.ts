@@ -15,7 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { timingSafeEqual } from 'crypto'
 import { getDefaultModelForProvider, MODEL_REGISTRY } from '@/lib/model-registry'
 import { decryptVaultKey } from '@/lib/crypto-vault'
-import { isUsableServiceKey } from '@/lib/service-vault'
+import { getServiceKey, isUsableServiceKey } from '@/lib/service-vault'
 
 // ── Request / Response Contracts ─────────────────────────────────────────────
 
@@ -170,6 +170,32 @@ export interface ProviderCallResult {
  * @returns The API key string, or null if not configured anywhere
  */
 export async function getVaultApiKey(providerKey: string): Promise<string | null> {
+  const serviceEnvMap: Record<string, string[]> = {
+    openai: ['OPENAI_API_KEY'],
+    anthropic: ['ANTHROPIC_API_KEY'],
+    gemini: ['GEMINI_API_KEY'],
+    groq: ['GROQ_API_KEY'],
+    deepseek: ['DEEPSEEK_API_KEY'],
+    openrouter: ['OPENROUTER_API_KEY'],
+    together: ['TOGETHER_API_KEY'],
+    grok: ['GROK_API_KEY', 'XAI_API_KEY'],
+    xai: ['XAI_API_KEY', 'GROK_API_KEY'],
+    qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
+    nvidia: ['NVIDIA_API_KEY'],
+    huggingface: ['HUGGINGFACE_API_KEY'],
+    replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
+    suno: ['SUNO_API_KEY'],
+    github: ['GITHUB_TOKEN'],
+    cohere: ['COHERE_API_KEY'],
+    mistral: ['MISTRAL_API_KEY'],
+    genx: ['GENX_API_KEY'],
+    firecrawl: ['FIRECRAWL_API_KEY'],
+  }
+  for (const envVar of serviceEnvMap[providerKey] ?? []) {
+    const serviceKey = await getServiceKey(providerKey, envVar)
+    if (serviceKey) return normalizeProviderApiKey(serviceKey)
+  }
+
   // DB vault is the authoritative source (set via the Admin → AI Providers UI)
   try {
     const row = await prisma.aiProvider.findUnique({

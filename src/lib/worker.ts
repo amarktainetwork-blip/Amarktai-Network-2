@@ -21,7 +21,7 @@
  * When Redis is not available, these tasks run inline via the API layer.
  */
 
-import { createWorker, type JobPayload } from '@/lib/job-queue'
+import type { createWorker as createJobQueueWorker, JobPayload } from '@/lib/job-queue'
 
 // ── Job Processors ───────────────────────────────────────────────────────────
 
@@ -133,8 +133,10 @@ const processors: Record<string, JobProcessor> = {
 /**
  * Start the background worker. Call this from scripts/worker.mjs.
  */
-export function startWorker(): ReturnType<typeof createWorker> {
+export function startWorker(): ReturnType<typeof createJobQueueWorker> {
   console.log('[worker] Starting AmarktAI background worker...')
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { createWorker } = require('@/lib/job-queue') as typeof import('@/lib/job-queue')
 
   const worker = createWorker(async (job) => {
     const payload = job.data

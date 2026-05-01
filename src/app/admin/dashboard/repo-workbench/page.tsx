@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Archive,
   CheckCircle,
   ChevronDown,
   Code2,
@@ -241,15 +240,6 @@ export default function RepoWorkbenchPage() {
     })
   }
 
-  async function archiveWorkspace() {
-    if (!workspace) return
-    await runAction('archive-workspace', async () => {
-      await api(`/api/admin/repo-workbench/${workspace.id}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
-      setShowWorkspaceActions(false)
-      return 'Workspace archived.'
-    })
-  }
-
   async function resetWorkspace() {
     if (!workspace) return
     if (!confirm('Reset workspace? Uncommitted changes will be lost.')) return
@@ -260,11 +250,12 @@ export default function RepoWorkbenchPage() {
     })
   }
 
-  async function clearFailedJobs() {
+  async function clearLogs() {
     if (!workspace) return
-    await runAction('clear-failed', async () => {
-      const data = await api<{ cleared: number }>(`/api/admin/repo-workbench/${workspace.id}/clear-failed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
-      return `Cleared ${data.cleared ?? 0} failed job(s).`
+    await runAction('clear-logs', async () => {
+      const data = await api<{ cleared: number }>(`/api/admin/repo-workbench/${workspace.id}/clear-logs`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) })
+      setLogs('')
+      return `Cleared ${data.cleared ?? 0} log file(s).`
     })
   }
 
@@ -341,8 +332,7 @@ export default function RepoWorkbenchPage() {
                   {showWorkspaceActions && (
                     <div className="mt-3 space-y-2">
                       <Button label="Reset workspace" icon={RefreshCcw} onClick={resetWorkspace} busy={busy === 'reset-workspace'} />
-                      <Button label="Archive workspace" icon={Archive} onClick={archiveWorkspace} busy={busy === 'archive-workspace'} />
-                      <Button label="Clear failed jobs" icon={XCircle} onClick={clearFailedJobs} busy={busy === 'clear-failed'} />
+                      <Button label="Clear logs" icon={XCircle} onClick={clearLogs} busy={busy === 'clear-logs'} />
                       <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-2">
                         <p className="text-xs text-red-400 font-medium">Danger zone</p>
                         <p className="text-[10px] text-slate-500">Type <span className="font-mono text-red-300">{deletePhrase}</span> to confirm permanent deletion.</p>

@@ -10,7 +10,7 @@
  * Server-side only.
  */
 
-import { Queue, Worker, type Job } from 'bullmq'
+import type { Queue, Worker, Job } from 'bullmq'
 
 // ── Connection config ────────────────────────────────────────────────────────
 
@@ -45,6 +45,8 @@ export function getQueue(name: string = JOB_QUEUE_NAME): Queue | null {
   if (_queues.has(name)) return _queues.get(name)!
   const connection = getConnection()
   if (!connection) return null
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Queue } = require('bullmq') as typeof import('bullmq')
   const queue = new Queue(name, { connection })
   _queues.set(name, queue)
   return queue
@@ -102,6 +104,8 @@ export function createWorker(
 ): Worker | null {
   const connection = getConnection()
   if (!connection) return null
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { Worker } = require('bullmq') as typeof import('bullmq')
   const worker = new Worker<JobPayload>(JOB_QUEUE_NAME, processor, {
     connection,
     concurrency: 5,

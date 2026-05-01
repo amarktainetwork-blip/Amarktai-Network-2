@@ -112,31 +112,16 @@ export default function CreatorStudioTab({ initialMode }: CreatorStudioTabProps)
           }),
         })
       } else if (mode === 'image') {
-        res = await fetch('/api/admin/brain/test', {
+        res = await fetch('/api/brain/image', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId: '__admin_test__', appSecret: 'admin-test-secret', taskType: 'image', message: prompt }),
+          body: JSON.stringify({ prompt }),
         })
       } else if (mode === 'music') {
-        const genreMap: Record<string, string> = {
-          Pop: 'pop', Rock: 'rock', Gospel: 'gospel', Amapiano: 'amapiano',
-          EDM: 'edm', 'Hip-Hop': 'hip_hop', 'R&B': 'rnb', Jazz: 'jazz',
-          Classical: 'classical', Cinematic: 'cinematic', 'Lo-Fi': 'lofi',
-          Afrobeats: 'afrobeats', Country: 'country', Reggae: 'reggae',
-        }
-        res = await fetch('/api/admin/music-studio', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'create',
-            request: {
-              appSlug: 'workspace',
-              title: prompt,
-              theme: `${prompt}. Mood: ${mood}`,
-              genre: genreMap[genre] ?? 'pop',
-              vocalStyle: instrumental ? 'instrumental_only' : 'female_lead',
-              durationSeconds: 120,
-            },
-          }),
-        })
+        res = new Response(JSON.stringify({
+          success: false,
+          executed: false,
+          error: 'Music generation is disabled until a real audio provider, job polling, and artifact flow are verified.',
+        }), { status: 501, headers: { 'Content-Type': 'application/json' } })
       } else if (mode === 'voice') {
         res = await fetch('/api/brain/tts', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -150,10 +135,11 @@ export default function CreatorStudioTab({ initialMode }: CreatorStudioTabProps)
           }),
         })
       } else if (mode === 'video') {
-        res = await fetch('/api/brain/video-generate', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ appId: '__admin_test__', appSecret: 'admin-test-secret', prompt }),
-        })
+        res = new Response(JSON.stringify({
+          success: false,
+          executed: false,
+          error: 'Video generation is disabled until a real render provider, quota check, polling, and artifact flow are verified.',
+        }), { status: 501, headers: { 'Content-Type': 'application/json' } })
       } else if (mode === 'campaign') {
         res = await fetch('/api/admin/brain/test', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -214,9 +200,9 @@ export default function CreatorStudioTab({ initialMode }: CreatorStudioTabProps)
               latencyMs: data.latencyMs ?? 0,
             }
           : {
-              success: data.success ?? (!!data.output || !!data.audioUrl),
+              success: data.success ?? data.executed ?? (!!data.output || !!data.audioUrl || !!data.imageUrl || !!data.imageBase64),
               output: data.output ?? data.text ?? null,
-              imageUrl: data.imageUrl ?? null,
+              imageUrl: data.imageUrl ?? (data.imageBase64 ? `data:image/png;base64,${data.imageBase64}` : null),
               audioUrl: data.audioUrl ?? null,
               videoUrl: data.videoUrl ?? null,
               error: data.error ?? null,

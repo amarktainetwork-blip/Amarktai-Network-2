@@ -15,6 +15,8 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { getProviderKey } from '@/lib/provider-config'
+import { saveServiceKey } from '@/lib/service-vault'
 
 // ── Input Validation ──────────────────────────────────────────────────────────
 
@@ -100,14 +102,7 @@ export interface GitHubPushResult {
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
 async function getAccessToken(): Promise<string | null> {
-  try {
-    const config = await prisma.gitHubConfig.findFirst({
-      orderBy: { id: 'desc' },
-    })
-    return config?.accessToken ?? null
-  } catch {
-    return null
-  }
+  return getProviderKey('github')
 }
 
 const GITHUB_API_BASE = 'https://api.github.com'
@@ -157,22 +152,18 @@ async function githubFetch(
 
 export async function getGitHubConfig(): Promise<GitHubConfigData | null> {
   try {
-    const row = await prisma.gitHubConfig.findFirst({
-      orderBy: { id: 'desc' },
-    })
-    if (!row) return null
+    const token = await getAccessToken()
+    if (!token) return null
 
     return {
-      id: row.id,
-      username: row.username,
-      accessTokenMasked: row.accessToken
-        ? `••••••••••••${row.accessToken.slice(-4)}`
-        : '(not set)',
-      defaultOwner: row.defaultOwner,
-      configured: !!row.accessToken,
-      lastValidatedAt: row.lastValidatedAt?.toISOString() ?? null,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      id: 0,
+      username: '',
+      accessTokenMasked: `????????????${token.slice(-4)}`,
+      defaultOwner: '',
+      configured: true,
+      lastValidatedAt: null,
+      createdAt: new Date(0).toISOString(),
+      updatedAt: new Date(0).toISOString(),
     }
   } catch {
     return null
@@ -184,25 +175,26 @@ export async function saveGitHubConfig(input: {
   accessToken: string
   defaultOwner: string
 }): Promise<GitHubConfigData> {
-  // Upsert: one global GitHub config for the admin
-  const existing = await prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } })
-
-  const row = existing
-    ? await prisma.gitHubConfig.update({
-        where: { id: existing.id },
-        data: { ...input, updatedAt: new Date() },
-      })
-    : await prisma.gitHubConfig.create({ data: input })
+  await saveServiceKey({
+    integrationKey: 'github',
+    displayName: 'GitHub',
+    apiKey: input.accessToken,
+    notes: {
+      username: input.username || '',
+      defaultOwner: input.defaultOwner || '',
+      savedAt: new Date().toISOString(),
+    },
+  })
 
   return {
-    id: row.id,
-    username: row.username,
-    accessTokenMasked: `••••••••••••${row.accessToken.slice(-4)}`,
-    defaultOwner: row.defaultOwner,
+    id: 0,
+    username: input.username,
+    accessTokenMasked: `????????????${input.accessToken.slice(-4)}`,
+    defaultOwner: input.defaultOwner,
     configured: true,
-    lastValidatedAt: row.lastValidatedAt?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
+    lastValidatedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }
 }
 
@@ -223,11 +215,6 @@ export async function validateGitHubToken(): Promise<{
     if (!ok) return { valid: false, username: null, error: 'Token invalid or expired' }
 
     const user = body as { login: string }
-
-    // Update lastValidatedAt
-    await prisma.gitHubConfig.updateMany({
-      data: { lastValidatedAt: new Date(), username: user.login },
-    })
 
     return { valid: true, username: user.login, error: null }
   } catch (e) {
