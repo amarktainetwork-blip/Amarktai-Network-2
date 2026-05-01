@@ -11,16 +11,16 @@ export type CoreProvider =
   | 'together'
   | 'qwen'
 
-const PROVIDER_ENV: Record<CoreProvider, string> = {
-  genx: 'GENX_API_KEY',
-  openai: 'OPENAI_API_KEY',
-  groq: 'GROQ_API_KEY',
-  gemini: 'GEMINI_API_KEY',
-  replicate: 'REPLICATE_API_TOKEN',
-  suno: 'SUNO_API_KEY',
-  github: 'GITHUB_TOKEN',
-  together: 'TOGETHER_API_KEY',
-  qwen: 'QWEN_API_KEY',
+const PROVIDER_ENV: Record<CoreProvider, string[]> = {
+  genx: ['GENX_API_KEY'],
+  openai: ['OPENAI_API_KEY'],
+  groq: ['GROQ_API_KEY'],
+  gemini: ['GEMINI_API_KEY'],
+  replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
+  suno: ['SUNO_API_KEY'],
+  github: ['GITHUB_TOKEN'],
+  together: ['TOGETHER_API_KEY'],
+  qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
 }
 
 const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
@@ -36,7 +36,11 @@ const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
 }
 
 export async function getProviderKey(provider: CoreProvider): Promise<string | null> {
-  return getServiceKey(PROVIDER_INTEGRATION_KEY[provider], PROVIDER_ENV[provider])
+  for (const envVar of PROVIDER_ENV[provider]) {
+    const key = await getServiceKey(PROVIDER_INTEGRATION_KEY[provider], envVar)
+    if (key) return key
+  }
+  return null
 }
 
 export async function isProviderConfigured(provider: CoreProvider): Promise<boolean> {

@@ -12,9 +12,6 @@
  * No fabricated memories.
  */
 
-import { searchVectors, upsertVectors, ensureCollection } from './vector-store'
-import { cacheGet, cacheSet, cacheDel } from './redis'
-import { generateEmbedding } from './rag-pipeline'
 import { prisma } from './prisma'
 import { randomUUID } from 'crypto'
 
@@ -214,9 +211,11 @@ export async function storeMemory(input: {
   }).catch(() => { /* non-critical */ })
 
   // Store in vector DB for semantic search
+  const { generateEmbedding } = await import('./rag-pipeline')
   const embedding = await generateEmbedding(input.content)
   if (embedding) {
     try {
+      const { ensureCollection, upsertVectors } = await import('./vector-store')
       await ensureCollection()
       await upsertVectors([{
         id,
@@ -230,6 +229,7 @@ export async function storeMemory(input: {
   }
 
   // Cache in Redis for fast session access
+  const { cacheSet } = await import('./redis')
   await cacheSet(`mem:${id}`, JSON.stringify(memory), SESSION_CACHE_TTL)
 
   return memory
@@ -237,6 +237,7 @@ export async function storeMemory(input: {
 
 /** Retrieve a specific memory. */
 export async function getMemory(id: string): Promise<Memory | null> {
+  const { cacheGet, cacheSet, cacheDel } = await import('./redis')
   // Try Redis cache first
   const cached = await cacheGet(`mem:${id}`)
   if (cached) {
@@ -292,6 +293,7 @@ export async function getMemory(id: string): Promise<Memory | null> {
 /** Delete a memory. */
 export async function deleteMemory(id: string): Promise<boolean> {
   try {
+    const { cacheDel } = await import('./redis')
     const deleted = await prisma.memoryEntry.deleteMany({ where: { key: encodeKey(id) } })
     await cacheDel(`mem:${id}`)
     return deleted.count > 0
@@ -309,9 +311,11 @@ export async function searchMemories(query: MemoryQuery): Promise<MemorySearchRe
   const { userId, appSlug, query: queryText, types, limit = 10, minImportance = 0 } = query
 
   // First try semantic search via vector store
+  const { generateEmbedding } = await import('./rag-pipeline')
   const embedding = await generateEmbedding(queryText)
   if (embedding) {
     try {
+      const { searchVectors } = await import('./vector-store')
       const results = await searchVectors(embedding, limit * 3)
       const filtered = results
         .filter((r) => {

@@ -10,7 +10,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { decryptVaultKey } from '@/lib/crypto-vault'
+import { decryptVaultKey, encryptVaultKey } from '@/lib/crypto-vault'
 
 const PLACEHOLDER_KEY_PATTERNS = [
   /^test$/i,
@@ -63,6 +63,33 @@ export async function getServiceKey(integrationKey: string, envVar: string): Pro
   // Env-var fallback for local dev / CI
   const envValue = process.env[envVar]
   return isUsableServiceKey(envValue) ? envValue.trim() : null
+}
+
+export async function saveServiceKey(input: {
+  integrationKey: string
+  displayName: string
+  apiKey: string
+  apiUrl?: string
+  notes?: Record<string, unknown>
+}): Promise<void> {
+  await prisma.integrationConfig.upsert({
+    where: { key: input.integrationKey },
+    update: {
+      displayName: input.displayName,
+      apiKey: encryptVaultKey(input.apiKey.trim()),
+      apiUrl: input.apiUrl ?? '',
+      enabled: true,
+      notes: input.notes ? JSON.stringify(input.notes) : undefined,
+    },
+    create: {
+      key: input.integrationKey,
+      displayName: input.displayName,
+      apiKey: encryptVaultKey(input.apiKey.trim()),
+      apiUrl: input.apiUrl ?? '',
+      enabled: true,
+      notes: input.notes ? JSON.stringify(input.notes) : '',
+    },
+  })
 }
 
 /**

@@ -17,9 +17,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { getQueueStatus, getQueue } from '@/lib/job-queue'
-import { getStorageStatus } from '@/lib/storage-driver'
-import { emitSystemEvent } from '@/lib/event-bus'
+
+async function emitManagerEvent(payload: Record<string, unknown>): Promise<void> {
+  const { emitSystemEvent } = await import('@/lib/event-bus')
+  emitSystemEvent('manager_action', payload)
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,7 +139,7 @@ export async function runRoutingManagerCheck(): Promise<ManagerCheckResult> {
 
   await logManagerAction(result)
   if (actionsPerformed.length > 0) {
-    emitSystemEvent('manager_action', { manager: 'routing', actions: actionsPerformed })
+    await emitManagerEvent({ manager: 'routing', actions: actionsPerformed })
   }
   return result
 }
@@ -145,6 +147,7 @@ export async function runRoutingManagerCheck(): Promise<ManagerCheckResult> {
 // ── Queue Manager ────────────────────────────────────────────────────────────
 
 export async function runQueueManagerCheck(): Promise<ManagerCheckResult> {
+  const { getQueueStatus, getQueue } = await import('@/lib/job-queue')
   const status = await getQueueStatus()
 
   const stuckJobs = (status.counts['stuck'] ?? 0) + (status.counts['stalled'] ?? 0)
@@ -208,7 +211,7 @@ export async function runQueueManagerCheck(): Promise<ManagerCheckResult> {
 
   await logManagerAction(result)
   if (actionsPerformed.length > 0) {
-    emitSystemEvent('manager_action', { manager: 'queue', actions: actionsPerformed })
+    await emitManagerEvent({ manager: 'queue', actions: actionsPerformed })
   }
   return result
 }
@@ -216,6 +219,7 @@ export async function runQueueManagerCheck(): Promise<ManagerCheckResult> {
 // ── Artifact Manager ─────────────────────────────────────────────────────────
 
 export async function runArtifactManagerCheck(): Promise<ManagerCheckResult> {
+  const { getStorageStatus } = await import('@/lib/storage-driver')
   const storageStatus = getStorageStatus()
   let totalArtifacts = 0
   let failedArtifacts = 0
@@ -322,7 +326,7 @@ export async function runAppManagerCheck(): Promise<ManagerCheckResult> {
 
   await logManagerAction(result)
   if (actionsPerformed.length > 0) {
-    emitSystemEvent('manager_action', { manager: 'app', actions: actionsPerformed })
+    await emitManagerEvent({ manager: 'app', actions: actionsPerformed })
   }
   return result
 }

@@ -4,6 +4,7 @@ import path from 'path'
 import { promisify } from 'util'
 import { prisma } from '@/lib/prisma'
 import { createArtifact } from '@/lib/artifact-store'
+import { getProviderKey } from '@/lib/provider-config'
 import { MODEL_REGISTRY } from '@/lib/model-registry'
 import { listGenXModels } from '@/lib/genx-client'
 import { routeWorkspaceTask } from '@/lib/workspace-executor'
@@ -176,12 +177,7 @@ export function isBinaryPath(filePath: string): boolean {
 }
 
 export async function getGitHubToken(): Promise<string | null> {
-  try {
-    const config = await prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } })
-    return config?.accessToken?.trim() || null
-  } catch {
-    return null
-  }
+  return getProviderKey('github')
 }
 
 export async function runGit(cwd: string, args: string[], timeoutMs = 120_000, token?: string) {
@@ -555,6 +551,7 @@ export async function runMagicPipeline(input: {
 
   const parsed = parseJsonOutput(result.output)
   const diffText = String(parsed.diffText ?? parsed.diff ?? '')
+  const realDiff = looksLikeUnifiedDiff(diffText)
   const changes = Array.isArray(parsed.changes) ? parsed.changes as Array<{ file: string; description: string }> : []
   // Accept both 'filesAffected' and 'affectedFiles' — models may return either field name
   const filesAffected = Array.isArray(parsed.filesAffected) ? parsed.filesAffected as string[] : Array.isArray(parsed.affectedFiles) ? parsed.affectedFiles as string[] : []
@@ -581,7 +578,7 @@ export async function runMagicPipeline(input: {
   let patchId: string | null = null
   let patchArtifactId: string | null = null
 
-  if (diffText.trim()) {
+  if (diffText.trim() && realDiff) {
     logs.push('[pipeline] Patch diff received, saving proposal...')
     const patch = await prisma.repoPatch.create({
       data: {
@@ -610,7 +607,7 @@ export async function runMagicPipeline(input: {
     patchArtifactId = patchArtifact.id
     logs.push(`[pipeline] Patch saved: ${patch.id}`)
   } else {
-    logs.push('[pipeline] No patch diff in response (analysis/plan only)')
+    logs.push(diffText.trim() ? '[pipeline] Agent returned content, but it was not a valid unified diff.' : '[pipeline] No patch diff in response (analysis/plan only)')
   }
 
   await prisma.repoTask.update({
@@ -765,8 +762,26 @@ export function parseJsonOutput(raw: string): Record<string, unknown> {
   try {
     return JSON.parse(cleaned) as Record<string, unknown>
   } catch {
-    return { summary: cleaned.slice(0, 4000), rawOutput: cleaned }
+    const objectMatch = cleaned.match(/\{[\s\S]*\}/)
+    if (objectMatch) {
+      try {
+        return JSON.parse(objectMatch[0]) as Record<string, unknown>
+      } catch {
+        // fall through to raw output below
+      }
+    }
+    return { summary: cleaned.slice(0, 4000), rawOutput: cleaned, diffText: extractUnifiedDiff(cleaned) }
   }
+}
+
+function extractUnifiedDiff(raw: string): string {
+  const start = raw.search(/^diff --git |\n--- |\n\+\+\+ /m)
+  return start >= 0 ? raw.slice(start).trim() : ''
+}
+
+function looksLikeUnifiedDiff(diffText: string): boolean {
+  const text = diffText.trim()
+  return /^diff --git /m.test(text) || (/^--- /m.test(text) && /^\+\+\+ /m.test(text) && /^@@ /m.test(text))
 }
 
 export async function createAuditTask(workspaceId: string, agentMode: AgentMode, modelId: string | undefined, depth: 'quick' | 'standard' | 'deep') {
@@ -861,6 +876,7 @@ export async function createPatchProposal(input: {
   const ai = await runRepoAiTask({ ...input, kind: 'patch', depth: 'standard' })
   const diffText = String(ai.parsed.diffText ?? ai.parsed.diff ?? '')
   if (!diffText.trim()) throw new Error('Coding agent did not produce a patch diff')
+  if (!looksLikeUnifiedDiff(diffText)) throw new Error('Coding agent returned content, but it was not a valid unified diff')
   const patch = await prisma.repoPatch.create({
     data: {
       repoWorkspaceId: workspace.id,
@@ -1348,4 +1364,38 @@ export async function deployWorkspace(workspaceId: string, confirmation: string)
   await fs.writeFile(logPath, output, 'utf8')
   await prisma.repoTask.update({ where: { id: task.id }, data: { status: ok ? 'completed' : 'failed' } })
   return { jobId: task.id, status: ok ? 'passed' : 'failed', ok, output }
+}
+
+export async function deleteRepoWorkspace(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  assertInside(getRepoStorageRoot(), workspace.localPath)
+  await fs.rm(workspace.localPath, { recursive: true, force: true })
+  await prisma.repoWorkspace.delete({ where: { id: workspaceId } })
+  return { deleted: true, workspaceId }
+}
+
+export async function resetRepoWorkspace(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const reset = await runGit(workspace.localPath, ['reset', '--hard', 'HEAD'], 60_000)
+  if (!reset.ok) throw new Error(`git reset failed: ${reset.stderr || reset.stdout}`)
+  const clean = await runGit(workspace.localPath, ['clean', '-fd'], 60_000)
+  if (!clean.ok) throw new Error(`git clean failed: ${clean.stderr || clean.stdout}`)
+  const status = await getWorkspaceGitStatus(workspaceId)
+  await prisma.repoWorkspace.update({ where: { id: workspaceId }, data: { status: status.dirty ? 'dirty' : 'ready' } }).catch(() => null)
+  return { reset: true, dirty: status.dirty, dirtyFiles: status.dirtyFiles }
+}
+
+export async function clearRepoWorkspaceLogs(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId)
+  const tasks = await prisma.repoTask.findMany({ where: { repoWorkspaceId: workspace.id }, select: { id: true } })
+  let cleared = 0
+  for (const task of tasks) {
+    try {
+      await fs.rm(resolveWorkspacePath('logs', `${task.id}.log`), { force: true })
+      cleared += 1
+    } catch {
+      // continue
+    }
+  }
+  return { cleared }
 }
