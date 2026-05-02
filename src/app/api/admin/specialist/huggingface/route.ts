@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
+import { saveJsonArtifact, saveMediaArtifact } from '@/lib/media-artifacts'
 
 const schema = z.object({
   modelId: z.string().min(1).optional(),
   endpointUrl: z.string().url().optional(),
   inputs: z.unknown(),
   capability: z.string().min(1).default('huggingface_inference'),
+  appSlug: z.string().min(1).optional().default('amarktai-network'),
+  saveArtifact: z.boolean().optional().default(true),
 })
 
 export const dynamic = 'force-dynamic'
@@ -29,6 +32,30 @@ export async function POST(request: NextRequest) {
     capability: parsed.data.capability,
   })
 
+  let artifact = null
+  if (parsed.data.saveArtifact && result.ok) {
+    if (result.bytes) {
+      artifact = await saveMediaArtifact({
+        appSlug: parsed.data.appSlug,
+        provider: result.provider,
+        model: result.model,
+        capability: result.capability,
+        contentType: result.contentType ?? 'application/octet-stream',
+        bytes: result.bytes,
+        metadata: { endpointUrl: parsed.data.endpointUrl ? 'custom_endpoint' : 'model_id', latencyMs: result.latencyMs },
+      })
+    } else if (result.json) {
+      artifact = await saveJsonArtifact({
+        appSlug: parsed.data.appSlug,
+        provider: result.provider,
+        model: result.model,
+        capability: result.capability,
+        json: result.json,
+        metadata: { endpointUrl: parsed.data.endpointUrl ? 'custom_endpoint' : 'model_id', latencyMs: result.latencyMs },
+      })
+    }
+  }
+
   if (result.bytes) {
     return new NextResponse(result.bytes, {
       status: result.ok ? 200 : 409,
@@ -38,9 +65,10 @@ export async function POST(request: NextRequest) {
         'X-Model': result.model,
         'X-Capability': result.capability,
         'X-Latency-Ms': String(result.latencyMs),
+        ...(artifact ? { 'X-Artifact-Id': artifact.id, 'X-Artifact-Path': artifact.publicPath } : {}),
       },
     })
   }
 
-  return NextResponse.json({ success: result.ok, ...result }, { status: result.ok ? 200 : 409 })
+  return NextResponse.json({ success: result.ok, ...result, artifact }, { status: result.ok ? 200 : 409 })
 }
