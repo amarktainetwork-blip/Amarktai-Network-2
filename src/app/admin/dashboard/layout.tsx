@@ -4,6 +4,7 @@ import '@fontsource-variable/inter'
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import AivaAssistantPanel from '@/components/admin/AivaAssistantPanel'
 import {
   Menu,
   X,
@@ -128,8 +129,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
 
-      {/* Aiva floating assistant — disabled by default; set NEXT_PUBLIC_AIVA_ENABLED=true to enable */}
-      {showAivaAssistant && null}
+      {/* Aiva floating assistant — one surface only; disabled by default; set NEXT_PUBLIC_AIVA_ENABLED=true to enable */}
+      {showAivaAssistant && <AivaAssistantPanel />}
     </div>
   )
 }
