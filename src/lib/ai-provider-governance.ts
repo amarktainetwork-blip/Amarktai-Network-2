@@ -19,6 +19,7 @@ export type ProviderGovernanceStatus =
 export type ProviderCapability =
   | 'gateway'
   | 'chat'
+  | 'creative'
   | 'reasoning'
   | 'coding'
   | 'image_generation'
@@ -68,7 +69,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'GENX_API_KEY',
     status: 'core',
     reason: 'Primary AI gateway and model router for Amarktai Network.',
-    capabilities: ['gateway', 'chat', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'research'],
+    capabilities: ['gateway', 'chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'research'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -94,7 +95,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'DASHSCOPE_API_KEY',
     status: 'core',
     reason: 'Cheap, strong multilingual/chat/coding backbone that should not be ignored.',
-    capabilities: ['chat', 'reasoning', 'coding', 'creative' as ProviderCapability].filter(Boolean) as ProviderCapability[],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -107,7 +108,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'GROQ_API_KEY',
     status: 'core',
     reason: 'Fast low-cost inference for chat, routing, and fallback responses.',
-    capabilities: ['chat', 'reasoning', 'coding', 'voice_tts'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'voice_tts'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -120,7 +121,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'TOGETHER_API_KEY',
     status: 'core',
     reason: 'Cheap open-model route and specialist adult-safe provider option when explicitly enabled.',
-    capabilities: ['chat', 'reasoning', 'coding', 'image_generation', 'adult_text', 'adult_image'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'adult_text', 'adult_image'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -133,7 +134,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'HUGGINGFACE_API_KEY',
     status: 'core',
     reason: 'Free/open-source fallback for text, image and adult specialist routes when approved.',
-    capabilities: ['chat', 'coding', 'image_generation', 'voice_tts', 'adult_image'],
+    capabilities: ['chat', 'creative', 'coding', 'image_generation', 'voice_tts', 'adult_image'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -146,7 +147,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'OPENROUTER_API_KEY',
     status: 'active_optional',
     reason: 'Aggregator fallback for model access when direct providers are unavailable.',
-    capabilities: ['chat', 'reasoning', 'coding'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
@@ -172,7 +173,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'OPENAI_API_KEY',
     status: 'advanced_optional',
     reason: 'Premium direct fallback when GenX is unavailable or explicit direct route is required.',
-    capabilities: ['chat', 'reasoning', 'coding', 'image_generation', 'voice_tts', 'embeddings', 'moderation'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'voice_tts', 'embeddings'],
     coveredByGenX: true,
     wired: true,
     showInPrimarySetup: false,
@@ -186,7 +187,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     envVar: 'XAI_API_KEY',
     status: 'advanced_optional',
     reason: 'Premium Grok fallback and possible specialist adult-safe provider when explicitly approved.',
-    capabilities: ['chat', 'reasoning', 'coding', 'voice_tts', 'adult_text', 'adult_image'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'voice_tts', 'adult_text', 'adult_image'],
     coveredByGenX: true,
     wired: true,
     showInPrimarySetup: false,
@@ -384,7 +385,7 @@ export const PROPOSED_PROVIDER_BACKLOG: readonly ProviderGovernanceEntry[] = [
     envVar: 'FIREWORKS_API_KEY',
     status: 'proposed',
     reason: 'Low-cost open-model inference candidate if Qwen/Groq/Together are insufficient.',
-    capabilities: ['chat', 'reasoning', 'coding'],
+    capabilities: ['chat', 'creative', 'reasoning', 'coding'],
     coveredByGenX: false,
     wired: false,
     showInPrimarySetup: false,
