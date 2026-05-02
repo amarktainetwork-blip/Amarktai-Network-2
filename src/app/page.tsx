@@ -4,375 +4,273 @@ import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
-  MessageSquare,
-  ImageIcon,
-  Mic,
-  Video,
   Bot,
-  Workflow,
-  Archive,
-  Database,
-  FolderGit2,
-  Music,
-  Sparkles,
+  Boxes,
+  BrainCircuit,
+  CheckCircle2,
   ChevronRight,
+  Command,
+  Compass,
+  Fingerprint,
+  GitBranch,
+  LockKeyhole,
+  Orbit,
+  PlayCircle,
+  RadioTower,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import NetworkPulseBackground from '@/components/visual/NetworkPulseBackground'
 
-const capabilities = [
-  { icon: Sparkles,     label: 'Aiva Assistant',       desc: 'Intelligent chat, routing, and task execution in one interface.' },
-  { icon: MessageSquare, label: 'Chat & Reasoning',    desc: 'Task-aware routing across language models.' },
-  { icon: ImageIcon,    label: 'Image Generation',     desc: 'High-fidelity visuals with provider fallback.' },
-  { icon: Mic,          label: 'Voice Stack',           desc: 'STT, TTS, and persona-aware voice flows.' },
-  { icon: Video,        label: 'Video Pipelines',       desc: 'Queue-backed generation under one surface.' },
-  { icon: Music,        label: 'Music Creation',        desc: 'AI song generation with lyrics, vocals, and cover art.' },
-  { icon: Bot,          label: 'App Agents',            desc: 'App-scoped agents with policy and memory.' },
-  { icon: Workflow,     label: 'Workflows',             desc: 'Chain multimodal tasks for production ops.' },
-  { icon: Archive,      label: 'Artifacts',             desc: 'Stored outputs across image, audio, code.' },
-  { icon: Database,     label: 'Memory Layer',          desc: 'Cross-session context where configured.' },
-  { icon: FolderGit2,   label: 'Repo Workbench',        desc: 'Edit, push, PR, and deploy from operator console.' },
-]
-
-const workflowSteps = [
+const platformPillars = [
   {
-    step: '01',
-    title: 'Describe your task',
-    body: 'Tell Aiva what you need — chat, generate media, build a workflow, edit code, or automate a process.',
-    color: 'text-cyan-400',
+    icon: Bot,
+    title: 'Aiva at the centre',
+    body: 'Aiva is the operator interface: real-time conversation, routed intelligence, memory-aware context and permission-gated action control.',
   },
   {
-    step: '02',
-    title: 'Aiva understands and routes',
-    body: 'Aiva intelligently routes your request to the right capability, model, and provider for the task.',
-    color: 'text-blue-400',
+    icon: Boxes,
+    title: 'App-specific intelligence',
+    body: 'Each product can receive its own AI package: the right capabilities, rules, budget, voice, memory and tools for that product’s job.',
   },
   {
-    step: '03',
-    title: 'Controlled execution',
-    body: 'Smart provider selection runs with policy layers, memory hooks, and fallback logic attached.',
-    color: 'text-violet-400',
+    icon: GitBranch,
+    title: 'Prompt-to-PR workspace',
+    body: 'Connect a repo, describe the work, review the diff and create a PR. The goal is simple: command in, reviewed code out.',
   },
   {
-    step: '04',
-    title: 'Output & artifacts',
-    body: 'Generated outputs, artifacts, and traces surface in the workspace for inspection and iteration.',
-    color: 'text-emerald-400',
+    icon: ShieldCheck,
+    title: 'Control without chaos',
+    body: 'Deploys, PRs, spend, marketing sends and destructive actions are approval-gated and audited instead of hidden behind blind automation.',
   },
 ]
 
-/** Animated "dashboard preview" — minimal CSS art representing the console */
-function DashboardPreview() {
+const commandFlow = [
+  'Connect a product, website, workflow or repo',
+  'Aiva builds context and decides what intelligence is needed',
+  'Amarktai routes the work through the right capability path',
+  'Every output, action, approval and artifact stays visible',
+]
+
+const proofPoints = [
+  'Aiva-led operator workspace',
+  'Per-product AI packages instead of one global default',
+  'Smart routing with provider performance memory',
+  'Generated artifacts and task results saved for review',
+  'Repo workbench for command-to-patch workflows',
+  'Action approvals before PRs, deploys, spend or destructive work',
+]
+
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 22 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.55, delay },
+})
+
+function AivaOrb() {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#050d1e] shadow-2xl">
-      {/* Fake title bar */}
-      <div className="flex items-center gap-1.5 border-b border-white/[0.07] px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-500/60" />
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-500/60" />
-        <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/60" />
-        <span className="ml-3 text-[10px] text-slate-600 font-mono">AmarktAI Network — Workspace</span>
+    <div className="relative mx-auto aspect-square w-full max-w-[460px]">
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 28, repeat: Infinity, ease: 'linear' }}
+        className="absolute inset-0 rounded-full border border-cyan-300/20 bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.18),transparent_58%)]"
+      />
+      <motion.div
+        animate={{ rotate: -360 }}
+        transition={{ duration: 36, repeat: Infinity, ease: 'linear' }}
+        className="absolute inset-8 rounded-full border border-violet-300/20"
+      />
+      <div className="absolute inset-16 rounded-full border border-white/10 bg-slate-950/80 shadow-2xl shadow-cyan-950/40 backdrop-blur-xl" />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 text-center shadow-2xl backdrop-blur-xl">
+          <Sparkles className="mx-auto h-9 w-9 text-cyan-200" />
+          <p className="mt-4 text-sm uppercase tracking-[0.28em] text-cyan-200">Aiva</p>
+          <h3 className="mt-2 text-2xl font-bold text-white">Your AI operator</h3>
+          <p className="mt-3 max-w-xs text-sm text-slate-400">Conversation, app control, artifacts, code and action approvals in one living system.</p>
+        </div>
       </div>
-      {/* Fake sidebar + main */}
-      <div className="flex h-56 gap-0">
-        {/* Sidebar */}
-        <div className="w-32 shrink-0 border-r border-white/[0.07] px-2 py-3 space-y-0.5">
-          {['Workspace','Repo Workbench','Music Studio','Image Studio','Artifacts','Settings'].map((item, i) => (
-            <motion.div
-              key={item}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 + i * 0.07 }}
-              className={`rounded-lg px-2 py-1.5 text-[10px] ${i === 0 ? 'bg-cyan-400/10 text-cyan-300' : 'text-slate-600'}`}
-            >
-              {item}
-            </motion.div>
+      {[
+        { label: 'Products', x: '3%', y: '26%', icon: Boxes },
+        { label: 'Repos', x: '70%', y: '18%', icon: GitBranch },
+        { label: 'Actions', x: '70%', y: '70%', icon: Command },
+        { label: 'Memory', x: '8%', y: '68%', icon: BrainCircuit },
+      ].map((node, index) => (
+        <motion.div
+          key={node.label}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 + index * 0.12 }}
+          className="absolute rounded-2xl border border-white/10 bg-slate-950/80 px-3 py-2 text-xs text-slate-200 shadow-lg backdrop-blur-xl"
+          style={{ left: node.x, top: node.y }}
+        >
+          <node.icon className="mr-1.5 inline h-3.5 w-3.5 text-cyan-300" />{node.label}
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+function CommandPreview() {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-[#06101f]/90 p-3 shadow-2xl shadow-cyan-950/30 backdrop-blur-xl">
+      <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-3">
+          <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-300" /><span className="text-xs text-slate-400">Amarktai Command Center</span></div>
+          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[10px] text-emerald-200">Live routing</span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          {[
+            ['Aiva', 'Streaming conversation', 'Ready'],
+            ['Products', 'AI packages saved', 'Configured'],
+            ['Repo', 'Prompt-to-PR flow', 'Review gated'],
+          ].map(([title, detail, status]) => (
+            <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <p className="text-sm font-semibold text-white">{title}</p>
+              <p className="mt-2 text-xs text-slate-500">{detail}</p>
+              <p className="mt-4 text-[11px] text-cyan-200">{status}</p>
+            </div>
           ))}
         </div>
-        {/* Main area */}
-        <div className="flex-1 overflow-hidden p-4 space-y-2">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="h-2 w-32 rounded bg-white/10"
-          />
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.9 }}
-            className="h-14 w-full rounded-lg border border-white/[0.06] bg-white/[0.03]"
-          />
-          <div className="grid grid-cols-3 gap-1.5">
-            {[0,1,2].map(i => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.0 + i * 0.1 }}
-                className="h-16 rounded-lg border border-white/[0.06] bg-white/[0.02]"
-              />
-            ))}
-          </div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.3 }}
-            className="h-2 w-20 rounded bg-cyan-400/20"
-          />
+        <div className="mt-3 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4">
+          <p className="text-xs text-slate-400">Aiva command</p>
+          <p className="mt-2 text-sm text-white">“Audit this product, improve the copy, create a PR, and wait for my approval.”</p>
         </div>
       </div>
     </div>
   )
 }
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 20 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true },
-  transition: { duration: 0.5, delay },
-})
-
 export default function HomePage() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#030712] text-white">
+    <div className="min-h-screen overflow-x-hidden bg-[#030711] text-white">
       <Header />
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="relative isolate flex min-h-[88vh] items-center overflow-hidden px-4 pt-24 sm:px-6 lg:px-8">
-        <NetworkPulseBackground className="opacity-90" />
-        <div className="relative z-10 mx-auto w-full max-w-7xl">
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-label mb-5 text-cyan-300"
-          >
-            Amarkt<span className="text-blue-400">AI</span> Network · Powered by Aiva
-          </motion.p>
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.1 }}
-            className="text-display max-w-5xl"
-          >
-            Your AI operating system for{' '}
-            <span className="gradient-text">apps, agents, media, code, workflows, and automation.</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="mt-6 max-w-2xl text-lg text-slate-300"
-          >
-            Meet Aiva — your intelligent operations layer. One console for chat, image, video, voice,
-            music, code, agents, GitHub, and deployments. Every capability connected, every output tracked.
-          </motion.p>
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-9 flex flex-wrap gap-3"
-          >
-            <Link href="/admin/login" className="btn-primary">
-              Enter Workspace <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="/apps" className="btn-ghost">
-              Explore Capabilities
-            </Link>
-            <Link href="/contact" className="btn-ghost">
-              Contact
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── Meet Aiva ────────────────────────────────────────────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div {...fadeUp()}>
-            <p className="text-label text-cyan-300">Meet Aiva</p>
-            <h2 className="text-headline mt-3 max-w-3xl">
-              Your intelligent operations layer — one AI for everything.
-            </h2>
-            <p className="mt-4 max-w-2xl text-slate-400">
-              Aiva understands your intent, routes tasks to the right capability, manages memory and context,
-              and returns structured outputs — all from one interface. No switching tools. No disconnected workflows.
+      <section className="relative isolate overflow-hidden px-4 pb-20 pt-28 sm:px-6 lg:px-8 lg:pt-36">
+        <NetworkPulseBackground className="opacity-70" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_20%,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_80%_10%,rgba(168,85,247,0.16),transparent_30%),linear-gradient(180deg,rgba(3,7,17,0),#030711_88%)]" />
+        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-medium text-cyan-100">
+              <Orbit className="h-3.5 w-3.5" /> Amarktai Network · AI operating system
+            </div>
+            <h1 className="max-w-5xl text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
+              One intelligent command layer for the products you are building.
+            </h1>
+            <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
+              Amarktai Network is the control system for an AI-first product portfolio. Aiva understands the work, connects the moving parts, routes intelligence, manages artifacts, and keeps every important action visible, approved and auditable.
             </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ── How it works — horizontal flow ──────────────────────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div {...fadeUp()}>
-            <p className="text-label text-blue-300">How it works</p>
-            <h2 className="text-headline mt-3 max-w-3xl">
-              From idea to output in four steps.
-            </h2>
-          </motion.div>
-          <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {workflowSteps.map((s, i) => (
-              <motion.div key={s.step} {...fadeUp(i * 0.08)}>
-                <div className="relative pl-4 before:absolute before:left-0 before:top-0 before:h-full before:w-px before:bg-gradient-to-b before:from-white/20 before:to-transparent">
-                  <p className={`text-[11px] font-bold tracking-[0.14em] uppercase ${s.color}`}>{s.step}</p>
-                  <h3 className="mt-2 text-base font-semibold text-white">{s.title}</h3>
-                  <p className="mt-2 text-sm text-slate-400">{s.body}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Dashboard preview + differentiators — split panel ────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            {/* Left: dashboard preview */}
-            <motion.div {...fadeUp()}>
-              <DashboardPreview />
-            </motion.div>
-            {/* Right: content */}
-            <motion.div {...fadeUp(0.1)} className="space-y-6">
-              <div>
-                <p className="text-label text-violet-300">Operator console</p>
-                <h2 className="text-headline mt-3">
-                  One workspace for the full AI development lifecycle.
-                </h2>
-                <p className="mt-4 text-slate-400">
-                  Build apps, test models, edit code in GitHub repos, run agents, review generated
-                  artifacts, and trigger deployments — all from the same operator surface.
-                </p>
-              </div>
-              <ul className="space-y-3">
-                {[
-                  { color: 'bg-cyan-400',    text: 'Aiva — intelligent chat, routing, and task execution' },
-                  { color: 'bg-blue-400',    text: 'GitHub repo editing, commit, PR, and deploy triggers' },
-                  { color: 'bg-violet-400',  text: 'App agent configuration and monitoring' },
-                  { color: 'bg-emerald-400', text: 'Artifact library — text, image, audio, video, code' },
-                ].map((item) => (
-                  <li key={item.text} className="flex items-start gap-3 text-sm text-slate-300">
-                    <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${item.color}`} />
-                    {item.text}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/contact" className="btn-primary inline-flex">
-                Request access <ChevronRight className="h-4 w-4" />
+            <div className="mt-9 flex flex-wrap gap-3">
+              <Link href="/admin/login" className="group inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition hover:bg-white">
+                Enter workspace <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
               </Link>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Capability grid ───────────────────────────────────────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div {...fadeUp()}>
-            <p className="text-label text-amber-300">Full capability surface</p>
-            <h2 className="text-headline mt-3 max-w-3xl">
-              One intelligent layer. Every capability you actually need.
-            </h2>
-          </motion.div>
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {capabilities.map((cap, i) => (
-              <motion.div
-                key={cap.label}
-                {...fadeUp(i * 0.03)}
-                className="group flex items-start gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.14] hover:bg-white/[0.04]"
-              >
-                <cap.icon className="mt-0.5 h-4 w-4 shrink-0 text-blue-300 group-hover:text-cyan-300 transition-colors" />
-                <div>
-                  <p className="text-sm font-medium text-white">{cap.label}</p>
-                  <p className="mt-1 text-xs text-slate-500">{cap.desc}</p>
+              <Link href="/contact" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white backdrop-blur hover:bg-white/[0.08]">
+                Request access
+              </Link>
+            </div>
+            <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+              {['Aiva-led operations', 'Per-product intelligence', 'Prompt-to-PR control'].map((item) => (
+                <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
+                  <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" /> {item}
                 </div>
-              </motion.div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </motion.div>
+          <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, delay: 0.12 }}>
+            <AivaOrb />
+          </motion.div>
         </div>
       </section>
 
-      {/* ── GitHub-to-Deploy flow visual ──────────────────────────────── */}
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
-            <motion.div {...fadeUp()} className="space-y-5">
-              <div>
-                <p className="text-label text-emerald-300">GitHub workflow</p>
-                <h2 className="text-headline mt-3">
-                  From code edit to deployed branch — without leaving the console.
-                </h2>
-                <p className="mt-4 text-slate-400">
-                  Connect your GitHub repos, browse file trees, let Aiva generate or refactor code, review diffs, push branches, create PRs, and trigger workflow_dispatch deploys — all from the Workspace panel.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {['Connect repo', 'Browse files', 'Edit with AI', 'Review diff', 'Commit + push', 'Trigger deploy'].map((step, i) => (
-                  <motion.span
-                    key={step}
-                    initial={{ opacity: 0, x: -8 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.07 }}
-                    className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate-300"
-                  >
-                    <span className="text-emerald-400 font-bold">{i + 1}.</span> {step}
-                  </motion.span>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Flow diagram — CSS */}
-            <motion.div {...fadeUp(0.1)}>
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] p-6 space-y-3">
-                {[
-                  { label: 'GitHub Repo',         color: 'border-slate-600/60  bg-slate-700/20',      dot: 'bg-slate-400' },
-                  { label: 'AI Code Edit (Aiva)',  color: 'border-blue-500/30   bg-blue-500/[0.05]',   dot: 'bg-blue-400' },
-                  { label: 'Diff Review',          color: 'border-violet-500/30 bg-violet-500/[0.05]', dot: 'bg-violet-400' },
-                  { label: 'Commit + PR',          color: 'border-emerald-500/30 bg-emerald-500/[0.05]', dot: 'bg-emerald-400' },
-                  { label: 'Workflow Deploy',      color: 'border-cyan-500/30   bg-cyan-500/[0.05]',   dot: 'bg-cyan-400' },
-                ].map((row, i, arr) => (
-                  <div key={row.label} className="relative">
-                    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-slate-300 ${row.color}`}>
-                      <span className={`h-2 w-2 rounded-full ${row.dot}`} />
-                      {row.label}
-                    </div>
-                    {i < arr.length - 1 && (
-                      <div className="flex justify-center py-0.5">
-                        <ChevronRight className="h-3.5 w-3.5 rotate-90 text-slate-700" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+          <motion.div {...fadeUp()} className="mx-auto max-w-3xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.26em] text-cyan-200">What Amarktai actually is</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">Not a provider dashboard. Not a chatbot wrapper.</h2>
+            <p className="mt-5 text-slate-400">Amarktai Network sits above the product stack. It gives each product the intelligence it needs, gives Aiva context and control, and gives you one place to see what is working, what failed, what was generated and what still needs approval.</p>
+          </motion.div>
+          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {platformPillars.map((pillar, index) => (
+              <motion.div key={pillar.title} {...fadeUp(index * 0.06)} className="rounded-3xl border border-white/10 bg-white/[0.035] p-6 shadow-xl shadow-black/10 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]">
+                <pillar.icon className="h-7 w-7 text-cyan-200" />
+                <h3 className="mt-5 text-lg font-bold text-white">{pillar.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{pillar.body}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA ───────────────────────────────────────────────────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <motion.div
-            {...fadeUp()}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#0a1226] to-[#040916] p-10 text-center"
-          >
-            <h2 className="text-headline">
-              Not a chatbot. Not a demo wrapper. An AI operating layer.
-            </h2>
-            <p className="mx-auto mt-5 max-w-xl text-slate-400">
-              Request controlled access for teams building production AI products that need orchestration quality, reliability, and full operator visibility.
-            </p>
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
-              <Link href="/apps" className="btn-ghost">View Capabilities</Link>
-              <Link href="/contact" className="btn-primary">
-                Request Operator Access <ArrowRight className="h-4 w-4" />
-              </Link>
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:items-center">
+          <motion.div {...fadeUp()}>
+            <CommandPreview />
+          </motion.div>
+          <motion.div {...fadeUp(0.12)}>
+            <p className="text-xs font-bold uppercase tracking-[0.26em] text-violet-200">The operating flow</p>
+            <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">Aiva turns scattered tools into one controlled workflow.</h2>
+            <p className="mt-5 text-slate-400">Every product has different intelligence needs. Some need simple conversation. Others need memory, media, repo work, website context, automation or approvals. Amarktai gives each product its own controlled AI package instead of forcing one generic setup onto everything.</p>
+            <div className="mt-8 space-y-3">
+              {commandFlow.map((step, index) => (
+                <div key={step} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-300 text-xs font-black text-slate-950">{index + 1}</span>
+                  <span className="text-sm font-medium text-slate-200">{step}</span>
+                </div>
+              ))}
             </div>
           </motion.div>
         </div>
+      </section>
+
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-gradient-to-br from-cyan-300/[0.08] via-white/[0.03] to-violet-400/[0.08] p-8 sm:p-10">
+          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <motion.div {...fadeUp()}>
+              <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-200">Built as a system, not a collection of widgets</p>
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">One network. Many moving parts. One operator.</h2>
+              <p className="mt-5 text-slate-400">Amarktai is designed to become the intelligence layer behind a product portfolio: one operating surface where Aiva understands context, proposes work, tracks outputs, and keeps powerful actions under human approval.</p>
+            </motion.div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {proofPoints.map((point, index) => (
+                <motion.div key={point} {...fadeUp(index * 0.04)} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                  <Fingerprint className="mb-3 h-4 w-4 text-emerald-300" /> {point}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              { icon: RadioTower, title: 'Real-time Aiva', body: 'Streaming conversations, smart routing and clear route visibility for operator confidence.' },
+              { icon: LockKeyhole, title: 'Permission-gated control', body: 'Aiva can request powerful actions, but PRs, deploys and destructive work require confirmation.' },
+              { icon: Compass, title: 'Go-live visibility', body: 'Readiness checks, provider scores and artifacts reveal what is connected and what still needs work.' },
+            ].map((item, index) => (
+              <motion.div key={item.title} {...fadeUp(index * 0.08)} className="rounded-3xl border border-white/10 bg-white/[0.03] p-6">
+                <item.icon className="h-7 w-7 text-cyan-200" />
+                <h3 className="mt-5 text-lg font-bold text-white">{item.title}</h3>
+                <p className="mt-3 text-sm leading-6 text-slate-400">{item.body}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-4 py-20 sm:px-6 lg:px-8">
+        <motion.div {...fadeUp()} className="mx-auto max-w-5xl rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-10 text-center shadow-2xl shadow-cyan-950/20">
+          <PlayCircle className="mx-auto h-10 w-10 text-cyan-200" />
+          <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">Amarktai Network is becoming the control room for the products you build.</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-slate-400">Aiva, product AI packages, smart routing, artifacts, readiness checks and repo workbench are now part of one direction: build, manage and improve a connected product ecosystem from one intelligent operating layer.</p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">Enter workspace <ArrowRight className="h-4 w-4" /></Link>
+            <Link href="/contact" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Request access <ChevronRight className="h-4 w-4" /></Link>
+          </div>
+        </motion.div>
       </section>
 
       <Footer />
