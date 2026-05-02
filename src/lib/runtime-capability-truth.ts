@@ -2,75 +2,26 @@
  * @module runtime-capability-truth
  * @description Single source of truth for runtime provider/capability status.
  *
- * All key reads go through getServiceKey() from service-vault, which checks the
- * DB-encrypted vault first then falls back to environment variables — the same
- * resolution order used by the Settings page. No duplicated key logic anywhere.
- *
- * Server-side only — import from API routes and server components, not from
- * 'use client' components.
+ * Provider decisions come from ai-provider-governance.ts. Key reads go through
+ * getServiceKey() from service-vault, which checks the DB-encrypted vault first
+ * then falls back to environment variables — the same resolution order used by
+ * the Settings page.
  */
 
 import { getServiceKey, getServiceConfigField } from '@/lib/service-vault'
+import {
+  getAdultSpecialistProviderKeys,
+  getGenXCoveredProviderKeys,
+  getProviderEnvMap,
+  getRuntimeProviderGovernance,
+  getWiredProviderKeys,
+  type ProviderGovernanceStatus,
+} from '@/lib/ai-provider-governance'
 
-// ── Integration key → env-var map ────────────────────────────────────────────
-// Must match the keys used in the integrationConfig DB table and Settings page.
-
-const INTEGRATION_ENV_MAP: Record<string, string> = {
-  genx:        'GENX_API_KEY',
-  github:      'GITHUB_TOKEN',
-  firecrawl:   'FIRECRAWL_API_KEY',
-  mem0:        'MEM0_API_KEY',
-  huggingface: 'HUGGINGFACE_API_KEY',
-  together:    'TOGETHER_API_KEY',
-  openai:      'OPENAI_API_KEY',
-  replicate:   'REPLICATE_API_KEY',
-  qwen:        'DASHSCOPE_API_KEY',
-  groq:        'GROQ_API_KEY',
-  mistral:     'MISTRAL_API_KEY',
-  cohere:      'COHERE_API_KEY',
-  xai:         'XAI_API_KEY',
-  webdock:     'WEBDOCK_API_KEY',
-  openrouter:  'OPENROUTER_API_KEY',
-  elevenlabs:  'ELEVENLABS_API_KEY',
-  deepgram:    'DEEPGRAM_API_KEY',
-  suno:        'SUNO_API_KEY',
-  udio:        'UDIO_API_KEY',
-}
-
-// ── Providers covered by GenX — no direct key needed ─────────────────────────
-
-const GENX_COVERED_PROVIDERS = new Set([
-  'openai', 'anthropic', 'gemini', 'xai', 'recraft',
-  'kling', 'seedance', 'pixverse', 'deepgram_aura', 'genx_pro',
-])
-
-// ── Fallback provider metadata ────────────────────────────────────────────────
-
-interface FallbackProviderMeta {
-  key: string
-  displayName: string
-  reason: string
-  integrationKey: string
-}
-
-const FALLBACK_PROVIDER_META: FallbackProviderMeta[] = [
-  { key: 'huggingface', displayName: 'Hugging Face',     reason: 'Free / open-source models',              integrationKey: 'huggingface' },
-  { key: 'together',    displayName: 'Together AI',       reason: 'Cheaper route for open models',           integrationKey: 'together'    },
-  { key: 'qwen',        displayName: 'Qwen / Alibaba',    reason: 'Cheap, multilingual, open-source',        integrationKey: 'qwen'        },
-  { key: 'mistral',     displayName: 'Mistral AI',        reason: 'Open-source, self-host, privacy',         integrationKey: 'mistral'     },
-  { key: 'cohere',      displayName: 'Cohere',            reason: 'Embeddings + reranking fallback',         integrationKey: 'cohere'      },
-  { key: 'groq',        displayName: 'Groq',              reason: 'Fast inference, cheap',                   integrationKey: 'groq'        },
-  { key: 'openrouter',  displayName: 'OpenRouter',        reason: 'Aggregated model routing',                integrationKey: 'openrouter'  },
-  { key: 'replicate',   displayName: 'Replicate',         reason: 'Image / video / audio fallback',          integrationKey: 'replicate'   },
-  { key: 'elevenlabs',  displayName: 'ElevenLabs',        reason: 'Specialist TTS fallback',                 integrationKey: 'elevenlabs'  },
-  { key: 'deepgram',    displayName: 'Deepgram',          reason: 'STT / TTS direct fallback',               integrationKey: 'deepgram'    },
-  { key: 'firecrawl',   displayName: 'Firecrawl',         reason: 'Web crawler / research',                  integrationKey: 'firecrawl'   },
-  { key: 'openai',      displayName: 'OpenAI (direct)',   reason: 'Advanced fallback when GenX unavailable', integrationKey: 'openai'      },
-  { key: 'suno',        displayName: 'Suno',              reason: 'Music generation fallback',                integrationKey: 'suno'        },
-  { key: 'udio',        displayName: 'Udio',              reason: 'Music generation fallback',                integrationKey: 'udio'        },
-]
-
-// ── Return shapes ─────────────────────────────────────────────────────────────
+const INTEGRATION_ENV_MAP = getProviderEnvMap()
+const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
+const WIRED_PROVIDER_KEYS = getWiredProviderKeys()
+const ADULT_SPECIALIST_PROVIDER_KEYS = getAdultSpecialistProviderKeys()
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -96,6 +47,9 @@ export interface ProviderRuntimeEntry {
   coveredByGenX: boolean
   keySource: 'vault' | 'env' | 'missing'
   status: ProviderStatus
+  governanceStatus?: ProviderGovernanceStatus
+  showInPrimarySetup?: boolean
+  defaultCostRole?: string
 }
 
 export type CapabilityStatus = 'available' | 'blocked' | 'not_implemented'
@@ -117,20 +71,15 @@ export interface DashboardRuntimeTruth {
   blockers: string[]
 }
 
-// ── Helper: resolve key and determine source ──────────────────────────────────
-
 async function resolveKey(integrationKey: string): Promise<{ hasKey: boolean; source: 'vault' | 'env' | 'missing' }> {
   const envVar = INTEGRATION_ENV_MAP[integrationKey] ?? ''
   const key = await getServiceKey(integrationKey, envVar)
   if (!key) return { hasKey: false, source: 'missing' }
 
-  // Distinguish vault from env by checking env var directly
   const envValue = envVar ? process.env[envVar] : null
   const source: 'vault' | 'env' = (envValue && key === envValue.trim()) ? 'env' : 'vault'
   return { hasKey: true, source }
 }
-
-// ── GenX status ───────────────────────────────────────────────────────────────
 
 export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
   const { hasKey, source } = await resolveKey('genx')
@@ -147,15 +96,13 @@ export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
     }
   }
 
-  // Known GenX capabilities (static; live catalogue fetch is optional)
   const capabilities = [
     'text_chat', 'reasoning', 'coding', 'image_generation', 'video_generation',
     'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'vision',
     'translation', 'moderation', 'avatars',
   ]
 
-  // Attempt a lightweight catalogue count (non-blocking; never throw)
-  let modelCount = 57 // known static catalogue size
+  let modelCount = 57
   let available = true
   try {
     const key = await getServiceKey('genx', 'GENX_API_KEY')
@@ -186,11 +133,10 @@ export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
   }
 }
 
-// ── Provider status ───────────────────────────────────────────────────────────
-
 export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
+  const governance = getRuntimeProviderGovernance()
   const results: ProviderRuntimeEntry[] = await Promise.all(
-    FALLBACK_PROVIDER_META.map(async (meta) => {
+    governance.map(async (meta) => {
       const { hasKey, source } = await resolveKey(meta.integrationKey)
       const coveredByGenX = GENX_COVERED_PROVIDERS.has(meta.key)
 
@@ -198,15 +144,9 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
       if (coveredByGenX) {
         status = 'covered_by_genx'
       } else if (hasKey) {
-        // Mark as configured_wired for providers with a real implementation route.
-        // Providers without a wired backend are configured_not_wired.
-        const wiredProviders = new Set([
-          'huggingface', 'together', 'replicate', 'openrouter', 'groq',
-          'openai', 'firecrawl', 'deepgram', 'elevenlabs',
-        ])
-        status = wiredProviders.has(meta.key) ? 'configured_wired' : 'configured_not_wired'
+        status = WIRED_PROVIDER_KEYS.has(meta.key) ? 'configured_wired' : 'configured_not_wired'
       } else {
-        status = 'not_configured_optional'
+        status = meta.status === 'deprecated' ? 'blocked' : 'not_configured_optional'
       }
 
       return {
@@ -217,6 +157,9 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
         coveredByGenX,
         keySource: source,
         status,
+        governanceStatus: meta.status,
+        showInPrimarySetup: meta.showInPrimarySetup,
+        defaultCostRole: meta.defaultCostRole,
       }
     }),
   )
@@ -226,8 +169,6 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
 export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[]> {
   return getRuntimeProviderStatus()
 }
-
-// ── Adult mode capability check ───────────────────────────────────────────────
 
 export type AdultCapabilityGateStatus =
   | 'ready'
@@ -245,35 +186,19 @@ export interface AdultCapabilityGate {
   globalEnabled: boolean
 }
 
-/**
- * Compute the exact adult capability gate status from the service vault.
- *
- * Resolution:
- *   1. ADULT_MODE_ENABLED=true env var — sets the global env flag
- *   2. adult_mode integrationConfig notes.mode === 'specialist' — admin configured
- *   3. Specialist provider key exists (together / huggingface / xai)
- *   4. notes.lastTestStatus === 'passed' — provider generation test passed
- */
 export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
   function hasProvider(key: string) {
     return providers.find(p => p.key === key)?.configured === true
   }
 
-  // Check env flag
   const envEnabled = process.env.ADULT_MODE_ENABLED?.trim().toLowerCase() === 'true'
-
-  // Read adult_mode config from vault (notes stored by Settings/integrations route)
-  const adultMode    = await getServiceConfigField('adult_mode', 'mode', '').catch(() => null) ?? ''
+  const adultMode = await getServiceConfigField('adult_mode', 'mode', '').catch(() => null) ?? ''
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
 
   const globalEnabled = envEnabled || adultMode === 'specialist'
-
-  // xAI key is stored under 'xai' integration key
   const xaiKey = await resolveKey('xai')
   const providerAvailable =
-    hasProvider('together') ||
-    hasProvider('huggingface') ||
-    hasProvider('replicate') ||
+    [...ADULT_SPECIALIST_PROVIDER_KEYS].some((key) => hasProvider(key)) ||
     xaiKey.hasKey
 
   const testPassed = lastTestStatus === 'passed'
@@ -291,7 +216,7 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   if (!providerAvailable) {
     return {
       status: 'not_wired',
-      blocker: 'No specialist adult provider configured. Add a Together AI, HuggingFace, Replicate, or xAI/Grok key in Settings → AI Providers.',
+      blocker: 'No specialist adult provider configured. Add Together AI, HuggingFace, Replicate, or xAI/Grok in Settings → AI Providers.',
       providerAvailable: false,
       testPassed,
       globalEnabled: true,
@@ -319,106 +244,106 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   }
 }
 
-// ── Capability status ─────────────────────────────────────────────────────────
-
 export async function getCapabilityStatus(genxConfigured: boolean, providers: ProviderRuntimeEntry[]): Promise<CapabilityRuntimeEntry[]> {
   function isConfigured(key: string) {
     return providers.find(p => p.key === key)?.configured === true
   }
 
-  const hasHF       = isConfigured('huggingface')
+  const hasHF = isConfigured('huggingface')
   const hasTogether = isConfigured('together')
   const hasReplicate = isConfigured('replicate')
   const hasElevenLabs = isConfigured('elevenlabs')
   const hasDeepgram = isConfigured('deepgram')
-  const hasSuno     = isConfigured('suno')
-  const hasUdio     = isConfigured('udio')
+  const hasSuno = isConfigured('suno')
+  const hasUdio = isConfigured('udio')
   const hasFirecrawl = isConfigured('firecrawl')
-
-  // Resolve adult capability gate (reads from service vault — same as Settings)
   const adultGate = await getAdultCapabilityGate(providers)
 
-  const caps: CapabilityRuntimeEntry[] = [
+  return [
     {
       name: 'Text / Chat',
-      status: genxConfigured || providers.some(p => p.configured) ? 'available' : 'blocked',
-      blocker: genxConfigured ? null : 'No AI provider configured',
+      status: genxConfigured || providers.some(p => p.configured && p.governanceStatus !== 'deprecated') ? 'available' : 'blocked',
+      blocker: genxConfigured ? null : 'No governed AI provider configured',
       models: genxConfigured ? ['GPT-4o (via GenX)', 'Claude Opus 4 (via GenX)', 'Gemini 2.5 Pro (via GenX)', 'Grok 3 (via GenX)'] : [],
-      nextAction: genxConfigured ? null : 'Add GenX key in Settings',
+      nextAction: genxConfigured ? null : 'Add GenX or a governed cheap provider in Settings',
     },
     {
       name: 'Coding Agent',
-      status: genxConfigured ? 'available' : 'blocked',
-      blocker: genxConfigured ? null : 'GenX key required',
-      models: genxConfigured ? ['GPT-4.1 (via GenX)', 'Claude Sonnet 3.7 (via GenX)', 'DeepSeek R1 (via GenX)'] : [],
-      nextAction: genxConfigured ? null : 'Add GenX key in Settings',
+      status: genxConfigured || isConfigured('qwen') || isConfigured('groq') || isConfigured('together') ? 'available' : 'blocked',
+      blocker: genxConfigured || isConfigured('qwen') || isConfigured('groq') || isConfigured('together') ? null : 'GenX, Qwen, Groq, or Together key required',
+      models: [
+        ...(genxConfigured ? ['GPT-4.1 (via GenX)', 'Claude Sonnet 3.7 (via GenX)', 'DeepSeek R1 (via GenX)'] : []),
+        ...(isConfigured('qwen') ? ['Qwen Plus', 'Qwen Turbo'] : []),
+        ...(isConfigured('groq') ? ['Groq Llama 3.3 70B'] : []),
+        ...(isConfigured('together') ? ['Together Llama 3 70B'] : []),
+      ],
+      nextAction: genxConfigured ? null : 'Add GenX, Qwen, Groq, or Together in Settings',
     },
     {
       name: 'Image Generation',
       status: (genxConfigured || hasHF || hasTogether || hasReplicate) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasHF || hasTogether || hasReplicate)
-        ? null
-        : 'Configure GenX key or HuggingFace/Together/Replicate in Settings',
+      blocker: (genxConfigured || hasHF || hasTogether || hasReplicate) ? null : 'Configure GenX, HuggingFace, Together, or Replicate in Settings',
       models: [
         ...(genxConfigured ? ['Recraft v3 (via GenX)', 'DALL-E 3 (via GenX)', 'Grok Imagine (via GenX)'] : []),
         ...(hasHF ? ['SDXL (HuggingFace)'] : []),
         ...(hasReplicate ? ['SDXL Replicate'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX key or image provider key in Settings',
+      nextAction: genxConfigured ? null : 'Add GenX or image provider key in Settings',
     },
     {
       name: 'Video Generation',
-      status: genxConfigured ? 'available' : 'blocked',
-      blocker: genxConfigured
-        ? null
-        : 'GenX key required for video generation',
-      models: genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)', 'Grok Video (via GenX)'] : [],
-      nextAction: genxConfigured ? 'Confirm video quota before generating (high cost)' : 'Add GenX key in Settings',
+      status: genxConfigured || hasReplicate ? 'available' : 'blocked',
+      blocker: genxConfigured || hasReplicate ? null : 'GenX or Replicate required for video generation',
+      models: [
+        ...(genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)', 'Grok Video (via GenX)'] : []),
+        ...(hasReplicate ? ['Replicate video models'] : []),
+      ],
+      nextAction: genxConfigured ? 'Confirm video quota before generating (high cost)' : 'Add GenX or Replicate in Settings',
     },
     {
       name: 'Voice TTS',
-      status: (genxConfigured || hasElevenLabs || hasDeepgram) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasElevenLabs || hasDeepgram)
-        ? null
-        : 'Configure GenX key or ElevenLabs/Deepgram in Settings',
+      status: (genxConfigured || hasElevenLabs || hasDeepgram || isConfigured('groq') || hasHF) ? 'available' : 'blocked',
+      blocker: (genxConfigured || hasElevenLabs || hasDeepgram || isConfigured('groq') || hasHF) ? null : 'Configure GenX, ElevenLabs, Deepgram, Groq, or HuggingFace in Settings',
       models: [
         ...(genxConfigured ? ['Grok TTS (via GenX)', 'Aura 2 (via GenX)', 'GenX LM Voice v1'] : []),
         ...(hasElevenLabs ? ['ElevenLabs TTS'] : []),
         ...(hasDeepgram ? ['Deepgram Nova TTS'] : []),
+        ...(isConfigured('groq') ? ['Groq PlayAI TTS'] : []),
+        ...(hasHF ? ['HuggingFace MMS TTS'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX key or ElevenLabs/Deepgram key in Settings',
+      nextAction: genxConfigured ? null : 'Add GenX or a TTS provider key in Settings',
     },
     {
       name: 'STT / Transcription',
       status: (genxConfigured || hasDeepgram) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasDeepgram)
-        ? null
-        : 'Configure GenX key or Deepgram in Settings',
+      blocker: (genxConfigured || hasDeepgram) ? null : 'Configure GenX or Deepgram in Settings',
       models: [
         ...(genxConfigured ? ['GenX transcription', 'Whisper (via GenX)', 'Deepgram Nova (via GenX)'] : []),
         ...(hasDeepgram ? ['Deepgram Nova (direct)'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX key or Deepgram key in Settings',
+      nextAction: genxConfigured ? null : 'Add GenX or Deepgram in Settings',
     },
     {
       name: 'Music Generation',
-      status: (hasSuno || hasUdio) ? 'available' : 'not_implemented',
-      blocker: (hasSuno || hasUdio)
-        ? null
-        : 'No music provider configured. Suno or Udio key required. GenX music (Lyria) not yet wired.',
+      status: (hasSuno || hasUdio || hasReplicate) ? 'available' : 'not_implemented',
+      blocker: (hasSuno || hasUdio || hasReplicate) ? null : 'Music providers are proposed only. Add Suno/Udio/Replicate after legal/API confirmation.',
       models: [
         ...(genxConfigured ? ['Lyria (via GenX — pending route implementation)', 'GenX audio models'] : []),
         ...(hasSuno ? ['Suno'] : []),
         ...(hasUdio ? ['Udio'] : []),
+        ...(hasReplicate ? ['Replicate music/audio models'] : []),
       ],
-      nextAction: 'Configure Suno or Udio key in Settings',
+      nextAction: 'Approve and configure a music provider before enabling music generation',
     },
     {
       name: 'Embeddings',
-      status: genxConfigured ? 'available' : 'blocked',
-      blocker: genxConfigured ? null : 'GenX key required',
-      models: genxConfigured ? ['GenX embeddings', 'text-embedding-3 (via GenX)'] : [],
-      nextAction: genxConfigured ? null : 'Add GenX key in Settings',
+      status: genxConfigured || isConfigured('openai') ? 'available' : 'blocked',
+      blocker: genxConfigured || isConfigured('openai') ? null : 'GenX or OpenAI direct key required',
+      models: [
+        ...(genxConfigured ? ['GenX embeddings', 'text-embedding-3 (via GenX)'] : []),
+        ...(isConfigured('openai') ? ['OpenAI text-embedding-3-small/large'] : []),
+      ],
+      nextAction: genxConfigured ? null : 'Add GenX or advanced OpenAI direct key in Settings',
     },
     {
       name: 'Adult Image',
@@ -426,15 +351,15 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
       blocker: adultGate.blocker,
       models: adultGate.status === 'ready'
         ? [
-            ...(hasTogether  ? ['FLUX.1-schnell (Together AI)', 'SDXL (Together AI)']       : []),
-            ...(hasHF        ? ['RealVisXL (HuggingFace)', 'DreamShaper (HuggingFace)']      : []),
-            ...(hasReplicate ? ['SDXL Replicate']                                             : []),
+            ...(hasTogether ? ['FLUX.1-schnell (Together AI)', 'SDXL (Together AI)'] : []),
+            ...(hasHF ? ['RealVisXL (HuggingFace)', 'DreamShaper (HuggingFace)'] : []),
+            ...(hasReplicate ? ['SDXL Replicate'] : []),
           ]
         : [],
       nextAction: adultGate.status === 'ready'
         ? null
         : adultGate.status === 'not_wired'
-        ? 'Add Together AI, HuggingFace, or Replicate key in Settings → AI Providers'
+        ? 'Add Together AI, HuggingFace, Replicate, or xAI key in Settings → AI Providers'
         : adultGate.status === 'needs_provider_test' || adultGate.status === 'provider_failed'
         ? 'Run "Test provider" in Settings → Adult Mode'
         : 'Enable adult mode in Settings → Adult Mode',
@@ -442,9 +367,7 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     {
       name: 'Web Crawler / Research',
       status: (hasFirecrawl || genxConfigured) ? 'available' : 'blocked',
-      blocker: (hasFirecrawl || genxConfigured)
-        ? null
-        : 'Configure Firecrawl key or GenX key in Settings',
+      blocker: (hasFirecrawl || genxConfigured) ? null : 'Configure Firecrawl or GenX in Settings',
       models: [
         ...(hasFirecrawl ? ['Firecrawl'] : []),
         ...(genxConfigured ? ['GenX (Gemini/GPT-4.1 research)'] : []),
@@ -452,11 +375,7 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
       nextAction: hasFirecrawl ? null : 'Add Firecrawl key in Settings for enhanced crawling',
     },
   ]
-
-  return caps
 }
-
-// ── Master truth aggregator ───────────────────────────────────────────────────
 
 export async function getModelCatalogueStatus(): Promise<{ modelCount: number; source: 'live' | 'static' }> {
   const genx = await getGenXRuntimeStatus()
