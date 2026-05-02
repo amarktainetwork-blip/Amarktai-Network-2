@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
-import { callProvider } from '@/lib/brain'
 import { planAiRoute } from '@/lib/ai-routing-policy'
 import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
+import { callUniversalProvider } from '@/lib/universal-provider-call'
 
 const streamSchema = z.object({
   message: z.string().min(1).max(24_000),
@@ -146,7 +146,14 @@ export async function POST(request: NextRequest) {
           model: plan.selected.model,
         }))
 
-        const result = await callProvider(plan.selected.provider, plan.selected.model, payload.message, systemPrompt)
+        const result = await callUniversalProvider({
+          providerKey: plan.selected.provider,
+          model: plan.selected.model,
+          message: payload.message,
+          systemPrompt,
+          maxTokens: 1400,
+          temperature: payload.capability === 'creative' || payload.capability === 'adult_text' ? 0.8 : 0.35,
+        })
 
         if (!result.ok || !result.output) {
           controller.enqueue(sse('error', {
