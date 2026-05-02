@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
 import { saveJsonArtifact, saveMediaArtifact } from '@/lib/media-artifacts'
+import { recordProviderResult } from '@/lib/provider-result-log'
 
 const schema = z.object({
   modelId: z.string().min(1).optional(),
@@ -55,6 +56,21 @@ export async function POST(request: NextRequest) {
       })
     }
   }
+
+  await recordProviderResult({
+    appSlug: parsed.data.appSlug,
+    provider: result.provider,
+    model: result.model,
+    capability: result.capability,
+    success: result.ok,
+    executed: result.executed,
+    latencyMs: result.latencyMs,
+    contentType: result.contentType,
+    artifactId: artifact?.id,
+    artifactPath: artifact?.publicPath,
+    error: result.error,
+    metadata: { endpointUrl: parsed.data.endpointUrl ? 'custom_endpoint' : 'model_id' },
+  }).catch(() => null)
 
   if (result.bytes) {
     return new NextResponse(result.bytes, {
