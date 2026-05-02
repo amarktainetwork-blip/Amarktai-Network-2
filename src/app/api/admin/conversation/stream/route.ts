@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { planAiRoute } from '@/lib/ai-routing-policy'
 import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
-import { callUniversalProvider } from '@/lib/universal-provider-call'
+import { streamUniversalProvider } from '@/lib/universal-provider-call'
 
 const streamSchema = z.object({
   message: z.string().min(1).max(24_000),
@@ -11,6 +11,7 @@ const streamSchema = z.object({
   costPreference: z.enum(['free_first', 'cheap', 'balanced', 'premium']).default('balanced'),
   systemPrompt: z.string().max(8_000).optional(),
   allowAdult: z.boolean().default(false),
+  timeoutMs: z.number().min(5_000).max(90_000).optional(),
   appProfile: z.object({
     appSlug: z.string().optional(),
     appType: z.string().optional(),
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const requestStartedAt = Date.now()
       try {
         controller.enqueue(sse('status', { message: 'Planning route', capability: payload.capability, costPreference: payload.costPreference }))
 
@@ -88,8 +90,8 @@ export async function POST(request: NextRequest) {
         }
 
         const systemPrompt = payload.systemPrompt ?? [
-          'You are the Amarktai Network operator assistant.',
-          'Be direct, practical, and production-focused.',
+          'You are Aiva, the Amarktai Network operator assistant.',
+          'Hold a real-time conversation, answer directly, and keep replies practical.',
           'Do not claim actions were completed unless the tool or API result proves it.',
           'When giving code/deploy guidance, prefer safe, reversible, copy-paste-ready steps.',
         ].join('\n')
@@ -135,42 +137,56 @@ export async function POST(request: NextRequest) {
             model: result.model,
             routeReason: plan.selected.reason,
             streaming: 'native',
+            latencyMs: Date.now() - requestStartedAt,
           }))
           controller.close()
           return
         }
 
         controller.enqueue(sse('status', {
-          message: 'Calling selected provider',
+          message: 'Streaming selected provider',
           provider: plan.selected.provider,
           model: plan.selected.model,
         }))
 
-        const result = await callUniversalProvider({
+        const result = await streamUniversalProvider({
           providerKey: plan.selected.provider,
           model: plan.selected.model,
           message: payload.message,
           systemPrompt,
           maxTokens: 1400,
           temperature: payload.capability === 'creative' || payload.capability === 'adult_text' ? 0.8 : 0.35,
+          timeoutMs: payload.timeoutMs,
+        }, (event) => {
+          if (event.type === 'start') {
+            controller.enqueue(sse('status', {
+              message: 'Native provider stream opened',
+              provider: event.providerKey,
+              model: event.model,
+              streaming: event.streaming,
+            }))
+          }
+          if (event.type === 'token' && event.content) {
+            controller.enqueue(sse('token', {
+              text: event.content,
+              firstTokenMs: event.firstTokenMs,
+              streaming: event.streaming,
+            }))
+          }
+          if (event.type === 'error') {
+            controller.enqueue(sse('error', {
+              message: event.error ?? 'Provider stream error',
+              provider: event.providerKey,
+              model: event.model,
+              latencyMs: event.latencyMs,
+              firstTokenMs: event.firstTokenMs,
+            }))
+          }
         })
 
-        if (!result.ok || !result.output) {
-          controller.enqueue(sse('error', {
-            message: result.error ?? 'Provider returned no output',
-            provider: result.providerKey,
-            model: result.model,
-            latencyMs: result.latencyMs,
-          }))
+        if (!result.ok) {
           controller.close()
           return
-        }
-
-        const text = result.output
-        const chunkSize = 160
-        for (let index = 0; index < text.length; index += chunkSize) {
-          controller.enqueue(sse('token', { text: text.slice(index, index + chunkSize) }))
-          await new Promise((resolve) => setTimeout(resolve, 5))
         }
 
         controller.enqueue(sse('done', {
@@ -178,7 +194,7 @@ export async function POST(request: NextRequest) {
           model: result.model,
           latencyMs: result.latencyMs,
           routeReason: plan.selected.reason,
-          streaming: 'simulated',
+          streaming: 'native',
         }))
         controller.close()
       } catch (error) {
