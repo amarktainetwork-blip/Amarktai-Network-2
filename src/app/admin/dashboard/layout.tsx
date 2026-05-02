@@ -18,19 +18,21 @@ import {
   Film,
   LayoutDashboard,
   Terminal,
+  Compass,
 } from 'lucide-react'
 
-// Nine canonical nav sections — no duplicates, no hidden pages
+// Canonical nav sections — Command Center first, live readiness visible, no duplicate hidden workflow.
 const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }> = [
-  { href: '/admin/dashboard',               label: 'Overview',        icon: LayoutDashboard },
-  { href: '/admin/dashboard/command-center',label: 'Command Center',  icon: Terminal        },
-  { href: '/admin/dashboard/repo-workbench',label: 'Repo Workbench',  icon: GitBranch       },
-  { href: '/admin/dashboard/ai-engine',     label: 'AI Engine',       icon: Cpu             },
-  { href: '/admin/dashboard/media-studio',  label: 'Media Studio',    icon: Film            },
-  { href: '/admin/dashboard/apps',          label: 'Apps & Agents',   icon: AppWindow       },
-  { href: '/admin/dashboard/artifacts',     label: 'Artifacts & Jobs',icon: Archive         },
-  { href: '/admin/dashboard/system-health', label: 'System Health',   icon: Activity        },
-  { href: '/admin/dashboard/settings',      label: 'Settings',        icon: Settings2       },
+  { href: '/admin/dashboard/command-center', label: 'Command Center',  icon: Terminal        },
+  { href: '/admin/dashboard/live-readiness', label: 'Live Readiness',  icon: Compass         },
+  { href: '/admin/dashboard',                label: 'Overview',        icon: LayoutDashboard },
+  { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench',  icon: GitBranch       },
+  { href: '/admin/dashboard/ai-engine',      label: 'AI Engine',       icon: Cpu             },
+  { href: '/admin/dashboard/media-studio',   label: 'Media Studio',    icon: Film            },
+  { href: '/admin/dashboard/apps',           label: 'Apps & Agents',   icon: AppWindow       },
+  { href: '/admin/dashboard/artifacts',      label: 'Artifacts & Jobs',icon: Archive         },
+  { href: '/admin/dashboard/system-health',  label: 'System Health',   icon: Activity        },
+  { href: '/admin/dashboard/settings',       label: 'Settings',        icon: Settings2       },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -55,11 +57,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="h-16 border-b border-white/10 px-5">
-        <Link href="/admin/dashboard" className="flex h-full items-center gap-2">
-          <div className="rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 px-2 py-1 text-xs font-bold text-white">AN</div>
+        <Link href="/admin/dashboard/command-center" className="flex h-full items-center gap-2">
+          <div className="rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 px-2 py-1 text-xs font-black text-white shadow-lg shadow-cyan-950/20">AN</div>
           <div>
             <p className="text-sm font-bold text-white">Amarktai Network</p>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Operator Console</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Aiva Operator Console</p>
           </div>
         </Link>
       </div>
@@ -75,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition ${
                   active
-                    ? 'border border-cyan-400/30 bg-cyan-400/10 text-white'
+                    ? 'border border-cyan-400/30 bg-cyan-400/10 text-white shadow-sm shadow-cyan-950/20'
                     : 'border border-transparent text-slate-400 hover:bg-white/5 hover:text-white'
                 }`}
               >
@@ -105,17 +107,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="sticky top-0 z-40 border-b border-white/10 bg-[#030712]/90 backdrop-blur-xl">
           <div className="flex h-14 items-center justify-between px-4 lg:px-6">
             <div className="flex items-center gap-2">
-              <button className="hidden rounded-lg p-2 text-slate-400 lg:block" onClick={() => setSidebarOpen(v => !v)}>
+              <button className="hidden rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:block" onClick={() => setSidebarOpen(v => !v)}>
                 <Menu className="h-4 w-4" />
               </button>
-              <button className="rounded-lg p-2 text-slate-400 lg:hidden" onClick={() => setMobileOpen(v => !v)}>
+              <button className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white lg:hidden" onClick={() => setMobileOpen(v => !v)}>
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
               <span className="text-xs uppercase tracking-[0.14em] text-slate-500">
                 {NAV_ITEMS.find(s => isActive(s.href))?.label ?? 'Dashboard'}
               </span>
             </div>
-            <span className="text-xs text-slate-500">Amarktai Network</span>
+            <Link href="/admin/dashboard/command-center" className="text-xs text-slate-500 hover:text-cyan-300">Aiva Command Center</Link>
           </div>
         </header>
 
