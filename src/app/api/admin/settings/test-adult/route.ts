@@ -67,12 +67,7 @@ function validateUrl(raw: string): { url: URL; error: string | null } {
   return { url, error: null }
 }
 
-export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session.isLoggedIn) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
+async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // ── Parse request body ──
   let inlineMode         = ''
   let inlineProviderType = ''
@@ -663,4 +658,53 @@ export async function POST(req: NextRequest) {
     error_category: 'unknown' as ErrorCategory,
     message: `Unknown provider type: ${providerType}. Supported: xai, together, huggingface, custom`,
   })
+}
+
+// ── Persist last adult test status ───────────────────────────────────────────
+// Writes `lastTestStatus` and `lastTestAt` to the adult_mode integration config
+// notes so that runtime-capability-truth.ts can read the same value, keeping
+// the Settings page and all dashboard sections in sync.
+
+async function persistAdultTestStatus(passed: boolean): Promise<void> {
+  try {
+    const existing = await prisma.integrationConfig.findUnique({ where: { key: 'adult_mode' } })
+    let notes: Record<string, string> = {}
+    try { notes = JSON.parse(existing?.notes ?? '{}') } catch { /* ignore */ }
+    notes.lastTestStatus = passed ? 'passed' : 'failed'
+    notes.lastTestAt = new Date().toISOString()
+    await prisma.integrationConfig.upsert({
+      where: { key: 'adult_mode' },
+      update: { notes: JSON.stringify(notes) },
+      create: {
+        key: 'adult_mode',
+        displayName: 'Adult Content Provider',
+        apiKey: '',
+        notes: JSON.stringify(notes),
+        enabled: true,
+      },
+    })
+  } catch {
+    // Non-fatal — do not let persistence failure break the test response
+  }
+}
+
+/**
+ * POST /api/admin/settings/test-adult
+ *
+ * Wrapper that calls runAdultTest() and persists the result status to the
+ * adult_mode integration config so runtime-capability-truth.ts always reads
+ * the same lastTestStatus as Settings shows.
+ */
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const session = await getSession()
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const result = await runAdultTest(request)
+  const body = await result.json()
+  const passed = body.success === true
+  // Fire-and-forget — never let persistence delay the response
+  persistAdultTestStatus(passed).catch(() => {})
+  return NextResponse.json(body, { status: result.status })
 }
