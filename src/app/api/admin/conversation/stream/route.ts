@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
-import { planAiRoute } from '@/lib/ai-routing-policy'
+import { planAiRoute, type AiRoutePlan } from '@/lib/ai-routing-policy'
+import { shouldAvoidProvider } from '@/lib/provider-intelligence'
 import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
 import { streamUniversalProvider } from '@/lib/universal-provider-call'
 
@@ -12,6 +13,7 @@ const streamSchema = z.object({
   systemPrompt: z.string().max(8_000).optional(),
   allowAdult: z.boolean().default(false),
   timeoutMs: z.number().min(5_000).max(90_000).optional(),
+  useSmartRouting: z.boolean().optional().default(true),
   appProfile: z.object({
     appSlug: z.string().optional(),
     appType: z.string().optional(),
@@ -45,6 +47,24 @@ function genxCapability(capability: string): { capability: GenXCapability; opera
   }
 }
 
+async function applySmartAvoidance(plan: AiRoutePlan, appSlug: string, capability: string): Promise<AiRoutePlan> {
+  if (!plan.candidates.length || plan.blockers.length > 0) return plan
+
+  const candidates = []
+  for (const candidate of plan.candidates) {
+    if (candidate.blocked) {
+      candidates.push(candidate)
+      continue
+    }
+    const decision = await shouldAvoidProvider({ appSlug, provider: candidate.provider, model: candidate.model, capability, days: 14 })
+    candidates.push(decision.avoid ? { ...candidate, blocked: true, blocker: `Provider intelligence: ${decision.reason}` } : candidate)
+  }
+
+  const selected = candidates.find((candidate) => !candidate.blocked) ?? null
+  const blockers = selected ? plan.blockers : [...plan.blockers, 'Smart routing avoided every configured provider. Run provider tests or disable smart routing for manual override.']
+  return { ...plan, candidates, selected, blockers, generatedAt: new Date().toISOString() }
+}
+
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
@@ -68,15 +88,19 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       const requestStartedAt = Date.now()
       try {
-        controller.enqueue(sse('status', { message: 'Planning route', capability: payload.capability, costPreference: payload.costPreference }))
+        controller.enqueue(sse('status', { message: 'Planning route', capability: payload.capability, costPreference: payload.costPreference, smartRouting: payload.useSmartRouting }))
 
-        const plan = await planAiRoute({
+        let plan = await planAiRoute({
           capability: payload.capability,
           costPreference: payload.costPreference,
           allowAdult: payload.allowAdult,
           requireStreaming: true,
           appProfile: payload.appProfile,
         })
+
+        if (payload.useSmartRouting) {
+          plan = await applySmartAvoidance(plan, payload.appProfile?.appSlug ?? 'amarktai-network', payload.capability)
+        }
 
         controller.enqueue(sse('route', plan))
 
@@ -137,6 +161,7 @@ export async function POST(request: NextRequest) {
             model: result.model,
             routeReason: plan.selected.reason,
             streaming: 'native',
+            smartRouting: payload.useSmartRouting,
             latencyMs: Date.now() - requestStartedAt,
           }))
           controller.close()
@@ -195,6 +220,7 @@ export async function POST(request: NextRequest) {
           latencyMs: result.latencyMs,
           routeReason: plan.selected.reason,
           streaming: 'native',
+          smartRouting: payload.useSmartRouting,
         }))
         controller.close()
       } catch (error) {
