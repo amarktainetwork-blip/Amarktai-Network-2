@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { callProvider } from '@/lib/brain'
 import { planAiRoute } from '@/lib/ai-routing-policy'
+import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
 
 const streamSchema = z.object({
   message: z.string().min(1).max(24_000),
@@ -22,6 +23,25 @@ const encoder = new TextEncoder()
 
 function sse(event: string, data: unknown) {
   return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
+}
+
+function genxPolicy(costPreference: string): GenXModelPolicy {
+  if (costPreference === 'cheap' || costPreference === 'free_first') return 'cheap'
+  if (costPreference === 'premium') return 'best'
+  return 'balanced'
+}
+
+function genxCapability(capability: string): { capability: GenXCapability; operation: GenXOperationType } {
+  switch (capability) {
+    case 'coding': return { capability: 'code_generation', operation: 'code' }
+    case 'reasoning': return { capability: 'reasoning', operation: 'plan' }
+    case 'research': return { capability: 'research', operation: 'plan' }
+    case 'adult_text': return { capability: 'adult_text', operation: 'chat' }
+    case 'creative':
+    case 'chat':
+    default:
+      return { capability: 'chat', operation: 'chat' }
+  }
 }
 
 export const dynamic = 'force-dynamic'
@@ -67,18 +87,64 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        controller.enqueue(sse('status', {
-          message: 'Calling selected provider',
-          provider: plan.selected.provider,
-          model: plan.selected.model,
-        }))
-
         const systemPrompt = payload.systemPrompt ?? [
           'You are the Amarktai Network operator assistant.',
           'Be direct, practical, and production-focused.',
           'Do not claim actions were completed unless the tool or API result proves it.',
           'When giving code/deploy guidance, prefer safe, reversible, copy-paste-ready steps.',
         ].join('\n')
+
+        if (plan.selected.provider === 'genx') {
+          const mapped = genxCapability(payload.capability)
+          const selectedModel = await selectGenXModel(genxPolicy(payload.costPreference), mapped.capability, mapped.operation)
+
+          controller.enqueue(sse('status', {
+            message: 'Streaming through GenX',
+            provider: 'genx',
+            model: selectedModel,
+          }))
+
+          const result = await streamGenXChat({
+            model: selectedModel,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: payload.message },
+            ],
+            max_tokens: 1400,
+            temperature: payload.capability === 'creative' || payload.capability === 'adult_text' ? 0.8 : 0.35,
+            stream: true,
+            metadata: {
+              source: 'admin_conversation_stream',
+              capability: payload.capability,
+              costPreference: payload.costPreference,
+              appSlug: payload.appProfile?.appSlug ?? 'amarktai-network',
+            },
+          }, (event) => {
+            if (event.type === 'chunk' && event.content) controller.enqueue(sse('token', { text: event.content }))
+            if (event.type === 'error') controller.enqueue(sse('error', { message: event.error ?? 'GenX stream error' }))
+          })
+
+          if (!result.success) {
+            controller.enqueue(sse('error', { message: result.error ?? 'GenX stream failed', provider: 'genx', model: result.model }))
+            controller.close()
+            return
+          }
+
+          controller.enqueue(sse('done', {
+            provider: 'genx',
+            model: result.model,
+            routeReason: plan.selected.reason,
+            streaming: 'native',
+          }))
+          controller.close()
+          return
+        }
+
+        controller.enqueue(sse('status', {
+          message: 'Calling selected provider',
+          provider: plan.selected.provider,
+          model: plan.selected.model,
+        }))
 
         const result = await callProvider(plan.selected.provider, plan.selected.model, payload.message, systemPrompt)
 
@@ -105,6 +171,7 @@ export async function POST(request: NextRequest) {
           model: result.model,
           latencyMs: result.latencyMs,
           routeReason: plan.selected.reason,
+          streaming: 'simulated',
         }))
         controller.close()
       } catch (error) {
