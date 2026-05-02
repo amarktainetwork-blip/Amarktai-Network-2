@@ -3,12 +3,14 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
+import { runHuggingFaceInference, runMiniMaxTts, runQwenWanxImage } from '@/lib/specialist-provider-routes'
 
 const testSchema = z.object({
   provider: z.string().min(1),
   modelId: z.string().min(1).optional(),
   capabilityId: z.string().min(1),
   prompt: z.string().max(4000).optional(),
+  endpointUrl: z.string().url().optional(),
 })
 
 const EXECUTABLE_TEXT_CAPABILITIES = new Set([
@@ -27,6 +29,29 @@ const EXECUTABLE_TEXT_CAPABILITIES = new Set([
 
 export const dynamic = 'force-dynamic'
 
+async function specialistTest(provider: string, capabilityId: string, modelId: string | undefined, prompt: string, endpointUrl?: string) {
+  if (provider === 'huggingface') {
+    const result = await runHuggingFaceInference({
+      modelId,
+      endpointUrl,
+      inputs: prompt,
+      capability: capabilityId,
+      timeoutMs: 45_000,
+    })
+    return result
+  }
+
+  if (provider === 'qwen' && ['text_to_image', 'image_text_to_image'].includes(capabilityId)) {
+    return runQwenWanxImage({ prompt, model: modelId ?? 'wanx2.1-t2i-turbo' })
+  }
+
+  if ((provider === 'minimax' || provider === 'mimo') && capabilityId === 'text_to_speech') {
+    return runMiniMaxTts({ text: prompt, model: modelId ?? 'speech-2.6-turbo' })
+  }
+
+  return null
+}
+
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -43,7 +68,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: `Unknown capability: ${capabilityId}` }, { status: 404 })
   }
 
+  const prompt = parsed.data.prompt ?? `Provider capability test. In one short sentence, confirm you can handle ${capability.label}.`
+
   if (!EXECUTABLE_TEXT_CAPABILITIES.has(capabilityId)) {
+    const specialist = await specialistTest(provider, capabilityId, parsed.data.modelId, prompt, parsed.data.endpointUrl)
+    if (specialist) {
+      const audioOrBinary = specialist.bytes ? Buffer.byteLength(Buffer.from(specialist.bytes)) : 0
+      return NextResponse.json({
+        success: specialist.ok,
+        executed: specialist.executed,
+        status: specialist.ok ? 'passed' : 'failed',
+        provider: specialist.provider,
+        model: specialist.model,
+        capability,
+        latencyMs: specialist.latencyMs,
+        contentType: specialist.contentType,
+        bytes: audioOrBinary,
+        json: specialist.json,
+        text: specialist.text,
+        error: specialist.error,
+      }, { status: specialist.ok ? 200 : 409 })
+    }
+
     return NextResponse.json({
       success: true,
       executed: false,
@@ -55,7 +101,6 @@ export async function POST(request: NextRequest) {
     })
   }
 
-  const prompt = parsed.data.prompt ?? `Provider capability test. In one short sentence, confirm you can handle ${capability.label}.`
   const result = await callUniversalProvider({
     providerKey: provider,
     model: parsed.data.modelId ?? 'custom:model-id',
