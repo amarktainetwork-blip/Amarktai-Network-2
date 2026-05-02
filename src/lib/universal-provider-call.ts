@@ -7,6 +7,8 @@ interface OpenAICompatibleConfig {
   envVars: string[]
   defaultModel: string
   extraHeaders?: Record<string, string>
+  timeoutMs?: number
+  supportsStreaming?: boolean
 }
 
 const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
@@ -15,30 +17,40 @@ const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
     baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
     envVars: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
     defaultModel: 'qwen-plus',
+    timeoutMs: 25_000,
+    supportsStreaming: true,
   },
   deepseek: {
     providerKey: 'deepseek',
     baseUrl: 'https://api.deepseek.com/v1',
     envVars: ['DEEPSEEK_API_KEY'],
     defaultModel: 'deepseek-chat',
+    timeoutMs: 30_000,
+    supportsStreaming: true,
   },
   groq: {
     providerKey: 'groq',
     baseUrl: 'https://api.groq.com/openai/v1',
     envVars: ['GROQ_API_KEY'],
     defaultModel: 'llama-3.3-70b-versatile',
+    timeoutMs: 18_000,
+    supportsStreaming: true,
   },
   together: {
     providerKey: 'together',
     baseUrl: 'https://api.together.xyz/v1',
     envVars: ['TOGETHER_API_KEY'],
     defaultModel: 'meta-llama/Llama-3-70b-chat-hf',
+    timeoutMs: 30_000,
+    supportsStreaming: true,
   },
   openrouter: {
     providerKey: 'openrouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     envVars: ['OPENROUTER_API_KEY'],
     defaultModel: 'openai/gpt-4o-mini',
+    timeoutMs: 35_000,
+    supportsStreaming: true,
     extraHeaders: {
       'HTTP-Referer': 'https://amarktai.com',
       'X-Title': 'Amarktai Network',
@@ -49,24 +61,32 @@ const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
     baseUrl: 'https://api.moonshot.ai/v1',
     envVars: ['MOONSHOT_API_KEY'],
     defaultModel: 'kimi-k2.6',
+    timeoutMs: 45_000,
+    supportsStreaming: true,
   },
   zhipu: {
     providerKey: 'zhipu',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     envVars: ['ZHIPU_API_KEY'],
     defaultModel: 'glm-5',
+    timeoutMs: 35_000,
+    supportsStreaming: true,
   },
   minimax: {
     providerKey: 'minimax',
     baseUrl: 'https://api.minimax.io/v1',
     envVars: ['MINIMAX_API_KEY', 'MIMO_API_KEY'],
     defaultModel: 'MiniMax-M2.7',
+    timeoutMs: 35_000,
+    supportsStreaming: true,
   },
   mimo: {
     providerKey: 'minimax',
     baseUrl: 'https://api.minimax.io/v1',
     envVars: ['MIMO_API_KEY', 'MINIMAX_API_KEY'],
     defaultModel: 'MiniMax-M2.7',
+    timeoutMs: 35_000,
+    supportsStreaming: true,
   },
 }
 
@@ -77,6 +97,18 @@ export interface UniversalProviderRequest {
   systemPrompt?: string
   maxTokens?: number
   temperature?: number
+  timeoutMs?: number
+}
+
+export interface UniversalStreamEvent {
+  type: 'start' | 'token' | 'done' | 'error'
+  content?: string
+  error?: string
+  providerKey: string
+  model: string
+  latencyMs?: number
+  firstTokenMs?: number
+  streaming?: 'native' | 'fallback'
 }
 
 async function resolveKey(providerKey: string, envVars: string[]): Promise<string | null> {
@@ -91,27 +123,68 @@ export function isUniversalProvider(providerKey: string) {
   return providerKey in OPENAI_COMPATIBLE
 }
 
-export async function callUniversalProvider(request: UniversalProviderRequest): Promise<ProviderCallResult> {
-  const providerKey = request.providerKey === 'mimo' ? 'mimo' : request.providerKey
-  const config = OPENAI_COMPATIBLE[providerKey]
-  if (!config) {
-    return callProvider(request.providerKey, request.model, request.message, request.systemPrompt)
-  }
+export function listUniversalProviders() {
+  return Object.entries(OPENAI_COMPATIBLE).map(([key, config]) => ({
+    key,
+    baseUrl: config.baseUrl,
+    envVars: config.envVars,
+    defaultModel: config.defaultModel,
+    timeoutMs: config.timeoutMs ?? 30_000,
+    supportsStreaming: config.supportsStreaming === true,
+  }))
+}
 
-  const start = Date.now()
+function resolveUniversalConfig(providerKey: string) {
+  return OPENAI_COMPATIBLE[providerKey === 'mimo' ? 'mimo' : providerKey]
+}
+
+function resolveModel(request: UniversalProviderRequest, config: OpenAICompatibleConfig) {
+  return request.model && !request.model.startsWith('custom:') ? request.model : config.defaultModel
+}
+
+function messages(request: UniversalProviderRequest) {
+  return [
+    ...(request.systemPrompt ? [{ role: 'system', content: request.systemPrompt }] : []),
+    { role: 'user', content: request.message },
+  ]
+}
+
+function parseStreamData(line: string): string | null {
+  if (!line.startsWith('data:')) return null
+  const payload = line.slice('data:'.length).trim()
+  if (!payload || payload === '[DONE]') return null
+  try {
+    const data = JSON.parse(payload) as {
+      choices?: Array<{
+        delta?: { content?: string }
+        message?: { content?: string }
+        text?: string
+      }>
+      output_text?: string
+      error?: { message?: string }
+    }
+    if (data.error?.message) throw new Error(data.error.message)
+    return data.choices?.[0]?.delta?.content
+      ?? data.choices?.[0]?.message?.content
+      ?? data.choices?.[0]?.text
+      ?? data.output_text
+      ?? null
+  } catch {
+    return null
+  }
+}
+
+async function openAICompatibleRequest(request: UniversalProviderRequest, stream: boolean) {
+  const config = resolveUniversalConfig(request.providerKey)
+  if (!config) return null
   const apiKey = await resolveKey(config.providerKey, config.envVars)
   if (!apiKey) {
-    return {
-      ok: false,
-      output: null,
-      error: `Provider "${request.providerKey}" is not configured. Add ${config.envVars.join(' or ')} in Settings.`,
-      latencyMs: Date.now() - start,
-      model: request.model || config.defaultModel,
-      providerKey: request.providerKey,
-    }
+    throw new Error(`Provider "${request.providerKey}" is not configured. Add ${config.envVars.join(' or ')} in Settings.`)
   }
-
-  const model = request.model && !request.model.startsWith('custom:') ? request.model : config.defaultModel
+  const model = resolveModel(request, config)
+  const timeoutMs = request.timeoutMs ?? config.timeoutMs ?? 30_000
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
     const res = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -123,17 +196,96 @@ export async function callUniversalProvider(request: UniversalProviderRequest): 
       },
       body: JSON.stringify({
         model,
-        messages: [
-          ...(request.systemPrompt ? [{ role: 'system', content: request.systemPrompt }] : []),
-          { role: 'user', content: request.message },
-        ],
+        messages: messages(request),
         max_tokens: request.maxTokens ?? 1400,
         temperature: request.temperature ?? 0.4,
+        stream,
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: controller.signal,
     })
+    return { res, model, config, timeout }
+  } catch (error) {
+    clearTimeout(timeout)
+    throw error
+  }
+}
+
+export async function streamUniversalProvider(
+  request: UniversalProviderRequest,
+  onEvent: (event: UniversalStreamEvent) => void,
+): Promise<ProviderCallResult> {
+  const start = Date.now()
+  const config = resolveUniversalConfig(request.providerKey)
+  if (!config || config.supportsStreaming !== true) {
+    const result = await callUniversalProvider(request)
+    if (result.output) onEvent({ type: 'token', content: result.output, providerKey: result.providerKey, model: result.model, streaming: 'fallback' })
+    onEvent({ type: result.ok ? 'done' : 'error', error: result.error ?? undefined, providerKey: result.providerKey, model: result.model, latencyMs: result.latencyMs, streaming: 'fallback' })
+    return result
+  }
+
+  const model = resolveModel(request, config)
+  let output = ''
+  let firstTokenMs: number | undefined
+  onEvent({ type: 'start', providerKey: request.providerKey, model, streaming: 'native' })
+
+  try {
+    const opened = await openAICompatibleRequest(request, true)
+    if (!opened) throw new Error(`Provider "${request.providerKey}" is not a universal streaming provider.`)
+    const { res, timeout } = opened
+
+    if (!res.ok || !res.body) {
+      clearTimeout(timeout)
+      const body = await res.text().catch(() => '')
+      const error = `${request.providerKey} HTTP ${res.status}: ${body.slice(0, 500) || 'request failed'}`
+      onEvent({ type: 'error', error, providerKey: request.providerKey, model, latencyMs: Date.now() - start, streaming: 'native' })
+      return { ok: false, output: null, error, latencyMs: Date.now() - start, model, providerKey: request.providerKey }
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+      for (const line of lines) {
+        if (line.trim() === 'data: [DONE]') continue
+        const token = parseStreamData(line.trim())
+        if (!token) continue
+        if (firstTokenMs === undefined) firstTokenMs = Date.now() - start
+        output += token
+        onEvent({ type: 'token', content: token, providerKey: request.providerKey, model, firstTokenMs, streaming: 'native' })
+      }
+    }
+    clearTimeout(timeout)
+
+    onEvent({ type: 'done', providerKey: request.providerKey, model, latencyMs: Date.now() - start, firstTokenMs, streaming: 'native' })
+    return { ok: true, output, error: null, latencyMs: Date.now() - start, model, providerKey: request.providerKey }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Universal provider stream failed'
+    onEvent({ type: 'error', error: message, providerKey: request.providerKey, model, latencyMs: Date.now() - start, firstTokenMs, streaming: 'native' })
+    return { ok: false, output: null, error: message, latencyMs: Date.now() - start, model, providerKey: request.providerKey }
+  }
+}
+
+export async function callUniversalProvider(request: UniversalProviderRequest): Promise<ProviderCallResult> {
+  const config = resolveUniversalConfig(request.providerKey)
+  if (!config) {
+    return callProvider(request.providerKey, request.model, request.message, request.systemPrompt)
+  }
+
+  const start = Date.now()
+  const model = resolveModel(request, config)
+
+  try {
+    const opened = await openAICompatibleRequest(request, false)
+    if (!opened) throw new Error(`Provider "${request.providerKey}" is not configured for universal calls.`)
+    const { res, timeout } = opened
 
     if (!res.ok) {
+      clearTimeout(timeout)
       const body = await res.text().catch(() => '')
       return {
         ok: false,
@@ -146,6 +298,7 @@ export async function callUniversalProvider(request: UniversalProviderRequest): 
     }
 
     const data = await res.json() as { choices?: Array<{ message?: { content?: string }; text?: string }> }
+    clearTimeout(timeout)
     return {
       ok: true,
       output: data.choices?.[0]?.message?.content ?? data.choices?.[0]?.text ?? null,
