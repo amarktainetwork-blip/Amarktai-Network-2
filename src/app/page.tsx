@@ -13,16 +13,12 @@ import {
   Compass,
   Fingerprint,
   GitBranch,
-  Layers3,
   LockKeyhole,
-  MessageSquareText,
   Orbit,
   PlayCircle,
   RadioTower,
   ShieldCheck,
   Sparkles,
-  Wand2,
-  Zap,
 } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -36,8 +32,8 @@ const platformPillars = [
   },
   {
     icon: Boxes,
-    title: 'Every app gets its own AI brain',
-    body: 'Marketing, travel, learning, equine, religious, companion and future apps can each use their own capabilities, budgets and model package.',
+    title: 'App-specific intelligence',
+    body: 'Each product can receive its own AI package: the right capabilities, rules, budget, voice, memory and tools for that product’s job.',
   },
   {
     icon: GitBranch,
@@ -52,19 +48,19 @@ const platformPillars = [
 ]
 
 const commandFlow = [
-  'Connect an app, website or repo',
-  'Aiva builds context and capability needs',
-  'The system routes to the right AI tools',
-  'Outputs, actions and artifacts are tracked',
+  'Connect a product, website, workflow or repo',
+  'Aiva builds context and decides what intelligence is needed',
+  'Amarktai routes the work through the right capability path',
+  'Every output, action, approval and artifact stays visible',
 ]
 
-const useCases = [
-  'AI companion and character apps',
-  'Horse and equine management systems',
-  'Marketing engines that promote your portfolio',
-  'Religious, education and course platforms',
-  'Travel planning and destination apps',
-  'Internal coding and deployment workspaces',
+const proofPoints = [
+  'Aiva-led operator workspace',
+  'Per-product AI packages instead of one global default',
+  'Smart routing with provider performance memory',
+  'Generated artifacts and task results saved for review',
+  'Repo workbench for command-to-patch workflows',
+  'Action approvals before PRs, deploys, spend or destructive work',
 ]
 
 const fadeUp = (delay = 0) => ({
@@ -97,7 +93,7 @@ function AivaOrb() {
         </div>
       </div>
       {[
-        { label: 'Apps', x: '3%', y: '26%', icon: Boxes },
+        { label: 'Products', x: '3%', y: '26%', icon: Boxes },
         { label: 'Repos', x: '70%', y: '18%', icon: GitBranch },
         { label: 'Actions', x: '70%', y: '70%', icon: Command },
         { label: 'Memory', x: '8%', y: '68%', icon: BrainCircuit },
@@ -128,7 +124,7 @@ function CommandPreview() {
         <div className="grid gap-3 md:grid-cols-3">
           {[
             ['Aiva', 'Streaming conversation', 'Ready'],
-            ['Apps', 'AI packages saved', 'Configured'],
+            ['Products', 'AI packages saved', 'Configured'],
             ['Repo', 'Prompt-to-PR flow', 'Review gated'],
           ].map(([title, detail, status]) => (
             <div key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -140,7 +136,7 @@ function CommandPreview() {
         </div>
         <div className="mt-3 rounded-2xl border border-cyan-400/10 bg-cyan-400/[0.04] p-4">
           <p className="text-xs text-slate-400">Aiva command</p>
-          <p className="mt-2 text-sm text-white">“Audit the marketing app, update the landing page copy, create a PR, and wait for my approval.”</p>
+          <p className="mt-2 text-sm text-white">“Audit this product, improve the copy, create a PR, and wait for my approval.”</p>
         </div>
       </div>
     </div>
@@ -161,10 +157,10 @@ export default function HomePage() {
               <Orbit className="h-3.5 w-3.5" /> Amarktai Network · AI operating system
             </div>
             <h1 className="max-w-5xl text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
-              One intelligent command layer for every app you build.
+              One intelligent command layer for the products you are building.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              Amarktai Network is the control system for your AI business: Aiva understands the work, connects your apps, routes the intelligence, manages artifacts, and keeps every important action visible, approved and auditable.
+              Amarktai Network is the control system for an AI-first product portfolio. Aiva understands the work, connects the moving parts, routes intelligence, manages artifacts, and keeps every important action visible, approved and auditable.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/admin/login" className="group inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 shadow-xl shadow-cyan-950/30 transition hover:bg-white">
@@ -175,7 +171,7 @@ export default function HomePage() {
               </Link>
             </div>
             <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-              {['Aiva-led operations', 'App AI packages', 'Prompt-to-PR control'].map((item) => (
+              {['Aiva-led operations', 'Per-product intelligence', 'Prompt-to-PR control'].map((item) => (
                 <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs text-slate-300">
                   <CheckCircle2 className="mb-2 h-4 w-4 text-emerald-300" /> {item}
                 </div>
@@ -193,7 +189,7 @@ export default function HomePage() {
           <motion.div {...fadeUp()} className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-bold uppercase tracking-[0.26em] text-cyan-200">What Amarktai actually is</p>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">Not a provider dashboard. Not a chatbot wrapper.</h2>
-            <p className="mt-5 text-slate-400">Amarktai Network is the system that sits above your apps. It gives each product the intelligence it needs, gives Aiva context and control, and gives you one place to see what is working, what failed, what was generated and what still needs approval.</p>
+            <p className="mt-5 text-slate-400">Amarktai Network sits above the product stack. It gives each product the intelligence it needs, gives Aiva context and control, and gives you one place to see what is working, what failed, what was generated and what still needs approval.</p>
           </motion.div>
           <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {platformPillars.map((pillar, index) => (
@@ -215,7 +211,7 @@ export default function HomePage() {
           <motion.div {...fadeUp(0.12)}>
             <p className="text-xs font-bold uppercase tracking-[0.26em] text-violet-200">The operating flow</p>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">Aiva turns scattered tools into one controlled workflow.</h2>
-            <p className="mt-5 text-slate-400">Your apps do not need the same AI setup. One might need chat only. One might need voice, image, video, memory, web crawling and repo control. Amarktai lets each app receive exactly what it needs.</p>
+            <p className="mt-5 text-slate-400">Every product has different intelligence needs. Some need simple conversation. Others need memory, media, repo work, website context, automation or approvals. Amarktai gives each product its own controlled AI package instead of forcing one generic setup onto everything.</p>
             <div className="mt-8 space-y-3">
               {commandFlow.map((step, index) => (
                 <div key={step} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
@@ -232,14 +228,14 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl rounded-[2rem] border border-white/10 bg-gradient-to-br from-cyan-300/[0.08] via-white/[0.03] to-violet-400/[0.08] p-8 sm:p-10">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <motion.div {...fadeUp()}>
-              <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-200">Built for your app portfolio</p>
-              <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">One network. Many products. One operator.</h2>
-              <p className="mt-5 text-slate-400">The goal is not to show off provider logos. The goal is to make Amarktai the intelligence layer behind your apps and make Aiva the one place you operate them from.</p>
+              <p className="text-xs font-bold uppercase tracking-[0.26em] text-emerald-200">Built as a system, not a collection of widgets</p>
+              <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">One network. Many moving parts. One operator.</h2>
+              <p className="mt-5 text-slate-400">Amarktai is designed to become the intelligence layer behind a product portfolio: one operating surface where Aiva understands context, proposes work, tracks outputs, and keeps powerful actions under human approval.</p>
             </motion.div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {useCases.map((useCase, index) => (
-                <motion.div key={useCase} {...fadeUp(index * 0.04)} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
-                  <Fingerprint className="mb-3 h-4 w-4 text-emerald-300" /> {useCase}
+              {proofPoints.map((point, index) => (
+                <motion.div key={point} {...fadeUp(index * 0.04)} className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm text-slate-300">
+                  <Fingerprint className="mb-3 h-4 w-4 text-emerald-300" /> {point}
                 </motion.div>
               ))}
             </div>
@@ -268,8 +264,8 @@ export default function HomePage() {
       <section className="px-4 py-20 sm:px-6 lg:px-8">
         <motion.div {...fadeUp()} className="mx-auto max-w-5xl rounded-[2rem] border border-cyan-300/20 bg-cyan-300/[0.07] p-10 text-center shadow-2xl shadow-cyan-950/20">
           <PlayCircle className="mx-auto h-10 w-10 text-cyan-200" />
-          <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">Amarktai Network is becoming the control room for everything you build.</h2>
-          <p className="mx-auto mt-5 max-w-2xl text-slate-400">Aiva, app AI packages, smart routing, artifacts, provider intelligence and repo workbench are now part of one direction: build, manage and improve your entire app portfolio from one intelligent operating layer.</p>
+          <h2 className="mt-5 text-3xl font-black tracking-tight text-white sm:text-5xl">Amarktai Network is becoming the control room for the products you build.</h2>
+          <p className="mx-auto mt-5 max-w-2xl text-slate-400">Aiva, product AI packages, smart routing, artifacts, readiness checks and repo workbench are now part of one direction: build, manage and improve a connected product ecosystem from one intelligent operating layer.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-100">Enter workspace <ArrowRight className="h-4 w-4" /></Link>
             <Link href="/contact" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Request access <ChevronRight className="h-4 w-4" /></Link>
