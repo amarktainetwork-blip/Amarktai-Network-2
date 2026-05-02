@@ -55,11 +55,15 @@ export interface ProviderGovernanceEntry {
 /**
  * Core/active providers for the current app.
  *
- * Rule:
- * - Keep GenX as the main gateway.
- * - Keep cheap/free-capable providers first-class: Qwen, Groq, Together, HuggingFace.
- * - Keep specialist providers only where they solve a real product need.
- * - Do not show experimental providers in primary setup until approved.
+ * Rules:
+ * - GenX is the gateway, but it must not hide direct model choice.
+ * - Every connected app chooses its own provider/model package.
+ * - Qwen, MiniMax/Mimo, DeepSeek, Gemini, HuggingFace, Groq and Together are
+ *   first-class direct AI routes.
+ * - Hugging Face supports any model ID through Inference Providers and any
+ *   dedicated endpoint URL through Inference Endpoints.
+ * - Experimental providers stay proposed until their API route and safety/cost
+ *   behaviour are verified.
  */
 export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
   {
@@ -68,7 +72,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     integrationKey: 'genx',
     envVar: 'GENX_API_KEY',
     status: 'core',
-    reason: 'Primary AI gateway and model router for Amarktai Network.',
+    reason: 'Primary AI gateway and model router. Must support all GenX catalog models and not block direct model choice.',
     capabilities: ['gateway', 'chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'research'],
     coveredByGenX: false,
     wired: true,
@@ -81,7 +85,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     integrationKey: 'github',
     envVar: 'GITHUB_TOKEN',
     status: 'core',
-    reason: 'Required for Repo Workbench prompt-to-PR flow.',
+    reason: 'Required for simple Repo Workbench prompt-to-PR flow.',
     capabilities: ['repo', 'coding'],
     coveredByGenX: false,
     wired: true,
@@ -94,7 +98,34 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     integrationKey: 'qwen',
     envVar: 'DASHSCOPE_API_KEY',
     status: 'core',
-    reason: 'Cheap, strong multilingual/chat/coding backbone that should not be ignored.',
+    reason: 'Cheap, strong multilingual/chat/coding backbone with Qwen/Wanx/Qwen-Omni style multimodal routes.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'embeddings'],
+    coveredByGenX: false,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'cheap',
+  },
+  {
+    key: 'minimax',
+    displayName: 'MiniMax / Mimo',
+    integrationKey: 'minimax',
+    envVar: 'MINIMAX_API_KEY',
+    status: 'core',
+    reason: 'Full-stack low-cost multimodal provider for text, speech, video, image and music. Added as the likely provider behind the requested Mimo capability.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'music_generation'],
+    coveredByGenX: false,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'cheap',
+    notes: 'Also accept MIMO_API_KEY as a fallback env var in provider catalog/testing routes.',
+  },
+  {
+    key: 'deepseek',
+    displayName: 'DeepSeek',
+    integrationKey: 'deepseek',
+    envVar: 'DEEPSEEK_API_KEY',
+    status: 'core',
+    reason: 'Very low-cost reasoning/coding/chat backbone.',
     capabilities: ['chat', 'creative', 'reasoning', 'coding'],
     coveredByGenX: false,
     wired: true,
@@ -102,12 +133,39 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     defaultCostRole: 'cheap',
   },
   {
+    key: 'gemini',
+    displayName: 'Google Gemini',
+    integrationKey: 'gemini',
+    envVar: 'GEMINI_API_KEY',
+    status: 'core',
+    reason: 'Multimodal reasoning, vision, research, long-context and voice/media support where available.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'embeddings', 'research'],
+    coveredByGenX: true,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'balanced',
+  },
+  {
+    key: 'huggingface',
+    displayName: 'Hugging Face',
+    integrationKey: 'huggingface',
+    envVar: 'HUGGINGFACE_API_KEY',
+    status: 'core',
+    reason: 'Universal model layer: Inference Providers for serverless models and Inference Endpoints for dedicated private endpoints.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'embeddings', 'adult_image'],
+    coveredByGenX: false,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'free_first',
+    notes: 'Supports any HF model ID and optional dedicated endpoint URL per app/model.',
+  },
+  {
     key: 'groq',
     displayName: 'Groq',
     integrationKey: 'groq',
     envVar: 'GROQ_API_KEY',
     status: 'core',
-    reason: 'Fast low-cost inference for chat, routing, and fallback responses.',
+    reason: 'Fast low-cost inference for chat, routing, coding assistance and TTS where available.',
     capabilities: ['chat', 'creative', 'reasoning', 'coding', 'voice_tts'],
     coveredByGenX: false,
     wired: true,
@@ -120,7 +178,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     integrationKey: 'together',
     envVar: 'TOGETHER_API_KEY',
     status: 'core',
-    reason: 'Cheap open-model route and specialist adult-safe provider option when explicitly enabled.',
+    reason: 'Cheap open-model route and specialist image/adult-safe provider option when explicitly enabled.',
     capabilities: ['chat', 'creative', 'reasoning', 'coding', 'image_generation', 'adult_text', 'adult_image'],
     coveredByGenX: false,
     wired: true,
@@ -128,17 +186,30 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     defaultCostRole: 'cheap',
   },
   {
-    key: 'huggingface',
-    displayName: 'Hugging Face',
-    integrationKey: 'huggingface',
-    envVar: 'HUGGINGFACE_API_KEY',
-    status: 'core',
-    reason: 'Free/open-source fallback for text, image and adult specialist routes when approved.',
-    capabilities: ['chat', 'creative', 'coding', 'image_generation', 'voice_tts', 'adult_image'],
+    key: 'moonshot',
+    displayName: 'Moonshot / Kimi',
+    integrationKey: 'moonshot',
+    envVar: 'MOONSHOT_API_KEY',
+    status: 'active_optional',
+    reason: 'Long-context, coding, multimodal Kimi model route for massive datasets, leads and visual-to-code work.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding', 'research'],
     coveredByGenX: false,
     wired: true,
     showInPrimarySetup: true,
-    defaultCostRole: 'free_first',
+    defaultCostRole: 'balanced',
+  },
+  {
+    key: 'zhipu',
+    displayName: 'Zhipu AI / GLM',
+    integrationKey: 'zhipu',
+    envVar: 'ZHIPU_API_KEY',
+    status: 'active_optional',
+    reason: 'Agentic GLM route for coding, reasoning and long-running agent tasks.',
+    capabilities: ['chat', 'creative', 'reasoning', 'coding'],
+    coveredByGenX: false,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'balanced',
   },
   {
     key: 'openrouter',
@@ -224,8 +295,8 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     displayName: 'Firecrawl',
     integrationKey: 'firecrawl',
     envVar: 'FIRECRAWL_API_KEY',
-    status: 'active_optional',
-    reason: 'Web crawling/research and future app onboarding intelligence.',
+    status: 'core',
+    reason: 'Website crawling and app onboarding intelligence. Required for scraping an app site and building an agent profile.',
     capabilities: ['crawler', 'research'],
     coveredByGenX: false,
     wired: true,
@@ -264,7 +335,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     integrationKey: 'mistral',
     envVar: 'MISTRAL_API_KEY',
     status: 'deprecated',
-    reason: 'Mistral-class models are already available through other low-cost routes; direct key is not primary.',
+    reason: 'Mistral-class models are available through GenX/HuggingFace/OpenRouter-style routes; direct key is not primary.',
     capabilities: ['chat', 'coding'],
     coveredByGenX: false,
     wired: false,
@@ -372,7 +443,7 @@ export const PROPOSED_PROVIDER_BACKLOG: readonly ProviderGovernanceEntry[] = [
     envVar: 'FAL_API_KEY',
     status: 'proposed',
     reason: 'Fast image/video generation provider candidate for Media Studio.',
-    capabilities: ['image_generation', 'video_generation'],
+    capabilities: ['image_generation', 'video_generation', 'voice_stt'],
     coveredByGenX: false,
     wired: false,
     showInPrimarySetup: false,
