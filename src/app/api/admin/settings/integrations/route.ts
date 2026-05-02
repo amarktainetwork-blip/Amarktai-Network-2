@@ -224,6 +224,7 @@ const patchSchema = z.object({
     specialistEndpoint: z.string().optional(),
     specialistKey: z.string().optional(),
     providerModel: z.string().optional(),
+    lastTestStatus: z.enum(['passed', 'failed']).optional(),
   }).optional(),
   webdock: z.object({
     apiKey: z.string().optional(),
@@ -369,6 +370,7 @@ export async function PATCH(req: NextRequest) {
     if (data.adult.providerType !== undefined) notes.providerType = data.adult.providerType
     if (data.adult.specialistEndpoint !== undefined) notes.specialistEndpoint = data.adult.specialistEndpoint
     if (data.adult.providerModel !== undefined) notes.providerModel = data.adult.providerModel
+    if (data.adult.lastTestStatus !== undefined) notes.lastTestStatus = data.adult.lastTestStatus
 
     const adultKey = data.adult.specialistKey || undefined
 

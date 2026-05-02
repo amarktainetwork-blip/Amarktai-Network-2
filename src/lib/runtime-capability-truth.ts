@@ -10,7 +10,7 @@
  * 'use client' components.
  */
 
-import { getServiceKey } from '@/lib/service-vault'
+import { getServiceKey, getServiceConfigField } from '@/lib/service-vault'
 
 // ── Integration key → env-var map ────────────────────────────────────────────
 // Must match the keys used in the integrationConfig DB table and Settings page.
@@ -113,6 +113,7 @@ export interface DashboardRuntimeTruth {
   genx: GenXRuntimeStatus
   providers: ProviderRuntimeEntry[]
   capabilities: CapabilityRuntimeEntry[]
+  adultGate: AdultCapabilityGate
   blockers: string[]
 }
 
@@ -226,6 +227,98 @@ export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[
   return getRuntimeProviderStatus()
 }
 
+// ── Adult mode capability check ───────────────────────────────────────────────
+
+export type AdultCapabilityGateStatus =
+  | 'ready'
+  | 'needs_provider_test'
+  | 'provider_failed'
+  | 'app_permission_disabled'
+  | 'global_flag_disabled'
+  | 'not_wired'
+
+export interface AdultCapabilityGate {
+  status: AdultCapabilityGateStatus
+  blocker: string | null
+  providerAvailable: boolean
+  testPassed: boolean
+  globalEnabled: boolean
+}
+
+/**
+ * Compute the exact adult capability gate status from the service vault.
+ *
+ * Resolution:
+ *   1. ADULT_MODE_ENABLED=true env var — sets the global env flag
+ *   2. adult_mode integrationConfig notes.mode === 'specialist' — admin configured
+ *   3. Specialist provider key exists (together / huggingface / xai)
+ *   4. notes.lastTestStatus === 'passed' — provider generation test passed
+ */
+export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
+  function hasProvider(key: string) {
+    return providers.find(p => p.key === key)?.configured === true
+  }
+
+  // Check env flag
+  const envEnabled = process.env.ADULT_MODE_ENABLED?.trim().toLowerCase() === 'true'
+
+  // Read adult_mode config from vault (notes stored by Settings/integrations route)
+  const adultMode    = await getServiceConfigField('adult_mode', 'mode', '').catch(() => null) ?? ''
+  const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
+
+  const globalEnabled = envEnabled || adultMode === 'specialist'
+
+  // xAI key is stored under 'xai' integration key
+  const xaiKey = await resolveKey('xai')
+  const providerAvailable =
+    hasProvider('together') ||
+    hasProvider('huggingface') ||
+    hasProvider('replicate') ||
+    xaiKey.hasKey
+
+  const testPassed = lastTestStatus === 'passed'
+
+  if (!globalEnabled) {
+    return {
+      status: 'global_flag_disabled',
+      blocker: 'Adult mode is disabled. Enable it in Settings → Adult Mode (set mode to "Specialist provider only") or set ADULT_MODE_ENABLED=true.',
+      providerAvailable,
+      testPassed,
+      globalEnabled: false,
+    }
+  }
+
+  if (!providerAvailable) {
+    return {
+      status: 'not_wired',
+      blocker: 'No specialist adult provider configured. Add a Together AI, HuggingFace, Replicate, or xAI/Grok key in Settings → AI Providers.',
+      providerAvailable: false,
+      testPassed,
+      globalEnabled: true,
+    }
+  }
+
+  if (!testPassed) {
+    return {
+      status: 'needs_provider_test',
+      blocker: lastTestStatus === 'failed'
+        ? 'Last specialist provider test failed. Re-run "Test provider" in Settings → Adult Mode to confirm the provider works.'
+        : 'Specialist provider test has not been run. Run "Test provider" in Settings → Adult Mode to unlock adult generation.',
+      providerAvailable: true,
+      testPassed: false,
+      globalEnabled: true,
+    }
+  }
+
+  return {
+    status: 'ready',
+    blocker: null,
+    providerAvailable: true,
+    testPassed: true,
+    globalEnabled: true,
+  }
+}
+
 // ── Capability status ─────────────────────────────────────────────────────────
 
 export async function getCapabilityStatus(genxConfigured: boolean, providers: ProviderRuntimeEntry[]): Promise<CapabilityRuntimeEntry[]> {
@@ -241,6 +334,9 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
   const hasSuno     = isConfigured('suno')
   const hasUdio     = isConfigured('udio')
   const hasFirecrawl = isConfigured('firecrawl')
+
+  // Resolve adult capability gate (reads from service vault — same as Settings)
+  const adultGate = await getAdultCapabilityGate(providers)
 
   const caps: CapabilityRuntimeEntry[] = [
     {
@@ -326,10 +422,22 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     },
     {
       name: 'Adult Image',
-      status: 'blocked',
-      blocker: 'Adult mode disabled. Requires app-scoped permission, self-host provider (RunPod/HuggingFace), and ADULT_MODE_ENABLED=true.',
-      models: [],
-      nextAction: 'Enable adult mode in Settings → Adult Mode and configure specialist provider',
+      status: adultGate.status === 'ready' ? 'available' : 'blocked',
+      blocker: adultGate.blocker,
+      models: adultGate.status === 'ready'
+        ? [
+            ...(hasTogether  ? ['FLUX.1-schnell (Together AI)', 'SDXL (Together AI)']       : []),
+            ...(hasHF        ? ['RealVisXL (HuggingFace)', 'DreamShaper (HuggingFace)']      : []),
+            ...(hasReplicate ? ['SDXL Replicate']                                             : []),
+          ]
+        : [],
+      nextAction: adultGate.status === 'ready'
+        ? null
+        : adultGate.status === 'not_wired'
+        ? 'Add Together AI, HuggingFace, or Replicate key in Settings → AI Providers'
+        : adultGate.status === 'needs_provider_test' || adultGate.status === 'provider_failed'
+        ? 'Run "Test provider" in Settings → Adult Mode'
+        : 'Enable adult mode in Settings → Adult Mode',
     },
     {
       name: 'Web Crawler / Research',
@@ -364,7 +472,10 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     getRuntimeProviderStatus(),
   ])
 
-  const capabilities = await getCapabilityStatus(genx.configured, providers)
+  const [capabilities, adultGate] = await Promise.all([
+    getCapabilityStatus(genx.configured, providers),
+    getAdultCapabilityGate(providers),
+  ])
 
   const blockers: string[] = []
   if (!genx.configured) blockers.push('GenX API key not configured — add GENX_API_KEY in Settings')
@@ -380,6 +491,7 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     genx,
     providers,
     capabilities,
+    adultGate,
     blockers,
   }
 }
