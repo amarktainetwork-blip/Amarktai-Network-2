@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { runMiniMaxTts } from '@/lib/specialist-provider-routes'
 import { saveMediaArtifact } from '@/lib/media-artifacts'
+import { recordProviderResult } from '@/lib/provider-result-log'
 
 const schema = z.object({
   text: z.string().min(1).max(2000),
@@ -36,6 +37,21 @@ export async function POST(request: NextRequest) {
         metadata: { textPreview: parsed.data.text.slice(0, 160), voiceId: parsed.data.voiceId, latencyMs: result.latencyMs },
       })
     : null
+
+  await recordProviderResult({
+    appSlug: parsed.data.appSlug,
+    provider: result.provider,
+    model: result.model,
+    capability: result.capability,
+    success: result.ok,
+    executed: result.executed,
+    latencyMs: result.latencyMs,
+    contentType: result.contentType,
+    artifactId: artifact?.id,
+    artifactPath: artifact?.publicPath,
+    error: result.error,
+    metadata: { voiceId: parsed.data.voiceId, textLength: parsed.data.text.length },
+  }).catch(() => null)
 
   if (result.bytes) {
     return new NextResponse(result.bytes, {
