@@ -1,16 +1,7 @@
 import fs from 'fs/promises'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import {
-  GENX_AUDIO_MODELS,
-  GENX_IMAGE_MODELS,
-  GENX_TTS_MODELS,
-  GENX_VIDEO_MODELS,
-  getAdultCapabilityStatusAsync,
-  getGenXStatusAsync,
-  listGenXModels,
-} from '@/lib/genx-client'
-import { getProviderKey, isProviderConfigured } from '@/lib/provider-config'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 import { getQueueStatus } from '@/lib/job-queue'
 import { verifyStorage } from '@/lib/storage-driver'
@@ -38,27 +29,31 @@ function check(
   return { key, label, status, evidence, blocker }
 }
 
-function hasCatalogModel(
-  models: Array<{ id?: string; category?: string; capabilities?: string[] }>,
-  category: string,
-  fallbackIds: readonly string[],
-): boolean {
-  const fallbackSet = new Set(fallbackIds.map((id) => id.toLowerCase()))
-  return models.some((model) => {
-    const id = String(model.id ?? '').toLowerCase()
-    const modelCategory = String(model.category ?? '').toLowerCase()
-    const caps = (model.capabilities ?? []).map((cap) => String(cap).toLowerCase())
-    return modelCategory === category || caps.some((cap) => cap.includes(category)) || fallbackSet.has(id)
-  })
+function capabilityStatus(
+  truth: Awaited<ReturnType<typeof getDashboardRuntimeTruth>>,
+  names: string[],
+) {
+  const wanted = new Set(names.map((name) => name.toLowerCase()))
+  return truth.capabilities.find((capability) => wanted.has(capability.name.toLowerCase())) ?? null
+}
+
+function configuredProviderKeys(truth: Awaited<ReturnType<typeof getDashboardRuntimeTruth>>) {
+  return truth.providers.filter((provider) => provider.configured).map((provider) => provider.key)
 }
 
 async function runWorkspaceCreateDeleteProbe(): Promise<{ ok: boolean; evidence: string; blocker: string | null }> {
-  const tempPath = resolveWorkspacePath('repos', `.live-readiness-${process.pid}-${Date.now()}`)
+  const name = `.live-readiness-${process.pid}-${Date.now()}`
+  const tempPath = resolveWorkspacePath('repos', name)
+
   try {
     await fs.mkdir(tempPath, { recursive: false })
-    await fs.writeFile(resolveWorkspacePath('repos', `${tempPath.split(/[\\/]/).pop()}`, 'probe.txt'), 'ok', 'utf8')
+    await fs.writeFile(resolveWorkspacePath('repos', name, 'probe.txt'), 'ok', 'utf8')
     await fs.rm(tempPath, { recursive: true, force: true })
-    return { ok: true, evidence: 'Created and deleted a temporary Repo Workbench workspace under the configured root.', blocker: null }
+    return {
+      ok: true,
+      evidence: 'Created and deleted a temporary Repo Workbench workspace under the configured root.',
+      blocker: null,
+    }
   } catch (error) {
     await fs.rm(tempPath, { recursive: true, force: true }).catch(() => null)
     return {
@@ -77,14 +72,8 @@ export async function GET(request: NextRequest) {
 
   const checks: ReadinessCheck[] = []
 
-  const [genx, repo, queue, storage, adult, githubKey, webdockKey] = await Promise.all([
-    getGenXStatusAsync().catch((error) => ({
-      configured: false,
-      available: false,
-      apiUrl: null,
-      modelCount: 0,
-      error: error instanceof Error ? error.message : 'GenX status failed',
-    })),
+  const [truth, repo, queue, storage, githubKey, webdockKey] = await Promise.all([
+    getDashboardRuntimeTruth(),
     getRepoWorkbenchStatus().catch((error) => ({
       workspaceRoot: '',
       workspaceWritable: false,
@@ -92,6 +81,9 @@ export async function GET(request: NextRequest) {
       githubAuthenticated: false,
       canImport: false,
       canPatch: false,
+      canRunChecks: false,
+      canPush: false,
+      canCreatePr: false,
       blockers: [error instanceof Error ? error.message : 'Repo Workbench status failed'],
       warnings: [],
     })),
@@ -105,41 +97,22 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : 'Storage verification failed',
       missingSetup: ['Storage verification failed'],
     })),
-    getAdultCapabilityStatusAsync().catch((error) => ({
-      status: 'UNAVAILABLE' as const,
-      supported: false,
-      route: 'unavailable' as const,
-      note: error instanceof Error ? error.message : 'Adult readiness failed',
-      providers: [],
-      blockers: ['Adult readiness failed'],
-    })),
-    getProviderKey('github'),
+    getServiceKey('github', 'GITHUB_TOKEN'),
     getServiceKey('webdock', 'WEBDOCK_API_KEY'),
   ])
 
-  const models = genx.available ? await listGenXModels().catch(() => []) : []
-  const imageModelReady = genx.available && (hasCatalogModel(models, 'image', GENX_IMAGE_MODELS) || models.length === 0)
-  const videoModelReady = genx.available && hasCatalogModel(models, 'video', GENX_VIDEO_MODELS)
-  const voiceModelReady = genx.available && hasCatalogModel(models, 'voice', GENX_TTS_MODELS)
-  const musicModelReady = genx.available && hasCatalogModel(models, 'audio', GENX_AUDIO_MODELS)
   const workspaceProbe = await runWorkspaceCreateDeleteProbe()
-
-  const [openai, groq, gemini, replicate, suno, together, qwen] = await Promise.all([
-    isProviderConfigured('openai'),
-    isProviderConfigured('groq'),
-    isProviderConfigured('gemini'),
-    isProviderConfigured('replicate'),
-    isProviderConfigured('suno'),
-    isProviderConfigured('together'),
-    isProviderConfigured('qwen'),
-  ])
+  const providers = configuredProviderKeys(truth)
+  const image = capabilityStatus(truth, ['Image Generation'])
+  const video = capabilityStatus(truth, ['Video Generation'])
+  const voice = capabilityStatus(truth, ['Voice TTS', 'STT / Transcription'])
+  const music = capabilityStatus(truth, ['Music Generation'])
+  const adult = capabilityStatus(truth, ['Adult Image'])
+  const webCrawler = capabilityStatus(truth, ['Web Crawler / Research'])
 
   const db = await prisma.$queryRaw`SELECT 1`
     .then(() => ({ ok: true, blocker: null as string | null }))
     .catch((error) => ({ ok: false, blocker: error instanceof Error ? error.message : 'Database query failed' }))
-  const adultBlocker = 'blockers' in adult && Array.isArray(adult.blockers)
-    ? adult.blockers.join('; ')
-    : 'Adult gates are not all passed.'
 
   const healthUrl = new URL('/api/health/ping', request.url)
   const health = await fetch(healthUrl, { method: 'GET', cache: 'no-store' })
@@ -147,34 +120,141 @@ export async function GET(request: NextRequest) {
     .catch((error) => ({ ok: false, evidence: error instanceof Error ? error.message : 'Health endpoint fetch failed' }))
 
   checks.push(
-    check('genx_key', 'GenX key configured', genx.configured ? 'PASS' : 'FAIL', genx.configured ? 'GenX key found in service vault/env.' : 'No usable GenX key found.', genx.configured ? null : 'Configure GENX_API_KEY in Settings.'),
-    check('genx_live', 'GenX live status', genx.available ? 'PASS' : 'FAIL', genx.available ? 'GenX catalogue/status endpoint responded.' : (genx.error ?? 'GenX is not reachable.'), genx.available ? null : 'GenX must respond before gateway-backed media/model routing can be verified.'),
-    check('genx_catalog', 'GenX model catalogue count', genx.available && (genx.modelCount ?? models.length) > 0 ? 'PASS' : 'FAIL', `${genx.modelCount ?? models.length} model(s) reported.`, genx.available ? null : 'GenX unavailable, catalogue cannot be trusted.'),
-    check('github_pat', 'GitHub PAT configured', githubKey ? 'PASS' : 'FAIL', githubKey ? 'GitHub token found in service vault/env.' : 'No usable GitHub token found.', githubKey ? null : 'Configure GitHub token in Settings or Repo Workbench.'),
-    check('workspace_writable', 'Workspace root exists/writable', repo.workspaceWritable ? 'PASS' : 'FAIL', repo.workspaceRoot ? `Workspace root: ${repo.workspaceRoot}` : 'Workspace root unavailable.', repo.workspaceWritable ? null : 'Repo workspace root is not writable.'),
-    check('repo_temp_workspace', 'Repo Workbench temp workspace create/delete', workspaceProbe.ok ? 'PASS' : 'FAIL', workspaceProbe.evidence, workspaceProbe.blocker),
-    check('image_provider', 'Image generation provider available', imageModelReady || openai || gemini || together || qwen ? 'PASS' : 'FAIL', imageModelReady ? 'GenX image model available.' : 'Direct image-capable fallback provider status checked.', imageModelReady || openai || gemini || together || qwen ? null : 'Configure GenX image model access or an image-capable fallback provider.'),
-    check('video_provider', 'Video generation provider available', videoModelReady ? 'PASS' : 'DISABLED', videoModelReady ? 'GenX video model found in live catalogue.' : 'No live GenX video model confirmed.', videoModelReady ? null : 'Video remains disabled until a live video model/provider, async polling, and artifact flow are verified.'),
-    check('voice_provider', 'Voice provider available', voiceModelReady || openai || groq || gemini ? 'PASS' : 'FAIL', voiceModelReady ? 'GenX voice/TTS model found.' : 'Checked direct TTS provider fallback keys.', voiceModelReady || openai || groq || gemini ? null : 'Configure GenX voice model or direct TTS provider.'),
-    check('music_provider', 'Music provider available', musicModelReady || suno || replicate ? 'PASS' : 'DISABLED', musicModelReady ? 'GenX audio/music model found.' : suno || replicate ? 'Direct music provider key configured; live generation still needs endpoint verification.' : 'No live music provider confirmed.', musicModelReady || suno || replicate ? null : 'Music stays disabled until GenX/Lyria/Suno/Replicate route is wired and verified.'),
-    check('adult_readiness', 'Adult provider test status', adult.status === 'READY' ? 'PASS' : 'DISABLED', adult.note ?? adult.status, adult.status === 'READY' ? null : adultBlocker),
-    check('artifacts_storage', 'Artifacts storage writable', storage.configured && storage.writable ? 'PASS' : 'FAIL', `driver=${storage.driver}; root=${storage.basePath}; persistent=${storage.persistent}`, storage.configured && storage.writable ? null : (storage.error ?? ((storage.missingSetup ?? []).join('; ') || 'Artifact storage is not configured/writable.'))),
-    check('job_queue', 'Job queue available', queue.healthy ? 'PASS' : queue.backendAvailable ? 'OPTIONAL' : 'OPTIONAL', queue.backendAvailable ? `Queue backend available; counts=${JSON.stringify(queue.counts)}` : 'Redis/BullMQ queue unavailable; inline/non-queue flows may still run.', queue.healthy ? null : 'Queue is not fully healthy; heavy media jobs must remain gated.'),
+    check(
+      'runtime_truth',
+      'Runtime truth endpoint source',
+      truth.success ? 'PASS' : 'FAIL',
+      `Runtime truth loaded. Providers configured: ${providers.length ? providers.join(', ') : 'none'}.`,
+      truth.success ? null : 'Runtime truth failed to load.',
+    ),
+    check(
+      'genx_key',
+      'GenX key configured',
+      truth.genx.configured ? 'PASS' : 'FAIL',
+      truth.genx.configured ? `GenX key found via ${truth.genx.keySource}.` : 'No usable GenX key found.',
+      truth.genx.configured ? null : 'Configure GENX_API_KEY in Settings.',
+    ),
+    check(
+      'genx_live',
+      'GenX live status',
+      truth.genx.available ? 'PASS' : 'FAIL',
+      truth.genx.available ? `GenX responded. Model count: ${truth.genx.modelCount}.` : 'GenX key is missing or endpoint is unreachable.',
+      truth.genx.available ? null : 'GenX must respond before gateway-backed model/media routing can be fully verified.',
+    ),
+    check(
+      'github_pat',
+      'GitHub PAT configured',
+      githubKey ? 'PASS' : 'FAIL',
+      githubKey ? 'GitHub token found in the same service vault/env path used by Settings and Repo Workbench.' : 'No usable GitHub token found.',
+      githubKey ? null : 'Configure GitHub token in Settings or Repo Workbench.',
+    ),
+    check(
+      'repo_workbench_workspace',
+      'Repo Workbench workspace root writable',
+      repo.workspaceWritable ? 'PASS' : 'FAIL',
+      repo.workspaceRoot ? `Workspace root: ${repo.workspaceRoot}` : 'Workspace root unavailable.',
+      repo.workspaceWritable ? null : 'Repo workspace root is not writable by the app process.',
+    ),
+    check(
+      'repo_temp_workspace',
+      'Repo Workbench temp workspace create/delete',
+      workspaceProbe.ok ? 'PASS' : 'FAIL',
+      workspaceProbe.evidence,
+      workspaceProbe.blocker,
+    ),
+    check(
+      'repo_prompt_to_pr_flow',
+      'Repo prompt → patch → checks → PR prerequisites',
+      repo.canPatch && repo.canRunChecks && repo.canPush && repo.canCreatePr ? 'PASS' : 'FAIL',
+      `canPatch=${Boolean(repo.canPatch)}; canRunChecks=${Boolean(repo.canRunChecks)}; canPush=${Boolean(repo.canPush)}; canCreatePr=${Boolean(repo.canCreatePr)}.`,
+      repo.canPatch && repo.canRunChecks && repo.canPush && repo.canCreatePr
+        ? null
+        : [...((repo.blockers as string[] | undefined) ?? []), ...((repo.warnings as string[] | undefined) ?? [])].join('; ') || 'Repo Workbench prerequisites are incomplete.',
+    ),
+    check(
+      'image_generation',
+      'Image generation available',
+      image?.status === 'available' ? 'PASS' : 'FAIL',
+      image ? `status=${image.status}; models=${image.models.length}` : 'Image capability not returned by runtime truth.',
+      image?.status === 'available' ? null : image?.blocker ?? 'Configure and test an image-capable provider.',
+    ),
+    check(
+      'video_generation',
+      'Video generation available',
+      video?.status === 'available' ? 'PASS' : 'DISABLED',
+      video ? `status=${video.status}; models=${video.models.length}` : 'Video capability not returned by runtime truth.',
+      video?.status === 'available' ? null : video?.blocker ?? 'Video remains disabled until a real provider route, quota and artifact flow are verified.',
+    ),
+    check(
+      'voice_tts',
+      'Voice/TTS available',
+      voice?.status === 'available' ? 'PASS' : 'FAIL',
+      voice ? `status=${voice.status}; models=${voice.models.length}` : 'Voice capability not returned by runtime truth.',
+      voice?.status === 'available' ? null : voice?.blocker ?? 'Configure and test GenX, ElevenLabs, or Deepgram voice.',
+    ),
+    check(
+      'music_generation',
+      'Music generation available',
+      music?.status === 'available' ? 'PASS' : 'DISABLED',
+      music ? `status=${music.status}; models=${music.models.length}` : 'Music capability not returned by runtime truth.',
+      music?.status === 'available' ? null : music?.blocker ?? 'Music stays disabled until a real route/provider is verified.',
+    ),
+    check(
+      'adult_mode',
+      'Adult Mode gate status',
+      truth.adultGate.status === 'ready' ? 'PASS' : 'DISABLED',
+      `adultGate=${truth.adultGate.status}; providerAvailable=${truth.adultGate.providerAvailable}; testPassed=${truth.adultGate.testPassed}; globalEnabled=${truth.adultGate.globalEnabled}.`,
+      truth.adultGate.status === 'ready' ? null : truth.adultGate.blocker,
+    ),
+    check(
+      'adult_image_capability',
+      'Adult image capability status',
+      adult?.status === 'available' ? 'PASS' : 'DISABLED',
+      adult ? `status=${adult.status}; models=${adult.models.length}` : 'Adult capability not returned by runtime truth.',
+      adult?.status === 'available' ? null : adult?.blocker ?? 'Adult image remains disabled until specialist provider test passes.',
+    ),
+    check(
+      'web_research',
+      'Web crawler/research capability',
+      webCrawler?.status === 'available' ? 'PASS' : 'OPTIONAL',
+      webCrawler ? `status=${webCrawler.status}; models=${webCrawler.models.length}` : 'Web crawler capability not returned by runtime truth.',
+      null,
+    ),
+    check(
+      'artifacts_storage',
+      'Artifacts storage writable',
+      storage.configured && storage.writable ? 'PASS' : 'FAIL',
+      `driver=${storage.driver}; root=${storage.basePath}; persistent=${storage.persistent}`,
+      storage.configured && storage.writable ? null : (storage.error ?? ((storage.missingSetup ?? []).join('; ') || 'Artifact storage is not configured/writable.')),
+    ),
+    check(
+      'job_queue',
+      'Job queue available',
+      queue.healthy ? 'PASS' : queue.backendAvailable ? 'OPTIONAL' : 'OPTIONAL',
+      queue.backendAvailable ? `Queue backend available; counts=${JSON.stringify(queue.counts)}` : 'Redis/BullMQ queue unavailable; inline/non-queue flows may still run.',
+      queue.healthy ? null : 'Queue is not fully healthy; heavy media jobs must remain gated.',
+    ),
     check('database', 'DB reachable', db.ok ? 'PASS' : 'FAIL', db.ok ? 'Database SELECT 1 succeeded.' : 'Database query failed.', db.blocker),
     check('health_ping', 'Health endpoint OK', health.ok ? 'PASS' : 'FAIL', health.evidence, health.ok ? null : 'GET /api/health/ping did not return OK.'),
     check('nginx_static', 'Nginx/static notes', 'OPTIONAL', process.env.NGINX_CONFIG_PATH ? `Configured NGINX_CONFIG_PATH=${process.env.NGINX_CONFIG_PATH}` : 'Nginx cannot be detected from the Next.js runtime; verify systemd/Nginx on VPS.', null),
     check('webdock', 'Webdock optional status', webdockKey ? 'OPTIONAL' : 'OPTIONAL', webdockKey ? 'Webdock key configured.' : 'Webdock not configured; VPS metrics can use local fallback where available.', null),
   )
 
-  const overall: 'PASS' | 'FAIL' = checks.some((item) => item.status === 'FAIL') ? 'FAIL' : 'PASS'
+  const failCount = checks.filter((item) => item.status === 'FAIL').length
+  const disabledCount = checks.filter((item) => item.status === 'DISABLED').length
+  const overall: 'PASS' | 'FAIL' = failCount > 0 ? 'FAIL' : 'PASS'
+
   return NextResponse.json({
     overall,
+    goLiveCandidate: overall === 'PASS',
     generatedAt: new Date().toISOString(),
+    sourceOfTruth: '/api/admin/runtime-truth',
+    disabledIsAllowedForLaunch: ['video_generation', 'music_generation', 'adult_mode', 'adult_image_capability'],
     checks,
     counts: {
       pass: checks.filter((item) => item.status === 'PASS').length,
-      fail: checks.filter((item) => item.status === 'FAIL').length,
-      disabled: checks.filter((item) => item.status === 'DISABLED').length,
+      fail: failCount,
+      disabled: disabledCount,
       optional: checks.filter((item) => item.status === 'OPTIONAL').length,
     },
   })
