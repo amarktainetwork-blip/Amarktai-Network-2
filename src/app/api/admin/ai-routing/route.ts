@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
-import { defaultAppCapabilityProfiles, planAiRoute } from '@/lib/ai-routing-policy'
+import { defaultAppCapabilityProfiles, planAiRoute, type AiCapability, type AiRouteRequest } from '@/lib/ai-routing-policy'
+
+const capabilitySchema = z.enum([
+  'chat',
+  'coding',
+  'reasoning',
+  'creative',
+  'image_generation',
+  'video_generation',
+  'voice_tts',
+  'voice_stt',
+  'music_generation',
+  'embeddings',
+  'moderation',
+  'research',
+  'adult_image',
+  'adult_text',
+])
 
 const routeSchema = z.object({
-  capability: z.enum([
-    'chat',
-    'coding',
-    'reasoning',
-    'creative',
-    'image_generation',
-    'video_generation',
-    'voice_tts',
-    'voice_stt',
-    'music_generation',
-    'embeddings',
-    'moderation',
-    'research',
-    'adult_image',
-    'adult_text',
-  ]),
+  capability: capabilitySchema,
   costPreference: z.enum(['free_first', 'cheap', 'balanced', 'premium']).optional(),
   allowAdult: z.boolean().optional(),
   requireStreaming: z.boolean().optional(),
@@ -28,7 +30,7 @@ const routeSchema = z.object({
     appSlug: z.string().optional(),
     appType: z.string().optional(),
     safetyProfile: z.enum(['standard', 'child_safe', 'religious_safe', 'adult_safe', 'education_safe', 'medical_caution', 'travel_safe']).optional(),
-    enabledCapabilities: z.array(z.string()).optional(),
+    enabledCapabilities: z.array(capabilitySchema).optional(),
     defaultCostPreference: z.enum(['free_first', 'cheap', 'balanced', 'premium']).optional(),
     maxDailyUsd: z.number().optional(),
     maxMonthlyUsd: z.number().optional(),
@@ -72,6 +74,17 @@ export async function POST(request: NextRequest) {
     }, { status: 422 })
   }
 
-  const plan = await planAiRoute(parsed.data)
+  const routeRequest: AiRouteRequest = {
+    ...parsed.data,
+    capability: parsed.data.capability as AiCapability,
+    appProfile: parsed.data.appProfile
+      ? {
+          ...parsed.data.appProfile,
+          enabledCapabilities: parsed.data.appProfile.enabledCapabilities as AiCapability[] | undefined,
+        }
+      : undefined,
+  }
+
+  const plan = await planAiRoute(routeRequest)
   return NextResponse.json({ success: true, plan })
 }

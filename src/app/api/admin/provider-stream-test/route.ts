@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     firstTokenMs: firstTokenMs ?? null,
     tokenCount,
     sample: sample.slice(0, 500),
-    error: result.error ?? error || null,
+    error: result.error ?? (error || null),
     thresholds: {
       timeoutMs: parsed.data.timeoutMs,
       targetFirstTokenMs: 5000,
