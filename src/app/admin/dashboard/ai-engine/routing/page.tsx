@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BrainCircuit, CheckCircle, GitBranch, Loader2, RefreshCcw, ShieldAlert, Sparkles, Zap } from 'lucide-react'
+import { ArrowLeft, BrainCircuit, CheckCircle, GitBranch, Loader2, RefreshCcw, ShieldAlert, Sparkles } from 'lucide-react'
 
 type Capability = 'chat' | 'coding' | 'reasoning' | 'creative' | 'image_generation' | 'voice_tts' | 'research' | 'adult_text' | 'adult_image'
 type CostPreference = 'free_first' | 'cheap' | 'balanced' | 'premium'
