@@ -359,7 +359,7 @@ export default function AIEnginePage() {
                         <p className="text-[11px] text-slate-500 mt-0.5">{p.reason}</p>
                       </div>
                       <span className="text-[10px] text-slate-600 shrink-0 mt-1 text-right">
-                        {p.wired ? 'Wired' : 'Not wired yet'}
+                        {p.wired ? 'Wired' : 'Requires provider route'}
                       </span>
                     </div>
                   ))

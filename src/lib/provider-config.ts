@@ -1,8 +1,11 @@
 import { getServiceKey, isUsableServiceKey } from '@/lib/service-vault'
+import { decryptVaultKey } from '@/lib/crypto-vault'
+import { prisma } from '@/lib/prisma'
 
 export type CoreProvider =
   | 'genx'
   | 'openai'
+  | 'anthropic'
   | 'groq'
   | 'gemini'
   | 'replicate'
@@ -10,10 +13,30 @@ export type CoreProvider =
   | 'github'
   | 'together'
   | 'qwen'
+  | 'dashscope'
+  | 'huggingface'
+  | 'xai'
+  | 'grok'
+  | 'openrouter'
+  | 'minimax'
+  | 'mistral'
+  | 'cohere'
+  | 'firecrawl'
+  | 'mem0'
+  | 'webdock'
+  | 'elevenlabs'
+  | 'deepgram'
+  | 'deepseek'
+  | 'moonshot'
+  | 'zhipu'
+  | 'udio'
+  | 'qdrant'
+  | 'posthog'
 
 const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   genx: ['GENX_API_KEY'],
   openai: ['OPENAI_API_KEY'],
+  anthropic: ['ANTHROPIC_API_KEY'],
   groq: ['GROQ_API_KEY'],
   gemini: ['GEMINI_API_KEY'],
   replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
@@ -21,11 +44,31 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   github: ['GITHUB_TOKEN'],
   together: ['TOGETHER_API_KEY'],
   qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
+  dashscope: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
+  huggingface: ['HUGGINGFACE_API_KEY', 'HF_TOKEN'],
+  xai: ['XAI_API_KEY', 'GROK_API_KEY'],
+  grok: ['GROK_API_KEY', 'XAI_API_KEY'],
+  openrouter: ['OPENROUTER_API_KEY'],
+  minimax: ['MINIMAX_API_KEY', 'MIMO_API_KEY'],
+  mistral: ['MISTRAL_API_KEY'],
+  cohere: ['COHERE_API_KEY'],
+  firecrawl: ['FIRECRAWL_API_KEY'],
+  mem0: ['MEM0_API_KEY'],
+  webdock: ['WEBDOCK_API_KEY'],
+  elevenlabs: ['ELEVENLABS_API_KEY'],
+  deepgram: ['DEEPGRAM_API_KEY'],
+  deepseek: ['DEEPSEEK_API_KEY'],
+  moonshot: ['MOONSHOT_API_KEY'],
+  zhipu: ['ZHIPU_API_KEY'],
+  udio: ['UDIO_API_KEY'],
+  qdrant: ['QDRANT_API_KEY'],
+  posthog: ['POSTHOG_API_KEY'],
 }
 
 const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
   genx: 'genx',
   openai: 'openai',
+  anthropic: 'anthropic',
   groq: 'groq',
   gemini: 'gemini',
   replicate: 'replicate',
@@ -33,14 +76,97 @@ const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
   github: 'github',
   together: 'together',
   qwen: 'qwen',
+  dashscope: 'qwen',
+  huggingface: 'huggingface',
+  xai: 'xai',
+  grok: 'xai',
+  openrouter: 'openrouter',
+  minimax: 'minimax',
+  mistral: 'mistral',
+  cohere: 'cohere',
+  firecrawl: 'firecrawl',
+  mem0: 'mem0',
+  webdock: 'webdock',
+  elevenlabs: 'elevenlabs',
+  deepgram: 'deepgram',
+  deepseek: 'deepseek',
+  moonshot: 'moonshot',
+  zhipu: 'zhipu',
+  udio: 'udio',
+  qdrant: 'qdrant',
+  posthog: 'posthog',
+}
+
+export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
+
+function normalizeProviderKey(provider: CoreProvider): CoreProvider {
+  if (provider === 'dashscope') return 'qwen'
+  if (provider === 'grok') return 'xai'
+  return provider
+}
+
+async function getAiProviderKey(provider: CoreProvider): Promise<string | null> {
+  const normalized = normalizeProviderKey(provider)
+  const aliases = new Set<string>([normalized])
+  if (normalized === 'xai') aliases.add('grok')
+  if (normalized === 'qwen') aliases.add('dashscope')
+  if (normalized === 'minimax') aliases.add('mimo')
+
+  try {
+    const row = await prisma.aiProvider.findFirst({
+      where: { providerKey: { in: [...aliases] } },
+      select: { apiKey: true },
+      orderBy: { updatedAt: 'desc' },
+    })
+    if (row?.apiKey) {
+      const decrypted = decryptVaultKey(row.apiKey)
+      if (isUsableServiceKey(decrypted)) return decrypted.trim()
+    }
+  } catch {
+    // DB unavailable; env fallback below remains safe for CI/local.
+  }
+  return null
+}
+
+async function getLegacyGitHubToken(): Promise<string | null> {
+  try {
+    const row = await prisma.gitHubConfig.findFirst({
+      orderBy: { id: 'desc' },
+      select: { accessToken: true },
+    })
+    return isUsableServiceKey(row?.accessToken) ? row!.accessToken.trim() : null
+  } catch {
+    return null
+  }
+}
+
+export async function getProviderKeyWithSource(provider: CoreProvider): Promise<{
+  key: string | null
+  source: ProviderKeySource
+}> {
+  const normalized = normalizeProviderKey(provider)
+
+  for (const envVar of PROVIDER_ENV[provider]) {
+    const key = await getServiceKey(PROVIDER_INTEGRATION_KEY[provider], envVar)
+    if (key) {
+      const envValue = process.env[envVar]
+      return { key, source: envValue && key === envValue.trim() ? 'env' : 'vault' }
+    }
+  }
+
+  const aiProviderKey = await getAiProviderKey(normalized)
+  if (aiProviderKey) return { key: aiProviderKey, source: 'ai_provider' }
+
+  if (normalized === 'github') {
+    const legacyToken = await getLegacyGitHubToken()
+    if (legacyToken) return { key: legacyToken, source: 'legacy_github' }
+  }
+
+  return { key: null, source: 'missing' }
 }
 
 export async function getProviderKey(provider: CoreProvider): Promise<string | null> {
-  for (const envVar of PROVIDER_ENV[provider]) {
-    const key = await getServiceKey(PROVIDER_INTEGRATION_KEY[provider], envVar)
-    if (key) return key
-  }
-  return null
+  return (await getProviderKeyWithSource(provider)).key
 }
 
 export async function isProviderConfigured(provider: CoreProvider): Promise<boolean> {

@@ -22,6 +22,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { decryptVaultKey } from '@/lib/crypto-vault'
 import { getVaultApiKey } from '@/lib/brain'
+import { getProviderKey, type CoreProvider } from '@/lib/provider-config'
 import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 
 type ProviderType = 'together' | 'huggingface' | 'xai' | 'custom'
@@ -119,13 +120,16 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // saved in Admin → AI Providers, without entering it a second time.
   if (!apiKey && mode === 'specialist') {
     if (!providerType) providerType = 'together'
-    const vaultKeyMap: Record<string, string> = {
-      xai: 'grok',  // xAI/Grok uses the 'grok' vault key; all other provider types share their own key name
+    const vaultKeyMap: Record<string, CoreProvider> = {
+      together: 'together',
+      huggingface: 'huggingface',
+      xai: 'xai',
     }
     // 'custom' has no corresponding vault key — skip vault lookup for it
     if (providerType !== 'custom') {
       const vaultKey = vaultKeyMap[providerType] ?? providerType
-      const resolved = await getVaultApiKey(vaultKey).catch(() => null)
+      const resolved = await getProviderKey(vaultKey as CoreProvider).catch(() => null)
+        ?? await getVaultApiKey(vaultKey).catch(() => null)
       if (resolved) apiKey = resolved
     }
   }
@@ -229,6 +233,13 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
         mode: 'specialist', providerType: 'together',
         error_category: errCat,
         message: errMsg,
+        providerError: bodyText.slice(0, 2000),
+        suggestedModels: [
+          'black-forest-labs/FLUX.1-schnell-Free',
+          'black-forest-labs/FLUX.1-schnell',
+          'black-forest-labs/FLUX.1-dev',
+          'stabilityai/stable-diffusion-xl-base-1.0',
+        ],
         latencyMs,
       })
     } catch (err) {
@@ -665,13 +676,16 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
 // notes so that runtime-capability-truth.ts can read the same value, keeping
 // the Settings page and all dashboard sections in sync.
 
-async function persistAdultTestStatus(passed: boolean): Promise<void> {
+async function persistAdultTestStatus(passed: boolean, details?: { provider?: string; model?: string; message?: string; status?: string }): Promise<void> {
   try {
     const existing = await prisma.integrationConfig.findUnique({ where: { key: 'adult_mode' } })
     let notes: Record<string, string> = {}
     try { notes = JSON.parse(existing?.notes ?? '{}') } catch { /* ignore */ }
     notes.lastTestStatus = passed ? 'passed' : 'failed'
     notes.lastTestAt = new Date().toISOString()
+    if (details?.provider) notes.providerType = details.provider
+    if (details?.model) notes.providerModel = details.model
+    notes.lastError = passed ? '' : (details?.message || details?.status || 'Adult provider test failed')
     await prisma.integrationConfig.upsert({
       where: { key: 'adult_mode' },
       update: { notes: JSON.stringify(notes) },
@@ -705,6 +719,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const body = await result.json()
   const passed = body.success === true
   // Fire-and-forget — never let persistence delay the response
-  persistAdultTestStatus(passed).catch(() => {})
+  persistAdultTestStatus(passed, {
+    provider: typeof body.providerType === 'string' ? body.providerType : typeof body.provider === 'string' ? body.provider : undefined,
+    model: typeof body.model === 'string' ? body.model : undefined,
+    message: typeof body.message === 'string' ? body.message : undefined,
+    status: typeof body.status === 'string' ? body.status : undefined,
+  }).catch(() => {})
   return NextResponse.json(body, { status: result.status })
 }
