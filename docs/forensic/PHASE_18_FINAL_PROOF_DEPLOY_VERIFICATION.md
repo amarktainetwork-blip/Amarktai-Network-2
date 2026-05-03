@@ -13,31 +13,11 @@ The goal is not to add more product features. The goal is to make the deployment
 
 ### Final proof script
 
-New file:
-
 ```text
 scripts/final_proof.sh
 ```
 
-It checks:
-
-- public homepage,
-- admin login,
-- dashboard redirect,
-- Command Center,
-- Live Readiness page,
-- AI Engine hub,
-- Repo Workbench simple page,
-- Live Readiness API,
-- Provider Scores API,
-- Media Artifacts API,
-- App AI Packages API,
-- Aiva Actions API,
-- Aiva Action Audit API,
-- systemd service hint,
-- artifact storage hint.
-
-It prints:
+It checks public routes, dashboard routes, key admin APIs, service hints and artifact storage hints. It prints:
 
 ```text
 PASS=...
@@ -45,68 +25,53 @@ WARN=...
 FAIL=...
 ```
 
-Warnings are acceptable for endpoints that require admin auth if no cookie file is supplied. Failures must be investigated before go-live.
+### Safe deploy + proof runner
 
-## VPS deployment commands
-
-Run these on the VPS after this PR is merged into `main`.
-
-```bash
-set -Eeuo pipefail
-cd /var/www/amarktai/repo
-
-echo "== Current state =="
-git status --short
-git branch --show-current
-git rev-parse --short HEAD
-
-echo "== Update from GitHub =="
-git fetch origin main
-git reset --hard origin/main
-
-echo "== Install dependencies =="
-npm install
-
-echo "== Build =="
-npm run build
-
-echo "== Verify standalone server =="
-test -f .next/standalone/server.js
-mkdir -p .next/standalone/.next
-rm -rf .next/standalone/.next/static
-cp -R .next/static .next/standalone/.next/static
-
-echo "== Ensure storage dirs =="
-sudo mkdir -p /var/www/amarktai/repo/public/generated-artifacts
-sudo mkdir -p /var/www/amarktai/repo/storage/provider-results
-sudo mkdir -p /var/www/amarktai/repo/storage/app-ai-packages
-sudo mkdir -p /var/www/amarktai/repo/storage/aiva-action-audit
-sudo chown -R www-data:www-data /var/www/amarktai/repo/public/generated-artifacts /var/www/amarktai/repo/storage || true
-
-echo "== Restart service =="
-sudo systemctl restart amarktai-web
-sleep 3
-sudo systemctl status amarktai-web --no-pager -l
-
-echo "== Tail logs =="
-sudo journalctl -u amarktai-web -n 80 --no-pager
+```text
+scripts/deploy_and_proof_safe.sh
 ```
 
-## Public proof commands
+This is now the preferred VPS command. It intentionally does **not** use `set -e`, so it does not exit the terminal early at the first failed command. It keeps going far enough to print a full report and only exits after showing the summary.
 
-Run after deployment.
+## Preferred VPS deployment command
+
+Run this on the VPS after this PR is merged into `main`.
 
 ```bash
-cd /var/www/amarktai/repo
-chmod +x scripts/final_proof.sh
-BASE_URL="https://amarktai.com" ./scripts/final_proof.sh
+cd /var/www/amarktai/repo || exit 1
+git fetch origin main
+git reset --hard origin/main
+chmod +x scripts/deploy_and_proof_safe.sh scripts/final_proof.sh
+BASE_URL="https://amarktai.com" ./scripts/deploy_and_proof_safe.sh
 ```
 
 If you have an admin cookie saved in Netscape/curl cookie format:
 
 ```bash
-BASE_URL="https://amarktai.com" COOKIE_FILE="/tmp/amarktai.cookies" ./scripts/final_proof.sh
+cd /var/www/amarktai/repo || exit 1
+git fetch origin main
+git reset --hard origin/main
+chmod +x scripts/deploy_and_proof_safe.sh scripts/final_proof.sh
+BASE_URL="https://amarktai.com" COOKIE_FILE="/tmp/amarktai.cookies" ./scripts/deploy_and_proof_safe.sh
 ```
+
+## What the safe runner does
+
+It runs:
+
+1. git fetch/reset
+2. npm install
+3. npm run build
+4. standalone server check
+5. static asset copy
+6. storage directory creation
+7. storage ownership attempt
+8. amarktai-web restart
+9. service status/log tail
+10. final proof script
+11. PASS/WARN/FAIL summary
+
+It does **not** hide failures. Required failures still count as `FAIL`, but you get the full report instead of an abrupt terminal exit.
 
 ## Manual browser checks
 
@@ -236,4 +201,4 @@ The product can continue improving after launch. Known post-launch enhancements:
 
 ## Verdict
 
-After this PR merges, the repo has a repeatable final proof script and a clear VPS redeploy/runbook. The next step is not another feature phase; it is merge, deploy, verify, and fix any proof failures.
+After this PR merges, use `scripts/deploy_and_proof_safe.sh` for deployment. It gives a complete report instead of exiting early, and the next step is to fix only the real `FAIL` items it reports.
