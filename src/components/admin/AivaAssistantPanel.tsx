@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bot, Loader2, MessageSquare, Play, Send, Settings2, Sparkles, Volume2, X } from 'lucide-react'
+import { Bot, ChevronDown, ChevronUp, Loader2, MessageSquare, Play, Send, Settings2, Sparkles, Volume2, X } from 'lucide-react'
 
 type CostPreference = 'free_first' | 'cheap' | 'balanced' | 'premium'
 type Capability = 'chat' | 'coding' | 'reasoning' | 'creative' | 'research'
@@ -42,6 +42,7 @@ function parseSseChunk(raw: string) {
 export default function AivaAssistantPanel() {
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [showRoute, setShowRoute] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'system', text: 'Aiva is online when enabled. She streams through the admin conversation route and only reports actions proven by backend results.' },
   ])
@@ -53,7 +54,8 @@ export default function AivaAssistantPanel() {
   const [voiceStatus, setVoiceStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [speaking, setSpeaking] = useState(false)
-  const [routeMeta, setRouteMeta] = useState('')
+  const [routeMeta, setRouteMeta] = useState('Smart routing enabled')
+  const [streamStatus, setStreamStatus] = useState('Ready')
   const abortRef = useRef<AbortController | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -85,7 +87,9 @@ export default function AivaAssistantPanel() {
     if (!prompt || busy) return
     setInput('')
     setBusy(true)
-    setRouteMeta('')
+    setShowRoute(false)
+    setRouteMeta('Planning smart route…')
+    setStreamStatus('Streaming')
     setMessages((current) => [...current, { role: 'user', text: prompt }, { role: 'assistant', text: '', meta: 'streaming' }])
 
     const controller = new AbortController()
@@ -99,6 +103,7 @@ export default function AivaAssistantPanel() {
           message: prompt,
           capability,
           costPreference,
+          useSmartRouting: true,
           appProfile: {
             appSlug: 'amarktai-network',
             appType: 'ai-operating-system',
@@ -127,6 +132,7 @@ export default function AivaAssistantPanel() {
           const events = parseSseChunk(`${part}\n\n`)
           for (const item of events) {
             const data = item.data as Record<string, unknown>
+            if (item.event === 'status' && typeof data.message === 'string') setStreamStatus(data.message)
             if (item.event === 'token' && typeof data.text === 'string') {
               setMessages((current) => {
                 const copy = [...current]
@@ -136,13 +142,15 @@ export default function AivaAssistantPanel() {
               })
             }
             if (item.event === 'route') {
-              const selected = data.selected as { provider?: string; model?: string } | null | undefined
-              if (selected?.provider || selected?.model) setRouteMeta(`${selected.provider ?? 'provider'} · ${selected.model ?? 'model'}`)
+              const selected = data.selected as { provider?: string; model?: string; reason?: string } | null | undefined
+              if (selected?.provider || selected?.model) setRouteMeta(`${selected.provider ?? 'provider'} · ${selected.model ?? 'model'}${selected.reason ? ` · ${selected.reason}` : ''}`)
             }
             if (item.event === 'done') {
-              setRouteMeta(`${String(data.provider ?? 'provider')} · ${String(data.model ?? 'model')}`)
+              setRouteMeta(`${String(data.provider ?? 'provider')} · ${String(data.model ?? 'model')} · smart routing ${data.smartRouting ? 'on' : 'off'}`)
+              setStreamStatus('Done')
             }
             if (item.event === 'error') {
+              setStreamStatus('Error')
               setMessages((current) => {
                 const copy = [...current]
                 const last = copy[copy.length - 1]
@@ -156,6 +164,7 @@ export default function AivaAssistantPanel() {
       }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
+        setStreamStatus('Error')
         setMessages((current) => {
           const copy = [...current]
           const last = copy[copy.length - 1]
@@ -175,6 +184,7 @@ export default function AivaAssistantPanel() {
     audioRef.current?.pause()
     setBusy(false)
     setSpeaking(false)
+    setStreamStatus('Stopped')
   }
 
   async function playVoice(text?: string) {
@@ -212,15 +222,15 @@ export default function AivaAssistantPanel() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className="fixed bottom-4 right-4 z-50 sm:bottom-5 sm:right-5">
       {open && (
-        <section className={`mb-3 overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#06101f]/95 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl ${expanded ? 'h-[760px] w-[560px]' : 'h-[620px] w-[400px]'} max-h-[calc(100vh-7rem)] max-w-[calc(100vw-2rem)]`}>
+        <section className={`mb-3 flex max-h-[calc(100vh-6rem)] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-cyan-400/20 bg-[#06101f]/95 shadow-2xl shadow-cyan-950/50 backdrop-blur-xl ${expanded ? 'h-[760px] w-[min(560px,calc(100vw-2rem))]' : 'h-[min(680px,calc(100vh-6rem))] w-[min(430px,calc(100vw-2rem))]'}`}>
           <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
             <div className="flex items-center gap-2">
               <div className="rounded-xl bg-cyan-400/10 p-2"><Sparkles className="h-4 w-4 text-cyan-200" /></div>
               <div>
                 <p className="text-sm font-bold text-white">Aiva</p>
-                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">Streaming operator assistant</p>
+                <p className="text-[10px] uppercase tracking-[0.14em] text-slate-500">{streamStatus}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -253,10 +263,10 @@ export default function AivaAssistantPanel() {
             </select>
           </div>
 
-          <div className="h-[calc(100%-208px)] space-y-3 overflow-y-auto p-4">
-            {assistantText.length === 0 && <p className="text-sm text-slate-500">Ask Aiva to plan, explain, audit, or help operate the current app. Repo changes still belong in Repo Workbench.</p>}
+          <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            {assistantText.length === 0 && <p className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-500">Ask Aiva to plan, explain, audit, or help operate the current app. Repo changes still belong in Repo Workbench.</p>}
             {assistantText.map((message, index) => (
-              <div key={index} className={`rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'ml-8 bg-cyan-400/10 text-cyan-50' : 'mr-8 border border-white/10 bg-white/[0.04] text-slate-200'}`}>
+              <div key={index} className={`rounded-2xl px-3 py-2 text-sm ${message.role === 'user' ? 'ml-4 bg-cyan-400/10 text-cyan-50 sm:ml-8' : 'mr-4 border border-white/10 bg-white/[0.04] text-slate-200 sm:mr-8'}`}>
                 <p className="whitespace-pre-wrap">{message.text || (message.meta === 'streaming' ? '…' : '')}</p>
                 {message.role === 'assistant' && message.text.trim() && selectedVoice?.verified && (
                   <button onClick={() => playVoice(message.text)} disabled={speaking} className="mt-2 inline-flex items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-2 py-1 text-[11px] font-semibold text-cyan-100 disabled:opacity-40">
@@ -268,7 +278,10 @@ export default function AivaAssistantPanel() {
           </div>
 
           <footer className="border-t border-white/10 p-3">
-            {routeMeta && <p className="mb-1 truncate text-[10px] text-slate-500">Route: {routeMeta}</p>}
+            <button onClick={() => setShowRoute((value) => !value)} className="mb-1 flex w-full items-center justify-between rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-[10px] text-slate-400 hover:text-cyan-200">
+              <span>Route details</span>{showRoute ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+            {showRoute && <p className="mb-2 rounded-xl border border-cyan-400/10 bg-cyan-400/[0.04] p-2 text-[10px] text-cyan-100">{routeMeta}</p>}
             {voiceStatus && <p className="mb-1 truncate text-[10px] text-cyan-300">Voice: {voiceStatus}</p>}
             {verifiedVoices.length === 0 && <p className="mb-1 truncate text-[10px] text-amber-300">Voice playback locked until a TTS provider passes runtime truth.</p>}
             <div className="flex gap-2">
