@@ -23,7 +23,7 @@ const packageSchema = z.object({
   voice: z.object({ provider: z.string(), modelId: z.string(), voiceId: z.string().optional(), label: z.string().optional() }).optional(),
   crawler: z.object({ provider: z.enum(['firecrawl', 'genx', 'manual']), websiteUrl: z.string().optional(), lastCrawledAt: z.string().optional() }).optional(),
   budget: z.object({ mode: z.enum(['cheap', 'balanced', 'premium', 'custom']), monthlyUsd: z.number().optional(), maxPerRequestUsd: z.number().optional() }).optional(),
-  permissions: z.record(z.boolean()),
+  permissions: z.record(z.string(), z.boolean()),
   status: z.enum(['draft', 'ready', 'needs_configuration', 'blocked']),
   blockers: z.array(z.string()).default([]),
 })
