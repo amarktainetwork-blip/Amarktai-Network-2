@@ -55,6 +55,22 @@ interface LiveReadiness {
   counts: Record<string, number>
 }
 
+interface ToolRegistry {
+  tools: Array<{
+    id: string
+    label: string
+    category: string
+    enabled: boolean
+    wired: boolean
+    permission: string
+    approvalRequired: boolean
+    requiredConfig: string[]
+    endpoint: string | null
+    lastError: string | null
+  }>
+  mcpServers?: { implemented: boolean; status: string; blocker: string }
+}
+
 function StatusBadge({ ok, label }: { ok: boolean | null; label?: string }) {
   if (ok === null) return <span className="text-[11px] text-slate-500 animate-pulse">Checking…</span>
   const cls = ok ? 'text-emerald-400' : 'text-red-400'
@@ -98,16 +114,18 @@ export default function SystemHealthPage() {
   const [apps, setApps] = useState<AppHealthEntry[]>([])
   const [genx, setGenx] = useState<GenxStatus | null>(null)
   const [readiness, setReadiness] = useState<LiveReadiness | null>(null)
+  const [tools, setTools] = useState<ToolRegistry | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [vpsRes, jobsRes, appsRes, genxRes, readinessRes] = await Promise.allSettled([
+      const [vpsRes, jobsRes, appsRes, genxRes, readinessRes, toolsRes] = await Promise.allSettled([
         fetch('/api/admin/vps'),
         fetch('/api/admin/jobs'),
         fetch('/api/admin/app-health'),
         fetch('/api/admin/genx/status'),
         fetch('/api/admin/system/live-readiness'),
+        fetch('/api/admin/tool-registry'),
       ])
       if (vpsRes.status === 'fulfilled' && vpsRes.value.ok) setVps(await vpsRes.value.json())
       else setVps({ error: 'VPS data unavailable — check server connection' })
@@ -121,6 +139,7 @@ export default function SystemHealthPage() {
 
       if (genxRes.status === 'fulfilled' && genxRes.value.ok) setGenx(await genxRes.value.json())
       if (readinessRes.status === 'fulfilled' && readinessRes.value.ok) setReadiness(await readinessRes.value.json())
+      if (toolsRes.status === 'fulfilled' && toolsRes.value.ok) setTools(await toolsRes.value.json())
     } finally {
       setLoading(false)
     }
@@ -386,29 +405,27 @@ export default function SystemHealthPage() {
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 space-y-3">
             <div className="flex items-center gap-2 text-amber-400">
               <AlertTriangle className="h-4 w-4" />
-              <h2 className="text-sm font-semibold">MCP / Tool Registry — Not Wired Yet</h2>
+              <h2 className="text-sm font-semibold">Internal Tool Registry</h2>
             </div>
             <p className="text-xs text-slate-400">
-              Model Context Protocol (MCP) servers, the tool registry, webhooks, and per-agent tool permissions
-              are <strong className="text-slate-300">not yet implemented</strong> in this platform.
-              No fake tool calls are made. See <code className="font-mono text-slate-300">docs/forensic/mcp-tools-webhooks-audit.md</code> for the full audit.
+              Core tools are checked through <code className="font-mono text-slate-300">/api/admin/tool-registry</code>. External MCP server connections are post-launch and separate from the wired internal dashboard tools.
             </p>
           </div>
 
           <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-white">Required Tool Architecture (pending)</h3>
+            <h3 className="text-sm font-semibold text-white">Tool availability</h3>
             <ul className="space-y-2 text-xs text-slate-400">
               {[
-                { label: 'Tool registry', status: 'not-wired' },
-                { label: 'Per-app allowed tools', status: 'not-wired' },
-                { label: 'Per-agent allowed tools', status: 'not-wired' },
-                { label: 'Confirmation for destructive tools', status: 'not-wired' },
-                { label: 'Tool call logs', status: 'not-wired' },
+                { label: 'Tool registry', status: 'requires-config' },
+                { label: 'Per-app allowed tools', status: 'requires-config' },
+                { label: 'Per-agent allowed tools', status: 'requires-config' },
+                { label: 'Confirmation for destructive tools', status: 'requires-config' },
+                { label: 'Tool call logs', status: 'requires-config' },
                 { label: 'Budget / cost tracking per model call', status: 'partial' },
                 { label: 'GitHub tools (create PR, push, commit)', status: 'partial' },
                 { label: 'Repo tools (clone, tree, diff, patch)', status: 'partial' },
-                { label: 'Webhook registry', status: 'not-wired' },
-                { label: 'MCP server connections', status: 'not-wired' },
+                { label: 'Webhook registry', status: 'requires-config' },
+                { label: 'MCP server connections', status: 'requires-config' },
                 { label: 'Media tools (image gen, video gen, TTS)', status: 'partial' },
                 { label: 'Crawler tools (Firecrawl, Crawl4AI)', status: 'partial' },
                 { label: 'VPS tools (server health, restart)', status: 'partial' },
@@ -420,11 +437,29 @@ export default function SystemHealthPage() {
                       ? 'bg-amber-500/10 text-amber-400'
                       : 'bg-red-500/10 text-red-400'
                   }`}>
-                    {item.status === 'partial' ? 'partial' : 'not wired'}
+                    {item.status === 'partial' ? 'partial' : 'requires config'}
                   </span>
                 </li>
               ))}
             </ul>
+            {tools?.tools?.length ? (
+              <div className="mt-4 grid gap-2 md:grid-cols-2">
+                {tools.tools.map((tool) => (
+                  <div key={tool.id} className="rounded-xl border border-white/10 bg-black/20 p-3 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-slate-200">{tool.label}</span>
+                      <span className={tool.enabled ? 'text-emerald-300' : 'text-amber-300'}>
+                        {tool.enabled ? 'enabled' : 'blocked'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500">{tool.endpoint ?? tool.category}</p>
+                    {tool.lastError && <p className="mt-2 text-[11px] text-amber-200">{tool.lastError}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-amber-200">Live tool registry data unavailable.</p>
+            )}
           </div>
         </div>
       )}

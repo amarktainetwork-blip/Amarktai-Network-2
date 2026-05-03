@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { encryptVaultKey, decryptVaultKey } from '@/lib/crypto-vault'
+import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { z } from 'zod'
 
 // ── Key constants ──────────────────────────────────────────────────────────────
@@ -105,7 +106,8 @@ export async function GET() {
   const genxConfigured = !!(genxKey || process.env.GENX_API_KEY) && !!genxUrl
 
   // ── GitHub ──
-  const ghToken = githubRow?.accessToken || ''
+  const resolvedGitHub = await getProviderKeyWithSource('github')
+  const ghToken = githubRow?.accessToken || resolvedGitHub.key || ''
   const ghConfigured = !!ghToken
 
   // ── Storage ──
@@ -142,6 +144,7 @@ export async function GET() {
       username: githubRow?.username || null,
       defaultOwner: githubRow?.defaultOwner || '',
       lastValidatedAt: githubRow?.lastValidatedAt?.toISOString() ?? null,
+      source: githubRow?.accessToken ? 'legacy_settings' : resolvedGitHub.source,
     },
     storage: {
       driver: storageDriver,
@@ -327,6 +330,20 @@ export async function PATCH(req: NextRequest) {
           }),
         )
       }
+
+      ops.push(
+        upsertIntegrationConfig({
+          key: 'github',
+          displayName: 'GitHub',
+          apiKey: data.github.token,
+          notes: JSON.stringify({
+            username,
+            defaultOwner: defaultOwner || username,
+            savedVia: 'settings_integrations',
+            savedAt: new Date().toISOString(),
+          }),
+        }),
+      )
     } else if (data.github.defaultOwner !== undefined && existing) {
       ops.push(
         prisma.gitHubConfig.update({

@@ -9,16 +9,15 @@
  */
 
 import { getServiceKey, getServiceConfigField } from '@/lib/service-vault'
+import { getProviderKeyWithSource, type CoreProvider } from '@/lib/provider-config'
 import {
   getAdultSpecialistProviderKeys,
   getGenXCoveredProviderKeys,
-  getProviderEnvMap,
   getRuntimeProviderGovernance,
   getWiredProviderKeys,
   type ProviderGovernanceStatus,
 } from '@/lib/ai-provider-governance'
 
-const INTEGRATION_ENV_MAP = getProviderEnvMap()
 const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
 const WIRED_PROVIDER_KEYS = getWiredProviderKeys()
 const ADULT_SPECIALIST_PROVIDER_KEYS = getAdultSpecialistProviderKeys()
@@ -26,7 +25,7 @@ const ADULT_SPECIALIST_PROVIDER_KEYS = getAdultSpecialistProviderKeys()
 export interface GenXRuntimeStatus {
   configured: boolean
   available: boolean
-  keySource: 'vault' | 'env' | 'missing'
+  keySource: 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
   modelCount: number
   capabilities: string[]
   apiUrl: string | null
@@ -45,7 +44,7 @@ export interface ProviderRuntimeEntry {
   reason: string
   configured: boolean
   coveredByGenX: boolean
-  keySource: 'vault' | 'env' | 'missing'
+  keySource: 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
   status: ProviderStatus
   governanceStatus?: ProviderGovernanceStatus
   showInPrimarySetup?: boolean
@@ -71,14 +70,10 @@ export interface DashboardRuntimeTruth {
   blockers: string[]
 }
 
-async function resolveKey(integrationKey: string): Promise<{ hasKey: boolean; source: 'vault' | 'env' | 'missing' }> {
-  const envVar = INTEGRATION_ENV_MAP[integrationKey] ?? ''
-  const key = await getServiceKey(integrationKey, envVar)
-  if (!key) return { hasKey: false, source: 'missing' }
-
-  const envValue = envVar ? process.env[envVar] : null
-  const source: 'vault' | 'env' = (envValue && key === envValue.trim()) ? 'env' : 'vault'
-  return { hasKey: true, source }
+async function resolveKey(integrationKey: string): Promise<{ hasKey: boolean; source: ProviderRuntimeEntry['keySource'] }> {
+  const resolved = await getProviderKeyWithSource(integrationKey as CoreProvider)
+  if (!resolved.key) return { hasKey: false, source: 'missing' }
+  return { hasKey: true, source: resolved.source }
 }
 
 export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
@@ -184,6 +179,14 @@ export interface AdultCapabilityGate {
   providerAvailable: boolean
   testPassed: boolean
   globalEnabled: boolean
+  enabled: boolean
+  selectedProvider: string | null
+  selectedModel: string | null
+  allowedCategories: string[]
+  blockedCategories: string[]
+  lastTestStatus: string | null
+  lastError: string | null
+  configuredProviders: string[]
 }
 
 export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
@@ -194,53 +197,67 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   const envEnabled = process.env.ADULT_MODE_ENABLED?.trim().toLowerCase() === 'true'
   const adultMode = await getServiceConfigField('adult_mode', 'mode', '').catch(() => null) ?? ''
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
+  const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
+  const savedProvider = await getServiceConfigField('adult_mode', 'providerType', '').catch(() => null) ?? ''
+  const savedModel = await getServiceConfigField('adult_mode', 'providerModel', '').catch(() => null) ?? ''
 
   const globalEnabled = envEnabled || adultMode === 'specialist'
   const xaiKey = await resolveKey('xai')
-  const providerAvailable =
-    [...ADULT_SPECIALIST_PROVIDER_KEYS].some((key) => hasProvider(key)) ||
-    xaiKey.hasKey
+  const configuredProviders = [...ADULT_SPECIALIST_PROVIDER_KEYS].filter((key) => hasProvider(key))
+  if (xaiKey.hasKey && !configuredProviders.includes('xai')) configuredProviders.push('xai')
+  const providerAvailable = configuredProviders.length > 0
+  const selectedProvider = savedProvider && configuredProviders.includes(savedProvider)
+    ? savedProvider
+    : configuredProviders[0] ?? null
 
   const testPassed = lastTestStatus === 'passed'
+  const base = {
+    providerAvailable,
+    testPassed,
+    globalEnabled,
+    enabled: globalEnabled,
+    selectedProvider,
+    selectedModel: savedModel || null,
+    allowedCategories: ['consensual_adult_suggestive', 'adult_lingerie', 'adult_nudity_without_visible_genitals'],
+    blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'sexual_violence', 'real_person_sexual_deepfakes', 'explicit_sex_acts', 'visible_genitals', 'illegal_content', 'self_harm'],
+    lastTestStatus: lastTestStatus || null,
+    lastError: lastError || null,
+    configuredProviders,
+  }
 
   if (!globalEnabled) {
     return {
+      ...base,
       status: 'global_flag_disabled',
       blocker: 'Adult mode is disabled. Enable it in Settings → Adult Mode (set mode to "Specialist provider only") or set ADULT_MODE_ENABLED=true.',
-      providerAvailable,
-      testPassed,
       globalEnabled: false,
+      enabled: false,
     }
   }
 
   if (!providerAvailable) {
     return {
+      ...base,
       status: 'not_wired',
       blocker: 'No specialist adult provider configured. Add Together AI, HuggingFace, Replicate, or xAI/Grok in Settings → AI Providers.',
       providerAvailable: false,
-      testPassed,
-      globalEnabled: true,
     }
   }
 
   if (!testPassed) {
     return {
-      status: 'needs_provider_test',
+      ...base,
+      status: lastTestStatus === 'failed' ? 'provider_failed' : 'needs_provider_test',
       blocker: lastTestStatus === 'failed'
         ? 'Last specialist provider test failed. Re-run "Test provider" in Settings → Adult Mode to confirm the provider works.'
         : 'Specialist provider test has not been run. Run "Test provider" in Settings → Adult Mode to unlock adult generation.',
-      providerAvailable: true,
-      testPassed: false,
-      globalEnabled: true,
     }
   }
 
   return {
+    ...base,
     status: 'ready',
     blocker: null,
-    providerAvailable: true,
-    testPassed: true,
-    globalEnabled: true,
   }
 }
 
@@ -347,9 +364,9 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     },
     {
       name: 'Adult Image',
-      status: adultGate.status === 'ready' ? 'available' : 'blocked',
+      status: adultGate.globalEnabled && adultGate.providerAvailable ? 'available' : 'blocked',
       blocker: adultGate.blocker,
-      models: adultGate.status === 'ready'
+      models: adultGate.globalEnabled && adultGate.providerAvailable
         ? [
             ...(hasTogether ? ['FLUX.1-schnell (Together AI)', 'SDXL (Together AI)'] : []),
             ...(hasHF ? ['RealVisXL (HuggingFace)', 'DreamShaper (HuggingFace)'] : []),

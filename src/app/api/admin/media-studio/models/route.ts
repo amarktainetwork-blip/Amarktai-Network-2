@@ -8,6 +8,7 @@ import {
   getGenXStatusAsync,
   listGenXModels,
 } from '@/lib/genx-client'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 
 type MediaModel = {
   id: string
@@ -39,11 +40,17 @@ function staticModels(ids: readonly string[], category: MediaModel['category'], 
   }))
 }
 
+function directModel(id: string, label: string, provider: string, category: MediaModel['category'], costTier: MediaModel['costTier'] = 'medium'): MediaModel {
+  return { id, label, provider, category, available: true, costTier, blocker: null }
+}
+
 export async function GET() {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const genx = await getGenXStatusAsync()
+  const truth = await getDashboardRuntimeTruth().catch(() => null)
+  const configuredProviders = new Set((truth?.providers ?? []).filter((p) => p.configured).map((p) => p.key))
   const liveModels = genx.available ? await listGenXModels().catch(() => []) : []
   const blocker = genx.available ? null : genx.configured ? 'GenX is configured but unreachable.' : 'GenX is not configured.'
 
@@ -75,6 +82,34 @@ export async function GET() {
     return found.length ? found : staticModels(fallback, category, genx.available, blocker)
   }
 
+  const image = byCategory('image', GENX_IMAGE_MODELS)
+  const video = byCategory('video', GENX_VIDEO_MODELS)
+  const voice = byCategory('voice', GENX_TTS_MODELS)
+  const music = byCategory('music', GENX_AUDIO_MODELS)
+
+  if (configuredProviders.has('openai')) image.push(directModel('gpt-image-1', 'GPT Image', 'OpenAI Direct', 'image', 'high'))
+  if (configuredProviders.has('replicate')) {
+    image.push(directModel('replicate/sdxl', 'SDXL', 'Replicate', 'image', 'medium'))
+    video.push(directModel('replicate/video', 'Configured video model', 'Replicate', 'video', 'high'))
+  }
+  if (configuredProviders.has('huggingface')) {
+    image.push(directModel('hf/custom-image-model', 'Configured image endpoint/model', 'Hugging Face', 'image', 'medium'))
+    voice.push(directModel('hf/tts-model', 'Configured TTS endpoint/model', 'Hugging Face', 'voice', 'medium'))
+  }
+  if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
+  if (configuredProviders.has('qwen')) {
+    image.push(directModel('qwen-image', 'Qwen Image', 'Qwen / DashScope', 'image', 'low'))
+    video.push(directModel('wanx2.1-t2v-turbo', 'Wan video', 'Qwen / DashScope', 'video', 'medium'))
+    voice.push(directModel('qwen-tts', 'Qwen TTS', 'Qwen / DashScope', 'voice', 'low'))
+  }
+  if (configuredProviders.has('minimax')) {
+    video.push(directModel('minimax/video-01', 'MiniMax Video', 'MiniMax', 'video', 'medium'))
+    voice.push(directModel('minimax/speech-02', 'MiniMax Speech', 'MiniMax', 'voice', 'low'))
+    music.push(directModel('minimax/music-01', 'MiniMax Music', 'MiniMax', 'music', 'medium'))
+  }
+  if (configuredProviders.has('elevenlabs')) voice.push(directModel('elevenlabs/tts', 'ElevenLabs TTS', 'ElevenLabs', 'voice', 'high'))
+  if (configuredProviders.has('deepgram')) voice.push(directModel('deepgram/aura-2', 'Aura 2', 'Deepgram', 'voice', 'medium'))
+
   return NextResponse.json({
     genx: {
       configured: genx.configured,
@@ -82,9 +117,10 @@ export async function GET() {
       modelCount: genx.modelCount ?? liveModels.length,
       blocker,
     },
-    image: byCategory('image', GENX_IMAGE_MODELS),
-    video: byCategory('video', GENX_VIDEO_MODELS),
-    voice: byCategory('voice', GENX_TTS_MODELS),
-    music: byCategory('music', GENX_AUDIO_MODELS),
+    configuredProviders: [...configuredProviders],
+    image,
+    video,
+    voice,
+    music,
   })
 }

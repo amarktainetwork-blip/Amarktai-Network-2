@@ -229,8 +229,9 @@ describe('System Health — MCP/Tools tab', () => {
     expect(src).toContain("id: 'mcp'")
   })
 
-  it('MCP tab says "Not Wired Yet" (honest status)', () => {
-    expect(src).toContain('Not Wired Yet')
+  it('MCP tab shows the wired internal tool registry', () => {
+    expect(src).toContain('Internal Tool Registry')
+    expect(src).toContain('/api/admin/tool-registry')
   })
 
   it('MCP tab does not claim it works', () => {

@@ -6,7 +6,7 @@ import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
 import { getQueueStatus } from '@/lib/job-queue'
 import { verifyStorage } from '@/lib/storage-driver'
 import { resolveWorkspacePath } from '@/lib/workspace-security'
-import { getServiceKey } from '@/lib/service-vault'
+import { getProviderKey } from '@/lib/provider-config'
 import { prisma } from '@/lib/prisma'
 
 type ReadinessStatus = 'PASS' | 'FAIL' | 'OPTIONAL' | 'DISABLED'
@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
       error: error instanceof Error ? error.message : 'Storage verification failed',
       missingSetup: ['Storage verification failed'],
     })),
-    getServiceKey('github', 'GITHUB_TOKEN'),
-    getServiceKey('webdock', 'WEBDOCK_API_KEY'),
+    getProviderKey('github'),
+    getProviderKey('webdock'),
   ])
 
   const workspaceProbe = await runWorkspaceCreateDeleteProbe()
