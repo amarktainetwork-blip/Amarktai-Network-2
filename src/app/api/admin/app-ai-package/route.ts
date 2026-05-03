@@ -13,6 +13,18 @@ const selectionSchema = z.object({
   notes: z.string().optional(),
 })
 
+const permissionsSchema = z.object({
+  canChat: z.boolean(),
+  canUseTools: z.boolean(),
+  canUseRepo: z.boolean(),
+  canUseMedia: z.boolean(),
+  canUseVoice: z.boolean(),
+  canUseAdult: z.boolean(),
+  canSendMarketing: z.boolean(),
+  requiresApprovalForSpend: z.boolean(),
+  requiresApprovalForExternalActions: z.boolean(),
+})
+
 const packageSchema = z.object({
   appSlug: z.string().min(1),
   appName: z.string().min(1),
@@ -23,7 +35,7 @@ const packageSchema = z.object({
   voice: z.object({ provider: z.string(), modelId: z.string(), voiceId: z.string().optional(), label: z.string().optional() }).optional(),
   crawler: z.object({ provider: z.enum(['firecrawl', 'genx', 'manual']), websiteUrl: z.string().optional(), lastCrawledAt: z.string().optional() }).optional(),
   budget: z.object({ mode: z.enum(['cheap', 'balanced', 'premium', 'custom']), monthlyUsd: z.number().optional(), maxPerRequestUsd: z.number().optional() }).optional(),
-  permissions: z.record(z.boolean()),
+  permissions: permissionsSchema,
   status: z.enum(['draft', 'ready', 'needs_configuration', 'blocked']),
   blockers: z.array(z.string()).default([]),
 })
