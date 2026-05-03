@@ -29,7 +29,7 @@ const tools = [
   { title: 'Provider Intelligence', href: '/admin/dashboard/ai-engine/intelligence', icon: LineChart, body: 'Provider scores, failures, latency and recommendations.' },
   { title: 'App AI Setup', href: '/admin/dashboard/ai-engine/app-setup', icon: Boxes, body: 'Save per-app AI packages, capabilities and budgets.' },
   { title: 'Artifact Gallery', href: '/admin/dashboard/ai-engine/artifacts', icon: ImageIcon, body: 'Generated media, task JSON, audio and outputs.' },
-  { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench/simple', icon: GitBranch, body: 'Simple repo command to patch/review flow.' },
+  { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench', icon: GitBranch, body: 'Canonical repo command to patch/review flow.' },
 ]
 
 const stateClass = {
