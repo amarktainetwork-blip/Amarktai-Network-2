@@ -103,7 +103,7 @@ export function summarizeProviderResults(entries: ProviderResultLogEntry[]): Pro
     const lastArtifact = [...items].reverse().find((item) => item.artifactPath)
     const latencyPenalty = avgLatencyMs === null ? 20 : Math.min(60, avgLatencyMs / 1000 * 5)
     const score = Math.max(0, Math.min(100, Math.round(successRate * 100 - latencyPenalty)))
-    const status = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 45 ? 'degraded' : total === 0 ? 'unknown' : 'failing'
+    const status: ProviderScoreSummary['status'] = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 45 ? 'degraded' : total === 0 ? 'unknown' : 'failing'
 
     return {
       appSlug: first.appSlug,

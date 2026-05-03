@@ -10,12 +10,7 @@ function safeSegment(input: string) {
 
 async function walk(dir: string, maxFiles: number, out: string[] = []): Promise<string[]> {
   if (out.length >= maxFiles) return out
-  let entries: Awaited<ReturnType<typeof fs.readdir>> = []
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true })
-  } catch {
-    return out
-  }
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => [])
 
   for (const entry of entries) {
     if (out.length >= maxFiles) break

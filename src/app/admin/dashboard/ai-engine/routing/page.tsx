@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BrainCircuit, CheckCircle, GitBranch, Loader2, RefreshCcw, ShieldAlert, Sparkles } from 'lucide-react'
 
@@ -81,7 +81,7 @@ export default function AIRoutingPage() {
 
   const selectedCapability = useMemo(() => CAPABILITIES.find((item) => item.value === capability), [capability])
 
-  async function loadPlan() {
+  const loadPlan = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
@@ -109,7 +109,7 @@ export default function AIRoutingPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [allowAdult, capability, costPreference, safetyProfile])
 
   async function loadVoices() {
     const res = await fetch('/api/admin/voice/options')
@@ -117,7 +117,7 @@ export default function AIRoutingPage() {
     if (res.ok && data.success !== false) setVoices(data.voices ?? [])
   }
 
-  useEffect(() => { loadPlan(); loadVoices() }, [])
+  useEffect(() => { loadPlan(); loadVoices() }, [loadPlan])
 
   return (
     <div className="space-y-6">
