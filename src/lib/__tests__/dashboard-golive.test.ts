@@ -2,7 +2,7 @@
  * Dashboard Go-Live Checks
  *
  * Verifies structural requirements for the dashboard to be considered go-live ready:
- *  - Nav has exactly 9 sections (no duplicates)
+ *  - Nav has exactly 10 sections including Live Readiness (no duplicates)
  *  - Aiva is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
  *  - Redirect pages point to correct canonical targets
  *  - Repo Workbench agent presets include all required modes
@@ -24,22 +24,23 @@ function readPage(relPath: string): string {
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 
-describe('Dashboard Navigation — exactly 9 sections', () => {
+describe('Dashboard Navigation — exactly 10 sections', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('has exactly 9 NAV_ITEMS entries', () => {
+  it('has exactly 10 NAV_ITEMS entries', () => {
     // filter to only the ones that appear inside NAV_ITEMS array
     const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
     const navHrefs = navItemBlock?.[0].match(/href:\s*['"][^'"]+['"]/g) ?? []
-    expect(navHrefs).toHaveLength(9)
+    expect(navHrefs).toHaveLength(10)
   })
 
-  it('includes the 9 canonical sections', () => {
+  it('includes the 10 canonical sections', () => {
     const required = [
       '/admin/dashboard',
       '/admin/dashboard/command-center',
+      '/admin/dashboard/live-readiness',
       '/admin/dashboard/repo-workbench',
-      '/admin/dashboard/ai-engine',
+      '/admin/dashboard/ai-engine/hub',
       '/admin/dashboard/media-studio',
       '/admin/dashboard/apps',
       '/admin/dashboard/artifacts',

@@ -53,7 +53,11 @@ export async function saveMediaArtifact(params: {
   await fs.mkdir(dir, { recursive: true })
 
   const filePath = path.join(dir, `${id}.${ext}`)
-  const buffer = Buffer.isBuffer(params.bytes) ? params.bytes : Buffer.from(params.bytes)
+  const buffer = Buffer.isBuffer(params.bytes)
+    ? params.bytes
+    : params.bytes instanceof ArrayBuffer
+      ? Buffer.from(new Uint8Array(params.bytes))
+      : Buffer.from(params.bytes.buffer, params.bytes.byteOffset, params.bytes.byteLength)
   await fs.writeFile(filePath, buffer)
 
   const record: MediaArtifactRecord = {
