@@ -111,7 +111,7 @@ export async function GET() {
       providerIntelligence: '/admin/dashboard/ai-engine/intelligence',
       appSetup: '/admin/dashboard/ai-engine/app-setup',
       artifacts: '/admin/dashboard/ai-engine/artifacts',
-      repoWorkbench: '/admin/dashboard/repo-workbench/simple',
+      repoWorkbench: '/admin/dashboard/repo-workbench',
     },
   })
 }
