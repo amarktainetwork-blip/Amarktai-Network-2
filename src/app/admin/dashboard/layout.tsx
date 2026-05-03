@@ -27,7 +27,7 @@ const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ComponentType<
   { href: '/admin/dashboard/live-readiness', label: 'Live Readiness',  icon: Compass         },
   { href: '/admin/dashboard',                label: 'Overview',        icon: LayoutDashboard },
   { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench',  icon: GitBranch       },
-  { href: '/admin/dashboard/ai-engine',      label: 'AI Engine',       icon: Cpu             },
+  { href: '/admin/dashboard/ai-engine/hub',  label: 'AI Engine',       icon: Cpu             },
   { href: '/admin/dashboard/media-studio',   label: 'Media Studio',    icon: Film            },
   { href: '/admin/dashboard/apps',           label: 'Apps & Agents',   icon: AppWindow       },
   { href: '/admin/dashboard/artifacts',      label: 'Artifacts & Jobs',icon: Archive         },
@@ -48,7 +48,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const isActive = (href: string) => {
     if (href === '/admin/dashboard') return pathname === '/admin/dashboard'
-    return pathname === href || pathname.startsWith(href + '/')
+    return pathname === href || pathname.startsWith(href + '/') || (href === '/admin/dashboard/ai-engine/hub' && pathname.startsWith('/admin/dashboard/ai-engine'))
   }
 
   // Aiva disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true
