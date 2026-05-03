@@ -16,16 +16,14 @@ import {
   Activity,
   GitBranch,
   Film,
-  LayoutDashboard,
   Terminal,
   Compass,
 } from 'lucide-react'
 
-// Canonical nav sections — Command Center first, live readiness visible, no duplicate hidden workflow.
+// Canonical nav sections only. /admin/dashboard is a redirect alias, not a visible second dashboard.
 const NAV_ITEMS: Array<{ href: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }> = [
   { href: '/admin/dashboard/command-center', label: 'Command Center',  icon: Terminal        },
   { href: '/admin/dashboard/live-readiness', label: 'Live Readiness',  icon: Compass         },
-  { href: '/admin/dashboard',                label: 'Overview',        icon: LayoutDashboard },
   { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench',  icon: GitBranch       },
   { href: '/admin/dashboard/ai-engine/hub',  label: 'AI Engine',       icon: Cpu             },
   { href: '/admin/dashboard/media-studio',   label: 'Media Studio',    icon: Film            },
@@ -47,7 +45,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router])
 
   const isActive = (href: string) => {
-    if (href === '/admin/dashboard') return pathname === '/admin/dashboard'
     return pathname === href || pathname.startsWith(href + '/') || (href === '/admin/dashboard/ai-engine/hub' && pathname.startsWith('/admin/dashboard/ai-engine'))
   }
 
