@@ -2,33 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, GitMerge, Loader2, RefreshCw, Rocket, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
+import { CheckCircle2, ExternalLink, GitMerge, Loader2, RefreshCw, Rocket, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
 type Branch = { name: string; sha: string; isDefault?: boolean }
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
 type Status = { configured?: boolean; authenticated?: boolean; username?: string | null; tokenMasked?: string | null; blocker?: string | null }
-
-// Coding agents available for repo tasks
-const CODING_AGENTS = [
-  { id: 'aiva_operator',        label: 'AmarktAI Assistant (auto-route)' },
-  { id: 'repo_builder',         label: 'Repo Builder Agent' },
-  { id: 'repo_auditor',         label: 'Repo Auditor Agent' },
-  { id: 'frontend_designer',    label: 'Frontend Designer Agent' },
-  { id: 'backend_wiring',       label: 'Backend Wiring Agent' },
-]
-
-// Task type options for the selected coding agent
-const TASK_TYPES = [
-  { id: 'audit',         label: 'Audit' },
-  { id: 'fix',           label: 'Fix' },
-  { id: 'update',        label: 'Update' },
-  { id: 'add',           label: 'Add' },
-  { id: 'redesign',      label: 'Redesign' },
-  { id: 'wire_backend',  label: 'Wire Backend' },
-  { id: 'deploy',        label: 'Deploy' },
-]
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
+
+const CODING_AGENTS = [
+  { id: 'auto', label: 'Auto-select best agent' },
+  { id: 'repo_builder', label: 'Repo Builder Agent' },
+  { id: 'repo_auditor', label: 'Repo Auditor Agent' },
+  { id: 'frontend_designer', label: 'Frontend Designer Agent' },
+  { id: 'backend_wiring', label: 'Backend Wiring Agent' },
+]
 
 function textFrom(value: unknown): string {
   if (!value) return ''
@@ -42,9 +30,9 @@ export default function RepoWorkbenchPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [repoFullName, setRepoFullName] = useState('')
   const [branch, setBranch] = useState('main')
+  const [websiteUrl, setWebsiteUrl] = useState('')
   const [modelId, setModelId] = useState('')
-  const [agentId, setAgentId] = useState('aiva_operator')
-  const [taskType, setTaskType] = useState('update')
+  const [agentId, setAgentId] = useState('auto')
   const [models, setModels] = useState<Array<{ id: string; label: string; available: boolean }>>([])
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [prompt, setPrompt] = useState('')
@@ -60,6 +48,15 @@ export default function RepoWorkbenchPage() {
   const [error, setError] = useState('')
 
   const selectedRepo = useMemo(() => repos.find((repo) => repo.full_name === repoFullName), [repoFullName, repos])
+  const safePreviewUrl = useMemo(() => {
+    if (!websiteUrl.trim()) return ''
+    try {
+      const url = new URL(websiteUrl.trim())
+      return ['http:', 'https:'].includes(url.protocol) ? url.toString() : ''
+    } catch {
+      return ''
+    }
+  }, [websiteUrl])
 
   const call = useCallback(async (label: string, url: string, init?: RequestInit): Promise<ApiResult> => {
     setLoading(label)
@@ -114,20 +111,31 @@ export default function RepoWorkbenchPage() {
   }
 
   async function importSelectedRepo() {
-    const data = await call('Import repo', '/api/admin/repo-workbench/import', {
+    const data = await call('Add / pull repo', '/api/admin/repo-workbench/import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repoFullName, branch }),
+      body: JSON.stringify({ repoFullName, branch, websiteUrl: safePreviewUrl || undefined }),
     })
     setWorkspace(data.workspace as Workspace)
   }
 
+  function payload() {
+    return {
+      request: prompt,
+      modelId: modelId || 'auto',
+      agentMode: agentId === 'auto' ? 'auto' : agentId,
+      taskType: 'auto',
+      scope: 'auto',
+      websiteUrl: safePreviewUrl || undefined,
+    }
+  }
+
   async function runPlan() {
     if (!workspace) return
-    const data = await call('Plan', `/api/admin/repo-workbench/${workspace.id}/plan`, {
+    const data = await call('Auto-classify and plan', `/api/admin/repo-workbench/${workspace.id}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request: prompt, modelId, agentMode: agentId, taskType, scope: 'auto' }),
+      body: JSON.stringify(payload()),
     })
     setPlan(textFrom(data.plan ?? data.planJson ?? data.task ?? data))
   }
@@ -137,7 +145,7 @@ export default function RepoWorkbenchPage() {
     const data = await call('Generate patch', `/api/admin/repo-workbench/${workspace.id}/patch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request: prompt, modelId, agentMode: agentId, taskType }),
+      body: JSON.stringify(payload()),
     })
     const patch = data.patch as { id?: string; diffText?: string } | undefined
     setPatchId(String(patch?.id ?? data.patchId ?? ''))
@@ -207,39 +215,37 @@ export default function RepoWorkbenchPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-black text-white">Repo Workbench</h1>
-        <button onClick={() => loadBasics()} className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 hover:bg-white/5"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
-      </div>
+      <header className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Prompt-first workbench</p>
+            <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-white">Repo Workbench</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+              Add or pull a repo, write the request, and let AmarktAI Assistant classify the task, choose the best agent route, prepare a plan, generate a diff, run checks and create a PR. Admin can override the agent/model only when needed.
+            </p>
+          </div>
+          <button onClick={() => loadBasics()} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-white/[0.08]"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
+        </div>
+      </header>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="mt-1 text-sm text-slate-400">Choose agent and task type → import → plan → diff → checks → commit → PR → merge (approval-gated) → deploy (approval-gated).</p>
-          </div>
+          <p className="text-sm text-slate-400">Flow: repo → prompt → auto-plan → diff → checks → PR. Merge/deploy remain approval-gated until proofed.</p>
           <StatusPill ok={Boolean(github?.configured && github.authenticated)} label={github?.authenticated ? `GitHub connected: ${github.username ?? 'token valid'}` : github?.blocker || 'GitHub connection required'} />
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
+      <section className="grid gap-4 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="space-y-4">
-          <Panel title="1. GitHub connection status">
-            <p className="text-sm text-slate-300">Saved token: {github?.tokenMasked || 'not detected'}</p>
-            <p className="mt-1 text-xs text-slate-500">
-              {github?.blocker
-                ? github.blocker
-                : <>Token managed automatically via vault. To change it, go to <Link href="/admin/dashboard/settings" className="text-cyan-400 hover:underline">Settings → GitHub</Link>.</>}
-            </p>
-          </Panel>
-
-          <Panel title="2. Repo selector from connected GitHub account">
-            <select value={repoFullName} onChange={(e) => { setRepoFullName(e.target.value); const repo = repos.find((item) => item.full_name === e.target.value); setBranch(repo?.default_branch || 'main') }} className="mt-1 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+          <Panel title="1. Add / pull repo">
+            <p className="mb-3 text-xs leading-5 text-slate-500">GitHub token is managed in Settings. This panel only selects and imports the repo.</p>
+            <select value={repoFullName} onChange={(e) => { setRepoFullName(e.target.value); const repo = repos.find((item) => item.full_name === e.target.value); setBranch(repo?.default_branch || 'main') }} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
               <option value="">Select repo</option>
               {repos.map((repo) => <option key={repo.full_name} value={repo.full_name}>{repo.full_name}{repo.private ? ' (private)' : ''}</option>)}
             </select>
             <div className="mt-3 flex gap-2">
               <button onClick={() => loadBranches()} disabled={!repoFullName || Boolean(loading)} className="btn-secondary">Load branches</button>
-              <button onClick={importSelectedRepo} disabled={!repoFullName || !branch || Boolean(loading)} className="btn-primary">Import / clone</button>
+              <button onClick={importSelectedRepo} disabled={!repoFullName || !branch || Boolean(loading)} className="btn-primary">Add / pull repo</button>
             </div>
             <select value={branch} onChange={(e) => setBranch(e.target.value)} className="mt-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
               <option value={branch}>{branch}</option>
@@ -247,18 +253,12 @@ export default function RepoWorkbenchPage() {
             </select>
           </Panel>
 
-          <Panel title="3. Choose agent, model, and task type">
-            <div className="grid gap-3 sm:grid-cols-3">
+          <Panel title="2. Optional agent/model override">
+            <div className="grid gap-3">
               <div>
                 <label className="mb-1 block text-xs text-slate-500">Coding agent</label>
                 <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
                   {CODING_AGENTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-slate-500">Task type</label>
-                <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
-                  {TASK_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
               </div>
               <div>
@@ -270,29 +270,46 @@ export default function RepoWorkbenchPage() {
               </div>
             </div>
           </Panel>
+
+          <Panel title="Website preview URL">
+            <input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://example.com" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600" />
+            <p className="mt-2 text-xs leading-5 text-slate-500">Preview does not rely only on Firecrawl. Use direct iframe when allowed, external open when blocked, and screenshot/metadata later.</p>
+          </Panel>
         </div>
 
-        <Panel title="4. Tell AmarktAI Assistant what to change">
-          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={7} placeholder="Describe one focused repo change. AmarktAI Assistant will plan first, then generate a patch for approval." className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40" />
+        <Panel title="3. Tell AmarktAI Assistant what to do">
+          <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={9} placeholder="Example: Audit the dashboard and create a PR to remove duplicate actions, simplify Settings, and make Repo Workbench prompt-first." className="w-full resize-none rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/40" />
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={runPlan} disabled={!workspace || !prompt || Boolean(loading)} className="btn-secondary"><Wand2 className="h-4 w-4" /> Plan</button>
+            <button onClick={runPlan} disabled={!workspace || !prompt || Boolean(loading)} className="btn-secondary"><Wand2 className="h-4 w-4" /> Auto-plan</button>
             <button onClick={runPatch} disabled={!workspace || !prompt || Boolean(loading)} className="btn-primary">Generate diff</button>
             <label className="ml-auto inline-flex items-center gap-2 text-xs text-slate-300"><input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} /> I approve write/Git actions</label>
+          </div>
+          <div className="mt-4 rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3 text-xs leading-5 text-cyan-100">
+            The backend receives <code>taskType: auto</code>. The prompt should decide audit/fix/update/add/redesign/backend/deploy intent behind the scenes.
           </div>
         </Panel>
       </section>
 
-      {workspace && <Panel title="Selected repo status">
-        <p className="text-sm text-slate-300">{workspace.owner}/{workspace.repo} · {workspace.branch} · {workspace.currentCommit?.slice(0, 12) || 'sha pending'} · {workspace.status || 'ready'}</p>
-      </Panel>}
+      {workspace && <Panel title="Selected repo status"><p className="text-sm text-slate-300">{workspace.owner}/{workspace.repo} · {workspace.branch} · {workspace.currentCommit?.slice(0, 12) || 'sha pending'} · {workspace.status || 'ready'}</p></Panel>}
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Plan output / audit and safety output"><pre className="min-h-36 whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-300">{plan || 'Plan output will appear here.'}</pre></Panel>
-        <Panel title="Patch preview / diff"><pre className="min-h-36 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-300">{diff || 'Generated diff appears here before apply.'}</pre></Panel>
+      <section className="grid gap-4 xl:grid-cols-[1fr_0.85fr]">
+        <Panel title="Plan output"><pre className="min-h-56 whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-300">{plan || 'Auto-classification and plan output will appear here.'}</pre></Panel>
+        <Panel title="Website preview">
+          {safePreviewUrl ? (
+            <div className="space-y-3">
+              <div className="aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                <iframe src={safePreviewUrl} className="h-full w-full" title="Linked website preview" sandbox="allow-scripts allow-forms allow-same-origin" />
+              </div>
+              <a href={safePreviewUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs text-cyan-300 hover:underline">Open preview externally <ExternalLink className="h-3.5 w-3.5" /></a>
+            </div>
+          ) : <p className="rounded-xl bg-black/30 p-4 text-sm text-slate-500">Add a website URL to preview the current app/site. Some sites block iframe previews; external open remains available.</p>}
+        </Panel>
       </section>
 
+      <Panel title="Patch preview / diff"><pre className="min-h-56 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-300">{diff || 'Generated diff appears here before apply.'}</pre></Panel>
+
       <section className="grid gap-4 lg:grid-cols-3">
-        <Panel title="5. Apply patch and checks">
+        <Panel title="4. Apply patch and checks">
           <button onClick={applyPatch} disabled={!workspace || !patchId || !approved || Boolean(loading)} className="btn-primary">Apply patch</button>
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={() => runCheck('lint')} disabled={!workspace || Boolean(loading)} className="btn-secondary">Run lint</button>
@@ -300,7 +317,7 @@ export default function RepoWorkbenchPage() {
             <button onClick={() => runCheck('build')} disabled={!workspace || Boolean(loading)} className="btn-secondary">Run build</button>
           </div>
         </Panel>
-        <Panel title="6. Commit / push / PR / merge / deploy">
+        <Panel title="5. Commit / push / PR">
           <input value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} className="mb-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
           <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
           <div className="flex flex-wrap gap-2">
@@ -309,32 +326,17 @@ export default function RepoWorkbenchPage() {
             <button onClick={createPr} disabled={!workspace || !approved || Boolean(loading)} className="btn-primary">Create PR</button>
           </div>
           {prUrl && <a href={prUrl} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-cyan-300 underline">{prUrl}</a>}
-          {/* Merge and Deploy — approval-gated. Disabled until PR exists and proof is verified. */}
           <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              disabled
-              title="Merge requires: PR created, checks passing, and admin approval"
-              className="btn-secondary flex items-center gap-1.5 opacity-40 cursor-not-allowed"
-            >
-              <GitMerge className="h-3.5 w-3.5" />
-              Merge (approval-gated)
-            </button>
-            <button
-              disabled
-              title="Deploy requires: merge completed, deploy path configured, and admin approval"
-              className="btn-secondary flex items-center gap-1.5 opacity-40 cursor-not-allowed"
-            >
-              <Rocket className="h-3.5 w-3.5" />
-              Deploy (approval-gated)
-            </button>
+            <button disabled className="btn-secondary flex cursor-not-allowed items-center gap-1.5 opacity-40"><GitMerge className="h-3.5 w-3.5" /> Merge</button>
+            <button disabled className="btn-secondary flex cursor-not-allowed items-center gap-1.5 opacity-40"><Rocket className="h-3.5 w-3.5" /> Deploy</button>
           </div>
-          <p className="mt-2 text-[11px] text-slate-600">Merge and Deploy are shown but remain disabled until PR is created, checks pass, and an explicit admin approval is recorded.</p>
+          <p className="mt-2 text-[11px] text-slate-600">Merge and deploy stay disabled until PR checks, approval and live proof are wired.</p>
         </Panel>
-        <Panel title="7. Workspace hygiene">
+        <Panel title="6. Workspace hygiene">
           <p className="mb-3 text-xs text-slate-500">Reset/delete require the approval checkbox.</p>
           <div className="flex flex-wrap gap-2">
             <button onClick={resetWorkspace} disabled={!workspace || !approved || Boolean(loading)} className="btn-secondary">Reset workspace</button>
-            <button onClick={deleteWorkspace} disabled={!workspace || !approved || Boolean(loading)} className="btn-danger"><Trash2 className="h-4 w-4" /> Delete workspace</button>
+            <button onClick={deleteWorkspace} disabled={!workspace || !approved || Boolean(loading)} className="btn-danger"><Trash2 className="h-4 w-4" /> Delete</button>
             <button onClick={() => setLogs([])} className="btn-secondary">Clear logs</button>
           </div>
         </Panel>
@@ -342,9 +344,7 @@ export default function RepoWorkbenchPage() {
 
       {loading && <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-100"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{loading}</div>}
       {error && <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200"><XCircle className="mr-2 inline h-4 w-4" />{error}</div>}
-      <Panel title="Logs panel">
-        <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-400">{logs.join('\n\n') || 'No actions yet.'}</pre>
-      </Panel>
+      <Panel title="Logs"><pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-400">{logs.join('\n\n') || 'No actions yet.'}</pre></Panel>
     </div>
   )
 }
