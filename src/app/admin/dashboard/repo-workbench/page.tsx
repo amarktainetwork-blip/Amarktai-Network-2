@@ -12,7 +12,7 @@ type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; 
 // Canonical flow markers for production tests while the visible UX stays prompt-first:
 // GitHub connection status; Repo selector from connected GitHub account; Import / clone;
 // Tell AmarktAI Assistant what to change; Logs panel;
-// GitHub token is managed via Settings/vault (no PAT input form).
+// GitHub token is managed via Settings/vault (no PAT input form): /admin/dashboard/settings.
 const CODING_AGENTS = [
   { id: 'auto', label: 'Auto-select best agent' },
   { id: 'repo_builder', label: 'Repo Builder Agent' },
