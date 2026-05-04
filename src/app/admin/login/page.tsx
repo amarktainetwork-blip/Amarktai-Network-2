@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Loader2, Eye, EyeOff, Shield, ArrowRight } from 'lucide-react'
+import { Mail, Lock, Loader2, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 
 export default function AdminLoginPage() {
@@ -39,141 +39,106 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050816] flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Animated background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 grid-bg opacity-25" />
-        {/* Slow-pulse glow blobs */}
-        <motion.div
-          animate={{ scale: [1, 1.25, 1], opacity: [0.05, 0.13, 0.05] }}
-          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-1/4 left-1/4 w-[480px] h-[480px] bg-blue-600 rounded-full blur-[130px]"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.18, 1], opacity: [0.04, 0.10, 0.04] }}
-          transition={{ duration: 11, repeat: Infinity, delay: 2.5, ease: 'easeInOut' }}
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600 rounded-full blur-[110px]"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.12, 1], opacity: [0.03, 0.07, 0.03] }}
-          transition={{ duration: 7, repeat: Infinity, delay: 4, ease: 'easeInOut' }}
-          className="absolute top-2/3 left-1/2 w-72 h-72 bg-cyan-500 rounded-full blur-[100px]"
-        />
-        {/* Subtle animated node lines */}
-        <svg className="absolute inset-0 w-full h-full opacity-[0.04]" aria-hidden="true">
-          <motion.line x1="20%" y1="15%" x2="50%" y2="50%" stroke="#60a5fa" strokeWidth="1"
-            animate={{ opacity: [0, 1, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 0 }} />
-          <motion.line x1="80%" y1="20%" x2="50%" y2="50%" stroke="#818cf8" strokeWidth="1"
-            animate={{ opacity: [0, 1, 0] }} transition={{ duration: 5, repeat: Infinity, delay: 1 }} />
-          <motion.line x1="15%" y1="75%" x2="50%" y2="50%" stroke="#22d3ee" strokeWidth="1"
-            animate={{ opacity: [0, 1, 0] }} transition={{ duration: 6, repeat: Infinity, delay: 2 }} />
-          <motion.line x1="85%" y1="80%" x2="50%" y2="50%" stroke="#60a5fa" strokeWidth="1"
-            animate={{ opacity: [0, 1, 0] }} transition={{ duration: 4.5, repeat: Infinity, delay: 0.5 }} />
-        </svg>
-      </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030712] px-4 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(34,211,238,0.16),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(59,130,246,0.14),transparent_30%),radial-gradient(circle_at_50%_90%,rgba(168,85,247,0.10),transparent_32%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:56px_56px] opacity-40" />
 
       <motion.div
-        initial={{ opacity: 0, y: 32, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-md relative z-10"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.55 }}
+        className="relative z-10 grid w-full max-w-5xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
       >
-        {/* Branding header */}
-        <div className="text-center mb-8">
-          <motion.div
-            animate={{ scale: [1, 1.06, 1] }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="inline-flex mb-5"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-900/40">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-          </motion.div>
-
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-400 mb-2">
-            Amarkt<span className="text-cyan-300">AI</span> Network
-          </p>
-          <h1 className="text-2xl font-extrabold text-white mb-1 font-heading">
-            Operator Access
+        <section className="hidden lg:block">
+          <Link href="/" className="inline-block leading-none">
+            <span className="block text-4xl font-black tracking-[-0.06em] text-white">
+              Amarkt<span className="text-blue-400">AI</span> Network
+            </span>
+            <span className="mt-2 block text-[11px] font-semibold uppercase tracking-[0.26em] text-cyan-200/65">Private AI operating ecosystem</span>
+          </Link>
+          <h1 className="mt-12 max-w-xl text-5xl font-black tracking-[-0.06em] text-white">
+            Operator access for a private command network.
           </h1>
-          <p className="text-slate-500 text-xs font-mono">
-            Restricted — authorized personnel only
+          <p className="mt-5 max-w-lg text-sm leading-7 text-slate-400">
+            Restricted admin entry for approved operators only. Every powerful action belongs behind identity, permissions, approval gates and audit trails.
           </p>
-        </div>
+          <div className="mt-8 grid max-w-md gap-3">
+            {['Private access only', 'Approval-gated operations', 'AmarktAI Assistant command layer'].map((item) => (
+              <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-slate-300">
+                <ShieldCheck className="h-4 w-4 text-cyan-200" />
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
 
-        {/* Login card */}
-        <div className="glass-card rounded-2xl p-8 relative overflow-hidden border border-blue-500/15">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-violet-500/30 to-transparent" />
+        <section className="mx-auto w-full max-w-md rounded-[2rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-black/30 backdrop-blur-2xl">
+          <div className="mb-8 text-center lg:text-left">
+            <Link href="/" className="mb-8 inline-block leading-none lg:hidden">
+              <span className="block text-3xl font-black tracking-[-0.06em] text-white">
+                Amarkt<span className="text-blue-400">AI</span> Network
+              </span>
+              <span className="mt-2 block text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/65">Private AI operating ecosystem</span>
+            </Link>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-200">Operator Access</p>
+            <h2 className="mt-3 text-2xl font-black tracking-[-0.04em] text-white">Restricted login</h2>
+            <p className="mt-2 text-sm text-slate-500">Authorized personnel only.</p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2">
-                <Mail className="w-3 h-3" />
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@amarktai.network"
-                className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition-all font-mono"
-              />
-            </div>
-            <div>
-              <label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-2">
-                <Lock className="w-3 h-3" />
-                Password
-              </label>
-              <div className="relative">
+            <label className="block text-xs font-medium text-slate-400">
+              Email Address
+              <div className="relative mt-2">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin@amarktai.com"
+                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-11 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40 focus:bg-black/30"
+                />
+              </div>
+            </label>
+
+            <label className="block text-xs font-medium text-slate-400">
+              Password
+              <div className="relative mt-2">
+                <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-600" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition-all pr-10"
+                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-11 py-3.5 pr-12 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40 focus:bg-black/30"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-600 transition hover:text-white"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </label>
 
             {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="px-4 py-3 bg-red-500/8 border border-red-500/20 rounded-xl text-xs text-red-400 font-mono"
-              >
-                ⚠ {error}
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-xs text-red-200">
+                {error}
               </motion.div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full justify-center disabled:opacity-50 mt-2"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>Authenticate <ArrowRight className="w-4 h-4 relative z-10" /></>
-              )}
+            <button type="submit" disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:opacity-50">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Authenticate <ArrowRight className="h-4 w-4" /></>}
             </button>
           </form>
-        </div>
 
-        <div className="text-center mt-5">
-          <Link href="/" className="text-xs text-slate-600 hover:text-slate-400 transition-colors">
-            ← Back to site
-          </Link>
-        </div>
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-xs text-slate-600 transition hover:text-slate-400">← Back to public site</Link>
+          </div>
+        </section>
       </motion.div>
     </div>
   )
