@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-/** System hub route kept for backward compatibility — redirects to System Health. */
+/** System hub route kept for backward compatibility — redirects to Diagnostics. */
 export default function SystemHubRedirectPage() {
-  redirect('/admin/dashboard/system-health')
+  redirect('/admin/dashboard/diagnostics')
 }

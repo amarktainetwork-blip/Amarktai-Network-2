@@ -189,7 +189,7 @@ export default function AppsPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Apps</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage and monitor your connected applications.</p>
+          <p className="text-sm text-slate-500 mt-1">App Cards + detail drawer/panel — manage and monitor connected applications.</p>
         </div>
         <Link
           href="/admin/dashboard/apps/new"

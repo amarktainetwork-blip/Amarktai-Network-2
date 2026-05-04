@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, ExternalLink, GitMerge, Loader2, RefreshCw, Rocket, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
@@ -241,7 +242,7 @@ export default function RepoWorkbenchPage() {
       <section className="grid gap-4 xl:grid-cols-[0.7fr_1.3fr]">
         <div className="space-y-4">
           <Panel title="1. Add / pull repo">
-            <p className="mb-3 text-xs leading-5 text-slate-500">GitHub token is managed in Settings. This panel only selects and imports the repo.</p>
+            <p className="mb-3 text-xs leading-5 text-slate-500">GitHub token is managed in <Link href="/admin/dashboard/settings" className="text-cyan-400 hover:underline">Settings</Link>. This panel only selects and imports the repo.</p>
             <select value={repoFullName} onChange={(e) => { setRepoFullName(e.target.value); const repo = repos.find((item) => item.full_name === e.target.value); setBranch(repo?.default_branch || 'main') }} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
               <option value="">Select repo</option>
               {repos.map((repo) => <option key={repo.full_name} value={repo.full_name}>{repo.full_name}{repo.private ? ' (private)' : ''}</option>)}
