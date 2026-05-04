@@ -1804,10 +1804,10 @@ const PROVIDER_DEFS_SPECIALIST = [
 
 /** Advanced providers — collapsed behind toggle, not primary product story. */
 const PROVIDER_DEFS_ADVANCED = [
-  { key: 'openai',      label: 'OpenAI Direct',     placeholder: 'sk-…',       caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'], hint: undefined },
-  { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…',    caps: ['chat', 'code', 'reasoning'], hint: undefined },
-  { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',      caps: ['chat', 'reasoning', 'code', 'research'], hint: undefined },
-  { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',      caps: ['chat', 'reasoning', 'code'], hint: undefined },
+  { key: 'openai',      label: 'OpenAI Direct',     placeholder: 'sk-…',    caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] as string[], hint: '' },
+  { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…', caps: ['chat', 'code', 'reasoning'] as string[], hint: '' },
+  { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code', 'research'] as string[], hint: '' },
+  { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code'] as string[], hint: '' },
 ]
 
 function ProvidersSection() {
@@ -1862,7 +1862,7 @@ function ProvidersSection() {
                         label={def.label}
                         placeholder={def.placeholder}
                         capabilities={def.caps}
-                        hint={def.hint}
+                        hint={def.hint || undefined}
                         record={record ?? null}
                         onSaved={load}
                       />
@@ -1879,7 +1879,7 @@ function ProvidersSection() {
                         label={def.label}
                         placeholder={def.placeholder}
                         capabilities={def.caps}
-                        hint={def.hint}
+                        hint={def.hint || undefined}
                         record={record ?? null}
                         onSaved={load}
                       />
@@ -1908,7 +1908,7 @@ function ProvidersSection() {
                             label={def.label}
                             placeholder={def.placeholder}
                             capabilities={def.caps}
-                            hint={def.hint}
+                            hint={def.hint || undefined}
                             record={record ?? null}
                             onSaved={load}
                           />

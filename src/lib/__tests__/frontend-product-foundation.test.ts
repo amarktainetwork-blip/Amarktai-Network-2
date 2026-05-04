@@ -10,7 +10,7 @@
  *  - Repo Workbench labels match Import / Update / Add / Audit / command / plan / PR
  *  - No module labelled Working without matching endpoint/status proof helper
  *  - Settings shows only approved providers (no banned providers)
- *  - Dashboard nav matches Phase 1B canonical 11-item structure
+ *  - Dashboard nav matches Phase 1B canonical 12-item structure
  */
 
 import { describe, it, expect } from 'vitest'
@@ -213,9 +213,9 @@ describe('Settings — only approved providers visible', () => {
   })
 })
 
-// ── Dashboard nav — 11-item canonical structure ──────────────────────────────
+// ── Dashboard nav — 12-item canonical structure ──────────────────────────────
 
-describe('Dashboard nav — canonical 11-item structure', () => {
+describe('Dashboard nav — canonical 12-item structure', () => {
   it('nav includes Aiva Chat at /admin/dashboard/aiva', () => {
     const src = readPage(DASHBOARD_ROOT, 'layout.tsx')
     expect(src).toContain('/admin/dashboard/aiva')

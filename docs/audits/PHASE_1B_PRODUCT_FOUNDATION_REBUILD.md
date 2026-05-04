@@ -69,7 +69,7 @@ The following providers are in `hidden` or `backlog` governance group and do not
 
 ---
 
-## Final Visible Dashboard Nav (11 canonical sections)
+## Final Visible Dashboard Nav (12 canonical sections)
 
 | # | Label | Route |
 |---|-------|-------|
@@ -81,9 +81,10 @@ The following providers are in `hidden` or `backlog` governance group and do not
 | 6 | Memory / Emotions | `/admin/dashboard/memory-emotions` |
 | 7 | Media Studio | `/admin/dashboard/media-studio` |
 | 8 | Artifacts / Storage | `/admin/dashboard/artifacts` |
-| 9 | Actions / Approvals | `/admin/dashboard/ai-engine/aiva-actions` |
-| 10 | Diagnostics | `/admin/dashboard/system-health` |
-| 11 | Settings | `/admin/dashboard/settings` |
+| 9 | Agent Registry | `/admin/dashboard/agents` |
+| 10 | Actions / Approvals | `/admin/dashboard/ai-engine/aiva-actions` |
+| 11 | Diagnostics | `/admin/dashboard/system-health` |
+| 12 | Settings | `/admin/dashboard/settings` |
 
 ---
 

@@ -2,7 +2,7 @@
  * Dashboard Go-Live Checks (Phase 1B)
  *
  * Verifies structural requirements for the dashboard to be considered go-live ready:
- *  - Nav has exactly 11 canonical sections (no duplicate /admin/dashboard overview)
+ *  - Nav has exactly 12 canonical sections (no duplicate /admin/dashboard overview)
  *  - /admin/dashboard is NOT a visible nav item (redirect alias only)
  *  - Aiva Chat is the dedicated section at /admin/dashboard/aiva
  *  - Aiva assistant panel is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
