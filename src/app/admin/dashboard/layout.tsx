@@ -33,7 +33,7 @@ type NavItem = {
 // Phase 1B canonical nav: 12 production sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
 // Health, readiness and proof are consolidated under Diagnostics.
-// AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true.
+// AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
   { href: '/admin/dashboard/aiva', label: 'AI Assistant', icon: Bot },

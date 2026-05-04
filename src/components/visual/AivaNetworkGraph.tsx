@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 
-/** Network nodes: central Aiva + 8 surrounding capability nodes */
+/** Network nodes: central AmarktAI + 8 surrounding capability nodes */
 const AIVA = { x: 400, y: 240 }
 
 const OUTER_NODES = [
@@ -69,7 +69,7 @@ export default function AivaNetworkGraph({ className = '' }: { className?: strin
         fill="none"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* Background radial glow around Aiva */}
+        {/* Background radial glow around AmarktAI centre */}
         <radialGradient id="aiva-glow" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.18" />
           <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
@@ -110,17 +110,17 @@ export default function AivaNetworkGraph({ className = '' }: { className?: strin
           />
         ))}
 
-        {/* Aiva core outer pulse ring */}
+        {/* AmarktAI core outer pulse ring */}
         <motion.circle
           cx={AIVA.x} cy={AIVA.y} r={30}
           stroke="#22d3ee" strokeOpacity={0} strokeWidth={1.5} fill="none"
           animate={{ r: [26, 46], strokeOpacity: [0.4, 0] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: 'easeOut' }}
         />
-        {/* Aiva core inner ring */}
+        {/* AmarktAI core inner ring */}
         <circle cx={AIVA.x} cy={AIVA.y} r={24}
           fill="#0a1628" stroke="#22d3ee" strokeOpacity={0.35} strokeWidth={1.5} />
-        {/* Aiva core dot */}
+        {/* AmarktAI core dot */}
         <motion.circle
           cx={AIVA.x} cy={AIVA.y} r={10}
           fill="#22d3ee" fillOpacity={0.9}
@@ -129,7 +129,7 @@ export default function AivaNetworkGraph({ className = '' }: { className?: strin
         />
       </svg>
 
-      {/* Aiva centre label */}
+      {/* AmarktAI centre label */}
       <div
         className="absolute flex flex-col items-center"
         style={{
