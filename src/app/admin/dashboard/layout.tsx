@@ -32,7 +32,6 @@ type NavItem = {
 // Dashboard foundation redesign: 11 canonical sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
 // Health, readiness and proof are consolidated under Diagnostics.
-// AmarktAI Assistant disabled as floating panel by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 // AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },

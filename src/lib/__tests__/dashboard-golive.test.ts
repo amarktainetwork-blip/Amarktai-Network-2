@@ -86,7 +86,8 @@ describe('Dashboard Navigation — exactly 11 canonical sections', () => {
     if (navItemBlock) {
       for (const href of banned) {
         // Check that href does not appear as a primary href: (not in match aliases)
-        const primaryHrefPattern = new RegExp(`href:\\s*['"]${href.replace(/\//g, '/')}['"]`)
+        const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const primaryHrefPattern = new RegExp(`href:\\s*['"]${escaped}['"]`)
         expect(primaryHrefPattern.test(navItemBlock[0]), `${href} should not be a primary nav href`).toBe(false)
       }
     }
