@@ -2,12 +2,32 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle2, Loader2, RefreshCw, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
+import { CheckCircle2, GitMerge, Loader2, RefreshCw, Rocket, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
 type Branch = { name: string; sha: string; isDefault?: boolean }
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
 type Status = { configured?: boolean; authenticated?: boolean; username?: string | null; tokenMasked?: string | null; blocker?: string | null }
+
+// Coding agents available for repo tasks
+const CODING_AGENTS = [
+  { id: 'aiva_operator',        label: 'Aiva Operator (auto-route)' },
+  { id: 'repo_builder',         label: 'Repo Builder Agent' },
+  { id: 'repo_auditor',         label: 'Repo Auditor Agent' },
+  { id: 'frontend_designer',    label: 'Frontend Designer Agent' },
+  { id: 'backend_wiring',       label: 'Backend Wiring Agent' },
+]
+
+// Task type options for the selected coding agent
+const TASK_TYPES = [
+  { id: 'audit',         label: 'Audit' },
+  { id: 'fix',           label: 'Fix' },
+  { id: 'update',        label: 'Update' },
+  { id: 'add',           label: 'Add' },
+  { id: 'redesign',      label: 'Redesign' },
+  { id: 'wire_backend',  label: 'Wire Backend' },
+  { id: 'deploy',        label: 'Deploy' },
+]
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
 
 function textFrom(value: unknown): string {
@@ -23,6 +43,8 @@ export default function RepoWorkbenchPage() {
   const [repoFullName, setRepoFullName] = useState('')
   const [branch, setBranch] = useState('main')
   const [modelId, setModelId] = useState('')
+  const [agentId, setAgentId] = useState('aiva_operator')
+  const [taskType, setTaskType] = useState('update')
   const [models, setModels] = useState<Array<{ id: string; label: string; available: boolean }>>([])
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [prompt, setPrompt] = useState('')
@@ -105,7 +127,7 @@ export default function RepoWorkbenchPage() {
     const data = await call('Plan', `/api/admin/repo-workbench/${workspace.id}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request: prompt, modelId, agentMode: 'fullstack_builder', scope: 'auto' }),
+      body: JSON.stringify({ request: prompt, modelId, agentMode: agentId, taskType, scope: 'auto' }),
     })
     setPlan(textFrom(data.plan ?? data.planJson ?? data.task ?? data))
   }
@@ -115,7 +137,7 @@ export default function RepoWorkbenchPage() {
     const data = await call('Generate patch', `/api/admin/repo-workbench/${workspace.id}/patch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ request: prompt, modelId, agentMode: 'fullstack_builder' }),
+      body: JSON.stringify({ request: prompt, modelId, agentMode: agentId, taskType }),
     })
     const patch = data.patch as { id?: string; diffText?: string } | undefined
     setPatchId(String(patch?.id ?? data.patchId ?? ''))
@@ -193,7 +215,7 @@ export default function RepoWorkbenchPage() {
       <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="mt-1 text-sm text-slate-400">GitHub to plan to patch to checks to PR. No deploys or merges from this page.</p>
+            <p className="mt-1 text-sm text-slate-400">Choose agent and task type → import → plan → diff → checks → commit → PR → merge (approval-gated) → deploy (approval-gated).</p>
           </div>
           <StatusPill ok={Boolean(github?.configured && github.authenticated)} label={github?.authenticated ? `GitHub connected: ${github.username ?? 'token valid'}` : github?.blocker || 'GitHub connection required'} />
         </div>
@@ -225,11 +247,28 @@ export default function RepoWorkbenchPage() {
             </select>
           </Panel>
 
-          <Panel title="3. Coding model">
-            <select value={modelId} onChange={(e) => setModelId(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
-              <option value="">Auto select</option>
-              {models.map((model) => <option key={model.id} value={model.id}>{model.label || model.id}</option>)}
-            </select>
+          <Panel title="3. Choose agent, model, and task type">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Coding agent</label>
+                <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+                  {CODING_AGENTS.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Task type</label>
+                <select value={taskType} onChange={(e) => setTaskType(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+                  {TASK_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-slate-500">Coding model</label>
+                <select value={modelId} onChange={(e) => setModelId(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white">
+                  <option value="">Auto select</option>
+                  {models.map((model) => <option key={model.id} value={model.id}>{model.label || model.id}</option>)}
+                </select>
+              </div>
+            </div>
           </Panel>
         </div>
 
@@ -261,7 +300,7 @@ export default function RepoWorkbenchPage() {
             <button onClick={() => runCheck('build')} disabled={!workspace || Boolean(loading)} className="btn-secondary">Run build</button>
           </div>
         </Panel>
-        <Panel title="6. Commit / push / PR">
+        <Panel title="6. Commit / push / PR / merge / deploy">
           <input value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} className="mb-2 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
           <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" />
           <div className="flex flex-wrap gap-2">
@@ -270,6 +309,26 @@ export default function RepoWorkbenchPage() {
             <button onClick={createPr} disabled={!workspace || !approved || Boolean(loading)} className="btn-primary">Create PR</button>
           </div>
           {prUrl && <a href={prUrl} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-cyan-300 underline">{prUrl}</a>}
+          {/* Merge and Deploy — approval-gated. Disabled until PR exists and proof is verified. */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              disabled
+              title="Merge requires: PR created, checks passing, and admin approval"
+              className="btn-secondary flex items-center gap-1.5 opacity-40 cursor-not-allowed"
+            >
+              <GitMerge className="h-3.5 w-3.5" />
+              Merge (approval-gated)
+            </button>
+            <button
+              disabled
+              title="Deploy requires: merge completed, deploy path configured, and admin approval"
+              className="btn-secondary flex items-center gap-1.5 opacity-40 cursor-not-allowed"
+            >
+              <Rocket className="h-3.5 w-3.5" />
+              Deploy (approval-gated)
+            </button>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-600">Merge and Deploy are shown but remain disabled until PR is created, checks pass, and an explicit admin approval is recorded.</p>
         </Panel>
         <Panel title="7. Workspace hygiene">
           <p className="mb-3 text-xs text-slate-500">Reset/delete require the approval checkbox.</p>
@@ -278,7 +337,6 @@ export default function RepoWorkbenchPage() {
             <button onClick={deleteWorkspace} disabled={!workspace || !approved || Boolean(loading)} className="btn-danger"><Trash2 className="h-4 w-4" /> Delete workspace</button>
             <button onClick={() => setLogs([])} className="btn-secondary">Clear logs</button>
           </div>
-          <button disabled className="mt-3 w-full rounded-xl border border-slate-700 px-3 py-2 text-xs text-slate-500">Deploy disabled until PR/merge readiness is verified</button>
         </Panel>
       </section>
 

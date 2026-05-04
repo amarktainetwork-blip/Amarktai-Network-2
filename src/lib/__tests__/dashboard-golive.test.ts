@@ -27,16 +27,16 @@ function readPage(relPath: string): string {
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 
-describe('Dashboard Navigation — exactly 11 canonical sections', () => {
+describe('Dashboard Navigation — exactly 12 canonical sections', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('has exactly 11 NAV_ITEMS entries', () => {
+  it('has exactly 12 NAV_ITEMS entries', () => {
     const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     const navHrefs = navItemBlock?.[0].match(/href:\s*['"][^'"]+['"]/g) ?? []
-    expect(navHrefs).toHaveLength(11)
+    expect(navHrefs).toHaveLength(12)
   })
 
-  it('includes the 11 canonical sections', () => {
+  it('includes the 12 canonical sections', () => {
     const required = [
       '/admin/dashboard/command-center',
       '/admin/dashboard/aiva',
@@ -46,6 +46,7 @@ describe('Dashboard Navigation — exactly 11 canonical sections', () => {
       '/admin/dashboard/memory-emotions',
       '/admin/dashboard/media-studio',
       '/admin/dashboard/artifacts',
+      '/admin/dashboard/agents',
       '/admin/dashboard/ai-engine/aiva-actions',
       '/admin/dashboard/system-health',
       '/admin/dashboard/settings',

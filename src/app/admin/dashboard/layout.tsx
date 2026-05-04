@@ -19,6 +19,7 @@ import {
   Settings2,
   ShieldCheck,
   User,
+  Users,
   X,
 } from 'lucide-react'
 
@@ -29,7 +30,7 @@ type NavItem = {
   match?: string[]
 }
 
-// Phase 1B canonical nav: 11 production sections only.
+// Phase 1B canonical nav: 12 production sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
 // Health, readiness and proof are consolidated under Diagnostics.
 // Aiva disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true.
@@ -42,6 +43,7 @@ const NAV_ITEMS = [
   { href: '/admin/dashboard/memory-emotions', label: 'Memory / Emotions', icon: Brain },
   { href: '/admin/dashboard/media-studio', label: 'Media Studio', icon: Film },
   { href: '/admin/dashboard/artifacts', label: 'Artifacts / Storage', icon: Archive },
+  { href: '/admin/dashboard/agents', label: 'Agent Registry', icon: Users },
   { href: '/admin/dashboard/ai-engine/aiva-actions', label: 'Actions / Approvals', icon: ShieldCheck },
   { href: '/admin/dashboard/system-health', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/readiness'] },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings2 },

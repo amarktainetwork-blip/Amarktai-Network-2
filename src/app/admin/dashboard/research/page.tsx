@@ -4,6 +4,7 @@ import {
   Archive,
   CheckCircle,
   Clock,
+  Eye,
   Flame,
   Globe,
   Link2,
@@ -134,6 +135,39 @@ export default function ResearchPage() {
         <p className="text-xs font-semibold text-amber-300">Needs key / Backend pending</p>
         <p className="mt-1 text-xs text-slate-400">
           Firecrawl is the primary scraping provider. Set <code className="rounded bg-white/10 px-1 text-amber-200">FIRECRAWL_API_KEY</code> in Settings to begin. Storage and job history require the storage backend to be configured. No Working status will be shown until endpoint proof exists.
+        </p>
+      </div>
+
+      {/* App Discovery / Researcher Agent */}
+      <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/20 border border-violet-500/20">
+            <Eye className="h-4 w-4 text-violet-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">App Discovery / Researcher Agent</p>
+            <p className="text-[11px] text-slate-400">Status: <span className="text-cyan-400">Ready to wire</span></p>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 leading-5">
+          The Researcher Agent discovers new AI tools, providers, and app opportunities. It analyses competitor products, creates improved alternative plans, packages them as product specs, and routes them to Repo Workbench for implementation.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {[
+            { label: 'Research new AI tools / providers', status: 'Ready to wire' as StatusLabel },
+            { label: 'Alert admin of app opportunities', status: 'Ready to wire' as StatusLabel },
+            { label: 'Create improved alternative app plan', status: 'Ready to wire' as StatusLabel },
+            { label: 'Create product package / spec', status: 'Ready to wire' as StatusLabel },
+            { label: 'Send plan to Repo Workbench', status: 'Ready to wire' as StatusLabel },
+            { label: 'Competitor analysis scraping', status: 'Needs key' as StatusLabel },
+            { label: 'Opportunity alert notifications', status: 'Backend pending' as StatusLabel },
+            { label: 'Discovery history / archive', status: 'Backend pending' as StatusLabel },
+          ].map(({ label, status }) => (
+            <Row key={label} label={label} status={status} />
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-600">
+          Researcher Agent backend wiring is in Phase 2. Requires Firecrawl key and a planning model (GenX or direct).
         </p>
       </div>
     </div>
