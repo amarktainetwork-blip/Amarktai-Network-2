@@ -62,7 +62,7 @@ describe('Aiva Chat — dedicated route, not floating overlay', () => {
   it('Aiva Chat page does not use floating/fixed overlay positioning as main layout', () => {
     const src = readPage(DASHBOARD_ROOT, 'aiva/page.tsx')
     // Should not use fixed-position overlay as the primary chat container
-    const hasFixedOverlay = src.includes('fixed inset-0') || src.includes('fixed bottom-') && src.includes('z-50')
+    const hasFixedOverlay = src.includes('fixed inset-0') || (src.includes('fixed bottom-') && src.includes('z-50'))
     expect(hasFixedOverlay).toBe(false)
   })
 

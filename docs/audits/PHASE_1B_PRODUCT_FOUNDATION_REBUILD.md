@@ -1,6 +1,6 @@
 # Phase 1B Product Foundation Rebuild
 
-**Branch:** `copilot/amarktai-network-2-phase-1b-foundation-rebuild`  
+**Branch:** `copilot/phase-1b-product-foundation-rebuild`  
 **Status:** Frontend/dashboard shell complete — backend wiring not included
 
 ---
