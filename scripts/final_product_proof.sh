@@ -108,6 +108,53 @@ adult="$(check_json "Adult mode status" /api/admin/global-adult-mode)"
 tools="$(check_json "Tool registry" /api/admin/tool-registry)"
 artifacts="$(check_json "Artifacts storage route" /api/admin/artifacts)"
 
+# ── Phase A — Settings backend ────────────────────────────────────────────────
+settings_integrations="$(check_json "Settings integrations" /api/admin/settings/integrations)"
+check_json "Settings test-github" /api/admin/settings/test-github >/dev/null
+check_json "Settings test-storage" /api/admin/settings/test-storage >/dev/null
+check_json "Settings test-webdock" /api/admin/settings/test-webdock >/dev/null
+check_json "Settings test-adult" /api/admin/settings/test-adult >/dev/null
+check_json "Provider capability test" /api/admin/provider-capability-test >/dev/null
+
+# ── Phase B — Diagnostics ────────────────────────────────────────────────────
+check_json "Live readiness endpoint" /api/admin/live-readiness >/dev/null
+
+# ── Phase C — AmarktAI Assistant ─────────────────────────────────────────────
+check_json "AmarktAI Assistant context" /api/admin/amarktai-assistant/context >/dev/null
+check_json "AmarktAI Assistant memory" /api/admin/amarktai-assistant/memory >/dev/null
+
+# ── Phase D — Memory ─────────────────────────────────────────────────────────
+memory_status="$(check_json "Memory status" /api/admin/memory)"
+check_json "Memory manage" /api/admin/memory/manage >/dev/null
+
+# ── Phase E — Apps ───────────────────────────────────────────────────────────
+check_json "Apps list" /api/admin/apps >/dev/null
+check_json "App profiles" /api/admin/app-profiles >/dev/null
+check_json "App AI package" /api/admin/app-ai-package >/dev/null
+
+# ── Phase F — Agents ─────────────────────────────────────────────────────────
+check_json "Agent registry" /api/admin/agents >/dev/null
+check_json "App agents" /api/admin/app-agents >/dev/null
+check_json "Tool registry" /api/admin/tool-registry >/dev/null
+
+# ── Phase G — Repo Workbench ─────────────────────────────────────────────────
+check_json "Repo Workbench status" /api/admin/repo-workbench/status >/dev/null
+
+# ── Phase H — Research ───────────────────────────────────────────────────────
+check_json "Research jobs" /api/admin/research/jobs >/dev/null
+
+# ── Phase I — Artifacts ──────────────────────────────────────────────────────
+check_json "Artifacts media" /api/admin/artifacts/media >/dev/null
+
+# ── Phase J — Approvals ──────────────────────────────────────────────────────
+check_json "Approvals queue" /api/admin/approvals >/dev/null
+
+# ── Phase K — VPS ────────────────────────────────────────────────────────────
+check_json "VPS status" /api/admin/vps >/dev/null
+
+# ── Phase L — App Safety ─────────────────────────────────────────────────────
+check_json "App safety policy" /api/admin/app-safety >/dev/null
+
 if printf '%s' "$runtime" | grep -qi '"github".*"configured":true' && printf '%s' "$github" | grep -qi 'No token\|not configured\|missing'; then
   record FAIL "GitHub truth consistency" "runtime/settings connected but repo workbench token missing"
 else
