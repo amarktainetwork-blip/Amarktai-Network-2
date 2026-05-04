@@ -81,7 +81,7 @@ Open:
 /admin/dashboard/ai-engine/intelligence
 /admin/dashboard/ai-engine/artifacts
 /admin/dashboard/ai-engine/aiva-actions
-/admin/dashboard/repo-workbench/simple
+/admin/dashboard/repo-workbench
 ```
 
 Expected:

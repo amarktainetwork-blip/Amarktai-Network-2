@@ -27,8 +27,8 @@ const OPS = [
     icon: Bot,
   },
   {
-    title: 'Simple Repo Workbench',
-    href: '/admin/dashboard/repo-workbench/simple',
+    title: 'Repo Workbench',
+    href: '/admin/dashboard/repo-workbench',
     description: 'Repo URL + command → AI patch proposal and review steps.',
     icon: GitBranch,
   },

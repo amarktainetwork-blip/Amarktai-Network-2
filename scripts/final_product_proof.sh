@@ -78,7 +78,7 @@ else
   record PASS "Adult provider reuse" "adult mode reports configured provider/status instead of separate-key block"
 fi
 
-repo_page="$(fetch_path /admin/dashboard/repo-workbench/simple 2>&1)"
+repo_page="$(fetch_path /admin/dashboard/repo-workbench 2>&1)"
 for label in "GitHub connection status" "Repo selector" "Tell Aiva what to change" "Plan" "Generate diff" "Apply patch" "Run lint" "Commit" "Create PR" "Logs panel"; do
   if printf '%s' "$repo_page" | grep -q "$label"; then
     record PASS "Repo page label: $label" "present"
@@ -86,6 +86,18 @@ for label in "GitHub connection status" "Repo selector" "Tell Aiva what to chang
     record FAIL "Repo page label: $label" "missing"
   fi
 done
+
+if printf '%s' "$repo_page" | grep -qiE 'AGENT_PRESETS|GenX Best|GitHub PAT|ENABLE_DEPLOY_ACTIONS|Safe Repo Workbench Test'; then
+  record FAIL "Repo page: no legacy strings" "legacy workbench strings found in canonical workbench"
+else
+  record PASS "Repo page: no legacy strings" "legacy strings absent"
+fi
+
+if grep -RIn --exclude-dir=node_modules --exclude-dir=.next "repo-workbench/simple" src scripts docs >/dev/null 2>&1; then
+  record FAIL "/simple route eliminated" "references to /admin/dashboard/repo-workbench/simple still exist"
+else
+  record PASS "/simple route eliminated" "no references to /simple route found"
+fi
 
 command_center="$(fetch_path /admin/dashboard/command-center 2>&1)"
 if printf '%s' "$command_center" | grep -qi 'Aiva\|Command Center'; then

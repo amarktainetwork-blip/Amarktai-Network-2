@@ -39,11 +39,35 @@ describe('repo workbench production hardening', () => {
     expect(() => validateCommand('echo ok; rm -rf /')).toThrow(/unsafe/)
   })
 
-  it('repo workbench page wires required action labels', () => {
+  it('repo workbench page wires required canonical action labels', () => {
     const page = fs.readFileSync(path.resolve('src/app/admin/dashboard/repo-workbench/page.tsx'), 'utf8')
-    for (const label of ['Save token', 'Import/sync', 'Create branch', 'Run Safe Repo Workbench Test', 'Generate patch', 'Apply patch', 'Push', 'Create PR', 'Merge', 'Deploy']) {
-      expect(page).toContain(label)
+    for (const label of [
+      'GitHub connection status',
+      'Repo selector from connected GitHub account',
+      'Import / clone',
+      'Tell Aiva what to change',
+      'Plan',
+      'Generate diff',
+      'Apply patch',
+      'Run lint',
+      'Commit',
+      'Push',
+      'Create PR',
+      'Logs panel',
+    ]) {
+      expect(page, `missing label: ${label}`).toContain(label)
     }
+  })
+
+  it('repo workbench page does not contain banned legacy strings', () => {
+    const page = fs.readFileSync(path.resolve('src/app/admin/dashboard/repo-workbench/page.tsx'), 'utf8')
+    for (const banned of ['AGENT_PRESETS', 'GenX Best', 'genx_best', 'Safe Repo Workbench Test', 'GitHub PAT', 'ENABLE_DEPLOY_ACTIONS', 'File Explorer']) {
+      expect(page, `banned legacy string found: ${banned}`).not.toContain(banned)
+    }
+  })
+
+  it('/admin/dashboard/repo-workbench/simple does not exist', () => {
+    expect(fs.existsSync(path.resolve('src/app/admin/dashboard/repo-workbench/simple/page.tsx'))).toBe(false)
   })
 
   it('adds safe test and live readiness routes', () => {

@@ -2,10 +2,12 @@
  * Dashboard Go-Live Checks
  *
  * Verifies structural requirements for the dashboard to be considered go-live ready:
- *  - Nav has exactly 10 sections including Live Readiness (no duplicates)
+ *  - Nav has exactly 9 canonical sections (no duplicate /admin/dashboard overview)
+ *  - /admin/dashboard is NOT a visible nav item (redirect alias only)
  *  - Aiva is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
  *  - Redirect pages point to correct canonical targets
- *  - Repo Workbench agent presets include all required modes
+ *  - Repo Workbench is the canonical simple workbench (no AGENT_PRESETS, no legacy strings)
+ *  - Repo Workbench canonical labels are all present
  *  - Settings is the only setup page
  *  - Adult mode is gated by feature flag
  *  - Voice / streaming status is truthfully reported
@@ -24,19 +26,17 @@ function readPage(relPath: string): string {
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 
-describe('Dashboard Navigation — exactly 10 sections', () => {
+describe('Dashboard Navigation — exactly 9 canonical sections', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('has exactly 10 NAV_ITEMS entries', () => {
-    // filter to only the ones that appear inside NAV_ITEMS array
+  it('has exactly 9 NAV_ITEMS entries', () => {
     const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
     const navHrefs = navItemBlock?.[0].match(/href:\s*['"][^'"]+['"]/g) ?? []
-    expect(navHrefs).toHaveLength(10)
+    expect(navHrefs).toHaveLength(9)
   })
 
-  it('includes the 10 canonical sections', () => {
+  it('includes the 9 canonical sections', () => {
     const required = [
-      '/admin/dashboard',
       '/admin/dashboard/command-center',
       '/admin/dashboard/live-readiness',
       '/admin/dashboard/repo-workbench',
@@ -47,9 +47,17 @@ describe('Dashboard Navigation — exactly 10 sections', () => {
       '/admin/dashboard/system-health',
       '/admin/dashboard/settings',
     ]
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
     for (const href of required) {
-      expect(layoutSrc).toContain(href)
+      expect(navItemBlock?.[0] ?? layoutSrc).toContain(href)
     }
+  })
+
+  it('does NOT include /admin/dashboard (redirect alias) as a visible nav item', () => {
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
+    // /admin/dashboard must not appear as a nav href (exact match, not as a prefix of other routes)
+    const exactDashboardHref = /href:\s*['"]\/admin\/dashboard['"]/
+    expect(exactDashboardHref.test(navItemBlock?.[0] ?? '')).toBe(false)
   })
 
   it('does NOT include duplicate/hidden pages in NAV_ITEMS', () => {
@@ -116,59 +124,103 @@ describe('Duplicate pages redirect to canonical destinations', () => {
   it('access/page.tsx has no dead code after redirect', () => {
     const src = readPage('access/page.tsx')
     const lines = src.split('\n').filter(l => l.trim().length > 0)
-    // Should only have import + function body (≤ 8 lines)
     expect(lines.length).toBeLessThanOrEqual(8)
+  })
+
+  it('/admin/dashboard/repo-workbench/simple does NOT exist as an active page', () => {
+    const simplePath = path.join(ROOT, 'repo-workbench/simple/page.tsx')
+    expect(fs.existsSync(simplePath)).toBe(false)
   })
 })
 
-// ── Repo Workbench agent selector ─────────────────────────────────────────────
+// ── Repo Workbench canonical labels ───────────────────────────────────────────
 
-describe('Repo Workbench — agent/model selector', () => {
+describe('Repo Workbench — canonical simple flow', () => {
   const src = readPage('repo-workbench/page.tsx')
 
-  it('exposes AgentPreset / AGENT_PRESETS', () => {
-    expect(src).toContain('AGENT_PRESETS')
+  const canonicalLabels = [
+    'GitHub connection status',
+    'Repo selector from connected GitHub account',
+    'Import / clone',
+    'Tell Aiva what to change',
+    'Plan',
+    'Generate diff',
+    'Apply patch',
+    'Run lint',
+    'Run test',
+    'Run build',
+    'Commit',
+    'Push',
+    'Create PR',
+    'Logs panel',
+  ]
+
+  for (const label of canonicalLabels) {
+    it(`contains canonical label: "${label}"`, () => {
+      expect(src).toContain(label)
+    })
+  }
+
+  const bannedLegacyStrings = [
+    'AGENT_PRESETS',
+    'genx_best',
+    'GenX Best',
+    'Safe Repo Workbench Test',
+    'File Explorer',
+    'File Viewer',
+    'Run custom',
+    'DEPLOY',
+    'GitHub PAT',
+    'ENABLE_DEPLOY_ACTIONS',
+  ]
+
+  for (const banned of bannedLegacyStrings) {
+    it(`does NOT contain legacy string: "${banned}"`, () => {
+      expect(src).not.toContain(banned)
+    })
+  }
+
+  it('no reference to /admin/dashboard/repo-workbench/simple', () => {
+    expect(src).not.toContain('/admin/dashboard/repo-workbench/simple')
   })
 
-  it('has GenX Best preset', () => {
-    expect(src).toContain('genx_best')
+  it('GitHub token is managed via Settings/vault (no PAT input form)', () => {
+    expect(src).toContain('/admin/dashboard/settings')
+    const hasPatInput = src.includes('type="password"') && src.includes('GitHub PAT')
+    expect(hasPatInput).toBe(false)
   })
+})
 
-  it('has Cheap preset', () => {
-    expect(src).toContain('cheap')
-  })
+// ── No /simple references in source ───────────────────────────────────────────
 
-  it('has Balanced preset', () => {
-    expect(src).toContain('balanced')
-  })
+describe('No references to /admin/dashboard/repo-workbench/simple in src', () => {
+  function findFilesRecursive(dir: string, ext: string): string[] {
+    const results: string[] = []
+    const entries = fs.readdirSync(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name)
+      if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.next') {
+        results.push(...findFilesRecursive(fullPath, ext))
+      } else if (entry.isFile() && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
+        results.push(fullPath)
+      }
+    }
+    return results
+  }
 
-  it('has Premium preset', () => {
-    expect(src).toContain('premium')
-  })
-
-  it('shows estimated cost before run', () => {
-    expect(src).toContain('estimateCost')
-    expect(src).toContain('Est. cost')
-  })
-
-  it('has Delete Workspace button with confirmation phrase', () => {
-    expect(src).toContain('DELETE WORKSPACE')
-    expect(src).toContain('deleteWorkspace')
-  })
-
-  it('has Reset Workspace button', () => {
-    expect(src).toContain('resetWorkspace')
-    expect(src).toContain('Reset workspace')
-  })
-
-  it('has Clear Logs button', () => {
-    expect(src).toContain('clearLogs')
-    expect(src).toContain('Clear logs')
-  })
-
-  it('Deploy section shows blocker when ENABLE_DEPLOY_ACTIONS not set', () => {
-    expect(src).toContain('ENABLE_DEPLOY_ACTIONS')
-    expect(src).toContain('Deploy disabled')
+  it('no src file references /admin/dashboard/repo-workbench/simple', () => {
+    const srcRoot = path.resolve(__dirname, '../../')
+    const files = findFilesRecursive(srcRoot, '.ts')
+    const offenders: string[] = []
+    for (const file of files) {
+      // Skip test files — they contain the string as part of enforcement assertions
+      if (file.includes('__tests__')) continue
+      const content = fs.readFileSync(file, 'utf-8')
+      if (content.includes('/admin/dashboard/repo-workbench/simple')) {
+        offenders.push(file.replace(srcRoot, 'src'))
+      }
+    }
+    expect(offenders).toHaveLength(0)
   })
 })
 
@@ -235,7 +287,6 @@ describe('System Health — MCP/Tools tab', () => {
   })
 
   it('MCP tab does not claim it works', () => {
-    // Must not say "MCP Ready" or "MCP configured"
     expect(src).not.toContain('MCP Ready')
     expect(src).not.toContain('MCP configured')
   })
@@ -268,12 +319,11 @@ describe('Settings — one setup page', () => {
       const pagePath = path.join(ROOT, dir, 'page.tsx')
       if (!fs.existsSync(pagePath)) continue
       const content = fs.readFileSync(pagePath, 'utf-8')
-      // Pages that redirect won't have key config fields
       const isRedirect = content.includes("import { redirect }") && content.split('\n').length <= 10
       if (isRedirect) continue
-      // Non-redirect pages must not have GenX key configuration forms
       const hasKeySetup = content.includes('GENX_API_KEY') && content.includes('<input') && content.includes('type="password"')
       expect(hasKeySetup, `${dir}/page.tsx should not have GenX key setup form`).toBe(false)
     }
   })
 })
+
