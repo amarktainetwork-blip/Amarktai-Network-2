@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@amarktai.com"
+                  placeholder="amarktainetwork@gmail.com"
                   className="w-full rounded-2xl border border-white/10 bg-black/20 px-11 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40 focus:bg-black/30"
                 />
               </div>
