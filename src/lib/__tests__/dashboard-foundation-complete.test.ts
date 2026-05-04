@@ -379,8 +379,9 @@ describe('Settings page — setup checklist, tabs, approved provider stack', () 
     }
   })
 
-  it('does not contain "OpenAI Direct" as visible label outside advanced section', () => {
-    // The advanced section toggle button must not reference "OpenAI Direct"
+  it('does not contain "OpenAI Direct" as a visible label', () => {
+    // "OpenAI Direct" has been renamed to "Direct OpenAI API" in the advanced providers section
+    // to comply with the forbidden visible language policy
     expect(src).not.toContain('OpenAI Direct')
   })
 
