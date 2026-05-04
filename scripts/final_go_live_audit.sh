@@ -38,10 +38,13 @@ section() { echo -e "\n${CYAN}${BOLD}── $1 ──${RESET}"; }
 section "Build"
 
 echo "Running: npm run build"
-if npm run build 2>&1; then
+BUILD_OUT=$(npm run build 2>&1)
+BUILD_EXIT=$?
+if [ $BUILD_EXIT -eq 0 ]; then
   pass "Build succeeded"
 else
-  fail "Build FAILED"
+  echo "$BUILD_OUT" | tail -40
+  fail "Build FAILED (exit $BUILD_EXIT)"
 fi
 
 # =============================================================================
@@ -50,10 +53,13 @@ fi
 section "Lint"
 
 echo "Running: npm run lint"
-if npm run lint 2>&1; then
+LINT_OUT=$(npm run lint 2>&1)
+LINT_EXIT=$?
+if [ $LINT_EXIT -eq 0 ]; then
   pass "Lint passed"
 else
-  fail "Lint FAILED"
+  echo "$LINT_OUT" | tail -20
+  fail "Lint FAILED (exit $LINT_EXIT)"
 fi
 
 # =============================================================================
