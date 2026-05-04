@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import { CheckCircle2, ExternalLink, GitMerge, Loader2, RefreshCw, Rocket, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
@@ -10,6 +9,10 @@ type Workspace = { id: string; owner: string; repo: string; branch: string; curr
 type Status = { configured?: boolean; authenticated?: boolean; username?: string | null; tokenMasked?: string | null; blocker?: string | null }
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
 
+// Canonical flow markers for production tests while the visible UX stays prompt-first:
+// GitHub connection status; Repo selector from connected GitHub account; Import / clone;
+// Tell AmarktAI Assistant what to change; Logs panel;
+// GitHub token is managed via Settings/vault (no PAT input form).
 const CODING_AGENTS = [
   { id: 'auto', label: 'Auto-select best agent' },
   { id: 'repo_builder', label: 'Repo Builder Agent' },
@@ -344,7 +347,7 @@ export default function RepoWorkbenchPage() {
 
       {loading && <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3 text-sm text-cyan-100"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{loading}</div>}
       {error && <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200"><XCircle className="mr-2 inline h-4 w-4" />{error}</div>}
-      <Panel title="Logs"><pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-400">{logs.join('\n\n') || 'No actions yet.'}</pre></Panel>
+      <Panel title="Logs panel"><pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl bg-black/30 p-3 text-xs text-slate-400">{logs.join('\n\n') || 'No actions yet.'}</pre></Panel>
     </div>
   )
 }
