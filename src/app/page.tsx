@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bot, BrainCircuit, Code2, Eye, HeartPulse, LockKeyhole, Network, Search, ShieldCheck, Sparkles, Wand2, Zap } from 'lucide-react'
+import { ArrowRight, Bot, BrainCircuit, Code2, Eye, HeartPulse, Network, Search, ShieldCheck, Sparkles, Wand2, Zap } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
@@ -14,7 +14,7 @@ const fadeUp = (delay = 0) => ({
 })
 
 const ecosystem = [
-  { icon: Bot, title: 'Aiva operator', body: 'A conversational command layer that understands apps, agents, memory, workflows and approvals.' },
+  { icon: Bot, title: 'AmarktAI Assistant operator', body: 'A conversational command layer that understands apps, agents, memory, workflows and approvals.' },
   { icon: Network, title: 'Agent network', body: 'Specialist agents for code, research, media, marketing, diagnostics, deployment and app-specific work.' },
   { icon: BrainCircuit, title: 'Memory & emotion', body: 'App-aware and user-aware context designed to learn from outcomes, preferences and decisions.' },
   { icon: Code2, title: 'Repo Workbench', body: 'Pull a repo, choose an agent/model, describe the work, review the diff, create the PR.' },
@@ -55,7 +55,7 @@ function NetworkVisual() {
       <div className="absolute inset-0 flex items-center justify-center">
         <motion.div animate={{ scale: [1, 1.03, 1] }} transition={{ duration: 4, repeat: Infinity }} className="rounded-[2rem] border border-cyan-300/20 bg-slate-950/80 px-8 py-7 text-center shadow-2xl shadow-cyan-950/40">
           <Sparkles className="mx-auto h-8 w-8 text-cyan-200" />
-          <p className="mt-3 text-[10px] font-black uppercase tracking-[0.26em] text-cyan-200">Aiva</p>
+          <p className="mt-3 text-[10px] font-black uppercase tracking-[0.26em] text-cyan-200">AmarktAI Assistant</p>
           <p className="mt-2 text-xl font-black text-white">Network Operator</p>
           <p className="mt-2 max-w-[220px] text-xs leading-5 text-slate-500">Coordinates agents, memory, tools, media, code and approvals.</p>
         </motion.div>
@@ -85,7 +85,7 @@ export default function HomePage() {
                 One intelligent network for every product you build.
               </h1>
               <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-                Aiva coordinates agents, memory, research, media, code, infrastructure and approval-gated actions inside one private command network.
+                AmarktAI Assistant coordinates agents, memory, research, media, code, infrastructure and approval-gated actions inside one private command network.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link href="/contact" className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-black text-slate-950 shadow-xl shadow-cyan-950/20 hover:bg-cyan-100">
@@ -150,7 +150,7 @@ export default function HomePage() {
               <motion.div {...fadeUp()}>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-300">From idea to operating product</p>
                 <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-white sm:text-5xl">Research. Plan. Create. Approve. Deploy. Learn.</h2>
-                <p className="mt-5 text-slate-400">A researcher agent can discover opportunities. A repo agent can prepare the code. Creative agents can produce assets. Aiva keeps the network aware, gated and improving.</p>
+                <p className="mt-5 text-slate-400">A researcher agent can discover opportunities. A repo agent can prepare the code. Creative agents can produce assets. AmarktAI Assistant keeps the network aware, gated and improving.</p>
               </motion.div>
               <div className="grid gap-3 sm:grid-cols-4">
                 {flow.map((step, index) => (
