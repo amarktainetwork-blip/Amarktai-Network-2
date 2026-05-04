@@ -37,12 +37,12 @@ interface AgentDef {
 const AGENTS: AgentDef[] = [
   {
     id: 'aiva-operator',
-    name: 'AmarktAI Assistant Agent',
+    name: 'AmarktAI Assistant Operator',
     description: 'Primary orchestrator. Routes tasks to the correct specialist agent, manages context, and enforces approval gates.',
     capabilities: ['orchestration', 'routing', 'approval gating', 'memory context'],
     status: 'Ready to wire',
     icon: Bot,
-    route: '/admin/dashboard/aiva',
+    route: '/admin/dashboard/amarktai-assistant',
   },
   {
     id: 'repo-builder',
@@ -122,7 +122,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['image generation', 'video generation', 'music generation', 'avatar creation'],
     status: 'Ready to wire',
     icon: Video,
-    route: '/admin/dashboard/media-studio',
+    route: '/admin/dashboard/creative-studio',
   },
   {
     id: 'voice',
@@ -139,7 +139,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['memory storage', 'emotion tracking', 'preference learning', 'conversation summaries'],
     status: 'Backend pending',
     icon: Heart,
-    route: '/admin/dashboard/memory-emotions',
+    route: '/admin/dashboard/memory',
   },
   {
     id: 'adult-app',
@@ -156,7 +156,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['health monitoring', 'readiness checks', 'blocker detection', 'status reporting'],
     status: 'Ready to wire',
     icon: Cpu,
-    route: '/admin/dashboard/system-health',
+    route: '/admin/dashboard/diagnostics',
   },
   {
     id: 'deployment',

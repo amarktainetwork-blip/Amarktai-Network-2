@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** Events log consolidated into System Health. */
+/** Events log consolidated into Diagnostics. */
 export default function EventsPage() {
-  redirect('/admin/dashboard/system-health')
+  redirect('/admin/dashboard/diagnostics')
 }

@@ -7,7 +7,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import AivaAssistantPanel from '@/components/admin/AivaAssistantPanel'
 import {
   Activity,
-  Archive,
   AppWindow,
   Bot,
   Brain,
@@ -30,22 +29,22 @@ type NavItem = {
   match?: string[]
 }
 
-// Phase 1B canonical nav: 12 production sections only.
+// Dashboard foundation redesign: 11 canonical sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
 // Health, readiness and proof are consolidated under Diagnostics.
+// AmarktAI Assistant disabled as floating panel by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 // AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
-  { href: '/admin/dashboard/aiva', label: 'AI Assistant', icon: Bot },
-  { href: '/admin/dashboard/apps', label: 'Apps / Packages', icon: AppWindow },
+  { href: '/admin/dashboard/amarktai-assistant', label: 'AmarktAI Assistant', icon: Bot, match: ['/admin/dashboard/aiva'] },
+  { href: '/admin/dashboard/apps', label: 'Apps', icon: AppWindow },
+  { href: '/admin/dashboard/agents', label: 'Agents', icon: Users },
   { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench', icon: GitBranch },
-  { href: '/admin/dashboard/research', label: 'Scraping / Research', icon: Search },
-  { href: '/admin/dashboard/memory-emotions', label: 'Memory / Emotions', icon: Brain },
-  { href: '/admin/dashboard/media-studio', label: 'Media Studio', icon: Film },
-  { href: '/admin/dashboard/artifacts', label: 'Artifacts / Storage', icon: Archive },
-  { href: '/admin/dashboard/agents', label: 'Agent Registry', icon: Users },
-  { href: '/admin/dashboard/ai-engine/aiva-actions', label: 'Actions / Approvals', icon: ShieldCheck },
-  { href: '/admin/dashboard/system-health', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/readiness'] },
+  { href: '/admin/dashboard/research', label: 'Research', icon: Search },
+  { href: '/admin/dashboard/creative-studio', label: 'Creative Studio', icon: Film, match: ['/admin/dashboard/media-studio'] },
+  { href: '/admin/dashboard/memory', label: 'Memory', icon: Brain, match: ['/admin/dashboard/memory-emotions'] },
+  { href: '/admin/dashboard/actions', label: 'Actions', icon: ShieldCheck, match: ['/admin/dashboard/ai-engine/aiva-actions'] },
+  { href: '/admin/dashboard/diagnostics', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/system-health'] },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings2 },
 ] satisfies NavItem[]
 
@@ -83,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard navigation">
-        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Production shell</p>
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operator console</p>
         <div className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item)

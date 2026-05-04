@@ -79,8 +79,8 @@ describe('repo workbench production hardening', () => {
     expect(safeTestRoute).toContain('createArtifact')
   })
 
-  it('media studio uses runtime-backed model choices and artifact persistence', () => {
-    const mediaPage = fs.readFileSync(path.resolve('src/app/admin/dashboard/media-studio/page.tsx'), 'utf8')
+  it('creative studio uses runtime-backed model choices and artifact persistence', () => {
+    const mediaPage = fs.readFileSync(path.resolve('src/app/admin/dashboard/creative-studio/page.tsx'), 'utf8')
     const modelsRoute = fs.readFileSync(path.resolve('src/app/api/admin/media-studio/models/route.ts'), 'utf8')
     expect(mediaPage).toContain('/api/admin/media-studio/models')
     expect(mediaPage).toContain('/api/admin/artifacts')

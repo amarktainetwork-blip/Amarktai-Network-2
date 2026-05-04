@@ -1,4 +1,4 @@
 import { redirect } from 'next/navigation'
 export default function VoicePage() {
-  redirect('/admin/dashboard/media-studio')
+  redirect('/admin/dashboard/creative-studio')
 }

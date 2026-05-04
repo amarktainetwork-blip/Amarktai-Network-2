@@ -1,18 +1,18 @@
 /**
- * Dashboard Go-Live Checks (Phase 1B)
+ * Dashboard Go-Live Checks (Foundation Redesign)
  *
  * Verifies structural requirements for the dashboard to be considered go-live ready:
- *  - Nav has exactly 12 canonical sections (no duplicate /admin/dashboard overview)
+ *  - Nav has exactly 11 canonical sections (no duplicate /admin/dashboard overview)
  *  - /admin/dashboard is NOT a visible nav item (redirect alias only)
- *  - Aiva Chat is the dedicated section at /admin/dashboard/aiva
- *  - Aiva assistant panel is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
+ *  - AmarktAI Assistant is the dedicated section at /admin/dashboard/amarktai-assistant
+ *  - AmarktAI Assistant panel is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
  *  - Redirect pages point to correct canonical targets
  *  - Repo Workbench is the canonical simple workbench (no AGENT_PRESETS, no legacy strings)
  *  - Repo Workbench canonical labels are all present
  *  - Settings is the only setup page
  *  - Adult mode is gated by feature flag
  *  - Voice / streaming status is truthfully reported
- *  - Media Studio voice tab exposes batch mode
+ *  - Creative Studio voice tab exposes batch mode
  */
 
 import { describe, it, expect } from 'vitest'
@@ -27,28 +27,27 @@ function readPage(relPath: string): string {
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 
-describe('Dashboard Navigation — exactly 12 canonical sections', () => {
+describe('Dashboard Navigation — exactly 11 canonical sections', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('has exactly 12 NAV_ITEMS entries', () => {
+  it('has exactly 11 NAV_ITEMS entries', () => {
     const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     const navHrefs = navItemBlock?.[0].match(/href:\s*['"][^'"]+['"]/g) ?? []
-    expect(navHrefs).toHaveLength(12)
+    expect(navHrefs).toHaveLength(11)
   })
 
-  it('includes the 12 canonical sections', () => {
+  it('includes the 11 canonical sections', () => {
     const required = [
       '/admin/dashboard/command-center',
-      '/admin/dashboard/aiva',
+      '/admin/dashboard/amarktai-assistant',
       '/admin/dashboard/apps',
+      '/admin/dashboard/agents',
       '/admin/dashboard/repo-workbench',
       '/admin/dashboard/research',
-      '/admin/dashboard/memory-emotions',
-      '/admin/dashboard/media-studio',
-      '/admin/dashboard/artifacts',
-      '/admin/dashboard/agents',
-      '/admin/dashboard/ai-engine/aiva-actions',
-      '/admin/dashboard/system-health',
+      '/admin/dashboard/creative-studio',
+      '/admin/dashboard/memory',
+      '/admin/dashboard/actions',
+      '/admin/dashboard/diagnostics',
       '/admin/dashboard/settings',
     ]
     const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
@@ -64,7 +63,9 @@ describe('Dashboard Navigation — exactly 12 canonical sections', () => {
     expect(exactDashboardHref.test(navItemBlock?.[0] ?? '')).toBe(false)
   })
 
-  it('does NOT include duplicate/hidden pages in NAV_ITEMS', () => {
+  it('does NOT include duplicate/hidden pages as primary nav hrefs in NAV_ITEMS', () => {
+    // These items must not appear as the primary `href:` of a nav item
+    // (they may appear as match aliases, which is acceptable)
     const banned = [
       '/admin/dashboard/access',
       '/admin/dashboard/deployments',
@@ -78,29 +79,40 @@ describe('Dashboard Navigation — exactly 12 canonical sections', () => {
       '/admin/dashboard/workspace',
       '/admin/dashboard/build-studio',
       '/admin/dashboard/live-readiness',
+      '/admin/dashboard/artifacts',
+      '/admin/dashboard/memory-emotions',
     ]
     const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     if (navItemBlock) {
       for (const href of banned) {
-        expect(navItemBlock[0]).not.toContain(href)
+        // Check that href does not appear as a primary href: (not in match aliases)
+        const primaryHrefPattern = new RegExp(`href:\\s*['"]${href.replace(/\//g, '/')}['"]`)
+        expect(primaryHrefPattern.test(navItemBlock[0]), `${href} should not be a primary nav href`).toBe(false)
       }
     }
   })
 })
 
-// ── Aiva assistant panel hidden by default ─────────────────────────────────────
+// ── AmarktAI Assistant panel hidden by default ─────────────────────────────────
 
-describe('Aiva assistant panel — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true', () => {
+describe('AmarktAI Assistant panel — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('Aiva assistant panel is gated behind NEXT_PUBLIC_AIVA_ENABLED env flag', () => {
+  it('AmarktAI Assistant panel is gated behind NEXT_PUBLIC_AIVA_ENABLED env flag', () => {
     expect(layoutSrc).toContain('NEXT_PUBLIC_AIVA_ENABLED')
     expect(layoutSrc).toContain('AmarktAI Assistant disabled by default')
   })
 
-  it('Aiva Chat has its own dedicated route at /admin/dashboard/aiva', () => {
-    const aivaPagePath = path.join(ROOT, 'aiva/page.tsx')
-    expect(fs.existsSync(aivaPagePath)).toBe(true)
+  it('AmarktAI Assistant has its own dedicated route at /admin/dashboard/amarktai-assistant', () => {
+    const assistantPagePath = path.join(ROOT, 'amarktai-assistant/page.tsx')
+    expect(fs.existsSync(assistantPagePath)).toBe(true)
+  })
+
+  it('/admin/dashboard/aiva redirects to /admin/dashboard/amarktai-assistant', () => {
+    const src = readPage('aiva/page.tsx')
+    expect(src).toContain("from 'next/navigation'")
+    expect(src).toContain('redirect(')
+    expect(src).toContain('/admin/dashboard/amarktai-assistant')
   })
 })
 
@@ -108,18 +120,23 @@ describe('Aiva assistant panel — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true',
 
 describe('Duplicate pages redirect to canonical destinations', () => {
   const redirectPages: Array<{ file: string; expectedTarget: string }> = [
-    { file: 'access/page.tsx',         expectedTarget: '/admin/dashboard/settings' },
-    { file: 'deployments/page.tsx',    expectedTarget: '/admin/dashboard/repo-workbench' },
-    { file: 'emotions/page.tsx',       expectedTarget: '/admin/dashboard/memory-emotions' },
-    { file: 'events/page.tsx',         expectedTarget: '/admin/dashboard/system-health' },
-    { file: 'integrations/page.tsx',   expectedTarget: '/admin/dashboard/settings' },
-    { file: 'intelligence/page.tsx',   expectedTarget: '/admin/dashboard/research' },
-    { file: 'voice/page.tsx',          expectedTarget: '/admin/dashboard/media-studio' },
-    { file: 'genx-models/page.tsx',    expectedTarget: '/admin/dashboard/ai-engine' },
-    { file: 'brain/page.tsx',          expectedTarget: '/admin/dashboard/ai-engine' },
-    { file: 'build-studio/page.tsx',   expectedTarget: '/admin/dashboard/repo-workbench' },
-    { file: 'workspace/page.tsx',      expectedTarget: '/admin/dashboard' },
+    { file: 'access/page.tsx',              expectedTarget: '/admin/dashboard/settings' },
+    { file: 'deployments/page.tsx',         expectedTarget: '/admin/dashboard/repo-workbench' },
+    { file: 'emotions/page.tsx',            expectedTarget: '/admin/dashboard/memory' },
+    { file: 'events/page.tsx',              expectedTarget: '/admin/dashboard/diagnostics' },
+    { file: 'integrations/page.tsx',        expectedTarget: '/admin/dashboard/settings' },
+    { file: 'intelligence/page.tsx',        expectedTarget: '/admin/dashboard/research' },
+    { file: 'voice/page.tsx',               expectedTarget: '/admin/dashboard/creative-studio' },
+    { file: 'genx-models/page.tsx',         expectedTarget: '/admin/dashboard/ai-engine' },
+    { file: 'brain/page.tsx',               expectedTarget: '/admin/dashboard/ai-engine' },
+    { file: 'build-studio/page.tsx',        expectedTarget: '/admin/dashboard/repo-workbench' },
+    { file: 'workspace/page.tsx',           expectedTarget: '/admin/dashboard' },
     { file: 'settings/aiva-avatar/page.tsx', expectedTarget: '/admin/dashboard/settings' },
+    { file: 'aiva/page.tsx',                expectedTarget: '/admin/dashboard/amarktai-assistant' },
+    { file: 'media-studio/page.tsx',        expectedTarget: '/admin/dashboard/creative-studio' },
+    { file: 'memory-emotions/page.tsx',     expectedTarget: '/admin/dashboard/memory' },
+    { file: 'system-health/page.tsx',       expectedTarget: '/admin/dashboard/diagnostics' },
+    { file: 'ai-engine/aiva-actions/page.tsx', expectedTarget: '/admin/dashboard/actions' },
   ]
 
   for (const { file, expectedTarget } of redirectPages) {
@@ -234,11 +251,11 @@ describe('No references to /admin/dashboard/repo-workbench/simple in src', () =>
   })
 })
 
-// ── Adult Mode — settings and media studio ─────────────────────────────────────
+// ── Adult Mode — settings and creative studio ──────────────────────────────────
 
 describe('Adult Mode — gated and truthful', () => {
   const settingsSrc = readPage('settings/page.tsx')
-  const mediaSrc = readPage('media-studio/page.tsx')
+  const creativeSrc = readPage('creative-studio/page.tsx')
 
   it('Settings page has an AdultSection', () => {
     expect(settingsSrc).toContain('AdultSection')
@@ -248,44 +265,44 @@ describe('Adult Mode — gated and truthful', () => {
     expect(settingsSrc).toContain('test-adult')
   })
 
-  it('Media Studio adult tab is gated behind NEXT_PUBLIC_ADULT_MODE', () => {
-    expect(mediaSrc).toContain('NEXT_PUBLIC_ADULT_MODE')
+  it('Creative Studio adult tab is gated behind NEXT_PUBLIC_ADULT_MODE', () => {
+    expect(creativeSrc).toContain('NEXT_PUBLIC_ADULT_MODE')
   })
 })
 
 // ── Voice / TTS ────────────────────────────────────────────────────────────────
 
-describe('Media Studio Voice tab — truthful batch vs streaming', () => {
-  const mediaSrc = readPage('media-studio/page.tsx')
+describe('Creative Studio Voice tab — truthful batch vs streaming', () => {
+  const creativeSrc = readPage('creative-studio/page.tsx')
 
   it('has voice mode selector (batch/streaming)', () => {
-    expect(mediaSrc).toContain('voiceMode')
-    expect(mediaSrc).toContain('batch')
-    expect(mediaSrc).toContain('streaming')
+    expect(creativeSrc).toContain('voiceMode')
+    expect(creativeSrc).toContain('batch')
+    expect(creativeSrc).toContain('streaming')
   })
 
   it('streaming mode is disabled/pending — not fake', () => {
-    expect(mediaSrc).toContain('pending')
-    expect(mediaSrc).toContain('cursor-not-allowed')
+    expect(creativeSrc).toContain('pending')
+    expect(creativeSrc).toContain('cursor-not-allowed')
   })
 
   it('batch TTS routes to /api/brain/tts', () => {
-    expect(mediaSrc).toContain('/api/brain/tts')
+    expect(creativeSrc).toContain('/api/brain/tts')
   })
 
   it('has voice provider selector', () => {
-    expect(mediaSrc).toContain('voiceProvider')
+    expect(creativeSrc).toContain('voiceProvider')
   })
 
   it('has voice speed control', () => {
-    expect(mediaSrc).toContain('voiceSpeed')
+    expect(creativeSrc).toContain('voiceSpeed')
   })
 })
 
-// ── System Health MCP tab ──────────────────────────────────────────────────────
+// ── Diagnostics MCP tab ────────────────────────────────────────────────────────
 
-describe('System Health — MCP/Tools tab', () => {
-  const src = readPage('system-health/page.tsx')
+describe('Diagnostics — MCP/Tools tab', () => {
+  const src = readPage('diagnostics/page.tsx')
 
   it('has MCP tab in TABS list', () => {
     expect(src).toContain("id: 'mcp'")
@@ -336,4 +353,3 @@ describe('Settings — one setup page', () => {
     }
   })
 })
-
