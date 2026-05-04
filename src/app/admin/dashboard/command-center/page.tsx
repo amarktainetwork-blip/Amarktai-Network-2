@@ -2,25 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import {
-  Activity,
-  AlertTriangle,
-  ArrowRight,
-  Bot,
-  CheckCircle2,
-  Database,
-  Film,
-  GitBranch,
-  RefreshCw,
-  Search,
-  Settings2,
-  ShieldCheck,
-} from 'lucide-react'
+import { Activity, AlertTriangle, ArrowRight, Bot, CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react'
+
+type SystemState = 'ready' | 'warning' | 'blocked' | 'unknown'
 
 interface LiveSystem {
   id: string
   name: string
-  state: 'ready' | 'warning' | 'blocked' | 'unknown'
+  state: SystemState
   detail: string
   nextAction: string | null
 }
@@ -33,36 +22,19 @@ interface LiveReadiness {
   systems: LiveSystem[]
   blockers: string[]
   metrics: Record<string, number>
-  links: Record<string, string>
 }
 
-type ModuleState = 'Working' | 'Needs key' | 'Backend pending' | 'Ready to wire' | 'Post-launch' | 'Blocked'
-
-const stateClass: Record<LiveSystem['state'], string> = {
-  ready: 'border-emerald-400/20 bg-emerald-400/[0.08] text-emerald-100',
-  warning: 'border-amber-400/20 bg-amber-400/[0.08] text-amber-100',
-  blocked: 'border-red-400/20 bg-red-400/[0.08] text-red-100',
-  unknown: 'border-slate-400/20 bg-slate-400/[0.08] text-slate-100',
+const stateClass: Record<SystemState, string> = {
+  ready: 'border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-100',
+  warning: 'border-amber-400/25 bg-amber-400/[0.08] text-amber-100',
+  blocked: 'border-red-400/25 bg-red-400/[0.08] text-red-100',
+  unknown: 'border-slate-400/20 bg-slate-400/[0.08] text-slate-200',
 }
 
-const moduleClass: Record<ModuleState, string> = {
-  Working: 'border-emerald-400/25 bg-emerald-400/[0.08] text-emerald-100',
-  'Needs key': 'border-amber-400/25 bg-amber-400/[0.08] text-amber-100',
-  'Backend pending': 'border-sky-400/25 bg-sky-400/[0.08] text-sky-100',
-  'Ready to wire': 'border-cyan-400/25 bg-cyan-400/[0.08] text-cyan-100',
-  'Post-launch': 'border-slate-400/20 bg-slate-400/[0.06] text-slate-300',
-  Blocked: 'border-red-400/25 bg-red-400/[0.08] text-red-100',
-}
-
-const modules: Array<{ title: string; href: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; state: ModuleState; body: string }> = [
-  { title: 'AmarktAI Assistant', href: '/admin/dashboard/amarktai-assistant', icon: Bot, state: 'Ready to wire', body: 'Operator conversation, route visibility, approvals and memory surfaces.' },
-  { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench', icon: GitBranch, state: 'Ready to wire', body: 'Prompt-first repo change agent — write your request, AI picks the right agent, plan, diff, PR flow.' },
-  { title: 'Creative Studio', href: '/admin/dashboard/creative-studio', icon: Film, state: 'Needs key', body: 'Image, video, voice, music, avatar and asset mixer. Status reflects configured providers.' },
-  { title: 'Scraping / Research', href: '/admin/dashboard/research', icon: Search, state: 'Ready to wire', body: 'Firecrawl, backup crawler, manual URL input, and research pipeline for website intelligence.' },
-  { title: 'Memory', href: '/admin/dashboard/memory', icon: Database, state: 'Backend pending', body: 'VPS/local-first memory. App, user, and admin memory scoped by permission. Vector memory ready to wire.' },
-  { title: 'Actions / Approvals', href: '/admin/dashboard/actions', icon: ShieldCheck, state: 'Backend pending', body: 'Approval-gated actions only. Nothing destructive runs without explicit confirmation and audit.' },
-  { title: 'Diagnostics', href: '/admin/dashboard/diagnostics', icon: Database, state: 'Working', body: 'Health, readiness, static asset proof, runtime status, storage, GitHub, queue and provider checks.' },
-  { title: 'Settings', href: '/admin/dashboard/settings', icon: Settings2, state: 'Working', body: 'The only place to add, test and remove provider/tool keys and platform configuration.' },
+const nextActions = [
+  { title: 'Finish dashboard foundation', href: '/admin/dashboard/diagnostics', status: 'Ready to wire' },
+  { title: 'Connect approved provider keys', href: '/admin/dashboard/settings', status: 'Needs key' },
+  { title: 'Prepare local memory storage', href: '/admin/dashboard/memory', status: 'Backend pending' },
 ]
 
 export default function CommandCenterPage() {
@@ -76,10 +48,10 @@ export default function CommandCenterPage() {
     try {
       const res = await fetch('/api/admin/live-readiness')
       const data = await res.json()
-      if (!res.ok || data.success === false) throw new Error(data.error ?? 'Failed to load command center readiness')
+      if (!res.ok || data.success === false) throw new Error(data.error ?? 'Failed to load network readiness')
       setReadiness(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load command center readiness')
+      setError(err instanceof Error ? err.message : 'Failed to load network readiness')
     } finally {
       setLoading(false)
     }
@@ -90,86 +62,108 @@ export default function CommandCenterPage() {
   const summary = useMemo(() => {
     const systems = readiness?.systems ?? []
     return {
-      blocked: systems.filter((system) => system.state === 'blocked').length,
-      warnings: systems.filter((system) => system.state === 'warning').length,
       ready: systems.filter((system) => system.state === 'ready').length,
+      warnings: systems.filter((system) => system.state === 'warning').length,
+      blocked: systems.filter((system) => system.state === 'blocked').length,
       total: systems.length,
     }
   }, [readiness])
 
-  return (
-    <div className="space-y-6">
-      <section className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#071426] via-[#050b17] to-[#140a22] p-5 shadow-2xl shadow-black/25 lg:p-7">
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-stretch">
-          <div>
-            <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl xl:text-5xl">
-              Amarkt<span className="text-blue-400">AI</span> Network — Command Center
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
-              The operator console for the Amarkt<span className="text-blue-400">AI</span> Network. Every module shows its real status. Configure providers in Settings, monitor system health in Diagnostics.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/admin/dashboard/settings" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white">Configure providers <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/admin/dashboard/diagnostics" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Open Diagnostics</Link>
-              <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-300 hover:text-white disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
-            </div>
-          </div>
+  const urgentSystems = useMemo(() => {
+    const systems = readiness?.systems ?? []
+    return systems.filter((system) => system.state === 'blocked' || system.state === 'warning').slice(0, 6)
+  }, [readiness])
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Metric label="Foundation score" value={readiness?.score ?? '—'} suffix="/100" />
-            <Metric label="Ready systems" value={summary.ready} suffix={`/${summary.total || '—'}`} />
-            <Metric label="Warnings" value={summary.warnings} warn={summary.warnings > 0} />
-            <Metric label="Blocked" value={summary.blocked} danger={summary.blocked > 0} />
+  return (
+    <div className="space-y-5">
+      <header className="rounded-[2rem] border border-white/10 bg-white/[0.035] p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">Operator console</p>
+            <h1 className="mt-3 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">Command Center</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+              One control room for network status, approvals, blockers and the next operational move. No marketing, no duplicate actions, no fake green lights.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-white/[0.08] disabled:opacity-40">
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <Link href="/admin/dashboard/diagnostics" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-4 py-2.5 text-xs font-black text-slate-950 hover:bg-white">
+              Open Diagnostics <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
+      </header>
+
+      <section className="grid gap-3 md:grid-cols-4">
+        <Metric label="Network score" value={readiness?.score ?? '—'} suffix="/100" />
+        <Metric label="Ready systems" value={summary.ready} suffix={`/${summary.total || '—'}`} />
+        <Metric label="Warnings" value={summary.warnings} warn={summary.warnings > 0} />
+        <Metric label="Blocked" value={summary.blocked} danger={summary.blocked > 0} />
       </section>
 
       {error && <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-100">{error}</div>}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {modules.map((module) => (
-          <Link key={module.title} href={module.href} className="group rounded-3xl border border-white/10 bg-white/[0.035] p-5 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.04]">
-            <div className="flex items-start justify-between gap-3">
-              <module.icon className="h-7 w-7 text-cyan-200" />
-              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${moduleClass[module.state]}`}>{module.state}</span>
-            </div>
-            <h2 className="mt-5 text-lg font-bold text-white group-hover:text-cyan-100">{module.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-500">{module.body}</p>
-          </Link>
-        ))}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-white"><Activity className="h-5 w-5 text-cyan-200" /> Diagnostics snapshot</h2>
-            <Link href="/admin/dashboard/diagnostics" className="text-xs text-cyan-300 hover:underline">Full Diagnostics</Link>
+            <h2 className="flex items-center gap-2 text-lg font-black text-white"><Bot className="h-5 w-5 text-cyan-200" /> AmarktAI Assistant briefing</h2>
+            <span className="rounded-full border border-cyan-400/25 bg-cyan-400/[0.08] px-3 py-1 text-[10px] font-bold text-cyan-100">Ready to wire</span>
           </div>
+          <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-slate-300">
+            <p>The dashboard foundation is being shaped into an operator console. The next backend phases should wire Settings, Diagnostics, AmarktAI Assistant chat, local memory, app intelligence packages and Repo Workbench PR creation in that order.</p>
+            <p className="mt-3 text-slate-500">This briefing becomes live once AmarktAI Assistant can read diagnostics, apps, memory and pending approvals.</p>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {nextActions.map((action) => (
+              <Link key={action.title} href={action.href} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 hover:border-cyan-300/25 hover:bg-cyan-300/[0.035]">
+                <p className="text-sm font-bold text-white">{action.title}</p>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200">{action.status}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <h2 className="flex items-center gap-2 text-lg font-black text-white"><ShieldCheck className="h-5 w-5 text-cyan-200" /> Approvals & blockers</h2>
           <div className="mt-4 space-y-3">
-            {readiness?.systems?.map((system) => (
+            {urgentSystems.length ? urgentSystems.map((system) => (
               <div key={system.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-white">{system.name}</p>
-                    <p className="mt-1 text-sm text-slate-500">{system.detail}</p>
+                    <p className="text-sm font-bold text-white">{system.name}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{system.detail}</p>
                   </div>
                   <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${stateClass[system.state]}`}>{system.state}</span>
                 </div>
                 {system.nextAction && <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-2 text-xs text-amber-100"><AlertTriangle className="mr-1 inline h-3.5 w-3.5" />{system.nextAction}</p>}
               </div>
-            )) ?? <p className="p-4 text-sm text-slate-500">Loading system status…</p>}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-white"><AlertTriangle className="h-5 w-5 text-amber-200" /> Blockers</h2>
-          <div className="mt-4 space-y-2">
-            {readiness?.blockers?.length ? readiness.blockers.slice(0, 8).map((blocker) => (
-              <p key={blocker} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">{blocker}</p>
             )) : (
-              <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><CheckCircle2 className="mr-1.5 inline h-4 w-4" />No blockers returned by runtime readiness.</p>
+              <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><CheckCircle2 className="mr-1.5 inline h-4 w-4" />No urgent blockers returned by diagnostics.</p>
             )}
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="flex items-center gap-2 text-lg font-black text-white"><Activity className="h-5 w-5 text-cyan-200" /> Recent network status</h2>
+          <Link href="/admin/dashboard/diagnostics" className="text-xs text-cyan-300 hover:underline">View all diagnostics</Link>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {(readiness?.systems ?? []).slice(0, 8).map((system) => (
+            <div key={system.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">{system.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{system.detail}</p>
+                </div>
+                <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${stateClass[system.state]}`}>{system.state}</span>
+              </div>
+            </div>
+          ))}
+          {!readiness?.systems?.length && <p className="p-4 text-sm text-slate-500">Loading diagnostics snapshot…</p>}
         </div>
       </section>
     </div>
