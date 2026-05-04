@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** AI Intelligence / routing page consolidated into AI Engine. */
+/** AI Intelligence page — canonical section is now Scraping / Research. */
 export default function IntelligencePage() {
-  redirect('/admin/dashboard/ai-engine')
+  redirect('/admin/dashboard/research')
 }

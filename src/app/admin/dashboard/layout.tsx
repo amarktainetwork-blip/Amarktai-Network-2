@@ -10,6 +10,7 @@ import {
   Archive,
   AppWindow,
   Bot,
+  Brain,
   Database,
   Film,
   GitBranch,
@@ -28,21 +29,23 @@ type NavItem = {
   match?: string[]
 }
 
-// Phase 1 foundation nav: one production dashboard direction only.
+// Phase 1B canonical nav: 11 production sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
-// Health, readiness and tests are consolidated under Diagnostics.
-const NAV_ITEMS: NavItem[] = [
+// Health, readiness and proof are consolidated under Diagnostics.
+// Aiva disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true.
+const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
-  { href: '/admin/dashboard/ai-engine/hub', label: 'Aiva', icon: Bot, match: ['/admin/dashboard/ai-engine'] },
-  { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench', icon: GitBranch },
+  { href: '/admin/dashboard/aiva', label: 'Aiva Chat', icon: Bot },
   { href: '/admin/dashboard/apps', label: 'Apps / Packages', icon: AppWindow },
+  { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench', icon: GitBranch },
+  { href: '/admin/dashboard/research', label: 'Scraping / Research', icon: Search },
+  { href: '/admin/dashboard/memory-emotions', label: 'Memory / Emotions', icon: Brain },
   { href: '/admin/dashboard/media-studio', label: 'Media Studio', icon: Film },
-  { href: '/admin/dashboard/ai-engine/intelligence', label: 'Scraping / Research', icon: Search },
   { href: '/admin/dashboard/artifacts', label: 'Artifacts / Storage', icon: Archive },
   { href: '/admin/dashboard/ai-engine/aiva-actions', label: 'Actions / Approvals', icon: ShieldCheck },
-  { href: '/admin/dashboard/system-health', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/system-health', '/admin/dashboard/live-readiness', '/admin/dashboard/readiness'] },
+  { href: '/admin/dashboard/system-health', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/readiness'] },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings2 },
-]
+] satisfies NavItem[]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
