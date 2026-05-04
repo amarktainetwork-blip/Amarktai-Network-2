@@ -146,7 +146,7 @@ export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = [
     wired: true,
     showInPrimarySetup: true,
     defaultCostRole: 'cheap',
-    notes: 'Accepts MINIMAX_API_KEY or MIMO_API_KEY (alias: mimo → minimax). Music generation is post-launch.',
+    notes: 'Accepts MINIMAX_API_KEY or MIMO_API_KEY (alias: mimo → minimax). Music generation (music_generation capability) is post-launch — no route is implemented yet. Do not expose music as available.',
   },
   {
     key: 'deepseek',

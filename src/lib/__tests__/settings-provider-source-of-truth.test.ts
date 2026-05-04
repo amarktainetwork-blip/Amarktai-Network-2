@@ -110,8 +110,8 @@ describe('deprecated and hidden providers do not appear in Settings UI', () => {
 // ── Primary provider counts ───────────────────────────────────────────────────
 
 describe('Settings shows exactly the right provider groups', () => {
-  it('has at least 12 primary providers (per governance policy)', () => {
-    expect(getPrimarySetupProviders().length).toBeGreaterThanOrEqual(12)
+  it('has exactly 12 primary providers (genx, github, qwen, minimax, deepseek, gemini, huggingface, groq, together, firecrawl, mem0, webdock)', () => {
+    expect(getPrimarySetupProviders().length).toBe(12)
   })
 
   it('has exactly 3 specialist providers (replicate, elevenlabs, deepgram)', () => {

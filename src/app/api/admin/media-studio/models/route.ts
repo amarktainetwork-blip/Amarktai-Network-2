@@ -86,10 +86,9 @@ export async function GET() {
   const video = byCategory('video', GENX_VIDEO_MODELS)
   const voice = byCategory('voice', GENX_TTS_MODELS)
   // Music generation is post-launch regardless of GenX availability
-  const music: MediaModel[] = fromCatalog.filter((model) => model.category === 'music').length > 0
-    ? fromCatalog
-        .filter((m) => m.category === 'music')
-        .map((m) => ({ ...m, available: false, blocker: 'Music generation is post-launch. No music route is implemented yet.' }))
+  const catalogMusicModels = fromCatalog.filter((model) => model.category === 'music')
+  const music: MediaModel[] = catalogMusicModels.length > 0
+    ? catalogMusicModels.map((m) => ({ ...m, available: false, blocker: 'Music generation is post-launch. No music route is implemented yet.' }))
     : GENX_AUDIO_MODELS.map((id) => ({
         id,
         label: labelFromId(id),
