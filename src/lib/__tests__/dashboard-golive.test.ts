@@ -185,7 +185,7 @@ describe('Repo Workbench — canonical simple flow', () => {
   })
 
   it('GitHub token is managed via Settings/vault (no PAT input form)', () => {
-    expect(src).toContain('Settings/vault token is used automatically')
+    expect(src).toContain('/admin/dashboard/settings')
     const hasPatInput = src.includes('type="password"') && src.includes('GitHub PAT')
     expect(hasPatInput).toBe(false)
   })

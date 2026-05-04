@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { CheckCircle2, Loader2, RefreshCw, ShieldCheck, Trash2, Wand2, XCircle } from 'lucide-react'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
@@ -202,7 +203,11 @@ export default function RepoWorkbenchPage() {
         <div className="space-y-4">
           <Panel title="1. GitHub connection status">
             <p className="text-sm text-slate-300">Saved token: {github?.tokenMasked || 'not detected'}</p>
-            <p className="mt-1 text-xs text-slate-500">{github?.blocker || 'Settings/vault token is used automatically. Manage your GitHub token in Settings.'}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              {github?.blocker
+                ? github.blocker
+                : <>Token managed automatically via vault. To change it, go to <Link href="/admin/dashboard/settings" className="text-cyan-400 hover:underline">Settings → GitHub</Link>.</>}
+            </p>
           </Panel>
 
           <Panel title="2. Repo selector from connected GitHub account">
