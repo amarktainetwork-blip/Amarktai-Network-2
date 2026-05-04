@@ -5,7 +5,6 @@ import Link from 'next/link'
 import {
   Activity,
   AlertTriangle,
-  Archive,
   ArrowRight,
   Bot,
   CheckCircle2,
@@ -56,13 +55,13 @@ const moduleClass: Record<ModuleState, string> = {
 }
 
 const modules: Array<{ title: string; href: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; state: ModuleState; body: string }> = [
-  { title: 'AI Assistant', href: '/admin/dashboard/ai-engine/hub', icon: Bot, state: 'Ready to wire', body: 'Operator conversation, route visibility, approvals and memory surfaces.' },
-  { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench', icon: GitBranch, state: 'Ready to wire', body: 'Import repo, choose Update/Add/Audit/Fix, enter command, review plan/diff, run checks, create PR.' },
-  { title: 'Media Studio', href: '/admin/dashboard/media-studio', icon: Film, state: 'Needs key', body: 'Image, video, voice and media tools. Status reflects configured providers.' },
-  { title: 'Scraping / Research', href: '/admin/dashboard/ai-engine/intelligence', icon: Search, state: 'Ready to wire', body: 'Firecrawl and backup crawler for website intelligence and scraped-page storage.' },
-  { title: 'Artifacts / Storage', href: '/admin/dashboard/artifacts', icon: Archive, state: 'Ready to wire', body: 'Generated outputs, repo reports, scraped pages and job artifacts stored for review.' },
-  { title: 'Actions / Approvals', href: '/admin/dashboard/ai-engine/aiva-actions', icon: ShieldCheck, state: 'Backend pending', body: 'Approval-gated actions only. Nothing destructive runs without explicit confirmation and audit.' },
-  { title: 'Diagnostics', href: '/admin/dashboard/system-health', icon: Database, state: 'Working', body: 'Health, readiness, static asset proof, runtime status, storage, GitHub, queue and provider checks.' },
+  { title: 'AmarktAI Assistant', href: '/admin/dashboard/amarktai-assistant', icon: Bot, state: 'Ready to wire', body: 'Operator conversation, route visibility, approvals and memory surfaces.' },
+  { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench', icon: GitBranch, state: 'Ready to wire', body: 'Prompt-first repo change agent — write your request, AI picks the right agent, plan, diff, PR flow.' },
+  { title: 'Creative Studio', href: '/admin/dashboard/creative-studio', icon: Film, state: 'Needs key', body: 'Image, video, voice, music, avatar and asset mixer. Status reflects configured providers.' },
+  { title: 'Scraping / Research', href: '/admin/dashboard/research', icon: Search, state: 'Ready to wire', body: 'Firecrawl, backup crawler, manual URL input, and research pipeline for website intelligence.' },
+  { title: 'Memory', href: '/admin/dashboard/memory', icon: Database, state: 'Backend pending', body: 'VPS/local-first memory. App, user, and admin memory scoped by permission. Vector memory ready to wire.' },
+  { title: 'Actions / Approvals', href: '/admin/dashboard/actions', icon: ShieldCheck, state: 'Backend pending', body: 'Approval-gated actions only. Nothing destructive runs without explicit confirmation and audit.' },
+  { title: 'Diagnostics', href: '/admin/dashboard/diagnostics', icon: Database, state: 'Working', body: 'Health, readiness, static asset proof, runtime status, storage, GitHub, queue and provider checks.' },
   { title: 'Settings', href: '/admin/dashboard/settings', icon: Settings2, state: 'Working', body: 'The only place to add, test and remove provider/tool keys and platform configuration.' },
 ]
 
@@ -111,7 +110,7 @@ export default function CommandCenterPage() {
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/admin/dashboard/settings" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white">Configure providers <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/admin/dashboard/system-health" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Open Diagnostics</Link>
+              <Link href="/admin/dashboard/diagnostics" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Open Diagnostics</Link>
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-300 hover:text-white disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
             </div>
           </div>
@@ -144,7 +143,7 @@ export default function CommandCenterPage() {
         <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
           <div className="flex items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 text-lg font-bold text-white"><Activity className="h-5 w-5 text-cyan-200" /> Diagnostics snapshot</h2>
-            <Link href="/admin/dashboard/system-health" className="text-xs text-cyan-300 hover:underline">Full Diagnostics</Link>
+            <Link href="/admin/dashboard/diagnostics" className="text-xs text-cyan-300 hover:underline">Full Diagnostics</Link>
           </div>
           <div className="mt-4 space-y-3">
             {readiness?.systems?.map((system) => (
