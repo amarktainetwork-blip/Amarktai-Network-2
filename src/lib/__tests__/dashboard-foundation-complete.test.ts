@@ -319,7 +319,7 @@ describe('Redirect chain — legacy routes point to canonical targets', () => {
     ['readiness/page.tsx', '/admin/dashboard/diagnostics'],
     ['system/page.tsx', '/admin/dashboard/diagnostics'],
     ['monitor/page.tsx', '/admin/dashboard/diagnostics'],
-    ['operations/page.tsx', '/admin/dashboard/diagnostics'],
+    ['operations/page.tsx', '/admin/dashboard/actions'],
     ['music-studio/page.tsx', '/admin/dashboard/creative-studio'],
     ['video/page.tsx', '/admin/dashboard/creative-studio'],
     ['jobs/page.tsx', '/admin/dashboard/diagnostics'],
