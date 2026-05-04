@@ -66,6 +66,18 @@ check_admin_json() {
   fi
 }
 
+check_static_asset() {
+  local path="$1"
+  local name="$2"
+  local code
+  code=$(curl "${curl_args[@]}" -o /dev/null -w '%{http_code}' "$BASE_URL$path" || true)
+  if [[ "$code" == "200" ]]; then
+    ok "$name returned HTTP 200"
+  else
+    fail "$name returned HTTP $code (expected 200) — static asset broken"
+  fi
+}
+
 section "Public website"
 check_public_route "/" "Homepage"
 check_public_route "/admin/login" "Admin login"
@@ -84,6 +96,39 @@ check_admin_json "/api/admin/artifacts/media?appSlug=amarktai-network&limit=20" 
 check_admin_json "/api/admin/app-ai-package" "App AI packages API"
 check_admin_json "/api/admin/aiva/actions" "Aiva actions API"
 check_admin_json "/api/admin/aiva/action-execute?days=7" "Aiva action audit API"
+
+section "Next.js static assets"
+# Discover built CSS/JS/font assets from the standalone static directory and
+# verify each returns HTTP 200 through the public BASE_URL.
+STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/repo}/.next/standalone/.next/static"
+
+_proof_css=""
+_proof_js=""
+_proof_font=""
+
+if [[ -d "$STANDALONE_STATIC" ]]; then
+  _proof_css=$(find "$STANDALONE_STATIC/css"    -name '*.css'   2>/dev/null | head -1 || true)
+  _proof_js=$(find  "$STANDALONE_STATIC/chunks" -name '*.js'    2>/dev/null | head -1 || true)
+  _proof_font=$(find "$STANDALONE_STATIC/media" -name '*.woff*' 2>/dev/null | head -1 || true)
+fi
+
+if [[ -n "$_proof_css" ]]; then
+  check_static_asset "/_next/static/css/$(basename "$_proof_css")" "CSS asset"
+else
+  fail "No built CSS asset found — .next/standalone/.next/static/css is empty or missing"
+fi
+
+if [[ -n "$_proof_js" ]]; then
+  check_static_asset "/_next/static/chunks/$(basename "$_proof_js")" "JS chunk"
+else
+  fail "No built JS chunk found — .next/standalone/.next/static/chunks is empty or missing"
+fi
+
+if [[ -n "$_proof_font" ]]; then
+  check_static_asset "/_next/static/media/$(basename "$_proof_font")" "Font asset"
+else
+  warn "No font file found in standalone static/media — skipping font check"
+fi
 
 section "Local service hints"
 if command -v systemctl >/dev/null 2>&1; then
