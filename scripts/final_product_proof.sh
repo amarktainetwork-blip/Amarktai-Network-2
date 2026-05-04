@@ -50,6 +50,48 @@ check_json() {
 
 printf 'Amarktai final product proof\nBASE_URL=%s\n\n' "$BASE_URL"
 
+# ── Static asset checks ───────────────────────────────────────────────────────
+STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/repo}/.next/standalone/.next/static"
+
+check_static() {
+  local label="$1"
+  local url="$2"
+  local code
+  code=$(curl "${curl_args[@]}" -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo "000")
+  if [[ "$code" == "200" ]]; then
+    record PASS "$label" "HTTP 200"
+  else
+    record FAIL "$label" "HTTP $code (expected 200) — static asset broken"
+  fi
+}
+
+_pp_css=""
+_pp_js=""
+_pp_font=""
+if [[ -d "$STANDALONE_STATIC" ]]; then
+  _pp_css=$(find  "$STANDALONE_STATIC/css"    -name '*.css'   2>/dev/null | head -1 || true)
+  _pp_js=$(find   "$STANDALONE_STATIC/chunks" -name '*.js'    2>/dev/null | head -1 || true)
+  _pp_font=$(find "$STANDALONE_STATIC/media"  -name '*.woff*' 2>/dev/null | head -1 || true)
+fi
+
+if [[ -n "$_pp_css" ]]; then
+  check_static "CSS asset HTTP 200" "${BASE_URL}/_next/static/css/$(basename "$_pp_css")"
+else
+  record FAIL "CSS asset present" ".next/standalone/.next/static/css is empty or missing"
+fi
+
+if [[ -n "$_pp_js" ]]; then
+  check_static "JS chunk HTTP 200" "${BASE_URL}/_next/static/chunks/$(basename "$_pp_js")"
+else
+  record FAIL "JS chunk present" ".next/standalone/.next/static/chunks is empty or missing"
+fi
+
+if [[ -n "$_pp_font" ]]; then
+  check_static "Font asset HTTP 200" "${BASE_URL}/_next/static/media/$(basename "$_pp_font")"
+else
+  record WARN "Font asset" "No woff* files found in standalone static/media — skipping"
+fi
+
 health="$(fetch_path /api/health/ping 2>&1)"
 if printf '%s' "$health" | grep -qi 'ok\|healthy\|success'; then
   record PASS "health ping" "/api/health/ping responded"

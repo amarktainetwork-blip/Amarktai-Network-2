@@ -39,5 +39,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // Restrict middleware to admin routes only.
+  // Paths like /_next/static/*, /_next/image/*, and public files do NOT match
+  // this pattern and are never intercepted by this middleware — they are served
+  // directly by the Next.js standalone server or Nginx without any auth check.
   matcher: ['/admin/:path*'],
 }
