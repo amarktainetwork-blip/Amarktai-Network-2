@@ -29,6 +29,8 @@ type NavItem = {
   match?: string[]
 }
 
+// AmarktAI Assistant disabled by default — enable only with NEXT_PUBLIC_AIVA_ENABLED=true.
+// The env var remains legacy-named for compatibility; visible UI uses AmarktAI Assistant.
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
   { href: '/admin/dashboard/amarktai-assistant', label: 'AmarktAI Assistant', icon: Bot, match: ['/admin/dashboard/aiva'] },
