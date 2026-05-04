@@ -139,7 +139,7 @@ export default function AivaNetworkGraph({ className = '' }: { className?: strin
         }}
       >
         <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-[11px] font-semibold tracking-wider text-cyan-200 uppercase">
-          Aiva
+          AmarktAI
         </span>
       </div>
 

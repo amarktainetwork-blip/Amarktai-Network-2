@@ -74,7 +74,7 @@ export default function ProviderIntelligencePage() {
               <Activity className="h-6 w-6 text-cyan-300" />
               <h1 className="text-2xl font-bold text-white">Provider Intelligence</h1>
             </div>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400">Scores are built from real provider-result logs: success rate, failures, latency and artifacts. Use this to decide which providers Aiva and apps should trust.</p>
+            <p className="mt-2 max-w-3xl text-sm text-slate-400">Scores are built from real provider-result logs: success rate, failures, latency and artifacts. Use this to decide which providers AmarktAI Assistant and apps should trust.</p>
           </div>
           <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300 hover:text-white disabled:opacity-40"><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
         </div>

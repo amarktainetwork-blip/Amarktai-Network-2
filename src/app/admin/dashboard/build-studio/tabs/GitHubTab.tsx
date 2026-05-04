@@ -59,7 +59,7 @@ export default function GitHubTab() {
   const [pushResult, setPushResult] = useState<{ success: boolean; commitUrl?: string; error?: string } | null>(null)
   const [selectedRepo, setSelectedRepo] = useState<string>('')
   const [branch, setBranch] = useState<string>('build-studio/output')
-  const [exportNotes, setExportNotes] = useState<string>('# Workspace Export\n\nGenerated from Amarktai Workspace.\n')
+  const [exportNotes, setExportNotes] = useState<string>('# Workspace Export\n\nGenerated from AmarktAI Workspace.\n')
 
   // PR state
   const [branches, setBranches] = useState<BranchInfo[]>([])

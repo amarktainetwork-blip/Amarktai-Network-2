@@ -33,10 +33,10 @@ type NavItem = {
 // Phase 1B canonical nav: 12 production sections only.
 // /admin/dashboard remains a redirect alias and is not a visible nav item.
 // Health, readiness and proof are consolidated under Diagnostics.
-// Aiva disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true.
+// AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true.
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
-  { href: '/admin/dashboard/aiva', label: 'Aiva Chat', icon: Bot },
+  { href: '/admin/dashboard/aiva', label: 'AI Assistant', icon: Bot },
   { href: '/admin/dashboard/apps', label: 'Apps / Packages', icon: AppWindow },
   { href: '/admin/dashboard/repo-workbench', label: 'Repo Workbench', icon: GitBranch },
   { href: '/admin/dashboard/research', label: 'Scraping / Research', icon: Search },
@@ -66,16 +66,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const activeItem = NAV_ITEMS.find(isActive)
-  const showAivaAssistant = process.env.NEXT_PUBLIC_AIVA_ENABLED === 'true'
+  const showAssistantPanel = process.env.NEXT_PUBLIC_AIVA_ENABLED === 'true'
 
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="h-20 border-b border-white/10 px-5">
         <Link href="/admin/dashboard/command-center" className="flex h-full items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-violet-500 text-xs font-black text-slate-950 shadow-lg shadow-cyan-950/20">AN</div>
+          <div className="w-10 h-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-violet-500 text-xs font-black text-slate-950 shadow-lg shadow-cyan-950/20 hidden lg:flex">AN</div>
           <div>
-            <p className="text-sm font-black text-white">Amarktai Network</p>
-            <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/70">Aiva OS Console</p>
+            <p className="text-sm font-black text-white">
+              Amarkt<span className="text-blue-400">AI</span> Network
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/70">AmarktAI Console</p>
           </div>
         </Link>
       </div>
@@ -150,7 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
 
-      {showAivaAssistant && <AivaAssistantPanel />}
+      {showAssistantPanel && <AivaAssistantPanel />}
     </div>
   )
 }

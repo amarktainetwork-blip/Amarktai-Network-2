@@ -28,9 +28,9 @@ function pageExists(root: string, relPath: string): boolean {
   return fs.existsSync(path.join(root, relPath))
 }
 
-// ── Public website: Aiva-first, not GenX/provider-first ──────────────────────
+// ── Public website: AmarktAI-first, not GenX/provider-first ──────────────────────
 
-describe('Public website — Aiva-first branding', () => {
+describe('Public website — AmarktAI-first branding', () => {
   it('homepage does not use GenX as the main brand story', () => {
     const src = readPage(APP_ROOT, 'page.tsx')
     // GenX should not appear as the product name or hero headline
@@ -41,12 +41,12 @@ describe('Public website — Aiva-first branding', () => {
     }
   })
 
-  it('homepage mentions Aiva', () => {
+  it('homepage mentions AmarktAI Assistant', () => {
     const src = readPage(APP_ROOT, 'page.tsx')
-    expect(src).toContain('Aiva')
+    expect(src).toContain('AmarktAI Assistant')
   })
 
-  it('homepage mentions Amarktai Network', () => {
+  it('homepage mentions AmarktAI Network', () => {
     const src = readPage(APP_ROOT, 'page.tsx')
     expect(src.toLowerCase()).toContain('amarktai')
   })

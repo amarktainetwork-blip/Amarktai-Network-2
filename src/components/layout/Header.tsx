@@ -8,7 +8,7 @@ import { Menu, X, ArrowRight } from 'lucide-react'
 
 const navLinks = [
   { href: '/', label: 'Platform' },
-  { href: '/about', label: 'Aiva' },
+  { href: '/about', label: 'AmarktAI Assistant' },
   { href: '/apps', label: 'Ecosystem' },
   { href: '/apps#capabilities', label: 'Capabilities' },
 ]

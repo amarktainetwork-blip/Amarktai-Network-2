@@ -37,7 +37,7 @@ interface AgentDef {
 const AGENTS: AgentDef[] = [
   {
     id: 'aiva-operator',
-    name: 'Aiva Operator Agent',
+    name: 'AmarktAI Assistant Agent',
     description: 'Primary orchestrator. Routes tasks to the correct specialist agent, manages context, and enforces approval gates.',
     capabilities: ['orchestration', 'routing', 'approval gating', 'memory context'],
     status: 'Ready to wire',
@@ -229,7 +229,7 @@ export default function AgentRegistryPage() {
         </div>
         <div>
           <h1 className="text-xl font-black text-white">Agent Registry</h1>
-          <p className="text-xs text-slate-400">All Aiva-powered specialist agents — statuses reflect actual backend wiring</p>
+          <p className="text-xs text-slate-400">All AmarktAI specialist agents — statuses reflect actual backend wiring</p>
         </div>
       </div>
 

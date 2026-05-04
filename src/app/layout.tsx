@@ -18,10 +18,10 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Amarktai Network — Multi-Provider AI Operating System',
-  description: 'Amarktai Network is a multi-provider AI orchestration platform with routing intelligence, operator controls, and production-ready capability surfaces for real applications.',
-  keywords: ['AI orchestration', 'multi-provider AI', 'AI operating system', 'Amarktai Network', 'model routing', 'AI operator console', 'artifact workflows'],
-  authors: [{ name: 'Amarktai Network' }],
+  title: 'AmarktAI Network — Multi-Provider AI Operating System',
+  description: 'AmarktAI Network is a multi-provider AI orchestration platform with routing intelligence, operator controls, and production-ready capability surfaces for real applications.',
+  keywords: ['AI orchestration', 'multi-provider AI', 'AI operating system', 'AmarktAI Network', 'model routing', 'AI operator console', 'artifact workflows'],
+  authors: [{ name: 'AmarktAI Network' }],
   robots: 'index, follow',
 }
 

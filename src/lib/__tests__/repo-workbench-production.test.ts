@@ -45,7 +45,7 @@ describe('repo workbench production hardening', () => {
       'GitHub connection status',
       'Repo selector from connected GitHub account',
       'Import / clone',
-      'Tell Aiva what to change',
+      'Tell AmarktAI Assistant what to change',
       'Plan',
       'Generate diff',
       'Apply patch',

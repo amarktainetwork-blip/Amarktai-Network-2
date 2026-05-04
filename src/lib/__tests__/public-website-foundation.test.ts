@@ -101,12 +101,13 @@ describe('Public nav does not expose API or Login', () => {
 // ── Homepage contains required brand concepts ─────────────────────────────────
 
 describe('Homepage contains required brand and concept keywords', () => {
-  it('homepage contains "Aiva"', () => {
-    expect(homePage).toContain('Aiva')
+  it('homepage contains "AmarktAI Assistant"', () => {
+    expect(homePage).toContain('AmarktAI Assistant')
   })
 
-  it('homepage contains "Amarktai Network"', () => {
-    expect(homePage).toContain('Amarktai Network')
+  it('homepage contains AmarktAI brand', () => {
+    // Brand uses "AmarktAI" with capital AI throughout the page
+    expect(homePage).toContain('AmarktAI')
   })
 
   it('homepage contains not-a-chatbot / command network concept', () => {

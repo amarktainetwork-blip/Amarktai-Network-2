@@ -19,7 +19,7 @@ const DEFAULT_SETTINGS: VoiceAccessSettings = {
   voiceId: 'alloy',
   accent: 'neutral',
   behavior: 'talk_only',
-  wakePhrase: 'Hey Amarktai',
+  wakePhrase: 'Hey AmarktAI',
   allowVoiceLogin: false,
   loginPassphrase: '',
 }

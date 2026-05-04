@@ -69,7 +69,7 @@ export default function AivaChatPage() {
         ...prev,
         {
           role: 'aiva',
-          text: 'Aiva stream backend is not yet wired. Status: Ready to wire. Configure provider keys in Settings to enable live responses.',
+          text: 'AmarktAI Assistant stream backend is not yet wired. Status: Ready to wire. Configure provider keys in Settings to enable live responses.',
         },
       ])
     }, 400)
@@ -83,7 +83,7 @@ export default function AivaChatPage() {
           <Bot className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-white">Aiva Chat</h1>
+          <h1 className="text-xl font-black text-white">AI Assistant</h1>
           <p className="text-xs text-slate-400">Operator conversation interface — fixed within page layout</p>
         </div>
         <div className="ml-auto">
@@ -107,7 +107,7 @@ export default function AivaChatPage() {
                 <div className="rounded-xl border border-white/5 bg-white/[0.03] p-4 text-center">
                   <Bot className="mx-auto mb-2 h-8 w-8 text-slate-600" />
                   <p className="text-sm text-slate-500">No messages yet.</p>
-                  <p className="mt-1 text-xs text-slate-600">Backend stream is not wired — responses will show stub replies until the provider key and endpoint are configured in Settings.</p>
+                  <p className="mt-1 text-xs text-slate-600">Configure a provider key in Settings to enable live responses.</p>
                 </div>
               )}
               {messages.map((msg, i) => (
@@ -120,7 +120,7 @@ export default function AivaChatPage() {
                     }`}
                   >
                     {msg.role === 'aiva' && (
-                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-violet-400">Aiva</p>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-violet-400">AmarktAI</p>
                     )}
                     {msg.text}
                   </div>
@@ -135,7 +135,7 @@ export default function AivaChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Message Aiva... (backend not yet wired)"
+                placeholder="Message AmarktAI Assistant…"
                 className="min-w-0 flex-1 bg-transparent text-sm text-white placeholder-slate-600 outline-none"
               />
               <button

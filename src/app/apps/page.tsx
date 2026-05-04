@@ -65,7 +65,7 @@ const appProfiles = [
     color: 'text-violet-300',
     border: 'border-violet-500/20',
     bg: 'hover:bg-violet-400/[0.04]',
-    agents: ['Aiva Operator', 'Repo Builder', 'Researcher', 'App Discovery'],
+    agents: ['AmarktAI Assistant', 'Repo Builder', 'Researcher', 'App Discovery'],
     features: ['Agent assignment and config', 'Custom memory and tools', 'Repo and deploy awareness', 'Full audit trail'],
   },
 ]
@@ -83,7 +83,7 @@ const intelligencePackage = [
 ]
 
 const capabilities = [
-  { icon: Sparkles,     name: 'Aiva',           desc: 'Operator intelligence. Understands apps, agents, memory, and approval state.',       tags: ['core', 'coordinator'] },
+  { icon: Sparkles,     name: 'AmarktAI Assistant', desc: 'Operator intelligence. Understands apps, agents, memory, and approval state.',       tags: ['core', 'coordinator'] },
   { icon: Code2,        name: 'Repo Workbench', desc: 'Connect repo, describe task, review diff, approve PR. Command to code to production.', tags: ['code', 'github', 'pr'] },
   { icon: BrainCircuit, name: 'Memory Layer',   desc: 'Per-app context, cross-session persistence, and learning from outcomes.',             tags: ['memory', 'context'] },
   { icon: Bot,          name: 'Agent Network',  desc: 'Specialist agents assigned roles, tools, permissions, memory, and approval rules.',    tags: ['agents', 'network'] },
@@ -115,7 +115,7 @@ export default function AppsPage() {
               Every app gets its own intelligence package.
             </h1>
             <p className="mt-6 max-w-3xl text-lg text-slate-300">
-              Connect a product to Amarktai Network and give it a dedicated set of agents, memory, tools, voice, media, research, repo awareness, monitoring, and security rules. The network learns from each app and keeps it improving.
+              Connect a product to Amarkt<span className="text-blue-400">AI</span> Network and give it a dedicated set of agents, memory, tools, voice, media, research, repo awareness, monitoring, and security rules. The network learns from each app and keeps it improving.
             </p>
           </motion.div>
 
@@ -223,7 +223,7 @@ export default function AppsPage() {
                   <p className="mt-1 text-sm text-slate-400">Request access and tell us what you are building.</p>
                 </div>
                 <div className="flex gap-3 shrink-0">
-                  <Link href="/about" className="btn-ghost whitespace-nowrap">About Aiva</Link>
+                  <Link href="/about" className="btn-ghost whitespace-nowrap">About AmarktAI</Link>
                   <Link href="/contact" className="btn-primary whitespace-nowrap">
                     Request Access <ArrowRight className="h-4 w-4" />
                   </Link>

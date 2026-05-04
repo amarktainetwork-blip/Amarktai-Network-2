@@ -41,7 +41,7 @@ export async function GET() {
   const systems = [
     {
       id: 'aiva',
-      name: 'Aiva conversation',
+      name: 'AmarktAI Assistant conversation',
       state: stateFrom(truth?.genx?.available || configuredProviders > 0, !truth?.genx?.available),
       detail: truth?.genx?.available ? 'Streaming route available through the AI engine.' : `${configuredProviders} direct provider route(s) configured.`,
       nextAction: truth?.genx?.available || configuredProviders > 0 ? null : 'Configure at least one working AI provider route.',

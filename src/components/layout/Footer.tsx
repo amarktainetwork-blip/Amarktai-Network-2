@@ -5,7 +5,7 @@ const columns = [
     heading: 'Platform',
     links: [
       { href: '/', label: 'Platform' },
-      { href: '/about', label: 'Aiva' },
+      { href: '/about', label: 'AmarktAI Assistant' },
       { href: '/apps', label: 'Ecosystem' },
       { href: '/apps#capabilities', label: 'Capabilities' },
     ],
@@ -35,7 +35,7 @@ export default function Footer() {
               Amarkt<span className="text-blue-400">AI</span> Network
             </p>
             <p className="mt-3 max-w-sm text-sm text-slate-400">
-              Aiva-led AI operating ecosystem. A coordinated command network for apps, agents, memory, media, code, research, and infrastructure.
+              AmarktAI-led AI operating ecosystem. A coordinated command network for apps, agents, memory, media, code, research, and infrastructure.
             </p>
           </div>
 

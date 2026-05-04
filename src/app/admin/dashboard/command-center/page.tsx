@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Bot,
   CheckCircle2,
-  Clock,
   Database,
   Film,
   GitBranch,
@@ -17,9 +16,6 @@ import {
   Search,
   Settings2,
   ShieldCheck,
-  Sparkles,
-  Wrench,
-  XCircle,
 } from 'lucide-react'
 
 interface LiveSystem {
@@ -60,13 +56,13 @@ const moduleClass: Record<ModuleState, string> = {
 }
 
 const modules: Array<{ title: string; href: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>>; state: ModuleState; body: string }> = [
-  { title: 'Aiva', href: '/admin/dashboard/ai-engine/hub', icon: Bot, state: 'Ready to wire', body: 'Operator chat, route visibility, approvals and memory surfaces. Backend streams must be proofed before marked Working.' },
+  { title: 'AI Assistant', href: '/admin/dashboard/ai-engine/hub', icon: Bot, state: 'Ready to wire', body: 'Operator conversation, route visibility, approvals and memory surfaces.' },
   { title: 'Repo Workbench', href: '/admin/dashboard/repo-workbench', icon: GitBranch, state: 'Ready to wire', body: 'Import repo, choose Update/Add/Audit/Fix, enter command, review plan/diff, run checks, create PR.' },
-  { title: 'Media Studio', href: '/admin/dashboard/media-studio', icon: Film, state: 'Needs key', body: 'Image, video, voice and future media tools. Status must come from configured providers only.' },
-  { title: 'Scraping / Research', href: '/admin/dashboard/ai-engine/intelligence', icon: Search, state: 'Ready to wire', body: 'Firecrawl and backup crawler path for website intelligence and scraped-page storage.' },
+  { title: 'Media Studio', href: '/admin/dashboard/media-studio', icon: Film, state: 'Needs key', body: 'Image, video, voice and media tools. Status reflects configured providers.' },
+  { title: 'Scraping / Research', href: '/admin/dashboard/ai-engine/intelligence', icon: Search, state: 'Ready to wire', body: 'Firecrawl and backup crawler for website intelligence and scraped-page storage.' },
   { title: 'Artifacts / Storage', href: '/admin/dashboard/artifacts', icon: Archive, state: 'Ready to wire', body: 'Generated outputs, repo reports, scraped pages and job artifacts stored for review.' },
-  { title: 'Actions / Approvals', href: '/admin/dashboard/ai-engine/aiva-actions', icon: ShieldCheck, state: 'Backend pending', body: 'Approval-gated actions only. Nothing destructive should run without explicit confirmation and audit.' },
-  { title: 'Diagnostics', href: '/admin/dashboard/system-health', icon: Database, state: 'Working', body: 'One home for readiness, static asset proof, runtime truth, storage, GitHub, queue and provider checks.' },
+  { title: 'Actions / Approvals', href: '/admin/dashboard/ai-engine/aiva-actions', icon: ShieldCheck, state: 'Backend pending', body: 'Approval-gated actions only. Nothing destructive runs without explicit confirmation and audit.' },
+  { title: 'Diagnostics', href: '/admin/dashboard/system-health', icon: Database, state: 'Working', body: 'Health, readiness, static asset proof, runtime status, storage, GitHub, queue and provider checks.' },
   { title: 'Settings', href: '/admin/dashboard/settings', icon: Settings2, state: 'Working', body: 'The only place to add, test and remove provider/tool keys and platform configuration.' },
 ]
 
@@ -107,13 +103,14 @@ export default function CommandCenterPage() {
       <section className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#071426] via-[#050b17] to-[#140a22] p-5 shadow-2xl shadow-black/25 lg:p-7">
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] xl:items-stretch">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100">
-              <Sparkles className="h-3.5 w-3.5" /> Phase 1 foundation shell
-            </div>
-            <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl xl:text-5xl">One production dashboard. Clear modules. No fake green lights.</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">Amarktai Network now starts from a controlled operator console. Features can appear before final wiring, but their status must be truthful: Working, Needs key, Backend pending, Ready to wire, Post-launch or Blocked.</p>
+            <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white sm:text-4xl xl:text-5xl">
+              Amarkt<span className="text-blue-400">AI</span> Network — Command Center
+            </h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400 sm:text-base">
+              The operator console for the Amarkt<span className="text-blue-400">AI</span> Network. Every module shows its real status. Configure providers in Settings, monitor system health in Diagnostics.
+            </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/admin/dashboard/settings" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white">Configure approved stack <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/admin/dashboard/settings" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white">Configure providers <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/admin/dashboard/system-health" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-semibold text-white hover:bg-white/[0.08]">Open Diagnostics</Link>
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-semibold text-slate-300 hover:text-white disabled:opacity-40"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
             </div>
@@ -161,30 +158,18 @@ export default function CommandCenterPage() {
                 </div>
                 {system.nextAction && <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-2 text-xs text-amber-100"><AlertTriangle className="mr-1 inline h-3.5 w-3.5" />{system.nextAction}</p>}
               </div>
-            )) ?? <p className="p-4 text-sm text-slate-500">Loading runtime truth…</p>}
+            )) ?? <p className="p-4 text-sm text-slate-500">Loading system status…</p>}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-white"><Wrench className="h-5 w-5 text-cyan-200" /> Current foundation rules</h2>
-            <div className="mt-4 space-y-2 text-sm text-slate-400">
-              <Rule icon={CheckCircle2}>Settings is the only API key and provider setup surface.</Rule>
-              <Rule icon={CheckCircle2}>Diagnostics is the only health, readiness and proof surface.</Rule>
-              <Rule icon={Clock}>Missing features must stay labelled Ready to wire or Backend pending.</Rule>
-              <Rule icon={XCircle}>No module may be marked Working until endpoint and proof exist.</Rule>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-white"><AlertTriangle className="h-5 w-5 text-amber-200" /> Blockers</h2>
-            <div className="mt-4 space-y-2">
-              {readiness?.blockers?.length ? readiness.blockers.slice(0, 8).map((blocker) => (
-                <p key={blocker} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">{blocker}</p>
-              )) : (
-                <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><CheckCircle2 className="mr-1.5 inline h-4 w-4" />No blockers returned by runtime readiness.</p>
-              )}
-            </div>
+        <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-white"><AlertTriangle className="h-5 w-5 text-amber-200" /> Blockers</h2>
+          <div className="mt-4 space-y-2">
+            {readiness?.blockers?.length ? readiness.blockers.slice(0, 8).map((blocker) => (
+              <p key={blocker} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-sm text-slate-300">{blocker}</p>
+            )) : (
+              <p className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-100"><CheckCircle2 className="mr-1.5 inline h-4 w-4" />No blockers returned by runtime readiness.</p>
+            )}
           </div>
         </div>
       </section>
@@ -199,8 +184,4 @@ function Metric({ label, value, suffix, warn, danger }: { label: string; value: 
       <p className={`mt-2 text-3xl font-black ${danger ? 'text-red-200' : warn ? 'text-amber-200' : 'text-white'}`}>{value}<span className="ml-1 text-sm text-slate-500">{suffix}</span></p>
     </div>
   )
-}
-
-function Rule({ children, icon: Icon }: { children: React.ReactNode; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }) {
-  return <p className="rounded-2xl border border-white/10 bg-black/20 p-3"><Icon className="mr-2 inline h-4 w-4 text-cyan-200" />{children}</p>
 }

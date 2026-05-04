@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         }
 
         const systemPrompt = payload.systemPrompt ?? [
-          'You are Aiva, the Amarktai Network operator assistant.',
+          'You are AmarktAI Assistant, the AmarktAI Network operator assistant.',
           'Hold a real-time conversation, answer directly, and keep replies practical.',
           'Do not claim actions were completed unless the tool or API result proves it.',
           'When giving code/deploy guidance, prefer safe, reversible, copy-paste-ready steps.',

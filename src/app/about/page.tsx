@@ -88,7 +88,7 @@ export default function AboutPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-medium text-cyan-100">
-              <Sparkles className="h-3.5 w-3.5" /> Aiva · AI operating ecosystem
+              <Sparkles className="h-3.5 w-3.5" /> AmarktAI Assistant · AI operating ecosystem
             </div>
           </motion.div>
           <motion.h1
@@ -105,7 +105,7 @@ export default function AboutPage() {
             transition={{ duration: 0.45, delay: 0.2 }}
             className="mt-6 max-w-3xl text-lg text-slate-300"
           >
-            Every AI tool answers questions. Amarktai Network is built for something different: a living ecosystem that learns from apps, heals from failures, secures its own actions, and evolves every product it touches.
+            Every AI tool answers questions. Amarkt<span className="text-blue-400">AI</span> Network is built for something different: a living ecosystem that learns from apps, heals from failures, secures its own actions, and evolves every product it touches.
           </motion.p>
         </div>
       </section>
@@ -115,12 +115,12 @@ export default function AboutPage() {
         <div className="mx-auto max-w-6xl">
           <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
             <motion.div {...fadeUp()}>
-              <p className="text-label text-cyan-300">Aiva — the operator</p>
+              <p className="text-label text-cyan-300">AmarktAI Assistant — the operator</p>
               <h2 className="text-headline mt-3">
                 Not just a chat interface. The intelligence that turns scattered AI into a coordinated operating system.
               </h2>
               <p className="mt-5 text-slate-400">
-                Aiva understands apps, agents, users, memory, actions, tools, approvals, and context. It knows the state of the network. It knows what is connected, broken, pending, or ready. And it coordinates everything from a single private command layer.
+                AmarktAI Assistant understands apps, agents, users, memory, actions, tools, approvals, and context. It knows the state of the network. It knows what is connected, broken, pending, or ready. And it coordinates everything from a single private command layer.
               </p>
               <ul className="mt-6 space-y-2 text-sm text-slate-300">
                 {[
@@ -244,7 +244,7 @@ export default function AboutPage() {
               </div>
               <h2 className="text-lg font-semibold text-white">Built for builders running more than one product.</h2>
               <p className="mt-2 text-sm text-slate-400">
-                Amarktai Network is not an open-signup platform. Access is reviewed for builders with real product ecosystems where coordination, memory, and operational intelligence matter.
+                Amarkt<span className="text-blue-400">AI</span> Network is not an open-signup platform. Access is reviewed for builders with real product ecosystems where coordination, memory, and operational intelligence matter.
               </p>
               <ul className="mt-5 space-y-2 text-sm text-slate-300">
                 <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 mt-0.5 text-violet-400 shrink-0" /> Private onboarding process</li>

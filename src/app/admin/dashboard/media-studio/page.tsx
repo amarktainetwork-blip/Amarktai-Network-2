@@ -510,7 +510,7 @@ export default function MediaStudioPage() {
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Or text (will generate voice first)</label>
-                <textarea disabled rows={2} placeholder="Enter the text Aiva should speak as the avatar…" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 resize-none cursor-not-allowed" />
+                <textarea disabled rows={2} placeholder="Enter the text AmarktAI Assistant should speak as the avatar…" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 resize-none cursor-not-allowed" />
               </div>
             </div>
             <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 opacity-40 cursor-not-allowed">

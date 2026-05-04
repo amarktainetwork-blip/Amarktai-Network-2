@@ -101,7 +101,7 @@ const appExamples = [
 ]
 
 const agents = [
-  { icon: Command,    label: 'Aiva Operator',    desc: 'Coordinates the network'         },
+  { icon: Command,    label: 'AmarktAI Assistant',    desc: 'Coordinates the network'         },
   { icon: FileCode2,  label: 'Repo Builder',      desc: 'Command to code to PR'           },
   { icon: Search,     label: 'Researcher',        desc: 'Markets, tools, opportunities'   },
   { icon: Globe,      label: 'App Discovery',     desc: 'Finds new product opportunities' },
@@ -161,14 +161,14 @@ export default function HomePage() {
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-medium text-cyan-100">
               <Sparkles className="h-3.5 w-3.5" />
-              Amarktai Network · AI operating ecosystem
+              Amarkt<span className="text-blue-400">AI</span> Network · AI operating ecosystem
             </div>
 
             <h1 className="max-w-4xl text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">
               A living AI command layer for apps, agents, memory, media, and code.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              Aiva coordinates specialist agents, tools, memory, research, media, code, infrastructure, and approval-gated actions in one private command network.
+              AmarktAI Assistant coordinates specialist agents, tools, memory, research, media, code, infrastructure, and approval-gated actions in one private command network.
             </p>
 
             <div className="mt-9 flex flex-wrap gap-3">
@@ -203,10 +203,10 @@ export default function HomePage() {
           <motion.div {...fadeUp()} className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-bold uppercase tracking-[0.26em] text-cyan-200">Not a chatbot. A command network.</p>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">
-              Chatbots answer. Amarktai Network coordinates.
+              Chatbots answer. Amarkt<span className="text-blue-400">AI</span> Network coordinates.
             </h2>
             <p className="mt-5 text-slate-400">
-              This is not ChatGPT. This is not Claude. This is not a model picker. Aiva understands apps, agents, memory, tools, approvals, and system state — and turns scattered AI into a coordinated operating system.
+              This is not ChatGPT. This is not Claude. This is not a model picker. AmarktAI Assistant understands apps, agents, memory, tools, approvals, and system state — and turns scattered AI into a coordinated operating system.
             </p>
           </motion.div>
 
@@ -214,8 +214,8 @@ export default function HomePage() {
             {[
               {
                 icon: Bot,
-                title: 'Aiva does not just respond.',
-                body: 'Aiva coordinates. It understands what every connected app needs, which agents are active, what has changed, and what is waiting for approval.',
+                title: 'AmarktAI Assistant does not just respond.',
+                body: 'AmarktAI Assistant coordinates. It understands what every connected app needs, which agents are active, what has changed, and what is waiting for approval.',
                 color: 'text-cyan-300',
               },
               {
@@ -428,7 +428,7 @@ export default function HomePage() {
             <motion.div {...fadeUp()}>
               <p className="text-xs font-bold uppercase tracking-[0.26em] text-orange-200">Repo Workbench</p>
               <h2 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-5xl">
-                Tell Aiva what to change. Review the plan. Approve the PR.
+                Tell AmarktAI Assistant what to change. Review the plan. Approve the PR.
               </h2>
               <p className="mt-5 text-slate-400">
                 Import a repo, describe the task, review the diff, run checks, and merge with approval. Command to code to production — with a full audit trail.
@@ -468,7 +468,7 @@ export default function HomePage() {
               A network that knows the state of what it is running.
             </h2>
             <p className="mt-5 text-slate-400">
-              Understands what is connected, broken, pending, or ready. Aiva is structured for operational self-awareness across the full network.
+              Understands what is connected, broken, pending, or ready. AmarktAI Assistant is structured for operational self-awareness across the full network.
             </p>
           </motion.div>
 
@@ -503,7 +503,7 @@ export default function HomePage() {
                   Autonomy with approval. Memory with boundaries. Power with audit trails.
                 </h2>
                 <p className="mt-5 text-slate-400">
-                  Aiva and agents can plan, prepare, and propose. Powerful actions do not execute without confirmation. Every decision leaves a trace.
+                  AmarktAI Assistant and agents can plan, prepare, and propose. Powerful actions do not execute without confirmation. Every decision leaves a trace.
                 </p>
               </motion.div>
               <div className="grid gap-3 sm:grid-cols-2">
