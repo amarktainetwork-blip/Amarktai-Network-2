@@ -8,7 +8,7 @@ import { ArrowRight, Menu, X } from 'lucide-react'
 
 const navLinks = [
   { href: '/', label: 'Platform' },
-  { href: '/about', label: 'Aiva' },
+  { href: '/about', label: 'AmarktAI Assistant' },
   { href: '/apps', label: 'Ecosystem' },
   { href: '/apps#capabilities', label: 'Capabilities' },
 ]
@@ -48,19 +48,13 @@ export default function Header() {
   if (pathname.startsWith('/admin')) return null
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-[#030712]/86 shadow-2xl shadow-black/20 backdrop-blur-2xl' : 'bg-transparent'}`}>
+    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled ? 'border-b border-white/10 bg-[#030712]/88 shadow-2xl shadow-black/20 backdrop-blur-2xl' : 'bg-transparent'}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="group flex items-center gap-3" aria-label="Amarktai Network">
-          <span className="relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-300/10 shadow-lg shadow-cyan-950/30">
-            <span className="absolute inset-0 bg-[radial-gradient(circle_at_35%_25%,rgba(34,211,238,0.55),transparent_40%),radial-gradient(circle_at_75%_75%,rgba(59,130,246,0.42),transparent_38%)]" />
-            <span className="relative text-sm font-black text-white">AN</span>
+        <Link href="/" className="leading-none" aria-label="Amarktai Network">
+          <span className="block text-2xl font-black tracking-[-0.055em] text-white sm:text-3xl">
+            Amarkt<span className="text-blue-400">AI</span> Network
           </span>
-          <span className="leading-none">
-            <span className="block text-[1.35rem] font-black tracking-[-0.04em] text-white sm:text-[1.55rem]">
-              Amarkt<span className="text-blue-400">AI</span> Network
-            </span>
-            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200/70">AI operating ecosystem</span>
-          </span>
+          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/65">Private AI operating ecosystem</span>
         </Link>
 
         <nav className="hidden items-center gap-1 rounded-2xl border border-white/10 bg-white/[0.035] p-1 md:flex" aria-label="Main navigation">
