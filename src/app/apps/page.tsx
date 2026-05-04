@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { ArrowRight, Bot, BrainCircuit, Code2, HeartPulse, Mic, Network, Search, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, Bot, BrainCircuit, Code2, Mic, Network, Search, ShieldCheck } from 'lucide-react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
