@@ -15,10 +15,12 @@ export type CoreProvider =
   | 'qwen'
   | 'dashscope'
   | 'huggingface'
+  | 'hf'
   | 'xai'
   | 'grok'
   | 'openrouter'
   | 'minimax'
+  | 'mimo'
   | 'mistral'
   | 'cohere'
   | 'firecrawl'
@@ -45,11 +47,13 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   together: ['TOGETHER_API_KEY'],
   qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
   dashscope: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
-  huggingface: ['HUGGINGFACE_API_KEY', 'HF_TOKEN'],
+  huggingface: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
+  hf: ['HF_TOKEN', 'HUGGINGFACEHUB_API_TOKEN', 'HUGGINGFACE_API_KEY'],
   xai: ['XAI_API_KEY', 'GROK_API_KEY'],
   grok: ['GROK_API_KEY', 'XAI_API_KEY'],
   openrouter: ['OPENROUTER_API_KEY'],
   minimax: ['MINIMAX_API_KEY', 'MIMO_API_KEY'],
+  mimo: ['MIMO_API_KEY', 'MINIMAX_API_KEY'],
   mistral: ['MISTRAL_API_KEY'],
   cohere: ['COHERE_API_KEY'],
   firecrawl: ['FIRECRAWL_API_KEY'],
@@ -78,10 +82,12 @@ const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
   qwen: 'qwen',
   dashscope: 'qwen',
   huggingface: 'huggingface',
+  hf: 'huggingface',
   xai: 'xai',
   grok: 'xai',
   openrouter: 'openrouter',
   minimax: 'minimax',
+  mimo: 'minimax',
   mistral: 'mistral',
   cohere: 'cohere',
   firecrawl: 'firecrawl',
@@ -102,7 +108,33 @@ export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env
 function normalizeProviderKey(provider: CoreProvider): CoreProvider {
   if (provider === 'dashscope') return 'qwen'
   if (provider === 'grok') return 'xai'
+  if (provider === 'mimo') return 'minimax'
+  if (provider === 'hf') return 'huggingface'
   return provider
+}
+
+/** Returns the canonical integration key for a given provider (resolves aliases). */
+export function getIntegrationKey(provider: CoreProvider): string {
+  return PROVIDER_INTEGRATION_KEY[provider]
+}
+
+/** Returns the first matching env var value for a provider (env only, no vault). Useful for diagnostics. */
+export function getEnvKeyForProvider(provider: CoreProvider): string | null {
+  const normalized = normalizeProviderKey(provider)
+  const aliases = new Set<string>([normalized])
+  if (normalized === 'xai') aliases.add('grok')
+  if (normalized === 'qwen') aliases.add('dashscope')
+  if (normalized === 'minimax') aliases.add('mimo')
+  if (normalized === 'huggingface') aliases.add('hf')
+
+  for (const alias of aliases) {
+    const envVars = PROVIDER_ENV[alias as CoreProvider] ?? []
+    for (const envVar of envVars) {
+      const val = process.env[envVar]
+      if (val?.trim()) return val.trim()
+    }
+  }
+  return null
 }
 
 async function getAiProviderKey(provider: CoreProvider): Promise<string | null> {
@@ -111,6 +143,7 @@ async function getAiProviderKey(provider: CoreProvider): Promise<string | null> 
   if (normalized === 'xai') aliases.add('grok')
   if (normalized === 'qwen') aliases.add('dashscope')
   if (normalized === 'minimax') aliases.add('mimo')
+  if (normalized === 'huggingface') aliases.add('hf')
 
   try {
     const row = await prisma.aiProvider.findFirst({

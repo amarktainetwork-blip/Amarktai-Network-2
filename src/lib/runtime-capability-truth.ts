@@ -167,6 +167,7 @@ export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[
 
 export type AdultCapabilityGateStatus =
   | 'ready'
+  | 'configured_with_last_error'
   | 'needs_provider_test'
   | 'provider_failed'
   | 'app_permission_disabled'
@@ -245,9 +246,10 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   }
 
   if (!testPassed) {
+    // Test failure is diagnostic — provider may still work. Report status accurately but do not globally block.
     return {
       ...base,
-      status: lastTestStatus === 'failed' ? 'provider_failed' : 'needs_provider_test',
+      status: lastTestStatus === 'failed' ? 'configured_with_last_error' : 'needs_provider_test',
       blocker: lastTestStatus === 'failed'
         ? 'Last specialist provider test failed. Re-run "Test provider" in Settings → Adult Mode to confirm the provider works.'
         : 'Specialist provider test has not been run. Run "Test provider" in Settings → Adult Mode to unlock adult generation.',
@@ -266,101 +268,145 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     return providers.find(p => p.key === key)?.configured === true
   }
 
+  const hasQwen = isConfigured('qwen')
+  const hasMinimax = isConfigured('minimax')
+  const hasDeepSeek = isConfigured('deepseek')
+  const hasGemini = isConfigured('gemini')
   const hasHF = isConfigured('huggingface')
   const hasTogether = isConfigured('together')
+  const hasGroq = isConfigured('groq')
   const hasReplicate = isConfigured('replicate')
   const hasElevenLabs = isConfigured('elevenlabs')
   const hasDeepgram = isConfigured('deepgram')
-  const hasSuno = isConfigured('suno')
-  const hasUdio = isConfigured('udio')
   const hasFirecrawl = isConfigured('firecrawl')
+  const hasMem0 = isConfigured('mem0')
+  const hasGitHub = isConfigured('github')
+  const hasOpenRouter = isConfigured('openrouter')
+  const hasOpenAI = isConfigured('openai')
+
+  // Text/chat can run via GenX OR any core text provider
+  const hasTextProvider = genxConfigured || hasQwen || hasMinimax || hasDeepSeek || hasGemini
+    || hasHF || hasGroq || hasTogether || hasOpenRouter || hasOpenAI
+  // Coding can run via GenX OR any coding-capable provider
+  const hasCodingProvider = genxConfigured || hasQwen || hasMinimax || hasDeepSeek || hasGemini
+    || hasGroq || hasTogether
+  // Image can run via GenX OR Qwen/MiniMax/HF/Together/Replicate/OpenAI
+  const hasImageProvider = genxConfigured || hasQwen || hasMinimax || hasHF || hasTogether || hasReplicate || hasOpenAI
+  // Video can run via GenX OR Qwen/MiniMax/Replicate
+  const hasVideoProvider = genxConfigured || hasQwen || hasMinimax || hasReplicate
+  // TTS via GenX OR MiniMax/ElevenLabs/Deepgram/Groq/HF/OpenAI
+  const hasTTSProvider = genxConfigured || hasMinimax || hasElevenLabs || hasDeepgram || hasGroq || hasHF || hasOpenAI
+  // STT via GenX OR Deepgram/MiniMax/HF/OpenAI
+  const hasSTTProvider = genxConfigured || hasDeepgram || hasMinimax || hasHF || hasOpenAI
+  // Research via Firecrawl OR GenX/Gemini/OpenRouter
+  const hasResearchProvider = hasFirecrawl || genxConfigured || hasGemini || hasOpenRouter
+
   const adultGate = await getAdultCapabilityGate(providers)
 
   return [
     {
       name: 'Text / Chat',
-      status: genxConfigured || providers.some(p => p.configured && p.governanceStatus !== 'deprecated') ? 'available' : 'blocked',
-      blocker: genxConfigured ? null : 'No governed AI provider configured',
-      models: genxConfigured ? ['GPT-4o (via GenX)', 'Claude Opus 4 (via GenX)', 'Gemini 2.5 Pro (via GenX)', 'Grok 3 (via GenX)'] : [],
-      nextAction: genxConfigured ? null : 'Add GenX or a governed cheap provider in Settings',
+      status: hasTextProvider ? 'available' : 'blocked',
+      blocker: hasTextProvider ? null : 'Configure at least one AI provider (Qwen, MiniMax, DeepSeek, Gemini, Groq, Together, HuggingFace, or GenX) in Settings',
+      models: [
+        ...(genxConfigured ? ['GPT-4o (via GenX)', 'Claude Opus 4 (via GenX)', 'Gemini 2.5 Pro (via GenX)', 'Grok 3 (via GenX)'] : []),
+        ...(hasQwen ? ['Qwen Plus', 'Qwen Turbo', 'Qwen Max'] : []),
+        ...(hasMinimax ? ['MiniMax MoE', 'MiniMax Text'] : []),
+        ...(hasDeepSeek ? ['DeepSeek V3', 'DeepSeek R1'] : []),
+        ...(hasGemini ? ['Gemini 2.5 Pro', 'Gemini 2.5 Flash'] : []),
+        ...(hasGroq ? ['Groq Llama 3.3 70B', 'Groq Llama 3.1 70B'] : []),
+        ...(hasTogether ? ['Together Llama 3 70B', 'Together Qwen 2.5 72B'] : []),
+      ],
+      nextAction: hasTextProvider ? null : 'Add a primary AI provider key in Settings',
     },
     {
       name: 'Coding Agent',
-      status: genxConfigured || isConfigured('qwen') || isConfigured('groq') || isConfigured('together') ? 'available' : 'blocked',
-      blocker: genxConfigured || isConfigured('qwen') || isConfigured('groq') || isConfigured('together') ? null : 'GenX, Qwen, Groq, or Together key required',
+      status: hasCodingProvider ? 'available' : 'blocked',
+      blocker: hasCodingProvider ? null : 'Configure GenX, Qwen, MiniMax, DeepSeek, Gemini, Groq, or Together in Settings',
       models: [
         ...(genxConfigured ? ['GPT-4.1 (via GenX)', 'Claude Sonnet 3.7 (via GenX)', 'DeepSeek R1 (via GenX)'] : []),
-        ...(isConfigured('qwen') ? ['Qwen Plus', 'Qwen Turbo'] : []),
-        ...(isConfigured('groq') ? ['Groq Llama 3.3 70B'] : []),
-        ...(isConfigured('together') ? ['Together Llama 3 70B'] : []),
+        ...(hasQwen ? ['Qwen Plus', 'Qwen Turbo'] : []),
+        ...(hasMinimax ? ['MiniMax MoE'] : []),
+        ...(hasDeepSeek ? ['DeepSeek R1', 'DeepSeek V3'] : []),
+        ...(hasGemini ? ['Gemini 2.5 Flash'] : []),
+        ...(hasGroq ? ['Groq Llama 3.3 70B'] : []),
+        ...(hasTogether ? ['Together Llama 3 70B'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX, Qwen, Groq, or Together in Settings',
+      nextAction: hasCodingProvider ? null : 'Add GenX, Qwen, or DeepSeek in Settings',
     },
     {
       name: 'Image Generation',
-      status: (genxConfigured || hasHF || hasTogether || hasReplicate) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasHF || hasTogether || hasReplicate) ? null : 'Configure GenX, HuggingFace, Together, or Replicate in Settings',
+      status: hasImageProvider ? 'available' : 'blocked',
+      blocker: hasImageProvider ? null : 'Configure GenX, Qwen/DashScope, MiniMax/Mimo, HuggingFace, Together, Replicate, or OpenAI Direct in Settings',
       models: [
         ...(genxConfigured ? ['Recraft v3 (via GenX)', 'DALL-E 3 (via GenX)', 'Grok Imagine (via GenX)'] : []),
-        ...(hasHF ? ['SDXL (HuggingFace)'] : []),
-        ...(hasReplicate ? ['SDXL Replicate'] : []),
+        ...(hasQwen ? ['Qwen Image (DashScope)', 'Wanx 2.1 (DashScope)'] : []),
+        ...(hasMinimax ? ['MiniMax Image'] : []),
+        ...(hasHF ? ['SDXL (HuggingFace)', 'Custom model endpoint'] : []),
+        ...(hasTogether ? ['FLUX.1 Schnell (Together AI)'] : []),
+        ...(hasReplicate ? ['SDXL (Replicate)'] : []),
+        ...(hasOpenAI ? ['GPT Image (OpenAI Direct)'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX or image provider key in Settings',
+      nextAction: hasImageProvider ? null : 'Add GenX or an image-capable provider key in Settings',
     },
     {
       name: 'Video Generation',
-      status: genxConfigured || hasReplicate ? 'available' : 'blocked',
-      blocker: genxConfigured || hasReplicate ? null : 'GenX or Replicate required for video generation',
+      status: hasVideoProvider ? 'available' : 'blocked',
+      blocker: hasVideoProvider ? null : 'Configure GenX, Qwen/DashScope, MiniMax/Mimo, or Replicate in Settings',
       models: [
-        ...(genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)', 'Grok Video (via GenX)'] : []),
+        ...(genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)'] : []),
+        ...(hasQwen ? ['Wan Video 2.1 (DashScope)'] : []),
+        ...(hasMinimax ? ['MiniMax Video-01'] : []),
         ...(hasReplicate ? ['Replicate video models'] : []),
       ],
-      nextAction: genxConfigured ? 'Confirm video quota before generating (high cost)' : 'Add GenX or Replicate in Settings',
+      nextAction: hasVideoProvider ? 'Confirm video quota before generating (high cost)' : 'Add GenX, Qwen, MiniMax, or Replicate in Settings',
     },
     {
       name: 'Voice TTS',
-      status: (genxConfigured || hasElevenLabs || hasDeepgram || isConfigured('groq') || hasHF) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasElevenLabs || hasDeepgram || isConfigured('groq') || hasHF) ? null : 'Configure GenX, ElevenLabs, Deepgram, Groq, or HuggingFace in Settings',
+      status: hasTTSProvider ? 'available' : 'blocked',
+      blocker: hasTTSProvider ? null : 'Configure GenX, MiniMax/Mimo, ElevenLabs, Deepgram, Groq, HuggingFace, or OpenAI Direct in Settings',
       models: [
         ...(genxConfigured ? ['Grok TTS (via GenX)', 'Aura 2 (via GenX)', 'GenX LM Voice v1'] : []),
+        ...(hasMinimax ? ['MiniMax Speech-02', 'MiniMax Speech-01'] : []),
         ...(hasElevenLabs ? ['ElevenLabs TTS'] : []),
-        ...(hasDeepgram ? ['Deepgram Nova TTS'] : []),
-        ...(isConfigured('groq') ? ['Groq PlayAI TTS'] : []),
-        ...(hasHF ? ['HuggingFace MMS TTS'] : []),
+        ...(hasDeepgram ? ['Deepgram Aura 2'] : []),
+        ...(hasGroq ? ['Groq PlayAI TTS'] : []),
+        ...(hasHF ? ['HuggingFace MMS TTS', 'Custom TTS endpoint'] : []),
+        ...(hasOpenAI ? ['OpenAI TTS-1', 'OpenAI TTS-1 HD'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX or a TTS provider key in Settings',
+      nextAction: hasTTSProvider ? null : 'Add a TTS provider key in Settings',
     },
     {
       name: 'STT / Transcription',
-      status: (genxConfigured || hasDeepgram) ? 'available' : 'blocked',
-      blocker: (genxConfigured || hasDeepgram) ? null : 'Configure GenX or Deepgram in Settings',
+      status: hasSTTProvider ? 'available' : 'blocked',
+      blocker: hasSTTProvider ? null : 'Configure GenX, Deepgram, MiniMax/Mimo, HuggingFace, or OpenAI Direct in Settings',
       models: [
         ...(genxConfigured ? ['GenX transcription', 'Whisper (via GenX)', 'Deepgram Nova (via GenX)'] : []),
-        ...(hasDeepgram ? ['Deepgram Nova (direct)'] : []),
+        ...(hasDeepgram ? ['Deepgram Nova 3 (direct)'] : []),
+        ...(hasMinimax ? ['MiniMax STT'] : []),
+        ...(hasHF ? ['HuggingFace Whisper', 'Custom STT endpoint'] : []),
+        ...(hasOpenAI ? ['OpenAI Whisper (direct)'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX or Deepgram in Settings',
+      nextAction: hasSTTProvider ? null : 'Add GenX or Deepgram in Settings',
     },
     {
       name: 'Music Generation',
-      status: (hasSuno || hasUdio || hasReplicate) ? 'available' : 'not_implemented',
-      blocker: (hasSuno || hasUdio || hasReplicate) ? null : 'Music providers are proposed only. Add Suno/Udio/Replicate after legal/API confirmation.',
-      models: [
-        ...(genxConfigured ? ['Lyria (via GenX — pending route implementation)', 'GenX audio models'] : []),
-        ...(hasSuno ? ['Suno'] : []),
-        ...(hasUdio ? ['Udio'] : []),
-        ...(hasReplicate ? ['Replicate music/audio models'] : []),
-      ],
+      status: 'not_implemented',
+      blocker: 'Music generation is post-launch. Music providers (Suno, Udio) require API and legal approval before being enabled.',
+      models: [],
       nextAction: 'Approve and configure a music provider before enabling music generation',
     },
     {
       name: 'Embeddings',
-      status: genxConfigured || isConfigured('openai') ? 'available' : 'blocked',
-      blocker: genxConfigured || isConfigured('openai') ? null : 'GenX or OpenAI direct key required',
+      status: genxConfigured || hasOpenAI || hasGemini || hasHF ? 'available' : 'blocked',
+      blocker: genxConfigured || hasOpenAI || hasGemini || hasHF ? null : 'Configure GenX, OpenAI Direct, Gemini, or HuggingFace in Settings',
       models: [
         ...(genxConfigured ? ['GenX embeddings', 'text-embedding-3 (via GenX)'] : []),
-        ...(isConfigured('openai') ? ['OpenAI text-embedding-3-small/large'] : []),
+        ...(hasOpenAI ? ['OpenAI text-embedding-3-small/large'] : []),
+        ...(hasGemini ? ['Gemini embedding-001'] : []),
+        ...(hasHF ? ['HuggingFace sentence-transformers', 'Custom embedding endpoint'] : []),
       ],
-      nextAction: genxConfigured ? null : 'Add GenX or advanced OpenAI direct key in Settings',
+      nextAction: genxConfigured ? null : 'Add GenX or an embedding provider in Settings',
     },
     {
       name: 'Adult Image',
@@ -377,19 +423,37 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
         ? null
         : adultGate.status === 'not_wired'
         ? 'Add Together AI, HuggingFace, Replicate, or xAI key in Settings → AI Providers'
-        : adultGate.status === 'needs_provider_test' || adultGate.status === 'provider_failed'
+        : adultGate.status === 'needs_provider_test' || adultGate.status === 'configured_with_last_error'
         ? 'Run "Test provider" in Settings → Adult Mode'
         : 'Enable adult mode in Settings → Adult Mode',
     },
     {
       name: 'Web Crawler / Research',
-      status: (hasFirecrawl || genxConfigured) ? 'available' : 'blocked',
-      blocker: (hasFirecrawl || genxConfigured) ? null : 'Configure Firecrawl or GenX in Settings',
+      status: hasResearchProvider ? 'available' : 'blocked',
+      blocker: hasResearchProvider ? null : 'Configure Firecrawl, GenX, Gemini, or OpenRouter in Settings',
       models: [
         ...(hasFirecrawl ? ['Firecrawl'] : []),
         ...(genxConfigured ? ['GenX (Gemini/GPT-4.1 research)'] : []),
+        ...(hasGemini ? ['Gemini research / search grounding'] : []),
+        ...(hasOpenRouter ? ['OpenRouter research models'] : []),
       ],
       nextAction: hasFirecrawl ? null : 'Add Firecrawl key in Settings for enhanced crawling',
+    },
+    {
+      name: 'Memory',
+      status: hasMem0 ? 'available' : 'not_implemented',
+      blocker: hasMem0 ? null : 'Mem0 not configured. Memory uses built-in DB persistence by default.',
+      models: [
+        ...(hasMem0 ? ['Mem0 long-term memory'] : ['Built-in DB memory (limited)']),
+      ],
+      nextAction: hasMem0 ? null : 'Add Mem0 API key in Settings for enhanced persistent memory',
+    },
+    {
+      name: 'Repo / GitHub',
+      status: hasGitHub ? 'available' : 'blocked',
+      blocker: hasGitHub ? null : 'GitHub Personal Access Token not configured',
+      models: hasGitHub ? ['GitHub API'] : [],
+      nextAction: hasGitHub ? null : 'Add GitHub Personal Access Token in Settings',
     },
   ]
 }
@@ -414,7 +478,17 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
   ])
 
   const blockers: string[] = []
-  if (!genx.configured) blockers.push('GenX API key not configured — add GENX_API_KEY in Settings')
+
+  // GenX is only a hard blocker if no direct providers can handle text/chat.
+  // If direct primary providers are configured, GenX is optional.
+  const hasDirectTextProvider = providers.some(
+    p => p.configured && ['qwen', 'minimax', 'deepseek', 'gemini', 'huggingface', 'groq', 'together', 'openrouter', 'openai'].includes(p.key),
+  )
+  if (!genx.configured && !hasDirectTextProvider) {
+    blockers.push('GenX API key not configured — add GENX_API_KEY in Settings')
+  } else if (!genx.configured) {
+    // GenX not configured but direct providers exist — informational only, not a hard blocker
+  }
   if (genx.configured && !genx.available) blockers.push('GenX key configured but endpoint unreachable — check GENX_API_URL')
 
   const blockedCapabilities = capabilities.filter(c => c.status === 'blocked')

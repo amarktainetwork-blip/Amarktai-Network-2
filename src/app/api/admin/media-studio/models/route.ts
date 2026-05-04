@@ -85,7 +85,20 @@ export async function GET() {
   const image = byCategory('image', GENX_IMAGE_MODELS)
   const video = byCategory('video', GENX_VIDEO_MODELS)
   const voice = byCategory('voice', GENX_TTS_MODELS)
-  const music = byCategory('music', GENX_AUDIO_MODELS)
+  // Music generation is post-launch regardless of GenX availability
+  const music: MediaModel[] = fromCatalog.filter((model) => model.category === 'music').length > 0
+    ? fromCatalog
+        .filter((m) => m.category === 'music')
+        .map((m) => ({ ...m, available: false, blocker: 'Music generation is post-launch. No music route is implemented yet.' }))
+    : GENX_AUDIO_MODELS.map((id) => ({
+        id,
+        label: labelFromId(id),
+        provider: 'GenX',
+        category: 'music' as const,
+        available: false,
+        costTier: 'high' as const,
+        blocker: 'Music generation is post-launch. No music route is implemented yet.',
+      }))
 
   if (configuredProviders.has('openai')) image.push(directModel('gpt-image-1', 'GPT Image', 'OpenAI Direct', 'image', 'high'))
   if (configuredProviders.has('replicate')) {
@@ -105,7 +118,16 @@ export async function GET() {
   if (configuredProviders.has('minimax')) {
     video.push(directModel('minimax/video-01', 'MiniMax Video', 'MiniMax', 'video', 'medium'))
     voice.push(directModel('minimax/speech-02', 'MiniMax Speech', 'MiniMax', 'voice', 'low'))
-    music.push(directModel('minimax/music-01', 'MiniMax Music', 'MiniMax', 'music', 'medium'))
+    // Music generation for MiniMax is post-launch — route not yet implemented
+    music.push({
+      id: 'minimax/music-01',
+      label: 'MiniMax Music (post-launch)',
+      provider: 'MiniMax',
+      category: 'music',
+      available: false,
+      costTier: 'medium',
+      blocker: 'Music generation is post-launch. MiniMax music route not yet implemented.',
+    })
   }
   if (configuredProviders.has('elevenlabs')) voice.push(directModel('elevenlabs/tts', 'ElevenLabs TTS', 'ElevenLabs', 'voice', 'high'))
   if (configuredProviders.has('deepgram')) voice.push(directModel('deepgram/aura-2', 'Aura 2', 'Deepgram', 'voice', 'medium'))
