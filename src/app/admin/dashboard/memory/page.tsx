@@ -170,6 +170,25 @@ export default function MemoryPage() {
         </SectionCard>
       </div>
 
+      {/* Recent learning timeline */}
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-white">
+            <Clock className="h-4 w-4 text-cyan-400" />
+            Recent Learning Timeline
+          </h2>
+          <StatusBadge status="Backend pending" />
+        </div>
+        <p className="mb-3 text-xs text-slate-500">
+          Timestamped record of new memories, emotional updates, preferences learned, and summaries created across all apps and users. VPS/local storage first.
+        </p>
+        <div className="rounded-xl border border-white/[0.06] bg-black/20 p-6 text-center">
+          <Brain className="mx-auto mb-2 h-8 w-8 text-slate-600" />
+          <p className="text-xs text-slate-500">No timeline entries yet.</p>
+          <p className="mt-1 text-[11px] text-slate-600">Timeline populates once the memory storage backend is wired.</p>
+        </div>
+      </div>
+
       {/* Notice */}
       <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
         <p className="text-xs font-semibold text-violet-300">Backend pending</p>

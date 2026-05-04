@@ -134,7 +134,7 @@ export default function SettingsPage() {
                 <Settings2 className="h-6 w-6 text-cyan-400" />
                 <h1 className="text-2xl font-bold text-white">Settings</h1>
               </div>
-              <p className="text-sm text-slate-400">Configure API keys, integrations, and system behaviour.</p>
+              <p className="text-sm text-slate-400">Configure API keys, integrations, and system behaviour for the AmarktAI Network operator console.</p>
             </div>
             <button
               onClick={load}
@@ -145,6 +145,47 @@ export default function SettingsPage() {
               Refresh
             </button>
           </div>
+        </div>
+      </motion.div>
+
+      {/* Setup checklist */}
+      <motion.div variants={fadeUp}>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Setup checklist</p>
+          <div className="grid gap-1.5 sm:grid-cols-2">
+            {[
+              { label: 'Admin account', done: true },
+              { label: 'AI stack keys (GenX / Qwen / Gemini)', done: Boolean(data?.genx?.configured) },
+              { label: 'GitHub', done: Boolean(data?.github?.configured) },
+              { label: 'Webdock', done: false },
+              { label: 'Firecrawl', done: Boolean(data?.firecrawl?.configured) },
+              { label: 'Local storage', done: Boolean(data?.storage?.configured) },
+              { label: 'Memory', done: false },
+              { label: 'Adult policy', done: false },
+              { label: 'Voice / media', done: false },
+              { label: 'Diagnostics proof', done: false },
+            ].map(({ label, done }) => (
+              <div key={label} className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs ${done ? 'text-emerald-300' : 'text-slate-500'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${done ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Tabs navigation */}
+      <motion.div variants={fadeUp}>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Configuration tabs</p>
+          <div className="flex flex-wrap gap-2">
+            {(['AI Stack', 'Tools', 'Scraping & Storage', 'Memory', 'Voice & Media', 'Adult & Safety', 'Admin & Security', 'Diagnostics'] as const).map((tab) => (
+              <span key={tab} className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400">
+                {tab}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-slate-600">All settings sections are listed below. Tab-based navigation is ready to wire once all sections are validated.</p>
         </div>
       </motion.div>
 
@@ -1804,7 +1845,7 @@ const PROVIDER_DEFS_SPECIALIST = [
 
 /** Advanced providers — collapsed behind toggle, not primary product story. */
 const PROVIDER_DEFS_ADVANCED = [
-  { key: 'openai',      label: 'OpenAI Direct',     placeholder: 'sk-…',    caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] as string[], hint: '' },
+  { key: 'openai',      label: 'Direct OpenAI API',  placeholder: 'sk-…',    caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] as string[], hint: '' },
   { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…', caps: ['chat', 'code', 'reasoning'] as string[], hint: '' },
   { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code', 'research'] as string[], hint: '' },
   { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code'] as string[], hint: '' },
@@ -1892,7 +1933,7 @@ function ProvidersSection() {
                     className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mt-2"
                   >
                     {showAdvanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    Advanced providers (OpenAI Direct, OpenRouter, Moonshot, Zhipu)
+                    Advanced providers (direct API access)
                   </button>
 
                   {showAdvanced && (

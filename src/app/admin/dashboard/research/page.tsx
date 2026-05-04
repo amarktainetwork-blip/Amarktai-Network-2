@@ -2,6 +2,7 @@
 
 import {
   Archive,
+  ArrowRight,
   CheckCircle,
   Clock,
   Eye,
@@ -10,8 +11,11 @@ import {
   Link2,
   Lock,
   Search,
+  Sparkles,
   XCircle,
 } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 
@@ -75,6 +79,8 @@ function Row({ label, status }: { label: string; status: StatusLabel }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function ResearchPage() {
+  const [manualUrl, setManualUrl] = useState('')
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -83,8 +89,51 @@ export default function ResearchPage() {
           <Search className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-white">Scraping / Research</h1>
-          <p className="text-xs text-slate-400">Firecrawl-powered web research, crawl jobs, artifact links and scraped storage</p>
+          <h1 className="text-xl font-black text-white">Research</h1>
+          <p className="text-xs text-slate-400">URL research workbench — Firecrawl-powered with backup crawler, scraped storage, and opportunity pipeline</p>
+        </div>
+        <div className="ml-auto">
+          <StatusBadge status="Needs key" />
+        </div>
+      </div>
+
+      {/* Manual URL Input — primary research workbench */}
+      <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-white">
+            <Search className="h-4 w-4 text-cyan-400" />
+            Manual URL Input
+          </h2>
+          <StatusBadge status="Needs key" />
+        </div>
+        <p className="mb-4 text-xs text-slate-500">
+          Enter a URL to research. Firecrawl is the primary scraper. A backup crawler handles fallback. Results are stored on VPS.
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={manualUrl}
+            onChange={(e) => setManualUrl(e.target.value)}
+            placeholder="https://example.com — URL to research"
+            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/30"
+          />
+          <button
+            disabled
+            className="inline-flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-bold text-amber-300 opacity-70 cursor-not-allowed"
+            title="Set FIRECRAWL_API_KEY in Settings to activate"
+          >
+            Scrape
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-slate-600">
+          Set <code className="rounded bg-white/10 px-1 text-amber-200">FIRECRAWL_API_KEY</code> in{' '}
+          <Link href="/admin/dashboard/settings" className="text-cyan-400 hover:underline">Settings</Link>{' '}
+          to activate. Manual notes and source upload available below.
+        </p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <Row label="Firecrawl scrape" status="Needs key" />
+          <Row label="Backup crawler" status="Ready to wire" />
+          <Row label="Scraped storage on VPS" status="Backend pending" />
         </div>
       </div>
 
@@ -106,27 +155,28 @@ export default function ResearchPage() {
             <Row label="Fallback crawler" status="Ready to wire" />
             <Row label="Raw HTML extraction" status="Ready to wire" />
           </div>
-          <p className="mt-3 text-[11px] text-slate-600">Backup crawler is ready to wire once Firecrawl is configured and primary path is validated.</p>
+          <p className="mt-3 text-[11px] text-slate-600">Backup crawler is ready to wire once Firecrawl is configured and primary path is validated. Research does not rely only on Firecrawl.</p>
         </SectionCard>
 
         {/* Scraped page storage */}
-        <SectionCard icon={Archive} title="Scraped Page Storage" status="Backend pending">
+        <SectionCard icon={Archive} title="Scraped Page Storage (VPS)" status="Backend pending">
           <div className="space-y-0">
-            <Row label="Scraped webpage storage" status="Backend pending" />
+            <Row label="Scraped webpage storage on VPS" status="Backend pending" />
             <Row label="Artifact links" status="Backend pending" />
             <Row label="Source/reference index" status="Backend pending" />
+            <Row label="Screenshot / manual review" status="Backend pending" />
           </div>
-          <p className="mt-3 text-[11px] text-slate-600">Storage backend must be wired before scraped pages are persisted.</p>
+          <p className="mt-3 text-[11px] text-slate-600">Storage backend must be wired before scraped pages are persisted on VPS.</p>
         </SectionCard>
 
         {/* Crawl job history */}
-        <SectionCard icon={Link2} title="Crawl Job History" status="Backend pending">
+        <SectionCard icon={Link2} title="Research Jobs" status="Backend pending">
           <div className="space-y-0">
             <Row label="Job history" status="Backend pending" />
             <Row label="Job status" status="Backend pending" />
             <Row label="Result artifacts" status="Backend pending" />
           </div>
-          <p className="mt-3 text-[11px] text-slate-600">Crawl history will appear here once the job queue and storage are wired.</p>
+          <p className="mt-3 text-[11px] text-slate-600">Research job history will appear here once the job queue and storage are wired.</p>
         </SectionCard>
       </div>
 
@@ -134,7 +184,7 @@ export default function ResearchPage() {
       <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
         <p className="text-xs font-semibold text-amber-300">Needs key / Backend pending</p>
         <p className="mt-1 text-xs text-slate-400">
-          Firecrawl is the primary scraping provider. Set <code className="rounded bg-white/10 px-1 text-amber-200">FIRECRAWL_API_KEY</code> in Settings to begin. Storage and job history require the storage backend to be configured. No Working status will be shown until endpoint proof exists.
+          Firecrawl is the primary scraping provider. Research does not rely only on Firecrawl — a backup crawler handles fallback. Set <code className="rounded bg-white/10 px-1 text-amber-200">FIRECRAWL_API_KEY</code> in Settings to begin. Storage and job history require the storage backend to be configured. No Working status will be shown until endpoint proof exists.
         </p>
       </div>
 
@@ -157,8 +207,8 @@ export default function ResearchPage() {
             { label: 'Research new AI tools / providers', status: 'Ready to wire' as StatusLabel },
             { label: 'Alert admin of app opportunities', status: 'Ready to wire' as StatusLabel },
             { label: 'Create improved alternative app plan', status: 'Ready to wire' as StatusLabel },
+            { label: 'Create differentiated product plan', status: 'Ready to wire' as StatusLabel },
             { label: 'Create product package / spec', status: 'Ready to wire' as StatusLabel },
-            { label: 'Send plan to Repo Workbench', status: 'Ready to wire' as StatusLabel },
             { label: 'Competitor analysis scraping', status: 'Needs key' as StatusLabel },
             { label: 'Opportunity alert notifications', status: 'Backend pending' as StatusLabel },
             { label: 'Discovery history / archive', status: 'Backend pending' as StatusLabel },
@@ -168,6 +218,48 @@ export default function ResearchPage() {
         </div>
         <p className="text-[11px] text-slate-600">
           Researcher Agent backend wiring is in Phase 2. Requires Firecrawl key and a planning model (GenX or direct).
+        </p>
+      </div>
+
+      {/* Opportunity Pipeline */}
+      <div className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.03] p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-white">
+            <Sparkles className="h-4 w-4 text-cyan-400" />
+            Opportunity Pipeline
+          </h2>
+          <StatusBadge status="Ready to wire" />
+        </div>
+        <p className="mb-4 text-xs text-slate-400 leading-5">
+          Competitor reports and app opportunity alerts feed into the pipeline. Use research findings to create a differentiated product plan and send it to Repo Workbench.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-xs font-semibold text-slate-300">Competitor Reports</p>
+            <p className="mt-1 text-[11px] text-slate-500">Scraped competitor analysis stored on VPS.</p>
+            <StatusBadge status="Backend pending" />
+          </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-xs font-semibold text-slate-300">App Opportunity Alerts</p>
+            <p className="mt-1 text-[11px] text-slate-500">Alerts when the agent discovers a product gap.</p>
+            <StatusBadge status="Backend pending" />
+          </div>
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4">
+            <p className="text-xs font-semibold text-slate-300">Create App Plan</p>
+            <p className="mt-1 text-[11px] text-slate-500">Create improved alternative or differentiated product plan from research.</p>
+            <StatusBadge status="Ready to wire" />
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button disabled className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed">
+            Create improved alternative
+          </button>
+          <Link href="/admin/dashboard/repo-workbench" className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] px-3 py-2 text-xs font-semibold text-cyan-400 hover:bg-cyan-400/[0.10]">
+            Send to Repo Workbench <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+        <p className="mt-3 text-[11px] text-slate-600">
+          Create improved alternative or differentiated product plan from research, then send to Repo Workbench.
         </p>
       </div>
     </div>

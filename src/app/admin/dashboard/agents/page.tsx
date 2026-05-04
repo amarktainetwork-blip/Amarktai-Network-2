@@ -21,6 +21,7 @@ import {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type AgentStatus = 'Active' | 'Ready to wire' | 'Backend pending' | 'Needs key' | 'Planned'
+type AgentCategory = 'Core' | 'Code' | 'Research' | 'Creative' | 'Operations' | 'App-specific'
 
 interface AgentDef {
   id: string
@@ -30,7 +31,12 @@ interface AgentDef {
   status: AgentStatus
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
   route?: string
+  category: AgentCategory
 }
+
+// ── Category groups ───────────────────────────────────────────────────────────
+
+const CATEGORY_ORDER: AgentCategory[] = ['Core', 'Code', 'Research', 'Creative', 'Operations', 'App-specific']
 
 // ── Agent definitions ─────────────────────────────────────────────────────────
 
@@ -43,6 +49,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Bot,
     route: '/admin/dashboard/amarktai-assistant',
+    category: 'Core',
   },
   {
     id: 'repo-builder',
@@ -52,6 +59,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: GitBranch,
     route: '/admin/dashboard/repo-workbench',
+    category: 'Code',
   },
   {
     id: 'repo-auditor',
@@ -61,6 +69,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Eye,
     route: '/admin/dashboard/repo-workbench',
+    category: 'Code',
   },
   {
     id: 'frontend-designer',
@@ -70,6 +79,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Layers,
     route: '/admin/dashboard/repo-workbench',
+    category: 'Code',
   },
   {
     id: 'backend-wiring',
@@ -79,6 +89,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Server,
     route: '/admin/dashboard/repo-workbench',
+    category: 'Code',
   },
   {
     id: 'researcher',
@@ -88,6 +99,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Search,
     route: '/admin/dashboard/research',
+    category: 'Research',
   },
   {
     id: 'app-discovery',
@@ -97,6 +109,16 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Eye,
     route: '/admin/dashboard/research',
+    category: 'Research',
+  },
+  {
+    id: 'crypto',
+    name: 'Crypto Agent',
+    description: 'Monitors crypto markets, executes trading strategies, manages portfolio actions, and feeds signals to the Crypto Trading App.',
+    capabilities: ['market monitoring', 'trading signals', 'portfolio management', 'strategy execution'],
+    status: 'Backend pending',
+    icon: Cpu,
+    category: 'App-specific',
   },
   {
     id: 'marketing',
@@ -105,6 +127,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['copy generation', 'landing pages', 'social content', 'email campaigns'],
     status: 'Backend pending',
     icon: Megaphone,
+    category: 'Operations',
   },
   {
     id: 'scraper',
@@ -114,6 +137,7 @@ const AGENTS: AgentDef[] = [
     status: 'Needs key',
     icon: Flame,
     route: '/admin/dashboard/research',
+    category: 'Research',
   },
   {
     id: 'media',
@@ -123,6 +147,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Video,
     route: '/admin/dashboard/creative-studio',
+    category: 'Creative',
   },
   {
     id: 'voice',
@@ -131,6 +156,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['TTS', 'STT', 'voice persona', 'voice session management'],
     status: 'Ready to wire',
     icon: Mic,
+    category: 'Creative',
   },
   {
     id: 'memory-emotion',
@@ -140,6 +166,7 @@ const AGENTS: AgentDef[] = [
     status: 'Backend pending',
     icon: Heart,
     route: '/admin/dashboard/memory',
+    category: 'Core',
   },
   {
     id: 'adult-app',
@@ -148,6 +175,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['adult content routing', 'approval gating', 'age gate', 'audit logging'],
     status: 'Backend pending',
     icon: Shield,
+    category: 'Operations',
   },
   {
     id: 'diagnostics',
@@ -157,6 +185,7 @@ const AGENTS: AgentDef[] = [
     status: 'Ready to wire',
     icon: Cpu,
     route: '/admin/dashboard/diagnostics',
+    category: 'Operations',
   },
   {
     id: 'deployment',
@@ -165,6 +194,7 @@ const AGENTS: AgentDef[] = [
     capabilities: ['VPS deployment', 'env config', 'CI integration', 'deploy verification'],
     status: 'Backend pending',
     icon: Wrench,
+    category: 'Operations',
   },
 ]
 
@@ -220,6 +250,11 @@ export default function AgentRegistryPage() {
     return acc
   }, {})
 
+  const byCategory = CATEGORY_ORDER.reduce<Record<AgentCategory, AgentDef[]>>((acc, cat) => {
+    acc[cat] = AGENTS.filter((a) => a.category === cat)
+    return acc
+  }, {} as Record<AgentCategory, AgentDef[]>)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -228,8 +263,8 @@ export default function AgentRegistryPage() {
           <Users className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-black text-white">Agent Registry</h1>
-          <p className="text-xs text-slate-400">All AmarktAI specialist agents — statuses reflect actual backend wiring</p>
+          <h1 className="text-xl font-black text-white">Agents</h1>
+          <p className="text-xs text-slate-400">Compact category groups — all AmarktAI specialist agents with actual backend wiring status</p>
         </div>
       </div>
 
@@ -251,12 +286,25 @@ export default function AgentRegistryPage() {
         </p>
       </div>
 
-      {/* Agent grid */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {AGENTS.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} />
-        ))}
-      </div>
+      {/* Compact category groups */}
+      {CATEGORY_ORDER.map((cat) => {
+        const agents = byCategory[cat]
+        if (!agents || agents.length === 0) return null
+        return (
+          <div key={cat} className="space-y-3">
+            <div className="flex items-center gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">{cat}</p>
+              <div className="flex-1 border-t border-white/[0.06]" />
+              <span className="text-[10px] text-slate-700">{agents.length} agent{agents.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {agents.map((agent) => (
+                <AgentCard key={agent.id} agent={agent} />
+              ))}
+            </div>
+          </div>
+        )
+      })}
 
       <p className="text-[11px] text-slate-600">
         Agent wiring happens in Phase 2. This registry is the source of truth for which agents exist and their current readiness status.
