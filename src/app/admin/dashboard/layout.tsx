@@ -29,10 +29,6 @@ type NavItem = {
   match?: string[]
 }
 
-// Dashboard foundation redesign: 11 canonical sections only.
-// /admin/dashboard remains a redirect alias and is not a visible nav item.
-// Health, readiness and proof are consolidated under Diagnostics.
-// AmarktAI Assistant disabled by default — enable with NEXT_PUBLIC_AIVA_ENABLED=true (legacy env var name).
 const NAV_ITEMS = [
   { href: '/admin/dashboard/command-center', label: 'Command Center', icon: Activity },
   { href: '/admin/dashboard/amarktai-assistant', label: 'AmarktAI Assistant', icon: Bot, match: ['/admin/dashboard/aiva'] },
@@ -43,7 +39,7 @@ const NAV_ITEMS = [
   { href: '/admin/dashboard/creative-studio', label: 'Creative Studio', icon: Film, match: ['/admin/dashboard/media-studio'] },
   { href: '/admin/dashboard/memory', label: 'Memory', icon: Brain, match: ['/admin/dashboard/memory-emotions'] },
   { href: '/admin/dashboard/actions', label: 'Actions', icon: ShieldCheck, match: ['/admin/dashboard/ai-engine/aiva-actions'] },
-  { href: '/admin/dashboard/diagnostics', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/system-health'] },
+  { href: '/admin/dashboard/diagnostics', label: 'Diagnostics', icon: Database, match: ['/admin/dashboard/system-health', '/admin/dashboard/live-readiness'] },
   { href: '/admin/dashboard/settings', label: 'Settings', icon: Settings2 },
 ] satisfies NavItem[]
 
@@ -69,19 +65,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="h-20 border-b border-white/10 px-5">
-        <Link href="/admin/dashboard/command-center" className="flex h-full items-center gap-3">
-          <div className="w-10 h-10 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-300 to-violet-500 text-xs font-black text-slate-950 shadow-lg shadow-cyan-950/20 hidden lg:flex">AN</div>
+        <Link href="/admin/dashboard/command-center" className="flex h-full items-center">
           <div>
-            <p className="text-sm font-black text-white">
+            <p className="text-xl font-black tracking-[-0.055em] text-white">
               Amarkt<span className="text-blue-400">AI</span> Network
             </p>
-            <p className="text-[10px] uppercase tracking-[0.16em] text-cyan-200/70">AmarktAI Console</p>
+            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-cyan-200/70">Operator console</p>
           </div>
         </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Dashboard navigation">
-        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Operator console</p>
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">Control room</p>
         <div className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item)
@@ -111,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span className="flex-1 text-xs font-semibold text-slate-300">Operator</span>
             <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-300">Sign out</button>
           </div>
-          <p className="mt-2 text-[11px] leading-5 text-slate-600">Settings is the only key/config surface. Diagnostics is the only health/readiness surface.</p>
+          <p className="mt-2 text-[11px] leading-5 text-slate-600">Settings configures. Diagnostics proves. Actions approve.</p>
         </div>
       </div>
     </div>
