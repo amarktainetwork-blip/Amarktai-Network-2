@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 
-/** Emotions monitoring consolidated into System Health. */
+/** Emotions route — canonical section is now Memory / Emotions. */
 export default function EmotionsPage() {
-  redirect('/admin/dashboard/system-health')
+  redirect('/admin/dashboard/memory-emotions')
 }

@@ -1,10 +1,11 @@
 /**
- * Dashboard Go-Live Checks
+ * Dashboard Go-Live Checks (Phase 1B)
  *
  * Verifies structural requirements for the dashboard to be considered go-live ready:
- *  - Nav has exactly 9 canonical sections (no duplicate /admin/dashboard overview)
+ *  - Nav has exactly 12 canonical sections (no duplicate /admin/dashboard overview)
  *  - /admin/dashboard is NOT a visible nav item (redirect alias only)
- *  - Aiva is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
+ *  - Aiva Chat is the dedicated section at /admin/dashboard/aiva
+ *  - Aiva assistant panel is hidden unless NEXT_PUBLIC_AIVA_ENABLED=true
  *  - Redirect pages point to correct canonical targets
  *  - Repo Workbench is the canonical simple workbench (no AGENT_PRESETS, no legacy strings)
  *  - Repo Workbench canonical labels are all present
@@ -26,35 +27,38 @@ function readPage(relPath: string): string {
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 
-describe('Dashboard Navigation — exactly 9 canonical sections', () => {
+describe('Dashboard Navigation — exactly 12 canonical sections', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('has exactly 9 NAV_ITEMS entries', () => {
-    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
+  it('has exactly 12 NAV_ITEMS entries', () => {
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     const navHrefs = navItemBlock?.[0].match(/href:\s*['"][^'"]+['"]/g) ?? []
-    expect(navHrefs).toHaveLength(9)
+    expect(navHrefs).toHaveLength(12)
   })
 
-  it('includes the 9 canonical sections', () => {
+  it('includes the 12 canonical sections', () => {
     const required = [
       '/admin/dashboard/command-center',
-      '/admin/dashboard/live-readiness',
-      '/admin/dashboard/repo-workbench',
-      '/admin/dashboard/ai-engine/hub',
-      '/admin/dashboard/media-studio',
+      '/admin/dashboard/aiva',
       '/admin/dashboard/apps',
+      '/admin/dashboard/repo-workbench',
+      '/admin/dashboard/research',
+      '/admin/dashboard/memory-emotions',
+      '/admin/dashboard/media-studio',
       '/admin/dashboard/artifacts',
+      '/admin/dashboard/agents',
+      '/admin/dashboard/ai-engine/aiva-actions',
       '/admin/dashboard/system-health',
       '/admin/dashboard/settings',
     ]
-    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     for (const href of required) {
       expect(navItemBlock?.[0] ?? layoutSrc).toContain(href)
     }
   })
 
   it('does NOT include /admin/dashboard (redirect alias) as a visible nav item', () => {
-    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     // /admin/dashboard must not appear as a nav href (exact match, not as a prefix of other routes)
     const exactDashboardHref = /href:\s*['"]\/admin\/dashboard['"]/
     expect(exactDashboardHref.test(navItemBlock?.[0] ?? '')).toBe(false)
@@ -73,8 +77,9 @@ describe('Dashboard Navigation — exactly 9 canonical sections', () => {
       '/admin/dashboard/brain',
       '/admin/dashboard/workspace',
       '/admin/dashboard/build-studio',
+      '/admin/dashboard/live-readiness',
     ]
-    const navItemBlock = layoutSrc.match(/NAV_ITEMS[\s\S]*?\]/)
+    const navItemBlock = layoutSrc.match(/NAV_ITEMS\s*=\s*\[[\s\S]*?\] satisfies/)
     if (navItemBlock) {
       for (const href of banned) {
         expect(navItemBlock[0]).not.toContain(href)
@@ -83,14 +88,19 @@ describe('Dashboard Navigation — exactly 9 canonical sections', () => {
   })
 })
 
-// ── Aiva hidden by default ─────────────────────────────────────────────────────
+// ── Aiva assistant panel hidden by default ─────────────────────────────────────
 
-describe('Aiva — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true', () => {
+describe('Aiva assistant panel — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true', () => {
   const layoutSrc = fs.readFileSync(path.join(ROOT, 'layout.tsx'), 'utf-8')
 
-  it('Aiva is gated behind NEXT_PUBLIC_AIVA_ENABLED env flag', () => {
+  it('Aiva assistant panel is gated behind NEXT_PUBLIC_AIVA_ENABLED env flag', () => {
     expect(layoutSrc).toContain('NEXT_PUBLIC_AIVA_ENABLED')
     expect(layoutSrc).toContain('Aiva disabled by default')
+  })
+
+  it('Aiva Chat has its own dedicated route at /admin/dashboard/aiva', () => {
+    const aivaPagePath = path.join(ROOT, 'aiva/page.tsx')
+    expect(fs.existsSync(aivaPagePath)).toBe(true)
   })
 })
 
@@ -100,10 +110,10 @@ describe('Duplicate pages redirect to canonical destinations', () => {
   const redirectPages: Array<{ file: string; expectedTarget: string }> = [
     { file: 'access/page.tsx',         expectedTarget: '/admin/dashboard/settings' },
     { file: 'deployments/page.tsx',    expectedTarget: '/admin/dashboard/repo-workbench' },
-    { file: 'emotions/page.tsx',       expectedTarget: '/admin/dashboard/system-health' },
+    { file: 'emotions/page.tsx',       expectedTarget: '/admin/dashboard/memory-emotions' },
     { file: 'events/page.tsx',         expectedTarget: '/admin/dashboard/system-health' },
     { file: 'integrations/page.tsx',   expectedTarget: '/admin/dashboard/settings' },
-    { file: 'intelligence/page.tsx',   expectedTarget: '/admin/dashboard/ai-engine' },
+    { file: 'intelligence/page.tsx',   expectedTarget: '/admin/dashboard/research' },
     { file: 'voice/page.tsx',          expectedTarget: '/admin/dashboard/media-studio' },
     { file: 'genx-models/page.tsx',    expectedTarget: '/admin/dashboard/ai-engine' },
     { file: 'brain/page.tsx',          expectedTarget: '/admin/dashboard/ai-engine' },

@@ -168,6 +168,8 @@ export default function SettingsPage() {
           <ServiceIntegrationsSection data={data} onSaved={load} />
           <StorageSection config={data.storage} onSaved={load} />
           <AdultSection config={data.adult} onSaved={load} />
+          <AivaVoiceSection />
+          <HFTaskRoutingSection />
           <ProvidersSection />
         </>
       ) : null}
@@ -987,24 +989,26 @@ function StorageSection({ config, onSaved }: { config: StorageConfig; onSaved: (
 // ── Adult Mode Section ────────────────────────────────────────────────────────
 
 const ADULT_PROVIDER_TYPES = [
-  { value: 'xai',         label: 'xAI / Grok Imagine (image)' },
-  { value: 'together',    label: 'Together AI (image)' },
+  { value: 'xai',         label: 'xAI / Grok Imagine (uses vault key)' },
+  { value: 'together',    label: 'Together AI (uses vault key)' },
   { value: 'huggingface', label: 'HuggingFace Private Endpoint' },
   { value: 'custom',      label: 'Custom (OpenAI-compatible)' },
 ]
 
-const ADULT_ALLOWED = [
-  'Adult consensual suggestive content',
-  'Topless adult subjects',
-  'Lingerie (thongs, g-strings)',
-  'Suggestive / erotic visuals',
-  'Nudity without visible genitals',
+const ADULT_MODES = [
+  { value: 'off',         label: 'Off (default)' },
+  { value: 'suggestive',  label: 'Suggestive' },
+  { value: 'adult_text',  label: 'Adult Text' },
+  { value: 'adult_image', label: 'Adult Image' },
+  { value: 'adult_video', label: 'Adult Video' },
+  { value: 'adult_voice', label: 'Adult Voice' },
+  { value: 'full_adult',  label: 'Full Adult App Mode' },
 ]
 
 const ADULT_BLOCKED = [
   'Minors or age-ambiguous subjects',
-  'Visible genitals',
-  'Explicit sex acts',
+  'Visible genitals (unless full adult mode with provider verified)',
+  'Explicit sex acts without full adult mode',
   'Sexual violence / non-consensual',
   'Real-person sexual deepfakes',
   'Self-harm content',
@@ -1013,13 +1017,11 @@ const ADULT_BLOCKED = [
 
 function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () => void }) {
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState(config.mode || 'disabled')
+  const [mode, setMode] = useState(config.mode || 'off')
   const [providerType, setProviderType] = useState(config.providerType || 'together')
   const [specialistEndpoint, setSpecialistEndpoint] = useState(config.specialistEndpoint)
-  const [specialistKey, setSpecialistKey] = useState('')
   const [providerModel, setProviderModel] = useState(config.providerModel || '')
   const [testPrompt, setTestPrompt] = useState('a tasteful topless portrait, artistic lighting')
-  const [showKey, setShowKey] = useState(false)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
@@ -1035,9 +1037,8 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
         body: JSON.stringify({
           adult: {
             mode,
-            providerType: mode === 'specialist' ? providerType : undefined,
+            providerType: mode !== 'off' ? providerType : undefined,
             specialistEndpoint: specialistEndpoint || undefined,
-            specialistKey: specialistKey || undefined,
             providerModel: providerModel || undefined,
           },
         }),
@@ -1047,7 +1048,6 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
         setSaveMsg(`Error: ${d.error ?? 'Save failed'}`)
       } else {
         setSaveMsg('Saved')
-        setSpecialistKey('')
         onSaved()
         setTimeout(() => setSaveMsg(null), 3000)
       }
@@ -1067,7 +1067,6 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
           mode,
           providerType,
           endpoint: specialistEndpoint,
-          apiKey: specialistKey,
           model: providerModel || undefined,
           testPrompt: testPrompt || undefined,
         }),
@@ -1079,105 +1078,75 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
   }
 
   const readyState: 'ready' | 'blocked' | 'unavailable' = (() => {
-    if (mode === 'disabled') return 'unavailable'
+    if (mode === 'off') return 'unavailable'
     if (!testResult) return 'blocked'
-    // New structured test result: { success: true } means READY
     if ('success' in testResult && testResult.success) return 'ready'
     return 'blocked'
   })()
 
-  const badge = mode === 'disabled'
-    ? { label: 'Disabled', color: 'text-slate-400 bg-slate-500/10 border-slate-500/20' }
+  const badge = mode === 'off'
+    ? { label: 'Off', color: 'text-slate-400 bg-slate-500/10 border-slate-500/20' }
     : readyState === 'ready'
     ? { label: '✓ READY', color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' }
-    : readyState === 'blocked'
-    ? { label: '⚠ BLOCKED', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }
-    : { label: 'UNAVAILABLE', color: 'text-red-400 bg-red-500/10 border-red-500/20' }
+    : { label: '⚠ BLOCKED', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' }
 
   return (
     <motion.div variants={fadeUp}>
       <SectionCard
         icon={<ShieldCheck className="h-5 w-5 text-violet-400" />}
-        title="Adult Creative Mode"
+        title="Adult Access (App-level)"
         badge={badge}
         open={open}
         onToggle={() => setOpen(v => !v)}
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            Adult Creative Mode routes adult content generation to a specialist provider. The AI Engine is never used for adult content. Disabled by default — must be enabled explicitly and requires a passing provider test.
+            Adult content is controlled per-app level. No separate adult key — the approved provider stack (xAI/Grok, Together AI, Hugging Face) is used.
+            All adult modes require explicit admin approval, age gate enforcement, and audit logging.
           </p>
 
           {open && (
             <div className="space-y-3">
-              {/* Allowed / blocked rules */}
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 space-y-1">
-                  <p className="text-[10px] uppercase tracking-widest text-emerald-400 font-semibold mb-1.5">Allowed</p>
-                  {ADULT_ALLOWED.map(item => (
-                    <p key={item} className="text-xs text-emerald-300 flex items-start gap-1.5"><span className="mt-px">✓</span>{item}</p>
-                  ))}
-                </div>
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-1">
-                  <p className="text-[10px] uppercase tracking-widest text-red-400 font-semibold mb-1.5">Always Blocked</p>
-                  {ADULT_BLOCKED.map(item => (
-                    <p key={item} className="text-xs text-red-300 flex items-start gap-1.5"><span className="mt-px">✗</span>{item}</p>
-                  ))}
-                </div>
+              {/* Blocked categories */}
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-1">
+                <p className="text-[10px] uppercase tracking-widest text-red-400 font-semibold mb-1.5">Always Blocked — no exceptions</p>
+                {ADULT_BLOCKED.map(item => (
+                  <p key={item} className="text-xs text-red-300 flex items-start gap-1.5"><span className="mt-px">✗</span>{item}</p>
+                ))}
               </div>
 
-              <Field label="Mode">
+              <Field label="Adult access mode (app-level)">
                 <select value={mode} onChange={e => setMode(e.target.value)} className={inputCls}>
-                  <option value="disabled">Disabled (default)</option>
-                  <option value="specialist">Specialist provider only</option>
+                  {ADULT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select>
+                <p className="text-[10px] text-slate-600 mt-1">
+                  Off = no adult content. Suggestive = tasteful suggestive only. Adult text/image/video/voice = capability-specific.
+                  Full adult app mode = all adult capabilities enabled for the app with all gates active.
+                </p>
               </Field>
 
-              {mode === 'specialist' && (
+              {mode !== 'off' && (
                 <>
-                  {/* READY / BLOCKED / UNAVAILABLE status banner */}
-                  {readyState === 'ready' && (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
-                      <p className="text-xs font-semibold text-emerald-400">✓ ADULT MODE READY</p>
-                      <p className="text-[10px] text-emerald-300 mt-0.5">Provider selected · Model confirmed · Generation test passed · App can use adult mode</p>
-                      {testResult && 'provider' in testResult && testResult.provider != null && (
-                        <p className="text-[10px] text-emerald-400 mt-0.5">
-                          Provider: {String(testResult.provider)} · Model: {String(testResult.model ?? 'default')}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {readyState === 'blocked' && testResult && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                      <p className="text-xs font-semibold text-amber-400">⚠ BLOCKED</p>
-                      {'error_category' in testResult && testResult.error_category != null && (
-                        <p className="text-[10px] text-amber-300 mt-0.5">Error: {String(testResult.error_category)}</p>
-                      )}
-                      {'message' in testResult && testResult.message != null && (
-                        <p className="text-[10px] text-amber-300 mt-0.5">{String(testResult.message)}</p>
-                      )}
-                    </div>
-                  )}
-                  {readyState === 'blocked' && !testResult && (
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                      <p className="text-xs font-semibold text-amber-400">⚠ BLOCKED — Test not run</p>
-                      <p className="text-[10px] text-amber-300 mt-0.5">Run &quot;Test provider&quot; to confirm adult generation works before enabling.</p>
-                    </div>
-                  )}
-                  <Field label="Provider Type">
+                  {/* Approval/gate requirements */}
+                  <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 space-y-2">
+                    <p className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold">Required gates</p>
+                    {[
+                      'Approval required — admin must explicitly approve before content is served',
+                      'Audit required — all adult requests are logged with provider, model, and prompt hash',
+                      'Age gate required — app must implement age verification',
+                    ].map(req => (
+                      <p key={req} className="text-xs text-violet-300 flex items-start gap-1.5"><span className="mt-px">✓</span>{req}</p>
+                    ))}
+                  </div>
+
+                  <Field label="Provider route (no separate key needed)">
                     <select value={providerType} onChange={e => setProviderType(e.target.value)} className={inputCls}>
                       {ADULT_PROVIDER_TYPES.map(p => (
                         <option key={p.value} value={p.value}>{p.label}</option>
                       ))}
                     </select>
-                    {providerType === 'xai' && (
-                      <p className="text-[10px] text-blue-400 mt-1">Uses existing xAI/Grok vault key — no separate key needed if already configured in AI Providers</p>
-                    )}
-                    {providerType === 'together' && (
-                      <p className="text-[10px] text-blue-400 mt-1">Uses existing Together AI vault key — disable_safety_checker sent automatically</p>
-                    )}
-                    {providerType === 'huggingface' && (
-                      <p className="text-[10px] text-slate-400 mt-1">HuggingFace private inference endpoint — use your own deployed model for unrestricted adult content</p>
+                    {(providerType === 'xai' || providerType === 'together') && (
+                      <p className="text-[10px] text-blue-400 mt-1">Uses existing {providerType === 'xai' ? 'xAI/Grok' : 'Together AI'} vault key from AI Providers — no separate adult key required.</p>
                     )}
                   </Field>
 
@@ -1193,38 +1162,14 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
                     </Field>
                   )}
 
-                  <Field label="API Key">
-                    <div className="relative">
-                      <input
-                        type={showKey ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        value={specialistKey}
-                        onChange={e => setSpecialistKey(e.target.value)}
-                        placeholder={config.hasSpecialistKey ? `Current: ${config.maskedSpecialistKey}` : 'API key…'}
-                        className={`${inputCls} pr-10`}
-                      />
-                      <button type="button" onClick={() => setShowKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                        {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {config.hasSpecialistKey && <p className="text-[10px] text-slate-500 mt-1">Leave blank to keep existing key</p>}
-                    {(providerType === 'xai' || providerType === 'together') && !config.hasSpecialistKey && (
-                      <p className="text-[10px] text-blue-400 mt-1">
-                        ℹ Leave blank to use existing {providerType === 'xai' ? 'xAI/Grok' : 'Together AI'} vault key from AI Providers.
-                        {' '}Key status: using existing provider vault key
-                      </p>
-                    )}
-                  </Field>
-
-                  <Field label="Model ID (optional)">
+                  <Field label="Model ID (optional override)">
                     <input
                       type="text"
                       value={providerModel}
                       onChange={e => setProviderModel(e.target.value)}
                       placeholder={
                         providerType === 'together' ? 'e.g. black-forest-labs/FLUX.1-schnell-Free' :
-                        providerType === 'xai' ? 'e.g. grok-2-image' :
-                        'model-id'
+                        providerType === 'xai' ? 'e.g. grok-2-image' : 'model-id'
                       }
                       className={inputCls}
                     />
@@ -1241,22 +1186,21 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
                     <p className="text-[10px] text-slate-600 mt-1">Used only during connection test — not saved</p>
                   </Field>
 
+                  {testResult && (
+                    <TestResultBanner result={testResult} extra={testResult.message as string | undefined} />
+                  )}
+
                   {config.lastTestStatus && (
                     <p className="text-[10px] text-slate-500">Last test: {config.lastTestStatus}</p>
                   )}
                 </>
               )}
 
-              {/* Unavailable banner when mode is disabled */}
-              {mode === 'disabled' && (
+              {mode === 'off' && (
                 <div className="rounded-xl border border-slate-500/20 bg-slate-500/5 p-3">
-                  <p className="text-xs font-semibold text-slate-400">UNAVAILABLE — Adult mode is disabled</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Enable &quot;Specialist provider only&quot; and run a generation test to make adult mode available.</p>
+                  <p className="text-xs font-semibold text-slate-400">Off — Adult content disabled</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Select an adult access mode and run a provider test to enable adult content for an app.</p>
                 </div>
-              )}
-
-              {testResult && (
-                <TestResultBanner result={testResult} extra={testResult.message as string | undefined} />
               )}
 
               <div className="flex items-center gap-2 pt-1">
@@ -1266,8 +1210,7 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
                 </button>
                 <button
                   onClick={test}
-                  disabled={testing || mode === 'disabled'}
-                  title={mode === 'disabled' ? 'Enable specialist provider first' : readyState === 'ready' ? 'Test passed — adult mode ready' : 'Run generation test'}
+                  disabled={testing || mode === 'off'}
                   className={`${btnSecondary} ${readyState === 'ready' ? 'border-emerald-500/30 text-emerald-400' : ''}`}
                 >
                   {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <TestTube2 className="h-3.5 w-3.5" />}
@@ -1600,6 +1543,244 @@ function WebdockSection() {
   )
 }
 
+// ── HF Task Routing Section ───────────────────────────────────────────────────
+
+/** Hugging Face task-based routing — auto task routing with optional pinned model per task. */
+const HF_TASKS = [
+  { task: 'text-generation',      label: 'Text Generation (chat/completion)',  defaultModel: '' },
+  { task: 'text-classification',  label: 'Text Classification',                defaultModel: '' },
+  { task: 'token-classification', label: 'Token Classification (NER)',          defaultModel: '' },
+  { task: 'summarization',        label: 'Summarization',                       defaultModel: '' },
+  { task: 'translation',          label: 'Translation',                         defaultModel: '' },
+  { task: 'question-answering',   label: 'Question Answering',                  defaultModel: '' },
+  { task: 'image-classification', label: 'Image Classification',                defaultModel: '' },
+  { task: 'image-to-text',        label: 'Image-to-Text (captioning)',           defaultModel: '' },
+  { task: 'text-to-image',        label: 'Text-to-Image (generation)',           defaultModel: '' },
+  { task: 'text-to-speech',       label: 'Text-to-Speech (TTS)',                 defaultModel: '' },
+  { task: 'automatic-speech-recognition', label: 'Speech Recognition (STT)',    defaultModel: '' },
+  { task: 'embedding',            label: 'Embedding / Feature Extraction',       defaultModel: '' },
+  { task: 'sentiment-analysis',   label: 'Sentiment / Emotion Analysis',         defaultModel: '' },
+]
+
+function HFTaskRoutingSection() {
+  const [open, setOpen] = useState(false)
+  const [pinnedModels, setPinnedModels] = useState<Record<string, string>>({})
+
+  return (
+    <motion.div variants={fadeUp}>
+      <SectionCard
+        icon={<Cpu className="h-5 w-5 text-slate-400" />}
+        title="Hugging Face — Task Routing"
+        badge={{ label: 'Ready to wire', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' }}
+        open={open}
+        onToggle={() => setOpen(v => !v)}
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Hugging Face routing uses automatic task routing by default — no model selection required for basic usage.
+            Pin a specific model per task only when you need a non-default model. Leave blank to use the HF Inference API default for that task.
+          </p>
+          {open && (
+            <div className="space-y-2">
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-300">
+                Auto task routing is the default. Provider key is set in the AI Providers section above.
+              </div>
+              <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Pinned model per task (optional override)</p>
+              {HF_TASKS.map(({ task, label }) => (
+                <div key={task} className="flex items-center gap-3">
+                  <span className="min-w-[200px] text-xs text-slate-400">{label}</span>
+                  <input
+                    type="text"
+                    value={pinnedModels[task] ?? ''}
+                    onChange={(e) => setPinnedModels((prev) => ({ ...prev, [task]: e.target.value }))}
+                    placeholder="Auto (leave blank)"
+                    className="flex-1 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500/40 font-mono"
+                  />
+                </div>
+              ))}
+              <p className="text-[11px] text-slate-600 pt-2">
+                Pinned models are applied per-request. Provider/model overrides are only needed when the HF default for a task is not suitable.
+                Backend persistence is Ready to wire — values are not yet saved to the vault.
+              </p>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+    </motion.div>
+  )
+}
+
+// ── Aiva Voice Settings Section ───────────────────────────────────────────────
+
+const VOICE_PROVIDERS_OPTS = [
+  { value: 'auto',       label: 'Auto (Groq → Gemini → HuggingFace)' },
+  { value: 'groq',       label: 'Groq TTS' },
+  { value: 'gemini',     label: 'Gemini TTS' },
+  { value: 'elevenlabs', label: 'ElevenLabs (specialist)' },
+  { value: 'deepgram',   label: 'Deepgram (specialist)' },
+  { value: 'huggingface',label: 'Hugging Face TTS' },
+]
+
+const VOICE_LANGUAGES = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'en-AU', label: 'English (AU)' },
+  { value: 'zh-CN', label: 'Chinese (Mandarin)' },
+  { value: 'es-ES', label: 'Spanish (Spain)' },
+  { value: 'fr-FR', label: 'French' },
+  { value: 'de-DE', label: 'German' },
+  { value: 'ja-JP', label: 'Japanese' },
+  { value: 'ko-KR', label: 'Korean' },
+  { value: 'pt-BR', label: 'Portuguese (BR)' },
+]
+
+function AivaVoiceSection() {
+  const [open, setOpen] = useState(false)
+  const [voiceProvider, setVoiceProvider] = useState('auto')
+  const [voiceModel, setVoiceModel] = useState('')
+  const [voicePersona, setVoicePersona] = useState('aiva-default')
+  const [voiceId, setVoiceId] = useState('')
+  const [tone, setTone] = useState('neutral')
+  const [speed, setSpeed] = useState(1.0)
+  const [pitch, setPitch] = useState(0)
+  const [language, setLanguage] = useState('en-US')
+  const [appDefault, setAppDefault] = useState('')
+  const [saveMsg, setSaveMsg] = useState<string | null>(null)
+
+  async function save() {
+    // Backend persistence is Ready to wire — show message
+    setSaveMsg('Settings saved locally. Backend persistence: Ready to wire.')
+    setTimeout(() => setSaveMsg(null), 4000)
+  }
+
+  return (
+    <motion.div variants={fadeUp}>
+      <SectionCard
+        icon={<Mic className="h-5 w-5 text-slate-400" />}
+        title="Aiva Voice Settings"
+        badge={{ label: 'Ready to wire', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' }}
+        open={open}
+        onToggle={() => setOpen(v => !v)}
+      >
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            Configure Aiva&apos;s default voice persona, provider, and characteristics. Status: <span className="text-cyan-400">Ready to wire</span> — backend persistence not yet wired.
+          </p>
+
+          {open && (
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Field label="Voice Provider">
+                  <select value={voiceProvider} onChange={e => setVoiceProvider(e.target.value)} className={inputCls}>
+                    {VOICE_PROVIDERS_OPTS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                </Field>
+
+                <Field label="Voice Model / ID">
+                  <input
+                    type="text"
+                    value={voiceModel}
+                    onChange={e => setVoiceModel(e.target.value)}
+                    placeholder="e.g. aura-2-asteria-en or ElevenLabs voice ID"
+                    className={inputCls}
+                  />
+                </Field>
+
+                <Field label="Voice Persona">
+                  <input
+                    type="text"
+                    value={voicePersona}
+                    onChange={e => setVoicePersona(e.target.value)}
+                    placeholder="aiva-default"
+                    className={inputCls}
+                  />
+                </Field>
+
+                <Field label="Voice ID (provider-specific)">
+                  <input
+                    type="text"
+                    value={voiceId}
+                    onChange={e => setVoiceId(e.target.value)}
+                    placeholder="Provider voice ID (e.g. ElevenLabs clone ID)"
+                    className={inputCls}
+                  />
+                </Field>
+
+                <Field label="Tone / Emotion">
+                  <select value={tone} onChange={e => setTone(e.target.value)} className={inputCls}>
+                    <option value="neutral">Neutral</option>
+                    <option value="warm">Warm</option>
+                    <option value="professional">Professional</option>
+                    <option value="energetic">Energetic</option>
+                    <option value="calm">Calm</option>
+                    <option value="serious">Serious</option>
+                    <option value="playful">Playful</option>
+                  </select>
+                </Field>
+
+                <Field label="Language / Accent">
+                  <select value={language} onChange={e => setLanguage(e.target.value)} className={inputCls}>
+                    {VOICE_LANGUAGES.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                </Field>
+              </div>
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <Field label={`Speed (${speed.toFixed(1)}x)`}>
+                  <input
+                    type="range"
+                    min={0.5}
+                    max={2.0}
+                    step={0.1}
+                    value={speed}
+                    onChange={e => setSpeed(Number(e.target.value))}
+                    className="w-full accent-cyan-400"
+                  />
+                </Field>
+
+                <Field label={`Pitch (${pitch >= 0 ? `+${pitch}` : pitch} semitones)`}>
+                  <input
+                    type="range"
+                    min={-6}
+                    max={6}
+                    step={1}
+                    value={pitch}
+                    onChange={e => setPitch(Number(e.target.value))}
+                    className="w-full accent-cyan-400"
+                  />
+                </Field>
+              </div>
+
+              <Field label="App Default Voice (slug)">
+                <input
+                  type="text"
+                  value={appDefault}
+                  onChange={e => setAppDefault(e.target.value)}
+                  placeholder="App slug — leave blank for global default"
+                  className={inputCls}
+                />
+                <p className="mt-1 text-[10px] text-slate-600">Override the voice per app. Blank = use global Aiva voice.</p>
+              </Field>
+
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-slate-400">
+                <p className="text-cyan-400 font-semibold mb-1">Preview Voice — Ready to wire</p>
+                <p>Voice preview requires a configured provider key and working TTS endpoint. Configure the provider in AI Providers above, then preview will be available from Media Studio → Voice.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={save} className={btnPrimary}>
+                  <Save className="h-3 w-3" /> Save voice settings
+                </button>
+                {saveMsg && <span className="text-xs text-cyan-400">{saveMsg}</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+    </motion.div>
+  )
+}
+
 // ── Providers Section ─────────────────────────────────────────────────────────
 
 /** Primary AI providers — always visible in the Setup panel. */
@@ -1611,6 +1792,7 @@ const PROVIDER_DEFS_PRIMARY = [
   { key: 'huggingface', label: 'Hugging Face',      placeholder: 'hf_…',       caps: ['chat', 'images', 'tts', 'adult_image'], hint: 'Env: HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, or HF_TOKEN' },
   { key: 'groq',        label: 'Groq',              placeholder: 'gsk_…',      caps: ['chat', 'code', 'stt'] },
   { key: 'together',    label: 'Together AI',       placeholder: 'tg_…',       caps: ['chat', 'code', 'images', 'adult_image'] },
+  { key: 'xai',         label: 'xAI / Grok',        placeholder: 'xai-…',      caps: ['chat', 'reasoning', 'vision', 'adult_image'], hint: 'Env: XAI_API_KEY or GROK_API_KEY' },
 ]
 
 /** Specialist media/voice providers — always visible in the Setup panel. */
@@ -1622,11 +1804,10 @@ const PROVIDER_DEFS_SPECIALIST = [
 
 /** Advanced providers — collapsed behind toggle, not primary product story. */
 const PROVIDER_DEFS_ADVANCED = [
-  { key: 'openai',      label: 'OpenAI Direct',     placeholder: 'sk-…',       caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] },
-  { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…',    caps: ['chat', 'code', 'reasoning'] },
-  { key: 'xai',         label: 'xAI / Grok',        placeholder: 'xai-…',      caps: ['chat', 'reasoning', 'vision', 'adult_image'], hint: 'Env: XAI_API_KEY or GROK_API_KEY' },
-  { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',      caps: ['chat', 'reasoning', 'code', 'research'] },
-  { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',      caps: ['chat', 'reasoning', 'code'] },
+  { key: 'openai',      label: 'OpenAI Direct',     placeholder: 'sk-…',    caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] as string[], hint: '' },
+  { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…', caps: ['chat', 'code', 'reasoning'] as string[], hint: '' },
+  { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code', 'research'] as string[], hint: '' },
+  { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code'] as string[], hint: '' },
 ]
 
 function ProvidersSection() {
@@ -1681,7 +1862,7 @@ function ProvidersSection() {
                         label={def.label}
                         placeholder={def.placeholder}
                         capabilities={def.caps}
-                        hint={def.hint}
+                        hint={def.hint || undefined}
                         record={record ?? null}
                         onSaved={load}
                       />
@@ -1698,7 +1879,7 @@ function ProvidersSection() {
                         label={def.label}
                         placeholder={def.placeholder}
                         capabilities={def.caps}
-                        hint={def.hint}
+                        hint={def.hint || undefined}
                         record={record ?? null}
                         onSaved={load}
                       />
@@ -1711,7 +1892,7 @@ function ProvidersSection() {
                     className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mt-2"
                   >
                     {showAdvanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    Advanced providers (OpenAI Direct, OpenRouter, xAI/Grok, Moonshot, Zhipu)
+                    Advanced providers (OpenAI Direct, OpenRouter, Moonshot, Zhipu)
                   </button>
 
                   {showAdvanced && (
@@ -1727,7 +1908,7 @@ function ProvidersSection() {
                             label={def.label}
                             placeholder={def.placeholder}
                             capabilities={def.caps}
-                            hint={def.hint}
+                            hint={def.hint || undefined}
                             record={record ?? null}
                             onSaved={load}
                           />

@@ -4,14 +4,17 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Film, RefreshCw, Image as ImageIcon, Video, Mic, Music, Shield, Clock, AlertTriangle, Download } from 'lucide-react'
 
-type TabId = 'images' | 'video' | 'voice' | 'music' | 'history'
+type TabId = 'images' | 'video' | 'voice' | 'music' | 'avatar' | 'music-video' | 'asset-mixer' | 'history'
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> }[] = [
-  { id: 'images',  label: 'Images', icon: ImageIcon },
-  { id: 'video',   label: 'Video',  icon: Video     },
-  { id: 'voice',   label: 'Voice',  icon: Mic       },
-  { id: 'music',   label: 'Music',  icon: Music     },
-  { id: 'history', label: 'History',icon: Clock     },
+  { id: 'images',      label: 'Images',        icon: ImageIcon },
+  { id: 'video',       label: 'Video',         icon: Video     },
+  { id: 'voice',       label: 'Voice',         icon: Mic       },
+  { id: 'music',       label: 'Music',         icon: Music     },
+  { id: 'avatar',      label: 'Avatar',        icon: Film      },
+  { id: 'music-video', label: 'Music Video',   icon: Film      },
+  { id: 'asset-mixer', label: 'Asset Mixer',   icon: Film      },
+  { id: 'history',     label: 'History',       icon: Clock     },
 ]
 
 interface Artifact {
@@ -480,6 +483,113 @@ export default function MediaStudioPage() {
             >
               <Music className="h-4 w-4" />
               Generate Music — configure provider first
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Talking Avatar */}
+      {tab === 'avatar' && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white">Talking Avatar</h2>
+            <p className="text-xs text-slate-400">
+              Generates a lip-synced talking avatar from an image and audio input. Requires a provider that supports avatar synthesis.
+            </p>
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-300">
+              <span className="font-semibold">Status: Ready to wire</span> — avatar synthesis endpoint not yet configured. Providers: Replicate, D-ID, or HeyGen via custom route.
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Avatar image</label>
+                <input disabled type="file" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Audio input (speech to animate)</label>
+                <input disabled type="file" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Or text (will generate voice first)</label>
+                <textarea disabled rows={2} placeholder="Enter the text Aiva should speak as the avatar…" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 resize-none cursor-not-allowed" />
+              </div>
+            </div>
+            <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 opacity-40 cursor-not-allowed">
+              <Film className="h-4 w-4" />
+              Generate Avatar — configure provider first
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Music Video Builder */}
+      {tab === 'music-video' && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white">Music Video Builder</h2>
+            <p className="text-xs text-slate-400">
+              Assembles a music video from an audio track and image/video clips. Combines music generation with video generation.
+            </p>
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-300">
+              <span className="font-semibold">Status: Ready to wire</span> — requires both music generation and video generation endpoints to be confirmed.
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Audio / music track</label>
+                <input disabled type="file" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Visual style / prompt</label>
+                <textarea disabled rows={3} placeholder="Abstract neon cityscape, dynamic camera motion, synced to beat…" className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 resize-none cursor-not-allowed" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Duration</label>
+                <select disabled className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 cursor-not-allowed">
+                  <option>15 seconds</option>
+                  <option>30 seconds</option>
+                  <option>60 seconds</option>
+                </select>
+              </div>
+            </div>
+            <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 opacity-40 cursor-not-allowed">
+              <Film className="h-4 w-4" />
+              Build Music Video — configure providers first
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Asset Mixer */}
+      {tab === 'asset-mixer' && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5 space-y-4">
+            <h2 className="text-sm font-semibold text-white">Asset Mixer</h2>
+            <p className="text-xs text-slate-400">
+              Combines and edits existing media assets from the Artifacts library. Overlay, trim, composite, and export.
+            </p>
+            <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-cyan-300">
+              <span className="font-semibold">Status: Ready to wire</span> — asset mixing pipeline requires FFmpeg or equivalent processing backend.
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Select assets from library</label>
+                <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3 text-xs text-slate-500">
+                  No assets loaded — connect to Artifacts library first.
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Mix operation</label>
+                <select disabled className="w-full rounded-xl bg-white/[0.03] border border-white/[0.08] px-3 py-2 text-xs text-slate-500 cursor-not-allowed">
+                  <option>Overlay image on video</option>
+                  <option>Combine audio tracks</option>
+                  <option>Trim and splice clips</option>
+                  <option>Add subtitles / captions</option>
+                  <option>Apply filter / style transfer</option>
+                </select>
+              </div>
+            </div>
+            <button disabled className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-sm text-cyan-400 opacity-40 cursor-not-allowed">
+              <Film className="h-4 w-4" />
+              Mix Assets — backend pending
             </button>
           </div>
         </div>
