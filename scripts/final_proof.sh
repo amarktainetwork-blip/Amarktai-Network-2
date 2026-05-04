@@ -75,7 +75,7 @@ check_public_route "/admin/dashboard" "Dashboard redirect"
 check_public_route "/admin/dashboard/command-center" "Command Center"
 check_public_route "/admin/dashboard/live-readiness" "Live Readiness page"
 check_public_route "/admin/dashboard/ai-engine/hub" "AI Engine hub"
-check_public_route "/admin/dashboard/repo-workbench/simple" "Repo Workbench simple"
+check_public_route "/admin/dashboard/repo-workbench" "Repo Workbench canonical"
 
 section "Admin APIs"
 check_admin_json "/api/admin/live-readiness" "Live readiness API"
