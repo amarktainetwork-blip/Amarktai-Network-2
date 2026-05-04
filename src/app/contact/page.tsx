@@ -3,29 +3,13 @@
 import { useState } from 'react'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
-import {
-  Loader2,
-  CheckCircle2,
-  ArrowRight,
-  ShieldCheck,
-  Sparkles,
-  Bot,
-  Code2,
-  Network,
-} from 'lucide-react'
+import { Loader2, CheckCircle2, ArrowRight } from 'lucide-react'
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false)
   const [ok, setOk] = useState(false)
   const [error, setError] = useState(false)
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    building: '',
-    apps: '',
-    capabilities: '',
-    message: '',
-  })
+  const [form, setForm] = useState({ name: '', email: '', building: '', capabilities: '', message: '' })
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -39,7 +23,7 @@ export default function ContactPage() {
           name: form.name,
           email: form.email,
           companyOrProject: form.building,
-          message: `[REQUEST ACCESS]\nWhat are you building: ${form.building}\nApps to connect: ${form.apps}\nAI capabilities needed: ${form.capabilities}\nAdditional context: ${form.message}`,
+          message: `[REQUEST ACCESS]\nWhat are you building: ${form.building}\nAI capabilities needed: ${form.capabilities}\nAdditional context: ${form.message}`,
         }),
       })
       if (!res.ok) throw new Error('request failed')
@@ -54,130 +38,61 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#030712] text-white">
       <Header />
-      <main className="px-4 pb-20 pt-32 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1.1fr]">
+      <main className="relative overflow-hidden px-4 pb-20 pt-32 sm:px-6 lg:px-8 lg:pt-40">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_12%,rgba(34,211,238,0.14),transparent_30%),radial-gradient(circle_at_82%_10%,rgba(59,130,246,0.10),transparent_32%),linear-gradient(180deg,rgba(3,7,18,0),#030712_78%)]" />
+        <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <section>
-            <p className="text-label text-cyan-300">Private access</p>
-            <h1 className="text-headline mt-4">Request access to Amarkt<span className="text-blue-400">AI</span> Network.</h1>
-            <p className="mt-5 max-w-xl text-slate-300">
-              For builders creating more than one AI-powered product. Access is reviewed — not open signup.
+            <p className="text-xs font-black uppercase tracking-[0.26em] text-cyan-200">Request access</p>
+            <h1 className="mt-5 max-w-3xl text-5xl font-black tracking-[-0.065em] text-white sm:text-6xl">
+              Tell us what you want the network to understand.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
+              AmarktAI Network is private and reviewed. Share the products you are building and the AI capabilities you need.
             </p>
-
-            <div className="mt-8 space-y-3">
-              {[
-                { icon: ShieldCheck, text: 'Private onboarding — not an open-signup platform.'              },
-                { icon: Sparkles,    text: 'Configured around your apps, agents, and capability needs.'     },
-                { icon: Bot,         text: 'Access scoped per approved product and use case.'                },
-              ].map((item) => (
-                <div key={item.text} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
-                  <item.icon className="h-4 w-4 text-cyan-300 shrink-0" />
-                  <span>{item.text}</span>
-                </div>
+            <div className="mt-8 grid gap-3 text-sm text-slate-400">
+              {['Product ecosystem and app goals', 'Agents, memory, media, research or repo automation', 'Security, adult policy and approval requirements'].map((item) => (
+                <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">{item}</div>
               ))}
-            </div>
-
-            <div className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-sm text-slate-300">
-              <p className="font-semibold text-white">What we will discuss</p>
-              <ul className="mt-3 space-y-2">
-                <li className="flex items-start gap-2"><Network className="h-4 w-4 text-cyan-300 shrink-0 mt-0.5" /> Which apps you want to connect to the network</li>
-                <li className="flex items-start gap-2"><Bot className="h-4 w-4 text-blue-300 shrink-0 mt-0.5" /> Which agents, memory, or tools each product needs</li>
-                <li className="flex items-start gap-2"><Code2 className="h-4 w-4 text-violet-300 shrink-0 mt-0.5" /> Whether you need agents, media, research, repo automation, or app memory</li>
-                <li className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300 shrink-0 mt-0.5" /> Security, adult policy, and approval gate requirements</li>
-              </ul>
-            </div>
-
-            <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-sm text-slate-300">
-              <p className="font-semibold text-white">Best fit</p>
-              <ul className="mt-3 space-y-2">
-                <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-cyan-300" /> Builders running multiple AI-powered products.</li>
-                <li className="flex items-center gap-2"><Bot className="h-4 w-4 text-blue-300" /> Teams who need agents, memory, and operational coordination — not just chat.</li>
-              </ul>
             </div>
           </section>
 
-          <section className="card-premium p-7">
+          <section className="rounded-[2rem] border border-white/10 bg-white/[0.045] p-7 shadow-2xl shadow-black/25 backdrop-blur-2xl">
             {ok ? (
-              <div className="py-14 text-center">
+              <div className="py-16 text-center">
                 <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-300" />
-                <h2 className="mt-4 text-xl font-semibold">Request received</h2>
-                <p className="mt-2 text-sm text-slate-400">We will review your request and respond directly.</p>
+                <h2 className="mt-4 text-2xl font-black tracking-[-0.04em]">Request received</h2>
+                <p className="mx-auto mt-2 max-w-sm text-sm text-slate-400">We will review your request and respond directly.</p>
               </div>
             ) : (
               <form className="space-y-5" onSubmit={onSubmit}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-xs text-slate-400">
                     Full name
-                    <input
-                      aria-label="Full name"
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                      placeholder="Full name"
-                      required
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    />
+                    <input className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40" placeholder="Full name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                   </label>
                   <label className="block text-xs text-slate-400">
                     Email
-                    <input
-                      aria-label="Email"
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                      type="email"
-                      placeholder="Your email"
-                      required
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
+                    <input className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40" type="email" placeholder="Your email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   </label>
                 </div>
 
                 <label className="block text-xs text-slate-400">
                   What are you building?
-                  <input
-                    aria-label="What are you building"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                    placeholder="Describe your product or portfolio"
-                    required
-                    value={form.building}
-                    onChange={(e) => setForm({ ...form, building: e.target.value })}
-                  />
-                </label>
-
-                <label className="block text-xs text-slate-400">
-                  What apps do you want to connect?
-                  <input
-                    aria-label="Apps to connect"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                    placeholder="e.g. crypto app, companion app, marketing tool"
-                    value={form.apps}
-                    onChange={(e) => setForm({ ...form, apps: e.target.value })}
-                  />
+                  <input className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40" placeholder="Product, app or portfolio" required value={form.building} onChange={(e) => setForm({ ...form, building: e.target.value })} />
                 </label>
 
                 <label className="block text-xs text-slate-400">
                   What AI capabilities do you need?
-                  <input
-                    aria-label="AI capabilities needed"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                    placeholder="e.g. agents, memory, media, research, repo automation"
-                    value={form.capabilities}
-                    onChange={(e) => setForm({ ...form, capabilities: e.target.value })}
-                  />
+                  <input className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40" placeholder="Agents, memory, media, research, repo automation…" value={form.capabilities} onChange={(e) => setForm({ ...form, capabilities: e.target.value })} />
                 </label>
 
                 <label className="block text-xs text-slate-400">
-                  Anything else?
-                  <textarea
-                    aria-label="Additional context"
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
-                    rows={4}
-                    placeholder="Any other context, requirements, or questions"
-                    value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  />
+                  Additional context
+                  <textarea className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-slate-700 focus:border-cyan-300/40" rows={5} placeholder="What should we know before reviewing access?" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
                 </label>
 
                 {error && <p className="text-xs text-red-300">Unable to submit right now. Please retry.</p>}
-                <button disabled={loading} className="btn-primary w-full justify-center" type="submit">
+                <button disabled={loading} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3.5 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:opacity-50" type="submit">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
                   Send Access Request
                 </button>
