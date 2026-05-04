@@ -15,7 +15,7 @@ type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; 
 // Tell AmarktAI Assistant what to change; Logs panel;
 // GitHub token is managed via Settings/vault (no PAT input form).
 const CODING_AGENTS = [
-  { id: 'auto', label: 'Auto-select best agent' },
+  { id: 'auto', label: 'Auto-select best agent (auto-route)' },
   { id: 'repo_builder', label: 'Repo Builder Agent' },
   { id: 'repo_auditor', label: 'Repo Auditor Agent' },
   { id: 'frontend_designer', label: 'Frontend Designer Agent' },
