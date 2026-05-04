@@ -1654,11 +1654,9 @@ function HFTaskRoutingSection() {
 // ── Aiva Voice Settings Section ───────────────────────────────────────────────
 
 const VOICE_PROVIDERS_OPTS = [
-  { value: 'auto',       label: 'Auto (Groq → Gemini → HuggingFace)' },
+  { value: 'auto',       label: 'Auto (Groq → Gemini → Hugging Face)' },
   { value: 'groq',       label: 'Groq TTS' },
   { value: 'gemini',     label: 'Gemini TTS' },
-  { value: 'elevenlabs', label: 'ElevenLabs (specialist)' },
-  { value: 'deepgram',   label: 'Deepgram (specialist)' },
   { value: 'huggingface',label: 'Hugging Face TTS' },
 ]
 
@@ -1722,7 +1720,7 @@ function AivaVoiceSection() {
                     type="text"
                     value={voiceModel}
                     onChange={e => setVoiceModel(e.target.value)}
-                    placeholder="e.g. aura-2-asteria-en or ElevenLabs voice ID"
+                    placeholder="e.g. groq-tts-v1 or gemini-voice-model"
                     className={inputCls}
                   />
                 </Field>
@@ -1742,7 +1740,7 @@ function AivaVoiceSection() {
                     type="text"
                     value={voiceId}
                     onChange={e => setVoiceId(e.target.value)}
-                    placeholder="Provider voice ID (e.g. ElevenLabs clone ID)"
+                    placeholder="Provider voice ID (e.g. Groq or Gemini voice ID)"
                     className={inputCls}
                   />
                 </Field>
@@ -1824,11 +1822,10 @@ function AivaVoiceSection() {
 
 // ── Providers Section ─────────────────────────────────────────────────────────
 
-/** Primary AI providers — always visible in the Setup panel. */
+/** Approved AI provider stack — only these providers are configurable in Settings. */
 const PROVIDER_DEFS_PRIMARY = [
   { key: 'qwen',        label: 'Qwen / DashScope',  placeholder: 'sk-…',       caps: ['chat', 'reasoning', 'images', 'video', 'stt'], hint: 'Env: QWEN_API_KEY or DASHSCOPE_API_KEY' },
   { key: 'minimax',     label: 'MiniMax / Mimo',    placeholder: 'sk-…',       caps: ['chat', 'reasoning', 'images', 'video', 'tts', 'stt'], hint: 'Env: MINIMAX_API_KEY or MIMO_API_KEY' },
-  { key: 'deepseek',    label: 'DeepSeek',          placeholder: 'sk-…',       caps: ['chat', 'reasoning', 'code'] },
   { key: 'gemini',      label: 'Google Gemini',     placeholder: 'AIza…',      caps: ['chat', 'reasoning', 'vision', 'research'] },
   { key: 'huggingface', label: 'Hugging Face',      placeholder: 'hf_…',       caps: ['chat', 'images', 'tts', 'adult_image'], hint: 'Env: HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, or HF_TOKEN' },
   { key: 'groq',        label: 'Groq',              placeholder: 'gsk_…',      caps: ['chat', 'code', 'stt'] },
@@ -1836,26 +1833,10 @@ const PROVIDER_DEFS_PRIMARY = [
   { key: 'xai',         label: 'xAI / Grok',        placeholder: 'xai-…',      caps: ['chat', 'reasoning', 'vision', 'adult_image'], hint: 'Env: XAI_API_KEY or GROK_API_KEY' },
 ]
 
-/** Specialist media/voice providers — always visible in the Setup panel. */
-const PROVIDER_DEFS_SPECIALIST = [
-  { key: 'replicate',   label: 'Replicate',         placeholder: 'r8_…',       caps: ['images', 'video', 'adult_image'], hint: 'Env: REPLICATE_API_TOKEN or REPLICATE_API_KEY' },
-  { key: 'elevenlabs',  label: 'ElevenLabs',        placeholder: 'XXXX…',      caps: ['tts', 'voice'] },
-  { key: 'deepgram',    label: 'Deepgram',          placeholder: 'XXXX…',      caps: ['stt', 'tts', 'voice'] },
-]
-
-/** Advanced providers — collapsed behind toggle, not primary product story. */
-const PROVIDER_DEFS_ADVANCED = [
-  { key: 'openai',      label: 'Direct OpenAI API',  placeholder: 'sk-…',    caps: ['chat', 'code', 'images', 'embeddings', 'tts', 'stt'] as string[], hint: '' },
-  { key: 'openrouter',  label: 'OpenRouter',        placeholder: 'sk-or-…', caps: ['chat', 'code', 'reasoning'] as string[], hint: '' },
-  { key: 'moonshot',    label: 'Moonshot / Kimi',   placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code', 'research'] as string[], hint: '' },
-  { key: 'zhipu',       label: 'Zhipu AI / GLM',    placeholder: 'XXXX…',   caps: ['chat', 'reasoning', 'code'] as string[], hint: '' },
-]
-
 function ProvidersSection() {
   const [providers, setProviders] = useState<ProviderRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -1882,7 +1863,7 @@ function ProvidersSection() {
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            Direct AI provider keys. Each key is stored encrypted in the vault and never returned in plaintext. xAI/Grok, Together AI, HuggingFace, and Replicate keys are also used by Adult Creative Mode.
+            Approved AI provider keys. Each key is stored encrypted in the vault and never returned in plaintext. xAI/Grok and Together AI keys are also used by Adult Creative Mode.
           </p>
 
           {open && (
@@ -1893,7 +1874,6 @@ function ProvidersSection() {
                 </div>
               ) : (
                 <>
-                  <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Primary AI Providers</p>
                   {PROVIDER_DEFS_PRIMARY.map(def => {
                     const record = providers.find(p => p.providerKey === def.key)
                     return (
@@ -1909,54 +1889,6 @@ function ProvidersSection() {
                       />
                     )
                   })}
-
-                  <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mt-2">Specialist Media / Voice Providers</p>
-                  {PROVIDER_DEFS_SPECIALIST.map(def => {
-                    const record = providers.find(p => p.providerKey === def.key)
-                    return (
-                      <ProviderForm
-                        key={def.key}
-                        providerKey={def.key}
-                        label={def.label}
-                        placeholder={def.placeholder}
-                        capabilities={def.caps}
-                        hint={def.hint || undefined}
-                        record={record ?? null}
-                        onSaved={load}
-                      />
-                    )
-                  })}
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced(v => !v)}
-                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 mt-2"
-                  >
-                    {showAdvanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                    Advanced providers (direct API access)
-                  </button>
-
-                  {showAdvanced && (
-                    <>
-                      <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">Advanced Providers</p>
-                      <p className="text-[10px] text-slate-600">These providers are not the primary product story. Configure only if you need direct access outside the primary provider stack.</p>
-                      {PROVIDER_DEFS_ADVANCED.map(def => {
-                        const record = providers.find(p => p.providerKey === def.key)
-                        return (
-                          <ProviderForm
-                            key={def.key}
-                            providerKey={def.key}
-                            label={def.label}
-                            placeholder={def.placeholder}
-                            capabilities={def.caps}
-                            hint={def.hint || undefined}
-                            record={record ?? null}
-                            onSaved={load}
-                          />
-                        )
-                      })}
-                    </>
-                  )}
                 </>
               )}
             </div>
