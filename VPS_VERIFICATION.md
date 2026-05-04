@@ -61,6 +61,5 @@ Test Files  6 passed (6)
      Tests  305 passed (305)
   Duration  620ms
 ```
-# Branch: copilot/go-live-audit-clean-slate-readiness
 
 
