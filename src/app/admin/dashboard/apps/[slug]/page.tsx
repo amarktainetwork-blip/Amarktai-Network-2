@@ -2044,7 +2044,7 @@ function IntelligenceTab({ appSlug, websiteUrl: defaultUrl, appName }: { appSlug
         </div>
         <p className="text-xs text-slate-400">
           Crawl the app website with Firecrawl to auto-generate the App Intelligence Profile.
-          The profile is used by Aiva, workspace, and agents as context.
+          The profile is used by AmarktAI Assistant, workspace, and agents as context.
         </p>
 
         <div className="space-y-3">

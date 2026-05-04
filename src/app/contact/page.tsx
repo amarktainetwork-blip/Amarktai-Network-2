@@ -8,10 +8,10 @@ import {
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
-  Cpu,
   Sparkles,
-  Building2,
-  Briefcase,
+  Bot,
+  Code2,
+  Network,
 } from 'lucide-react'
 
 export default function ContactPage() {
@@ -21,10 +21,9 @@ export default function ContactPage() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    org: '',
-    role: '',
-    volume: '',
-    type: '',
+    building: '',
+    apps: '',
+    capabilities: '',
     message: '',
   })
 
@@ -39,8 +38,8 @@ export default function ContactPage() {
         body: JSON.stringify({
           name: form.name,
           email: form.email,
-          companyOrProject: form.org,
-          message: `[${form.type || 'ACCESS'} | ${form.role} | ${form.volume}] ${form.message}`,
+          companyOrProject: form.building,
+          message: `[REQUEST ACCESS]\nWhat are you building: ${form.building}\nApps to connect: ${form.apps}\nAI capabilities needed: ${form.capabilities}\nAdditional context: ${form.message}`,
         }),
       })
       if (!res.ok) throw new Error('request failed')
@@ -58,39 +57,40 @@ export default function ContactPage() {
       <main className="px-4 pb-20 pt-32 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1.1fr]">
           <section>
-            <p className="text-label text-blue-300">Controlled access</p>
-            <h1 className="text-headline mt-4">Request operator access to Amarkt<span className="text-blue-400">AI</span> Network.</h1>
+            <p className="text-label text-cyan-300">Private access</p>
+            <h1 className="text-headline mt-4">Request access to Amarkt<span className="text-blue-400">AI</span> Network.</h1>
             <p className="mt-5 max-w-xl text-slate-300">
-              Access is reviewed for teams building serious AI products where orchestration quality, multi-provider reliability, and full operational visibility matter.
+              For builders creating more than one AI-powered product. Access is reviewed — not open signup.
             </p>
+
             <div className="mt-8 space-y-3">
               {[
-                { icon: ShieldCheck, text: 'Private onboarding — not an open-signup product.' },
-                { icon: Cpu,         text: 'Configured around your production capabilities and deployment stack.' },
-                { icon: Sparkles,    text: 'Capability and provider access scoped per approved use case.' },
+                { icon: ShieldCheck, text: 'Private onboarding — not an open-signup platform.'              },
+                { icon: Sparkles,    text: 'Configured around your apps, agents, and capability needs.'     },
+                { icon: Bot,         text: 'Access scoped per approved product and use case.'                },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-200">
-                  <item.icon className="h-4 w-4 text-cyan-300" />
+                  <item.icon className="h-4 w-4 text-cyan-300 shrink-0" />
                   <span>{item.text}</span>
                 </div>
               ))}
             </div>
 
             <div className="mt-8 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-sm text-slate-300">
-              <p className="font-semibold text-white">What access gives you</p>
+              <p className="font-semibold text-white">What we will discuss</p>
               <ul className="mt-3 space-y-2">
-                <li className="flex items-start gap-2"><Sparkles className="h-4 w-4 text-cyan-300 shrink-0 mt-0.5" /> Full operator dashboard: Workspace, Apps &amp; Agents, GenX Models, Artifacts, Deployments, Settings</li>
-                <li className="flex items-start gap-2"><Cpu className="h-4 w-4 text-blue-300 shrink-0 mt-0.5" /> GenX-routed AI execution: chat, code gen, image, video, voice, workflows</li>
-                <li className="flex items-start gap-2"><Building2 className="h-4 w-4 text-violet-300 shrink-0 mt-0.5" /> GitHub repo editing, AI code generation, and deploy triggers from the workspace</li>
-                <li className="flex items-start gap-2"><Briefcase className="h-4 w-4 text-emerald-300 shrink-0 mt-0.5" /> App agent config, artifact storage, and operational event traces</li>
+                <li className="flex items-start gap-2"><Network className="h-4 w-4 text-cyan-300 shrink-0 mt-0.5" /> Which apps you want to connect to the network</li>
+                <li className="flex items-start gap-2"><Bot className="h-4 w-4 text-blue-300 shrink-0 mt-0.5" /> Which agents, memory, or tools each product needs</li>
+                <li className="flex items-start gap-2"><Code2 className="h-4 w-4 text-violet-300 shrink-0 mt-0.5" /> Whether you need agents, media, research, repo automation, or app memory</li>
+                <li className="flex items-start gap-2"><ShieldCheck className="h-4 w-4 text-emerald-300 shrink-0 mt-0.5" /> Security, adult policy, and approval gate requirements</li>
               </ul>
             </div>
 
             <div className="mt-6 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-sm text-slate-300">
-              <p className="font-semibold text-white">Best fit profiles</p>
+              <p className="font-semibold text-white">Best fit</p>
               <ul className="mt-3 space-y-2">
-                <li className="flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-300" /> Product organizations operating multiple AI-enabled applications.</li>
-                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4 text-violet-300" /> Builders and integrators who need provider routing and operational control.</li>
+                <li className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-cyan-300" /> Builders running multiple AI-powered products.</li>
+                <li className="flex items-center gap-2"><Bot className="h-4 w-4 text-blue-300" /> Teams who need agents, memory, and operational coordination — not just chat.</li>
               </ul>
             </div>
           </section>
@@ -100,69 +100,86 @@ export default function ContactPage() {
               <div className="py-14 text-center">
                 <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-300" />
                 <h2 className="mt-4 text-xl font-semibold">Request received</h2>
-                <p className="mt-2 text-sm text-slate-400">Our team will review your onboarding request and respond directly.</p>
+                <p className="mt-2 text-sm text-slate-400">We will review your request and respond directly.</p>
               </div>
             ) : (
-              <form className="space-y-4" onSubmit={onSubmit}>
+              <form className="space-y-5" onSubmit={onSubmit}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block text-xs text-slate-400">
                     Full name
-                    <input aria-label="Full name" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" placeholder="Full name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                    <input
+                      aria-label="Full name"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                      placeholder="Full name"
+                      required
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    />
                   </label>
                   <label className="block text-xs text-slate-400">
-                    Work email
-                    <input aria-label="Work email" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" type="email" placeholder="Work email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                    Email
+                    <input
+                      aria-label="Email"
+                      className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                      type="email"
+                      placeholder="Your email"
+                      required
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    />
                   </label>
                 </div>
 
                 <label className="block text-xs text-slate-400">
-                  Company / project
-                  <input aria-label="Company or project" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" placeholder="Company / project" value={form.org} onChange={(e) => setForm({ ...form, org: e.target.value })} />
+                  What are you building?
+                  <input
+                    aria-label="What are you building"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                    placeholder="Describe your product or portfolio"
+                    required
+                    value={form.building}
+                    onChange={(e) => setForm({ ...form, building: e.target.value })}
+                  />
                 </label>
 
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <label className="block text-xs text-slate-400">
-                    Role
-                    <select aria-label="Role" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" required value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                      <option value="">Select role</option>
-                      <option>Founder / Executive</option>
-                      <option>Product / Engineering Lead</option>
-                      <option>Operator / AI Team</option>
-                      <option>Integrator / Agency</option>
-                    </select>
-                  </label>
-
-                  <label className="block text-xs text-slate-400">
-                    AI volume
-                    <select aria-label="AI volume" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" required value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })}>
-                      <option value="">Select volume</option>
-                      <option>Exploring (pre-scale)</option>
-                      <option>Low production</option>
-                      <option>Medium production</option>
-                      <option>High-volume production</option>
-                    </select>
-                  </label>
-
-                  <label className="block text-xs text-slate-400">
-                    Request type
-                    <select aria-label="Request type" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" required value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                      <option value="">Select request type</option>
-                      <option>Enterprise access</option>
-                      <option>Product integration</option>
-                      <option>Partnership</option>
-                      <option>Strategic conversation</option>
-                    </select>
-                  </label>
-                </div>
+                <label className="block text-xs text-slate-400">
+                  What apps do you want to connect?
+                  <input
+                    aria-label="Apps to connect"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                    placeholder="e.g. crypto app, companion app, marketing tool"
+                    value={form.apps}
+                    onChange={(e) => setForm({ ...form, apps: e.target.value })}
+                  />
+                </label>
 
                 <label className="block text-xs text-slate-400">
-                  Use case and current stack
-                  <textarea aria-label="Use case description" className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm" rows={6} placeholder="Describe current AI workflows, goals, and required capabilities" required value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+                  What AI capabilities do you need?
+                  <input
+                    aria-label="AI capabilities needed"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                    placeholder="e.g. agents, memory, media, research, repo automation"
+                    value={form.capabilities}
+                    onChange={(e) => setForm({ ...form, capabilities: e.target.value })}
+                  />
+                </label>
+
+                <label className="block text-xs text-slate-400">
+                  Anything else?
+                  <textarea
+                    aria-label="Additional context"
+                    className="mt-1 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white"
+                    rows={4}
+                    placeholder="Any other context, requirements, or questions"
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  />
                 </label>
 
                 {error && <p className="text-xs text-red-300">Unable to submit right now. Please retry.</p>}
                 <button disabled={loading} className="btn-primary w-full justify-center" type="submit">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Send Access Request
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                  Send Access Request
                 </button>
               </form>
             )}

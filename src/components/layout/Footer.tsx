@@ -5,16 +5,15 @@ const columns = [
     heading: 'Platform',
     links: [
       { href: '/', label: 'Platform' },
-      { href: '/about', label: 'Architecture' },
-      { href: '/apps', label: 'Capabilities' },
-      { href: '/docs', label: 'API Reference' },
+      { href: '/about', label: 'AmarktAI Assistant' },
+      { href: '/apps', label: 'Ecosystem' },
+      { href: '/apps#capabilities', label: 'Capabilities' },
     ],
   },
   {
     heading: 'Access',
     links: [
       { href: '/contact', label: 'Request Access' },
-      { href: '/apps', label: 'Capability Surfaces' },
     ],
   },
   {
@@ -36,7 +35,7 @@ export default function Footer() {
               Amarkt<span className="text-blue-400">AI</span> Network
             </p>
             <p className="mt-3 max-w-sm text-sm text-slate-400">
-              Multi-provider AI orchestration for real products: one routing brain, one capability engine, one operator console.
+              AmarktAI-led AI operating ecosystem. A coordinated command network for apps, agents, memory, media, code, research, and infrastructure.
             </p>
           </div>
 
@@ -57,7 +56,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-white/10 pt-5 text-xs text-slate-500">
-          © {new Date().getFullYear()} Amarkt<span className="text-blue-400/70">AI</span> Network. Operator-grade AI infrastructure.
+          © {new Date().getFullYear()} Amarkt<span className="text-blue-400/70">AI</span> Network. A living AI operating ecosystem.
         </div>
       </div>
     </footer>

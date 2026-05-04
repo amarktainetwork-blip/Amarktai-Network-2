@@ -7,8 +7,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'API Reference — Amarktai Network Brain Gateway',
-  description: 'Integration guide for connecting your application to the Amarktai Network Brain Gateway.',
+  title: 'API Reference — AmarktAI Network Brain Gateway',
+  description: 'Integration guide for connecting your application to the AmarktAI Network Brain Gateway.',
 }
 
 const CODE_STANDARD = `// Standard request
@@ -153,7 +153,7 @@ export default function DocsPage() {
       <header className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-white font-heading">Amarktai Network</span>
+            <span className="text-lg font-bold text-white font-heading">Amarkt<span className="text-blue-400">AI</span> Network</span>
             <Badge color="blue">API Docs</Badge>
           </div>
           <Link href="/" className="text-sm text-zinc-500 hover:text-white transition-colors">← Back to site</Link>
@@ -189,7 +189,7 @@ export default function DocsPage() {
           <div className="space-y-3">
             <h1 className="text-3xl font-bold text-white">Brain Gateway — API Reference</h1>
             <p className="text-zinc-400 leading-relaxed">
-              The Amarktai Network Brain Gateway is the single, unified entry point for all AI execution.
+              The AmarktAI Network Brain Gateway is the single, unified entry point for all AI execution.
               Every connected app authenticates with its <strong className="text-zinc-200">App ID</strong> and{' '}
               <strong className="text-zinc-200">App Secret</strong>, then sends tasks to the gateway which
               handles provider selection, emotion detection, content filtering, memory, and response.
@@ -346,7 +346,7 @@ fetch('https://your-domain.com/api/brain/suggestive-image', {
           </Section>
 
           <div className="border-t border-zinc-800 pt-8 text-xs text-zinc-600">
-            Amarktai Network · Brain Gateway API Reference · v2 · <a href="mailto:support@amarktai.com" className="hover:text-zinc-400">support@amarktai.com</a>
+            AmarktAI Network · Brain Gateway API Reference · v2 · <a href="mailto:support@amarktai.com" className="hover:text-zinc-400">support@amarktai.com</a>
           </div>
         </main>
       </div>

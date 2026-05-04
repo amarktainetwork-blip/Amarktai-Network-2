@@ -5,7 +5,7 @@
  *
  * The operator describes the app they want to connect and the assistant
  * generates: subdomain steps, VPS commands, env vars, code snippets,
- * and copy-paste deployment instructions tailored to Amarktai Network.
+ * and copy-paste deployment instructions tailored to AmarktAI Network.
  */
 
 import { useState, useCallback } from 'react'
@@ -21,7 +21,7 @@ function encodeBase64Utf8(value: string): string {
   return btoa(binary)
 }
 
-const SYSTEM_PROMPT = `You are Amarktai Network's onboarding assistant.
+const SYSTEM_PROMPT = `You are AmarktAI Network's onboarding assistant.
 You must always produce exactly this structure and order:
 
 ## Step 1: domain
@@ -41,12 +41,12 @@ Give a numbered checklist to verify end-to-end success.
 
 Rules:
 - Keep output practical and deployment-ready.
-- Use real Amarktai Network brain API paths.
+- Use real AmarktAI Network brain API paths.
 - Do not output TTS/voice instructions for onboarding.
 - Output markdown only.`
 
 const STARTER_PROMPTS = [
-  'I want to add my marketing agency website to Amarktai Network',
+  'I want to add my marketing agency website to AmarktAI Network',
   'I want to connect a Next.js e-commerce app with AI chat support',
   'I want to onboard a mobile fitness coaching app',
   'I want to add a church ministry platform with devotionals and AI prayer support',
@@ -208,7 +208,7 @@ export default function OnboardingAssistantTab() {
   return (
     <div className="space-y-6">
       <div className="text-sm text-slate-400 leading-relaxed">
-        Describe the app you want to connect to Amarktai Network. The AI will generate subdomain setup steps, VPS commands, env vars, integration code, and deployment instructions.
+        Describe the app you want to connect to AmarktAI Network. The AI will generate subdomain setup steps, VPS commands, env vars, integration code, and deployment instructions.
       </div>
 
       {/* Starter prompts */}
@@ -226,7 +226,7 @@ export default function OnboardingAssistantTab() {
         value={appDescription}
         onChange={e => setAppDescription(e.target.value)}
         rows={4}
-        placeholder="Describe your app: what it does, its tech stack, and how you want it connected to Amarktai Network…"
+        placeholder="Describe your app: what it does, its tech stack, and how you want it connected to AmarktAI Network…"
         className="w-full bg-white/[0.03] border border-white/[0.08] rounded-xl px-4 py-3.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/10 resize-none transition-all"
       />
 

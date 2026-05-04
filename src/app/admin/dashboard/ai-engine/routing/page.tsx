@@ -46,7 +46,7 @@ const CAPABILITIES: Array<{ value: Capability; label: string; note: string }> = 
   { value: 'reasoning', label: 'Reasoning', note: 'Planning, audits, decisions' },
   { value: 'creative', label: 'Creative', note: 'Marketing, content and copy' },
   { value: 'image_generation', label: 'Images', note: 'Media Studio and app imagery' },
-  { value: 'voice_tts', label: 'Voice TTS', note: 'Aiva and voice outputs' },
+  { value: 'voice_tts', label: 'Voice TTS', note: 'AmarktAI Assistant and voice outputs' },
   { value: 'research', label: 'Research', note: 'Crawling, summarising, strategy' },
   { value: 'adult_text', label: 'Adult Text', note: 'Only for adult-safe apps with gate passed' },
   { value: 'adult_image', label: 'Adult Images', note: 'Only for specialist providers and adult-safe apps' },

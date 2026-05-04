@@ -472,14 +472,14 @@ function AivaSection({ config, onSaved }: { config: AivaConfig; onSaved: () => v
     <motion.div variants={fadeUp}>
       <SectionCard
         icon={<Bot className="h-5 w-5 text-blue-400" />}
-        title="Aiva"
+        title="AmarktAI Assistant"
         badge={badge}
         open={open}
         onToggle={() => setOpen(v => !v)}
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            Aiva — AmarktAI Voice &amp; Intelligence Assistant. Configure typed chat mode and voice mode separately. Voice mode requires STT and TTS providers to be configured.
+            AmarktAI Assistant — Voice &amp; Intelligence. Configure typed chat mode and voice mode separately. Voice mode requires STT and TTS providers to be configured.
           </p>
 
           {/* ── Aiva Status Panel ─────────────────────────────────────────── */}
@@ -493,12 +493,12 @@ function AivaSection({ config, onSaved }: { config: AivaConfig; onSaved: () => v
             ) : aivaCtx ? (
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <StatusRow
-                  label="Aiva Chat"
+                  label="AI Assistant Chat"
                   value={aivaCtx.aivaChatReady ? 'Ready' : 'Unavailable'}
                   ok={aivaCtx.aivaChatReady}
                 />
                 <StatusRow
-                  label="Aiva Voice"
+                  label="AI Assistant Voice"
                   value={aivaCtx.aivaVoiceReady ? 'Ready' : 'Unavailable'}
                   ok={aivaCtx.aivaVoiceReady}
                 />
@@ -551,7 +551,7 @@ function AivaSection({ config, onSaved }: { config: AivaConfig; onSaved: () => v
                 className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition"
               >
                 <span>🎨</span>
-                Generate Aiva avatar images →
+                Generate AmarktAI avatar images →
               </a>
               <p className="text-[10px] text-slate-600 mt-0.5">Create state-aware avatar assets using GenX image generation.</p>
             </div>
@@ -1657,14 +1657,14 @@ function AivaVoiceSection() {
     <motion.div variants={fadeUp}>
       <SectionCard
         icon={<Mic className="h-5 w-5 text-slate-400" />}
-        title="Aiva Voice Settings"
+        title="AI Assistant Voice Settings"
         badge={{ label: 'Ready to wire', color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' }}
         open={open}
         onToggle={() => setOpen(v => !v)}
       >
         <div className="space-y-3">
           <p className="text-xs text-slate-500">
-            Configure Aiva&apos;s default voice persona, provider, and characteristics. Status: <span className="text-cyan-400">Ready to wire</span> — backend persistence not yet wired.
+            Configure AmarktAI Assistant&apos;s default voice persona, provider, and characteristics. Status: <span className="text-cyan-400">Ready to wire</span> — backend persistence not yet wired.
           </p>
 
           {open && (
@@ -1759,7 +1759,7 @@ function AivaVoiceSection() {
                   placeholder="App slug — leave blank for global default"
                   className={inputCls}
                 />
-                <p className="mt-1 text-[10px] text-slate-600">Override the voice per app. Blank = use global Aiva voice.</p>
+                <p className="mt-1 text-[10px] text-slate-600">Override the voice per app. Blank = use global AmarktAI Assistant voice.</p>
               </Field>
 
               <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3 text-xs text-slate-400">

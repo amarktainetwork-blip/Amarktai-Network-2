@@ -8,10 +8,9 @@ import { Menu, X, ArrowRight } from 'lucide-react'
 
 const navLinks = [
   { href: '/', label: 'Platform' },
-  { href: '/about', label: 'Architecture' },
-  { href: '/apps', label: 'Capabilities' },
-  { href: '/docs', label: 'API' },
-  { href: '/contact', label: 'Access' },
+  { href: '/about', label: 'AmarktAI Assistant' },
+  { href: '/apps', label: 'Ecosystem' },
+  { href: '/apps#capabilities', label: 'Capabilities' },
 ]
 
 /** Reveal operator login when user types the word "login" anywhere on the page (non-input). */

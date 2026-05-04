@@ -316,7 +316,7 @@ export default function AivaAssistant() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "Hi, I'm Aiva — your Amarktai system assistant. How can I help?",
+      content: "Hi, I'm AmarktAI Assistant — your operator assistant. How can I help?",
       capability: 'chat',
     },
   ])
@@ -473,7 +473,7 @@ export default function AivaAssistant() {
                 content: output,
                 pending: false,
                 capability: 'chat',
-                provider: 'Aiva',
+                provider: 'AmarktAI',
                 model: doneData.model,
                 outputType: 'text',
                 error: streamError ?? undefined,
@@ -730,7 +730,7 @@ export default function AivaAssistant() {
             onClick={() => setMinimized(false)}
             avatarAssets={avatarAssets}
           />
-          <span className="text-[9px] uppercase tracking-widest text-cyan-400/70">Aiva</span>
+          <span className="text-[9px] uppercase tracking-widest text-cyan-400/70">AmarktAI</span>
         </div>
       </div>
     )
@@ -780,7 +780,7 @@ export default function AivaAssistant() {
                 <div className="h-2 w-2 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]" />
                 <div className="absolute inset-0 h-2 w-2 rounded-full bg-cyan-400 animate-ping opacity-50" />
               </div>
-              <span className="text-sm font-semibold text-white">Aiva</span>
+              <span className="text-sm font-semibold text-white">AmarktAI Assistant</span>
               <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-1.5 py-px text-[9px] text-cyan-400">
                 SYSTEM ASSISTANT
               </span>
@@ -909,7 +909,7 @@ export default function AivaAssistant() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
-                placeholder="Ask Aiva anything…"
+                placeholder="Ask AmarktAI Assistant anything…"
                 disabled={sending}
                 className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none focus:border-cyan-400/40 disabled:opacity-50"
               />

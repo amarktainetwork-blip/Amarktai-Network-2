@@ -35,7 +35,7 @@ const sections: { title: string; content: string }[] = [
   },
   {
     title: 'Third-Party Links',
-    content: 'Our platform may contain links to third-party websites and services. We are not responsible for the privacy practices of these third parties. Applications within the Amarktai Network that have their own independent domains are subject to their own privacy policies for data processed on those platforms.',
+    content: 'Our platform may contain links to third-party websites and services. We are not responsible for the privacy practices of these third parties. Applications within the AmarktAI Network that have their own independent domains are subject to their own privacy policies for data processed on those platforms.',
   },
   {
     title: "Children's Privacy",
@@ -47,7 +47,7 @@ const sections: { title: string; content: string }[] = [
   },
   {
     title: 'Contact Us',
-    content: 'If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:\n\nAmarktai Network\nEmail: privacy@amarktai.com\n\nWe take your privacy seriously and will respond to all legitimate inquiries promptly.',
+    content: 'If you have questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us:\n\nAmarktAI Network\nEmail: privacy@amarktai.com\n\nWe take your privacy seriously and will respond to all legitimate inquiries promptly.',
   },
 ]
 
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
           Privacy Policy
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto leading-relaxed">
-          How we collect, use, and protect your information across the Amarktai Network.
+          How we collect, use, and protect your information across the AmarktAI Network.
         </p>
         <p className="text-sm text-slate-600 mt-3">Last updated: {lastUpdated}</p>
       </section>
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
         <div className="max-w-3xl mx-auto">
           <div className="border border-white/[0.06] rounded-xl p-8 mb-10 bg-white/[0.02]">
             <p className="text-slate-400 leading-relaxed text-[15px]">
-              Amarktai Network (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting
+              AmarktAI Network (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;) is committed to protecting
               your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information
               when you use our platform and services. Please read this policy carefully. If you disagree with its terms,
               please discontinue use of our services.

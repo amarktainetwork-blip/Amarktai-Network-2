@@ -45,10 +45,10 @@ const tools = [
     body: 'Review generated media, provider task output and saved AI artifacts.',
   },
   {
-    title: 'Aiva Actions',
+    title: 'AI Actions',
     href: '/admin/dashboard/ai-engine/aiva-actions',
     icon: ShieldCheck,
-    body: 'See what Aiva can read, propose and execute only after approval.',
+    body: 'See what AmarktAI Assistant can read, propose and execute only after approval.',
   },
   {
     title: 'AI Ops Command Center',
@@ -65,7 +65,7 @@ const tools = [
 ]
 
 const principles = [
-  'Aiva is the operator experience, not a hidden model selector.',
+  'AmarktAI Assistant is the operator experience, not a hidden model selector.',
   'Every product can receive its own intelligence package.',
   'Routes should be fast, streaming and measured from real usage.',
   'Powerful actions require approval and leave an audit trail.',
@@ -101,11 +101,13 @@ export default function AIEngineHubPage() {
         <div className="relative z-10 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
           <div>
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-xs font-semibold text-cyan-100">
-              <Sparkles className="h-3.5 w-3.5" /> Aiva Intelligence Engine
+              <Sparkles className="h-3.5 w-3.5" /> AmarktAI Intelligence Engine
             </div>
-            <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white sm:text-5xl">The brain behind Amarktai Network.</h1>
+            <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white sm:text-5xl">
+              The brain behind Amarkt<span className="text-blue-400">AI</span> Network.
+            </h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-400 sm:text-base">
-              This is where Aiva, product intelligence packages, smart routing, provider memory, generated artifacts and action permissions come together. Providers stay infrastructure; the operator experience stays Amarktai and Aiva.
+              This is where AmarktAI Assistant, product intelligence packages, smart routing, provider memory, generated artifacts and action permissions come together. Providers stay infrastructure; the operator experience stays AmarktAI.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/admin/dashboard/ai-engine/ops" className="inline-flex items-center gap-2 rounded-2xl bg-cyan-300 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white">Open AI Ops <ArrowRight className="h-4 w-4" /></Link>
@@ -118,7 +120,7 @@ export default function AIEngineHubPage() {
             <div className="flex items-center gap-3">
               <div className="rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-3"><Bot className="h-6 w-6 text-cyan-200" /></div>
               <div>
-                <p className="text-sm font-bold text-white">Aiva route health</p>
+                <p className="text-sm font-bold text-white">AmarktAI route health</p>
                 <p className="text-xs text-slate-500">Live readiness score</p>
               </div>
             </div>
@@ -173,8 +175,8 @@ export default function AIEngineHubPage() {
       <section className="rounded-3xl border border-cyan-300/10 bg-cyan-300/[0.04] p-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-white"><MessageSquareText className="h-5 w-5 text-cyan-200" /> Aiva conversation</h2>
-            <p className="mt-1 text-sm text-slate-400">Streaming conversation is handled through the Aiva panel and smart routing endpoint. Route metadata should stay collapsed by default, with voice controls visible only after TTS is verified.</p>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-white"><MessageSquareText className="h-5 w-5 text-cyan-200" /> AI Assistant conversation</h2>
+            <p className="mt-1 text-sm text-slate-400">Streaming conversation is handled through the AI Assistant panel and smart routing endpoint. Route metadata should stay collapsed by default, with voice controls visible only after TTS is verified.</p>
           </div>
           <Link href="/admin/dashboard/command-center" className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-2 text-sm font-semibold text-white hover:bg-white/[0.08]">Return to Command Center <ArrowRight className="h-4 w-4" /></Link>
         </div>

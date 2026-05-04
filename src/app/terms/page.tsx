@@ -7,11 +7,11 @@ const lastUpdated = 'March 2026'
 const sections: { title: string; content: string }[] = [
   {
     title: 'Acceptance of Terms',
-    content: 'By accessing or using the Amarktai Network platform and any of its associated applications and services (collectively, the "Services"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, you may not access or use our Services.\n\nThese Terms constitute a legally binding agreement between you and Amarktai Network ("Company," "we," "our," or "us"). We reserve the right to update these Terms at any time, and your continued use of the Services after any changes constitutes acceptance of the new Terms.',
+    content: 'By accessing or using the AmarktAI Network platform and any of its associated applications and services (collectively, the "Services"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, you may not access or use our Services.\n\nThese Terms constitute a legally binding agreement between you and AmarktAI Network ("Company," "we," "our," or "us"). We reserve the right to update these Terms at any time, and your continued use of the Services after any changes constitutes acceptance of the new Terms.',
   },
   {
     title: 'Description of Services',
-    content: 'Amarktai Network provides an interconnected suite of AI-powered applications and platforms spanning multiple domains:\n\n• Financial intelligence and market analysis tools\n• Community platforms and social networking\n• Educational services and learning environments\n• Security and identity verification products\n\nIndividual applications may be subject to additional terms. In cases of conflict, the specific application terms take precedence. We reserve the right to modify, suspend, or discontinue any part of our Services at any time.',
+    content: 'AmarktAI Network provides an interconnected suite of AI-powered applications and platforms spanning multiple domains:\n\n• Financial intelligence and market analysis tools\n• Community platforms and social networking\n• Educational services and learning environments\n• Security and identity verification products\n\nIndividual applications may be subject to additional terms. In cases of conflict, the specific application terms take precedence. We reserve the right to modify, suspend, or discontinue any part of our Services at any time.',
   },
   {
     title: 'User Accounts & Registration',
@@ -23,15 +23,15 @@ const sections: { title: string; content: string }[] = [
   },
   {
     title: 'Intellectual Property Rights',
-    content: 'The Services and their original content, features, and functionality are the exclusive property of Amarktai Network and its licensors. Our trademarks may not be used without prior written consent.\n\nYou retain ownership of content you submit. By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content in connection with operating the Services.',
+    content: 'The Services and their original content, features, and functionality are the exclusive property of AmarktAI Network and its licensors. Our trademarks may not be used without prior written consent.\n\nYou retain ownership of content you submit. By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, and distribute your content in connection with operating the Services.',
   },
   {
     title: 'Financial Services Disclaimer',
-    content: 'Certain applications provide financial market data, analysis, and intelligence tools. This information is for informational and educational purposes only and does not constitute financial, investment, or trading advice.\n\nAmarktai Network is not a registered investment advisor, broker-dealer, or financial institution. Investment decisions based on our Services are made solely at your own risk. Past performance is not indicative of future results. Consult a qualified financial advisor before making investment decisions.',
+    content: 'Certain applications provide financial market data, analysis, and intelligence tools. This information is for informational and educational purposes only and does not constitute financial, investment, or trading advice.\n\nAmarktAI Network is not a registered investment advisor, broker-dealer, or financial institution. Investment decisions based on our Services are made solely at your own risk. Past performance is not indicative of future results. Consult a qualified financial advisor before making investment decisions.',
   },
   {
     title: 'Limitation of Liability',
-    content: 'To the maximum extent permitted by law, Amarktai Network shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or goodwill, resulting from:\n\n• Your access to or inability to access the Services\n• Any conduct or content of any third party on the Services\n• Any content obtained from the Services\n• Unauthorized access or alteration of your transmissions\n\nOur aggregate liability shall not exceed $100 or the amount you paid us in the twelve months prior to the claim.',
+    content: 'To the maximum extent permitted by law, AmarktAI Network shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or goodwill, resulting from:\n\n• Your access to or inability to access the Services\n• Any conduct or content of any third party on the Services\n• Any content obtained from the Services\n• Unauthorized access or alteration of your transmissions\n\nOur aggregate liability shall not exceed $100 or the amount you paid us in the twelve months prior to the claim.',
   },
   {
     title: 'Disclaimer of Warranties',
@@ -51,7 +51,7 @@ const sections: { title: string; content: string }[] = [
   },
   {
     title: 'Contact Information',
-    content: 'If you have questions about these Terms of Service, please contact us:\n\nAmarktai Network\nEmail: legal@amarktai.com\n\nWe will respond to all legitimate legal inquiries in a timely manner.',
+    content: 'If you have questions about these Terms of Service, please contact us:\n\nAmarktAI Network\nEmail: legal@amarktai.com\n\nWe will respond to all legitimate legal inquiries in a timely manner.',
   },
 ]
 
@@ -70,7 +70,7 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto leading-relaxed">
-          The rules and agreements governing your use of the Amarktai Network.
+          The rules and agreements governing your use of the AmarktAI Network.
         </p>
         <p className="text-sm text-slate-600 mt-3">Last updated: {lastUpdated}</p>
       </section>
@@ -79,7 +79,7 @@ export default function TermsPage() {
         <div className="max-w-3xl mx-auto">
           <div className="border border-white/[0.06] rounded-xl p-8 mb-10 bg-white/[0.02]">
             <p className="text-slate-400 leading-relaxed text-[15px]">
-              These Terms of Service govern your access to and use of the Amarktai Network platform, including all
+              These Terms of Service govern your access to and use of the AmarktAI Network platform, including all
               associated applications, features, and services. By using our Services, you confirm that you are at
               least 16 years of age and have the legal authority to enter into these Terms on your own behalf or on
               behalf of an organization.

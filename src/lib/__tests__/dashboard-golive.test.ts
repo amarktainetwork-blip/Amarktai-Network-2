@@ -95,7 +95,7 @@ describe('Aiva assistant panel — hidden unless NEXT_PUBLIC_AIVA_ENABLED=true',
 
   it('Aiva assistant panel is gated behind NEXT_PUBLIC_AIVA_ENABLED env flag', () => {
     expect(layoutSrc).toContain('NEXT_PUBLIC_AIVA_ENABLED')
-    expect(layoutSrc).toContain('Aiva disabled by default')
+    expect(layoutSrc).toContain('AmarktAI Assistant disabled by default')
   })
 
   it('Aiva Chat has its own dedicated route at /admin/dashboard/aiva', () => {
@@ -152,7 +152,7 @@ describe('Repo Workbench — canonical simple flow', () => {
     'GitHub connection status',
     'Repo selector from connected GitHub account',
     'Import / clone',
-    'Tell Aiva what to change',
+    'Tell AmarktAI Assistant what to change',
     'Plan',
     'Generate diff',
     'Apply patch',

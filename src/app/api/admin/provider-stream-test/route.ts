@@ -18,7 +18,7 @@ export async function GET() {
   return NextResponse.json({
     success: true,
     providers: listUniversalProviders(),
-    purpose: 'Use POST to verify a provider streams quickly enough for Aiva/live conversations.',
+    purpose: 'Use POST to verify a provider streams quickly enough for AmarktAI Assistant/live conversations.',
   })
 }
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       targetFirstTokenMs: 5000,
     },
     recommendation: passed
-      ? 'Provider is suitable for Aiva/live conversation streaming.'
+      ? 'Provider is suitable for AmarktAI Assistant/live conversation streaming.'
       : 'Do not use this provider as a live conversation default until the stream test passes.',
   }, { status: passed ? 200 : 409 })
 }

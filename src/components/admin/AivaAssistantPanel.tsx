@@ -44,7 +44,7 @@ export default function AivaAssistantPanel() {
   const [expanded, setExpanded] = useState(false)
   const [showRoute, setShowRoute] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'system', text: 'Aiva is online when enabled. She streams through the admin conversation route and only reports actions proven by backend results.' },
+    { role: 'system', text: 'AmarktAI Assistant is online when enabled. It streams through the admin conversation route and only reports actions proven by backend results.' },
   ])
   const [input, setInput] = useState('')
   const [costPreference, setCostPreference] = useState<CostPreference>('cheap')
@@ -154,7 +154,7 @@ export default function AivaAssistantPanel() {
               setMessages((current) => {
                 const copy = [...current]
                 const last = copy[copy.length - 1]
-                const msg = typeof data.message === 'string' ? data.message : 'Aiva stream error'
+                const msg = typeof data.message === 'string' ? data.message : 'AmarktAI Assistant stream error'
                 if (last?.role === 'assistant') copy[copy.length - 1] = { ...last, text: last.text ? `${last.text}\n\n${msg}` : msg, meta: 'error' }
                 return copy
               })
@@ -168,7 +168,7 @@ export default function AivaAssistantPanel() {
         setMessages((current) => {
           const copy = [...current]
           const last = copy[copy.length - 1]
-          const msg = error instanceof Error ? error.message : 'Aiva failed'
+          const msg = error instanceof Error ? error.message : 'AmarktAI Assistant failed'
           if (last?.role === 'assistant') copy[copy.length - 1] = { ...last, text: last.text ? `${last.text}\n\n${msg}` : msg, meta: 'error' }
           return copy
         })
@@ -298,7 +298,7 @@ export default function AivaAssistantPanel() {
 
       <button onClick={() => setOpen((value) => !value)} className="flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm font-semibold text-cyan-100 shadow-xl shadow-cyan-950/40 backdrop-blur-xl hover:bg-cyan-400/20">
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : speaking ? <Volume2 className="h-4 w-4" /> : open ? <MessageSquare className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-        Aiva
+        AI Assistant
       </button>
     </div>
   )

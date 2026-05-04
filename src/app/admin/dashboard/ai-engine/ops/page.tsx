@@ -21,9 +21,9 @@ const OPS = [
     icon: Boxes,
   },
   {
-    title: 'Aiva Actions',
+    title: 'AI Actions',
     href: '/admin/dashboard/ai-engine/aiva-actions',
-    description: 'Review what Aiva can read, propose and execute only after confirmation.',
+    description: 'Review what AmarktAI Assistant can read, propose and execute only after confirmation.',
     icon: Bot,
   },
   {
@@ -35,12 +35,12 @@ const OPS = [
 ]
 
 const READINESS = [
-  'Aiva streams through smart routing by default.',
+  'AmarktAI Assistant streams through smart routing by default.',
   'Providers have capability and stream tests.',
   'Generated media/task results are saved as artifacts.',
   'Provider scores are calculated from real result logs.',
   'App AI packages can be saved and reloaded.',
-  'Aiva control is permission-gated before execution.',
+  'AmarktAI Assistant control is permission-gated before execution.',
 ]
 
 export default function AiOpsCommandCenterPage() {
@@ -53,7 +53,7 @@ export default function AiOpsCommandCenterPage() {
           <h1 className="text-2xl font-bold text-white">AI Ops Command Center</h1>
         </div>
         <p className="mt-2 max-w-3xl text-sm text-slate-400">
-          One place for the new backend AI operations surfaces before the final dashboard redesign.
+          AI operations surfaces for provider intelligence, artifact management, app AI packages, actions and repo management.
         </p>
       </div>
 
@@ -70,7 +70,7 @@ export default function AiOpsCommandCenterPage() {
       <section className="rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.03] p-5">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-emerald-300" />
-          <h2 className="text-sm font-bold text-white">Pre-redesign readiness</h2>
+          <h2 className="text-sm font-bold text-white">Platform status</h2>
         </div>
         <div className="mt-4 grid gap-2 md:grid-cols-2">
           {READINESS.map((item) => (
