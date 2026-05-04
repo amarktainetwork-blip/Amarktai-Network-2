@@ -34,7 +34,7 @@ export async function POST(
       return NextResponse.json({ error: 'Approval not found' }, { status: 404 })
     }
     if (existing.resolved) {
-      return NextResponse.json({ error: 'Approval already resolved', status: existing.resolved }, { status: 409 })
+      return NextResponse.json({ error: 'Approval already resolved', isResolved: true }, { status: 409 })
     }
 
     const updated = await prisma.systemAlert.update({
