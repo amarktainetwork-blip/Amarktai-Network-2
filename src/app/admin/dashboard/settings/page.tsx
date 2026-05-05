@@ -461,9 +461,6 @@ const STT_PROVIDERS = [
 const TTS_PROVIDERS = [
   { value: 'auto',       label: 'Auto (AI Engine default)' },
   { value: 'genx',       label: 'AI Engine built-in TTS' },
-  { value: 'openai',     label: 'OpenAI TTS' },
-  { value: 'deepgram',   label: 'Deepgram Aura' },
-  { value: 'elevenlabs', label: 'ElevenLabs' },
   { value: 'grok',       label: 'xAI Grok TTS' },
 ]
 

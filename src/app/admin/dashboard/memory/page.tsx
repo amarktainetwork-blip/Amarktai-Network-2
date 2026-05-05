@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   Brain,
   CheckCircle,
@@ -8,6 +9,7 @@ import {
   HardDrive,
   Heart,
   Lock,
+  RefreshCw,
   Shield,
   User,
   XCircle,
@@ -78,6 +80,21 @@ function Row({ label, value, status }: { label: string; value?: string; status?:
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function MemoryPage() {
+  const [memStatus, setMemStatus] = useState<{ available?: boolean; totalEntries?: number; statusLabel?: string } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/memory')
+      .then((res) => res.json())
+      .then((data) => setMemStatus(data))
+      .catch(() => null)
+  }, [])
+
+  const liveStatus: StatusLabel = memStatus?.available
+    ? 'Working'
+    : memStatus?.statusLabel === 'not_configured'
+      ? 'Needs key'
+      : 'Backend pending'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -88,6 +105,18 @@ export default function MemoryPage() {
         <div>
           <h1 className="text-xl font-black text-white">Memory</h1>
           <p className="text-xs text-slate-400">User memory, emotional profiles, conversation history and consent controls</p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <StatusBadge status={liveStatus} />
+          {memStatus?.totalEntries !== undefined && (
+            <span className="text-xs text-slate-500">{memStatus.totalEntries} entries</span>
+          )}
+          <button
+            onClick={() => fetch('/api/admin/memory').then(r => r.json()).then(setMemStatus).catch(() => null)}
+            className="rounded-xl border border-white/10 bg-white/[0.04] p-1.5 text-slate-400 hover:bg-white/[0.08]"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
 

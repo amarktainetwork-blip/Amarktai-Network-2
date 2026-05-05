@@ -3,16 +3,6 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle, Clock, ShieldCheck, XCircle } from 'lucide-react'
 
-interface ApprovalAction {
-  id: string
-  label: string
-  category: string
-  risk: string
-  defaultAllowed: boolean
-  requiresConfirmation: boolean
-  requiresAdmin: boolean
-  description: string
-}
 
 type StatusLabel = 'Working' | 'Ready to wire' | 'Needs key' | 'Backend pending'
 
@@ -41,6 +31,7 @@ const ACTION_CATEGORIES: Array<{
   label: string
   description: string
   status: StatusLabel
+  risk: string
   items: string[]
 }> = [
   {
@@ -48,6 +39,7 @@ const ACTION_CATEGORIES: Array<{
     label: 'PR Approval',
     description: 'Pull request creation and merge approvals. All PR and merge actions are approval-gated, audited, and logged.',
     status: 'Ready to wire',
+    risk: 'medium',
     items: ['PR creation approval', 'PR merge approval', 'Branch protection override'],
   },
   {
@@ -55,6 +47,7 @@ const ACTION_CATEGORIES: Array<{
     label: 'Deploy Approval',
     description: 'Deployment to VPS/production. Requires checks passing and explicit admin approval before executing.',
     status: 'Ready to wire',
+    risk: 'high',
     items: ['Staging deploy approval', 'Production deploy approval', 'VPS/service restart approval', 'Rollback approval'],
   },
   {
@@ -62,6 +55,7 @@ const ACTION_CATEGORIES: Array<{
     label: 'Adult Access Changes',
     description: 'Changes to adult content settings at app level. Requires approval, audit, and age gate configuration.',
     status: 'Backend pending',
+    risk: 'high',
     items: ['Enable adult mode for app', 'Change adult capability level', 'Age gate configuration'],
   },
   {
@@ -69,6 +63,7 @@ const ACTION_CATEGORIES: Array<{
     label: 'Spend / Provider Cost Approval',
     description: 'Actions that incur significant provider costs. Gated by spend limits and admin approval.',
     status: 'Backend pending',
+    risk: 'medium',
     items: ['High-cost model runs', 'Batch processing jobs', 'Bulk media generation'],
   },
   {
@@ -76,6 +71,7 @@ const ACTION_CATEGORIES: Array<{
     label: 'Destructive Action Approval',
     description: 'Irreversible operations such as data deletion, workspace reset, and schema migrations.',
     status: 'Ready to wire',
+    risk: 'critical',
     items: ['Workspace delete', 'Database schema migration', 'File/repo reset', 'Memory data purge'],
   },
   {
@@ -83,29 +79,40 @@ const ACTION_CATEGORIES: Array<{
     label: 'Marketing Send Approval',
     description: 'Mass communication approvals — email sequences, push notifications, social posts.',
     status: 'Backend pending',
+    risk: 'medium',
     items: ['Email campaign send', 'Push notification blast', 'Social post schedule'],
   },
 ]
 
 export default function ActionsPage() {
-  const [actions, setActions] = useState<ApprovalAction[]>([])
+  const [queue, setQueue] = useState<Array<{ id: string; type: string; title: string; status: string; createdAt: string }>>([])
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/admin/aiva/actions')
+  function loadQueue() {
+    setLoading(true)
+    fetch('/api/admin/approvals')
       .then((res) => res.json())
       .then((data) => {
-        if (data.success === false) throw new Error(data.error ?? 'Failed to load action permissions')
-        setActions(data.actions ?? [])
+        setQueue(Array.isArray(data.approvals) ? data.approvals : [])
       })
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load action permissions'))
-  }, [])
+      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load approval queue'))
+      .finally(() => setLoading(false))
+  }
 
-  const grouped = actions.reduce<Record<string, ApprovalAction[]>>((acc, action) => {
-    acc[action.category] ??= []
-    acc[action.category].push(action)
-    return acc
-  }, {})
+  useEffect(() => { loadQueue() }, [])
+
+  function handleApprove(id: string) {
+    fetch(`/api/admin/approvals/${id}/approve`, { method: 'POST' })
+      .then(() => loadQueue())
+      .catch((err) => setError(err instanceof Error ? err.message : 'Approve failed'))
+  }
+
+  function handleReject(id: string) {
+    fetch(`/api/admin/approvals/${id}/reject`, { method: 'POST' })
+      .then(() => loadQueue())
+      .catch((err) => setError(err instanceof Error ? err.message : 'Reject failed'))
+  }
 
   return (
     <div className="space-y-6">
@@ -118,9 +125,9 @@ export default function ActionsPage() {
           <h1 className="text-xl font-black text-white">Actions</h1>
           <p className="text-xs text-slate-400">Approval queue — all write, spend, deploy, and destructive actions are gated here</p>
         </div>
-        <div className="ml-auto">
-          <StatusBadge status="Ready to wire" />
-        </div>
+        <button onClick={loadQueue} disabled={loading} className="ml-auto rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-300 hover:bg-white/[0.08] disabled:opacity-40">
+          {loading ? 'Loading…' : 'Refresh'}
+        </button>
       </div>
 
       {/* Policy notice */}
@@ -132,17 +139,42 @@ export default function ActionsPage() {
         </p>
       </div>
 
-      {/* Live queue placeholder */}
+      {/* Live queue */}
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <p className="text-sm font-bold text-white">Live Approval Queue</p>
-          <StatusBadge status="Backend pending" />
+          <StatusBadge status={queue.length > 0 ? 'Working' : 'Ready to wire'} />
         </div>
-        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
-          <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-slate-600" />
-          <p className="text-sm text-slate-500">No pending approvals.</p>
-          <p className="mt-1 text-xs text-slate-600">Approval queue backend not wired — will show pending actions when wired.</p>
-        </div>
+        {error && <div className="mb-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-200">{error}</div>}
+        {queue.length === 0 ? (
+          <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
+            <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-slate-600" />
+            <p className="text-sm text-slate-500">No pending approvals.</p>
+            <p className="mt-1 text-xs text-slate-600">The queue is empty or no provider keys are configured.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {queue.map((item) => (
+              <div key={item.id} className="rounded-xl border border-white/10 bg-black/20 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-white">{item.title}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{item.type} · {new Date(item.createdAt).toLocaleString()}</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">{item.status}</span>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button onClick={() => handleApprove(item.id)} className="rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-400/20">
+                    Approve
+                  </button>
+                  <button onClick={() => handleReject(item.id)} className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/20">
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Action category cards */}
@@ -154,7 +186,10 @@ export default function ActionsPage() {
                 <ShieldCheck className="h-4 w-4 text-violet-400" />
                 <p className="text-sm font-bold text-white">{cat.label}</p>
               </div>
-              <StatusBadge status={cat.status} />
+              <div className="flex items-center gap-2">
+                <span className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">Risk: {cat.risk}</span>
+                <StatusBadge status={cat.status} />
+              </div>
             </div>
             <p className="mb-3 text-xs text-slate-400">{cat.description}</p>
             <div className="space-y-1.5">
@@ -168,48 +203,6 @@ export default function ActionsPage() {
           </div>
         ))}
       </div>
-
-      {/* Dynamic actions from backend */}
-      {error && <div className="rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-200">{error}</div>}
-
-      {Object.keys(grouped).length > 0 && (
-        <div className="space-y-4">
-          <p className="text-sm font-bold text-white">Live Action Permissions</p>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {Object.entries(grouped).map(([category, items]) => (
-              <section key={category} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                <h2 className="mb-3 text-sm font-bold capitalize text-white">{category}</h2>
-                <div className="space-y-2">
-                  {items.map((action) => (
-                    <div key={action.id} className="rounded-xl border border-white/10 bg-black/20 p-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{action.label}</p>
-                          <p className="mt-1 text-xs text-slate-500">{action.description}</p>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-400">{action.risk}</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-                        <Pill ok={action.defaultAllowed} label={action.defaultAllowed ? 'Default allowed' : 'Manual only'} />
-                        <Pill ok={!action.requiresConfirmation} label={action.requiresConfirmation ? 'Confirmation required' : 'No confirmation'} />
-                        <Pill ok={action.requiresAdmin} label={action.requiresAdmin ? 'Admin only' : 'User allowed'} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
-  )
-}
-
-function Pill({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 ${ok ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-100' : 'border-amber-400/20 bg-amber-400/10 text-amber-100'}`}>
-      <ShieldCheck className="h-3 w-3" />{label}
-    </span>
   )
 }
