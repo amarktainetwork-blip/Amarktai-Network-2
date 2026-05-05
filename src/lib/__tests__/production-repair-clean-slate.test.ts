@@ -171,7 +171,7 @@ describe('Part 3b — Reset functional tests', () => {
     })
     const res = await POST(req as Parameters<typeof POST>[0])
     expect(res.status).toBe(400)
-    const body = await res.json() as { error: string }
+    const body = await res.json() as { error?: string; success?: boolean }
     expect(body.error).toContain('RESET_APPROVED_KEYS')
   })
 
@@ -341,7 +341,7 @@ describe('Part 7 — Diagnostics does not expose banned providers', () => {
       const inStaticContent = diagSrc.includes(`"${label}"`) || diagSrc.includes(`'${label}'`)
       // Only fail if it's hardcoded as a string literal (not in a comment)
       if (inStaticContent) {
-        const lines = diagSrc.split('\n').filter(l => (l.includes(`"${label}"`) || l.includes(`'${label}'`)) && !l.trim().startsWith('//') && !l.trim().startsWith('*'))
+        const lines = diagSrc.split('\n').filter(l => (l.includes(`"${label}"`) || l.includes(`'${label}'`)) && !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/*'))
         expect(lines.length, `"${label}" hardcoded in diagnostics as provider`).toBe(0)
       }
     })

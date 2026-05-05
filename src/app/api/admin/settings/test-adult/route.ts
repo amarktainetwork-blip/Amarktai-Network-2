@@ -171,11 +171,15 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // The outputType defaults based on the policy level when not explicitly set.
   if (mode !== 'specialist') {
     if (!inlineOutputType) {
-      if (mode === 'adult_image' || mode === 'suggestive')          outputType = 'image'
-      else if (mode === 'adult_text')                               outputType = 'text'
-      else if (mode === 'adult_video')                              outputType = 'video'
-      else if (mode === 'adult_voice')                              outputType = 'audio'
-      else if (mode === 'full_adult_app_mode')                      outputType = 'image'
+      const modeOutputMap: Record<string, string> = {
+        adult_image:         'image',
+        suggestive:          'image',
+        adult_text:          'text',
+        adult_video:         'video',
+        adult_voice:         'audio',
+        full_adult_app_mode: 'image',
+      }
+      if (modeOutputMap[mode]) outputType = modeOutputMap[mode]
     }
   }
 

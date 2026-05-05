@@ -231,7 +231,15 @@ export default function SettingsPage() {
       )}
 
       {resetMsg && (
-        <motion.div variants={fadeUp} className={`rounded-xl border p-4 text-sm flex items-center gap-2 ${resetMsg.startsWith('Reset failed') ? 'border-red-500/20 bg-red-500/5 text-red-400' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'}`}>
+        <motion.div
+          variants={fadeUp}
+          className={[
+            'rounded-xl border p-4 text-sm flex items-center gap-2',
+            resetMsg.startsWith('Reset failed')
+              ? 'border-red-500/20 bg-red-500/5 text-red-400'
+              : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400',
+          ].join(' ')}
+        >
           <AlertCircle className="h-4 w-4 shrink-0" />
           {resetMsg}
         </motion.div>
