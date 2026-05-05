@@ -134,23 +134,53 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── Disabled ──
-  if (mode === 'disabled') {
+  // ── Disabled / off ──
+  if (mode === 'disabled' || mode === 'off') {
     return NextResponse.json({
-      mode: 'disabled',
+      mode,
       supported: false,
       status: 'disabled',
       message: 'Adult Creative Mode is disabled. Enable a specialist provider in Settings to use adult content generation.',
     })
   }
 
-  if (mode !== 'specialist') {
+  // ── Policy mode normalisation ──
+  // Accept the full app-level policy vocabulary and map it to specialist provider routing.
+  // "specialist" is kept as the internal routing mode for backwards compatibility.
+  // All other non-disabled policy levels route through the specialist provider stack.
+  const ACCEPTED_ADULT_MODES = new Set([
+    'specialist',
+    'suggestive',
+    'adult_text',
+    'adult_image',
+    'adult_video',
+    'adult_voice',
+    'full_adult_app_mode',
+  ])
+
+  if (!ACCEPTED_ADULT_MODES.has(mode)) {
     return NextResponse.json({
       mode,
       supported: false,
       status: 'unknown_mode',
-      message: `Unknown mode "${mode}". Only "specialist" is supported. The AI Engine is never used for adult content.`,
+      message: `Unknown adult policy mode "${mode}". Accepted modes: off, suggestive, adult_text, adult_image, adult_video, adult_voice, full_adult_app_mode, specialist.`,
     })
+  }
+
+  // Normalise — all non-disabled modes use the specialist provider stack.
+  // The outputType defaults based on the policy level when not explicitly set.
+  if (mode !== 'specialist') {
+    if (!inlineOutputType) {
+      const modeOutputMap: Record<string, string> = {
+        adult_image:         'image',
+        suggestive:          'image',
+        adult_text:          'text',
+        adult_video:         'video',
+        adult_voice:         'audio',
+        full_adult_app_mode: 'image',
+      }
+      if (modeOutputMap[mode]) outputType = modeOutputMap[mode]
+    }
   }
 
   // ── Specialist provider ──

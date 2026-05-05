@@ -458,13 +458,35 @@ describe('Settings key reset/save/test flow (Phase A)', () => {
     const { POST } = await import('@/app/api/admin/settings/reset-approved-keys/route')
     const req = new Request('http://localhost/api/admin/settings/reset-approved-keys', {
       method: 'POST',
-      body: JSON.stringify({ keys: ['github', 'genx'] }),
+      body: JSON.stringify({ confirm: 'RESET_APPROVED_KEYS', keys: ['github', 'genx'] }),
     })
     const res = await POST(req as Parameters<typeof POST>[0])
     const body = await res.json() as { success: boolean; cleared: number }
 
     expect(body.success).toBe(true)
     expect(body.cleared).toBe(2)
+  })
+
+  it('reset-approved-keys requires confirmation token', async () => {
+    vi.doMock('@/lib/session', () => ({ getSession: vi.fn().mockResolvedValue({ isLoggedIn: true }) }))
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: {
+        integrationConfig: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+        aiProvider: { updateMany: vi.fn().mockResolvedValue({ count: 0 }) },
+      },
+    }))
+
+    const { POST } = await import('@/app/api/admin/settings/reset-approved-keys/route')
+    const req = new Request('http://localhost/api/admin/settings/reset-approved-keys', {
+      method: 'POST',
+      body: JSON.stringify({ keys: ['github', 'genx'] }), // no confirm field
+    })
+    const res = await POST(req as Parameters<typeof POST>[0])
+
+    // Should return 400 since confirm is missing
+    expect(res.status).toBe(400)
+    const body = await res.json() as { error: string }
+    expect(body.error).toContain('RESET_APPROVED_KEYS')
   })
 
   it('reset-approved-keys rejects unknown/banned provider keys', async () => {
@@ -479,7 +501,7 @@ describe('Settings key reset/save/test flow (Phase A)', () => {
     const { POST } = await import('@/app/api/admin/settings/reset-approved-keys/route')
     const req = new Request('http://localhost/api/admin/settings/reset-approved-keys', {
       method: 'POST',
-      body: JSON.stringify({ keys: ['openai', 'anthropic', 'suno'] }),
+      body: JSON.stringify({ confirm: 'RESET_APPROVED_KEYS', keys: ['openai', 'anthropic', 'suno'] }),
     })
     const res = await POST(req as Parameters<typeof POST>[0])
 

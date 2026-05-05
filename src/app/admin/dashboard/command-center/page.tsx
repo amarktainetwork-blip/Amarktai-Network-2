@@ -32,9 +32,9 @@ const stateClass: Record<SystemState, string> = {
 }
 
 const nextActions = [
-  { title: 'Finish dashboard foundation', href: '/admin/dashboard/diagnostics', status: 'Ready to wire' },
-  { title: 'Connect approved provider keys', href: '/admin/dashboard/settings', status: 'Needs key' },
-  { title: 'Prepare local memory storage', href: '/admin/dashboard/memory', status: 'Backend pending' },
+  { title: 'Add provider API keys', href: '/admin/dashboard/settings', status: 'Needs key' },
+  { title: 'Configure GitHub & Webdock', href: '/admin/dashboard/settings', status: 'Needs key' },
+  { title: 'Fix health endpoint & run diagnostics', href: '/admin/dashboard/diagnostics', status: 'Ready to wire' },
 ]
 
 export default function CommandCenterPage() {
@@ -112,7 +112,7 @@ export default function CommandCenterPage() {
             <span className="rounded-full border border-cyan-400/25 bg-cyan-400/[0.08] px-3 py-1 text-[10px] font-bold text-cyan-100">Ready to wire</span>
           </div>
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-slate-300">
-            <p>The dashboard foundation is being shaped into an operator console. The next backend phases should wire Settings, Diagnostics, AmarktAI Assistant chat, local memory, app intelligence packages and Repo Workbench PR creation in that order.</p>
+            <p>AmarktAI Network operator console is operational. Add provider keys, configure GitHub and Webdock, enable memory storage, and run the adult provider test to unlock full capability.</p>
             <p className="mt-3 text-slate-500">This briefing becomes live once AmarktAI Assistant can read diagnostics, apps, memory and pending approvals.</p>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3">

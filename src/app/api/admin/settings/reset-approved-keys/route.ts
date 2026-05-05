@@ -5,8 +5,11 @@
  * Supports resetting individual keys or all approved keys at once.
  *
  * Body:
- *   { keys?: string[] }  — specific integration keys to clear (e.g. ['github', 'genx'])
- *   { all?: true }       — reset ALL approved provider keys
+ *   { confirm: "RESET_APPROVED_KEYS", keys?: string[] }  — reset specific integration keys
+ *   { confirm: "RESET_APPROVED_KEYS", all?: true }       — reset ALL approved provider keys
+ *
+ * The confirm field is REQUIRED to prevent accidental resets.
+ * This does NOT delete app data, repos, artifacts, memory, or user accounts.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -36,8 +39,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({})) as { keys?: string[]; all?: boolean }
-    const { keys, all } = body
+    const body = await req.json().catch(() => ({})) as { confirm?: string; keys?: string[]; all?: boolean }
+    const { confirm, keys, all } = body
+
+    // Require explicit confirmation to prevent accidental resets
+    if (confirm !== 'RESET_APPROVED_KEYS') {
+      return NextResponse.json(
+        { error: 'Confirmation required. Send { confirm: "RESET_APPROVED_KEYS" } to proceed.' },
+        { status: 400 },
+      )
+    }
 
     const targetKeys = all
       ? APPROVED_RESET_KEYS
@@ -81,6 +92,7 @@ export async function POST(req: NextRequest) {
       cleared: clearedCount,
       total: targetKeys.length,
       results,
+      note: 'Only approved provider keys were cleared. App data, repos, artifacts, memory, and user accounts are unaffected.',
     })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to reset keys' }, { status: 500 })

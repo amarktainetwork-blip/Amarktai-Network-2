@@ -57,22 +57,37 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 export default function AmarktAIAssistantPage() {
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([])
-
-  function handleSend() {
+  const [loading, setLoading] = useState(false)
+  const [selectedApp] = useState<string>('')
     const text = input.trim()
     if (!text) return
     setMessages((prev) => [...prev, { role: 'user', text }])
     setInput('')
-    // Stub response — backend stream not wired yet
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text: 'AmarktAI Assistant stream backend is not yet wired. Status: Ready to wire. Configure provider keys in Settings to enable live responses.',
-        },
-      ])
-    }, 400)
+    setLoading(true)
+    fetch('/api/admin/amarktai-assistant/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, appSlug: selectedApp || 'admin' }),
+    })
+      .then((res) => res.json())
+      .then((data: { reply?: string; error?: string; needsKey?: boolean }) => {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: data.needsKey
+              ? 'Needs key — add a provider key in Settings to enable live responses.'
+              : (data.reply ?? data.error ?? 'No response'),
+          },
+        ])
+      })
+      .catch((err: Error) => {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', text: `Error: ${err.message}` },
+        ])
+      })
+      .finally(() => setLoading(false))
   }
 
   return (
@@ -140,10 +155,10 @@ export default function AmarktAIAssistantPage() {
               />
               <button
                 onClick={handleSend}
-                disabled={!input.trim()}
+                disabled={!input.trim() || loading}
                 className="rounded-xl bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-400 transition hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Send
+                {loading ? 'Thinking…' : 'Send'}
               </button>
             </div>
           </div>
