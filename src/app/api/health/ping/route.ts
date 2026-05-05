@@ -8,11 +8,16 @@ import { NextResponse } from 'next/server'
  * Always returns 200 while the process is running.
  *
  * Response shape:
- *   { status: "ok", timestamp: "<ISO8601>" }
+ *   { ok: true, status: "ok", service: "amarktai-network", timestamp: "<ISO8601>" }
  */
 export async function GET() {
   return NextResponse.json(
-    { status: 'ok', timestamp: new Date().toISOString() },
+    {
+      ok: true,
+      status: 'ok',
+      service: 'amarktai-network',
+      timestamp: new Date().toISOString(),
+    },
     {
       status: 200,
       headers: {

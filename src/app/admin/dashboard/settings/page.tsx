@@ -101,6 +101,8 @@ export default function SettingsPage() {
   const [data, setData] = useState<IntegrationsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [resetMsg, setResetMsg] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -115,6 +117,27 @@ export default function SettingsPage() {
       setLoading(false)
     }
   }, [])
+
+  const handleCleanSlateReset = useCallback(async () => {
+    if (!window.confirm('This will clear all saved provider API keys. App data, repos, memory, and accounts will NOT be deleted. Continue?')) return
+    setResetting(true)
+    setResetMsg(null)
+    try {
+      const res = await fetch('/api/admin/settings/reset-approved-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET_APPROVED_KEYS', all: true }),
+      })
+      const body = await res.json() as { success?: boolean; cleared?: number; error?: string }
+      if (!res.ok || !body.success) throw new Error(body.error ?? 'Reset failed')
+      setResetMsg(`Clean slate complete — ${body.cleared ?? 0} key(s) cleared. All providers now show Needs key.`)
+      await load()
+    } catch (e) {
+      setResetMsg(`Reset failed: ${e instanceof Error ? e.message : 'Unknown error'}`)
+    } finally {
+      setResetting(false)
+    }
+  }, [load])
 
   useEffect(() => { load() }, [load])
 
@@ -136,14 +159,25 @@ export default function SettingsPage() {
               </div>
               <p className="text-sm text-slate-400">Configure API keys, integrations, and system behaviour for the AmarktAI Network operator console.</p>
             </div>
-            <button
-              onClick={load}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-slate-400 hover:text-white disabled:opacity-40 transition-all"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+              <button
+                onClick={load}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-slate-400 hover:text-white disabled:opacity-40 transition-all"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+              <button
+                onClick={handleCleanSlateReset}
+                disabled={resetting}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-xs text-red-400 hover:bg-red-500/10 disabled:opacity-40 transition-all"
+                title="Clear all saved provider API keys and start clean"
+              >
+                {resetting ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                Start clean / clear saved provider keys
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -193,6 +227,13 @@ export default function SettingsPage() {
         <motion.div variants={fadeUp} className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400 flex items-center gap-2">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
+        </motion.div>
+      )}
+
+      {resetMsg && (
+        <motion.div variants={fadeUp} className={`rounded-xl border p-4 text-sm flex items-center gap-2 ${resetMsg.startsWith('Reset failed') ? 'border-red-500/20 bg-red-500/5 text-red-400' : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'}`}>
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {resetMsg}
         </motion.div>
       )}
 

@@ -75,11 +75,79 @@ if node_modules/.bin/vitest run \
     src/lib/__tests__/public-website-foundation.test.ts \
     src/lib/__tests__/dashboard-foundation-complete.test.ts \
     src/lib/__tests__/go-live-clean-slate-audit.test.ts \
+    src/lib/__tests__/production-repair-clean-slate.test.ts \
     2>&1; then
   pass "All targeted tests passed"
 else
   fail "One or more targeted tests FAILED"
 fi
+
+# =============================================================================
+# SECTION 3b — SOURCE TRUTH CHECKS (static analysis)
+# =============================================================================
+section "Source truth — provider stack & clean-slate"
+
+# Health ping route must return ok:true and service field
+PING_SRC="src/app/api/health/ping/route.ts"
+if [ -f "$PING_SRC" ]; then
+  if grep -q "ok: true" "$PING_SRC" && grep -q "service:" "$PING_SRC" && grep -q "amarktai-network" "$PING_SRC"; then
+    pass "Health ping returns ok:true and service:amarktai-network"
+  else
+    fail "Health ping missing ok:true or service:amarktai-network field"
+  fi
+else
+  fail "Health ping route not found: $PING_SRC"
+fi
+
+# Reset endpoint requires confirmation
+RESET_SRC="src/app/api/admin/settings/reset-approved-keys/route.ts"
+if [ -f "$RESET_SRC" ]; then
+  if grep -q "RESET_APPROVED_KEYS" "$RESET_SRC"; then
+    pass "reset-approved-keys requires RESET_APPROVED_KEYS confirmation"
+  else
+    fail "reset-approved-keys does not require confirmation"
+  fi
+else
+  fail "reset-approved-keys route not found"
+fi
+
+# Test-adult must not reject full_adult_app_mode
+ADULT_SRC="src/app/api/admin/settings/test-adult/route.ts"
+if [ -f "$ADULT_SRC" ]; then
+  if grep -q "full_adult_app_mode" "$ADULT_SRC"; then
+    pass "test-adult route accepts full_adult_app_mode"
+  else
+    fail "test-adult route does not accept full_adult_app_mode"
+  fi
+else
+  fail "test-adult route not found"
+fi
+
+# Settings must have clean-slate reset button
+SETTINGS_SRC="src/app/admin/dashboard/settings/page.tsx"
+if grep -q "clear saved provider keys\|RESET_APPROVED_KEYS" "$SETTINGS_SRC"; then
+  pass "Settings has clean-slate reset button"
+else
+  fail "Settings missing clean-slate reset button"
+fi
+
+# Command center must not say 'dashboard foundation'
+CC_SRC="src/app/admin/dashboard/command-center/page.tsx"
+if grep -q "dashboard foundation is being shaped" "$CC_SRC"; then
+  fail "Command center still says 'dashboard foundation is being shaped'"
+else
+  pass "Command center does not say 'dashboard foundation is being shaped'"
+fi
+
+# Approved provider stack check — banned providers must not be in PROVIDER_DEFS_PRIMARY
+BANNED_PROVIDERS="deepseek replicate elevenlabs deepgram openrouter cohere mistral anthropic"
+for banned in $BANNED_PROVIDERS; do
+  if grep -q "key: '$banned'" "$SETTINGS_SRC"; then
+    fail "Settings still has banned provider '$banned' in PROVIDER_DEFS_PRIMARY"
+  else
+    pass "Settings does not expose banned provider '$banned'"
+  fi
+done
 
 # =============================================================================
 # SECTION 4 — STANDALONE SERVER & STATIC ASSETS
@@ -218,6 +286,55 @@ if [ -n "$BASE_URL" ]; then
   check_redirect "/admin/dashboard/intelligence"            "${BASE_URL}/admin/dashboard/intelligence"            "research"
   check_redirect "/admin/dashboard/integrations"            "${BASE_URL}/admin/dashboard/integrations"            "settings"
   check_redirect "/admin/dashboard/models"                  "${BASE_URL}/admin/dashboard/models"                  "settings"
+
+  # ── Health ping ──
+  section "Health endpoint truth"
+  PING_RESP=$(curl -s --max-time 10 "${BASE_URL}/api/health/ping" 2>/dev/null || echo "")
+  if echo "$PING_RESP" | grep -q '"ok":true'; then
+    pass "/api/health/ping returns ok:true"
+  else
+    fail "/api/health/ping did not return ok:true (got: $PING_RESP)"
+  fi
+  if echo "$PING_RESP" | grep -q '"service":"amarktai-network"'; then
+    pass "/api/health/ping returns service:amarktai-network"
+  else
+    fail "/api/health/ping missing service:amarktai-network"
+  fi
+
+  # ── Settings integrations endpoint ──
+  section "Settings endpoint clean-slate truth"
+  SETTINGS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/api/admin/settings/integrations" 2>/dev/null || echo "000")
+  if [[ "$SETTINGS_STATUS" =~ ^(200|401|403)$ ]]; then
+    pass "/api/admin/settings/integrations responds ($SETTINGS_STATUS — auth expected when not logged in)"
+  else
+    fail "/api/admin/settings/integrations returned $SETTINGS_STATUS"
+  fi
+
+  # ── Diagnostics endpoint truth ──
+  section "Diagnostics endpoint truth"
+  DIAG_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/api/admin/system/live-readiness" 2>/dev/null || echo "000")
+  if [[ "$DIAG_STATUS" =~ ^(200|401|403)$ ]]; then
+    pass "/api/admin/system/live-readiness responds ($DIAG_STATUS)"
+  else
+    fail "/api/admin/system/live-readiness returned $DIAG_STATUS"
+  fi
+
+  # ── Adult policy clean-slate ──
+  section "Adult policy clean-slate"
+  ADULT_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${BASE_URL}/api/admin/global-adult-mode" 2>/dev/null || echo "000")
+  if [[ "$ADULT_STATUS" =~ ^(200|401|403)$ ]]; then
+    pass "/api/admin/global-adult-mode responds ($ADULT_STATUS)"
+  else
+    fail "/api/admin/global-adult-mode returned $ADULT_STATUS"
+  fi
+
+  # ── Approved provider list — reset endpoint accessible ──
+  RESET_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 -X POST "${BASE_URL}/api/admin/settings/reset-approved-keys" -H "Content-Type: application/json" -d '{}' 2>/dev/null || echo "000")
+  if [[ "$RESET_STATUS" =~ ^(400|401|403)$ ]]; then
+    pass "/api/admin/settings/reset-approved-keys rejects unauthenticated/unconfirmed request ($RESET_STATUS)"
+  else
+    warn "/api/admin/settings/reset-approved-keys returned unexpected $RESET_STATUS"
+  fi
 
 else
   section "Live URL checks"
