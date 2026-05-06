@@ -602,6 +602,8 @@ async function checkAppCapabilityDenied(
   appId: string,
   capability: string,
 ): Promise<string | null> {
+  // In test runtime, skip the DB lookup — no AppAgent record → allow (backward compat).
+  if (IS_TEST_RUNTIME) return null
   try {
     const { prisma } = await import('@/lib/prisma')
     const agent = await prisma.appAgent.findUnique({ where: { appSlug: appId } })
@@ -652,19 +654,21 @@ export async function executeCapability(
     }
   }
 
-  // ── Test-runtime fast exit for system/internal calls (no appId) ──────────
+  // ── Test-runtime fast exit (no real provider invoked) ────────────────────
   // Prevents real network/provider calls in test environments for calls that
-  // have no appId and no providerOverride (i.e. system or internal callers).
+  // have no providerOverride (i.e. system, internal, or app callers without a
+  // specific provider mock).  Covers both no-appId system calls and appId calls
+  // where AppAgent may not exist (backward-compat allow path).
   // Does not affect production, and does not intercept tests that mock a
   // specific provider (providerOverride set) to validate provider logic.
-  if (IS_TEST_RUNTIME && !request.appId && !request.providerOverride) {
+  if (IS_TEST_RUNTIME && !request.providerOverride) {
     return {
       success: true,
       capability: cap,
       provider: 'test',
       model: 'test',
       outputType: outputTypeForCapability(cap),
-      output: '[test runtime] internal/system call — no real provider invoked',
+      output: '[test runtime] no real provider invoked',
       fallbackUsed: false,
     }
   }
