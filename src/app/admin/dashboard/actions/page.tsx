@@ -88,6 +88,7 @@ export default function ActionsPage() {
   const [queue, setQueue] = useState<Array<{ id: string; type: string; title: string; status: string; createdAt: string }>>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [queueLoaded, setQueueLoaded] = useState(false)
 
   function loadQueue() {
     setLoading(true)
@@ -95,6 +96,7 @@ export default function ActionsPage() {
       .then((res) => res.json())
       .then((data) => {
         setQueue(Array.isArray(data.approvals) ? data.approvals : [])
+        setQueueLoaded(true)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load approval queue'))
       .finally(() => setLoading(false))
@@ -143,14 +145,16 @@ export default function ActionsPage() {
       <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <p className="text-sm font-bold text-white">Live Approval Queue</p>
-          <StatusBadge status={queue.length > 0 ? 'Working' : 'Ready to wire'} />
+          <StatusBadge status={queueLoaded ? 'Working' : (error ? 'Ready to wire' : 'Ready to wire')} />
         </div>
         {error && <div className="mb-3 rounded-xl border border-amber-400/20 bg-amber-400/10 p-3 text-xs text-amber-200">{error}</div>}
         {queue.length === 0 ? (
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-8 text-center">
             <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-slate-600" />
             <p className="text-sm text-slate-500">No pending approvals.</p>
-            <p className="mt-1 text-xs text-slate-600">The queue is empty or no provider keys are configured.</p>
+            <p className="mt-1 text-xs text-slate-600">
+              {queueLoaded ? 'Local approval queue is active and ready.' : 'Loading approval queue…'}
+            </p>
           </div>
         ) : (
           <div className="space-y-3">

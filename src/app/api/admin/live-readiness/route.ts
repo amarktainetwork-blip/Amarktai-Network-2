@@ -63,9 +63,9 @@ export async function GET() {
     {
       id: 'apps',
       name: 'App AI packages',
-      state: stateFrom(packages.length > 0, packages.some((pkg) => pkg.status !== 'ready')),
+      state: packages.length > 0 ? stateFrom(true, packages.some((pkg) => pkg.status !== 'ready')) : ('warning' as SystemState),
       detail: `${packages.length} saved app package(s).`,
-      nextAction: packages.length ? 'Review package blockers before onboarding real apps.' : 'Create and save the first app AI package.',
+      nextAction: packages.length ? 'Review package blockers before onboarding real apps.' : 'Create and save the first app AI package when ready — not a launch blocker.',
     },
     {
       id: 'artifacts',

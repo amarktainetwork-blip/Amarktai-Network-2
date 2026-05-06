@@ -189,6 +189,12 @@ export async function runGit(cwd: string, args: string[], timeoutMs = 120_000, t
       timeout: timeoutMs,
       maxBuffer: 1024 * 1024 * 8,
       windowsHide: true,
+      env: {
+        ...process.env,
+        // Prevent git from prompting for credentials interactively (no TTY in server context)
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_ASKPASS: '',
+      },
     })
     return {
       ok: true,
@@ -228,9 +234,12 @@ export async function importRepo(repoUrl: string, branchInput = 'main') {
       gitResult = await runGit(localPath, ['pull', '--ff-only', 'origin', branch], 180_000, token ?? undefined)
     }
   } else {
-    gitResult = await runGit(path.dirname(localPath), ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath], 240_000)
-    if (!gitResult.ok && token) {
+    // Always try with token first if available — prevents git from asking for username
+    // interactively (which fails in server context with "No such device or address").
+    if (token) {
       gitResult = await runGit(path.dirname(localPath), ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath], 240_000, token)
+    } else {
+      gitResult = await runGit(path.dirname(localPath), ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath], 240_000)
     }
   }
 

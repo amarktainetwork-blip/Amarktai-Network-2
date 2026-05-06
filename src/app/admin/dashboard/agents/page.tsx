@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import {
   Bot,
   Cpu,
@@ -245,6 +246,23 @@ function AgentCard({ agent }: { agent: AgentDef }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AgentRegistryPage() {
+  const [registryLoaded, setRegistryLoaded] = useState(false)
+  const [registryCount, setRegistryCount] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/agents')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data) return
+        const agents = Array.isArray(data) ? data : (Array.isArray(data.agents) ? data.agents : null)
+        if (agents !== null) {
+          setRegistryCount(agents.length)
+          setRegistryLoaded(true)
+        }
+      })
+      .catch(() => { /* keep null */ })
+  }, [])
+
   const statusCounts = AGENTS.reduce<Record<string, number>>((acc, a) => {
     acc[a.status] = (acc[a.status] ?? 0) + 1
     return acc
@@ -266,7 +284,23 @@ export default function AgentRegistryPage() {
           <h1 className="text-xl font-black text-white">Agents</h1>
           <p className="text-xs text-slate-400">Compact category groups — all AmarktAI specialist agents with actual backend wiring status</p>
         </div>
+        {registryLoaded && (
+          <span className="ml-auto inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+            Registry Working
+          </span>
+        )}
       </div>
+
+      {/* Registry status notice */}
+      {registryLoaded && (
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <p className="text-xs font-semibold text-emerald-300">Agent registry is active.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {registryCount} starter agents seeded from local VPS storage.
+            Execution depends on provider keys and approved tool permissions.
+          </p>
+        </div>
+      )}
 
       {/* Status summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -307,7 +341,7 @@ export default function AgentRegistryPage() {
       })}
 
       <p className="text-[11px] text-slate-600">
-        Agent wiring happens in Phase 2. This registry is the source of truth for which agents exist and their current readiness status.
+        Agent registry is active. Execution depends on provider keys and approved tool permissions.
       </p>
     </div>
   )

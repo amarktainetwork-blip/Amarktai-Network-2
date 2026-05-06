@@ -33,8 +33,8 @@ const stateClass: Record<SystemState, string> = {
 
 const nextActions = [
   { title: 'Add provider API keys', href: '/admin/dashboard/settings', status: 'Needs key' },
-  { title: 'Configure GitHub & Webdock', href: '/admin/dashboard/settings', status: 'Needs key' },
-  { title: 'Fix health endpoint & run diagnostics', href: '/admin/dashboard/diagnostics', status: 'Ready to wire' },
+  { title: 'Test GitHub token & Repo Workbench import', href: '/admin/dashboard/repo-workbench', status: 'Needs key' },
+  { title: 'Configure Firecrawl for live web crawling', href: '/admin/dashboard/settings', status: 'Needs key' },
 ]
 
 export default function CommandCenterPage() {
