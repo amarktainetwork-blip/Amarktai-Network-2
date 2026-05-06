@@ -33,7 +33,7 @@ const placeholderByTab: Record<StudioTab, string> = {
 
 export default function CreativeStudioPage() {
   const [activeTab, setActiveTab] = useState<StudioTab>('image')
-  const [model, setModel] = useState<string>(GENX_IMAGE_MODELS[0])
+  const [model, setModel] = useState<string>(GENX_IMAGE_MODELS[0] ?? 'gpt-image-2')
   const [prompt, setPrompt] = useState('')
   const [resultUrl, setResultUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -43,7 +43,7 @@ export default function CreativeStudioPage() {
 
   function handleTabChange(tab: StudioTab) {
     setActiveTab(tab)
-    setModel(modelsByTab[tab][0] ?? '')
+    setModel(modelsByTab[tab][0] ?? 'gpt-image-2')
     setResultUrl('')
     setError('')
   }

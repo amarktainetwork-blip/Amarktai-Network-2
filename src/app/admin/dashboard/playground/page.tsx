@@ -50,7 +50,7 @@ const modelsByTab: Record<PlaygroundTab, readonly string[]> = {
 
 export default function PlaygroundPage() {
   const [activeTab, setActiveTab] = useState<PlaygroundTab>('chat')
-  const [model, setModel] = useState<string>(GENX_TEXT_MODELS[0])
+  const [model, setModel] = useState<string>(GENX_TEXT_MODELS[0] ?? 'gpt-5.5')
   const [prompt, setPrompt] = useState('')
   const [output, setOutput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,7 +59,7 @@ export default function PlaygroundPage() {
 
   function handleTabChange(tab: PlaygroundTab) {
     setActiveTab(tab)
-    setModel(modelsByTab[tab][0] ?? '')
+    setModel(modelsByTab[tab][0] ?? 'gpt-5.5')
     setOutput('')
   }
 

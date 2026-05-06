@@ -20,8 +20,8 @@ export function resolveModelAlias(opts: {
   const { selectedModelId, capability, costMode } = opts
 
   // Not an alias — return as-is (works for all providers, not just genx)
-  if (!selectedModelId || !selectedModelId.startsWith('auto:')) {
-    return selectedModelId ?? GENX_TEXT_MODELS[0]
+  if (!selectedModelId || selectedModelId.trim() === '' || !selectedModelId.startsWith('auto:')) {
+    return selectedModelId && selectedModelId.trim() !== '' ? selectedModelId : GENX_TEXT_MODELS[0]
   }
 
   // Explicit alias resolution (highest priority)

@@ -39,7 +39,7 @@ export default function AppsPage() {
   const [appType, setAppType] = useState<(typeof appTypes)[number]>('coding')
   const [strategy, setStrategy] = useState<'cheap' | 'balanced' | 'premium' | 'custom'>('balanced')
   const [capability, setCapability] = useState('coding')
-  const [modelId, setModelId] = useState<string>(GENX_TEXT_MODELS[0])
+  const [modelId, setModelId] = useState<string>(GENX_TEXT_MODELS[0] ?? 'gpt-5.5')
   const [monthlyBudget, setMonthlyBudget] = useState(100)
   const [approvalThreshold, setApprovalThreshold] = useState(0.25)
   const [adultPolicy, setAdultPolicy] = useState<'off' | 'allowed'>('off')
