@@ -155,7 +155,7 @@ Updated:
 src/app/api/admin/conversation/stream/route.ts
 ```
 
-Aiva/admin conversation now routes non-GenX providers through `callUniversalProvider()`, so the new governed direct providers can execute text/chat responses once configured.
+AmarktAI Assistant/admin conversation now routes non-GenX providers through `callUniversalProvider()`, so the new governed direct providers can execute text/chat responses once configured.
 
 ### 6. Routing policy expanded
 
@@ -245,7 +245,7 @@ curl -sS -X POST https://amarktai.com/api/admin/ai-routing \
   -d '{"capability":"chat","costPreference":"cheap"}' | jq
 ```
 
-### Aiva/provider execution
+### AmarktAI Assistant/provider execution
 
 ```bash
 curl -N -X POST https://amarktai.com/api/admin/conversation/stream \

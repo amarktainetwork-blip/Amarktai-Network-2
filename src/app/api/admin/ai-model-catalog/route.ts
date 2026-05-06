@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getAllProviderModelCatalogs, getProviderModelCatalog } from '@/lib/ai-model-catalog'
+import { getUniversalModelCatalog } from '@/lib/universal-model-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,14 +17,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, catalog })
   }
 
-  const catalogs = await getAllProviderModelCatalogs()
+  const [catalogs, universal] = await Promise.all([
+    getAllProviderModelCatalogs(),
+    getUniversalModelCatalog(),
+  ])
   return NextResponse.json({
     success: true,
     catalogs,
+    universal,
     summary: {
       providers: catalogs.length,
       configured: catalogs.filter((catalog) => catalog.configured).length,
-      models: catalogs.reduce((sum, catalog) => sum + catalog.models.length, 0),
+      models: universal.models.length,
       customModelProviders: catalogs.filter((catalog) => catalog.supportsCustomModelIds).map((catalog) => catalog.provider),
       liveDiscoveryProviders: catalogs.filter((catalog) => catalog.supportsLiveDiscovery).map((catalog) => catalog.provider),
     },

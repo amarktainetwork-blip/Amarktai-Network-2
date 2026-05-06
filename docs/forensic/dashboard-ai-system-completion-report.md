@@ -23,7 +23,7 @@ Branch: copilot/fix-amarktai-network-dashboard
 | Phase 12: Settings | DONE | Pre-existing settings page kept |
 | Phase 13: Hide Unused Code | DONE | docs/forensic/hidden-unused-code-map.md created; 13 redirect pages added |
 | Phase 14: Model Research Document | DONE | docs/ai/model-stack-research.md created |
-| Phase 15: Live Readiness | DONE | 9 nav sections, Aiva hidden, no broken buttons, GenX-first |
+| Phase 15: Live Readiness | DONE | 9 nav sections, AmarktAI Assistant hidden, no broken buttons, GenX-first |
 | Phase 16: Tests | DONE | lint ✅, tests ✅ (1374/1374), build: pending verification |
 | Phase 17: Completion Report | DONE | This document |
 | Phase 18: Commit + PR | DONE | Committed and pushed |
@@ -33,7 +33,7 @@ Branch: copilot/fix-amarktai-network-dashboard
 ## 2. Files Changed
 
 ### Modified
-- `src/app/admin/dashboard/layout.tsx` — 9 nav sections, Aiva disabled
+- `src/app/admin/dashboard/layout.tsx` — 9 nav sections, AmarktAI Assistant disabled
 
 ### Created
 - `src/app/admin/dashboard/command-center/page.tsx`
@@ -89,8 +89,8 @@ Branch: copilot/fix-amarktai-network-dashboard
 
 ## 4. Hidden Sections
 
-- Aiva floating widget (NEXT_PUBLIC_AIVA_ENABLED=false by default)
-- Aiva pages/components (code kept)
+- AmarktAI Assistant floating widget (NEXT_PUBLIC_AmarktAI Assistant_ENABLED=false by default)
+- AmarktAI Assistant pages/components (code kept)
 - Build Studio (redirected)
 - Lab / Labs (not in nav)
 - Intelligence page (not in nav)
@@ -168,7 +168,7 @@ Hugging Face, Together AI, DeepSeek, Kimi, Qwen, ElevenLabs, Suno, Udio, Replica
 5. **Music/video actual generation** — GenX endpoints wired, need key + quota
 6. **Fallback providers** — listed in AI Engine but keys not stored/wired yet
 7. **Crawler integration** — Firecrawl/Crawl4AI listed, not wired
-8. **Aiva hidden** — code ready, re-enable when core system proven
+8. **AmarktAI Assistant hidden** — code ready, re-enable when core system proven
 
 ---
 
@@ -183,7 +183,7 @@ Hugging Face, Together AI, DeepSeek, Kimi, Qwen, ElevenLabs, Suno, Udio, Replica
 - Crawler integration (Firecrawl/Crawl4AI)
 - Per-app agent learning UI
 - App-level safety profile enforcement
-- Aiva re-enable + feature flag flow
+- AmarktAI Assistant re-enable + feature flag flow
 
 ---
 
@@ -224,5 +224,5 @@ Hugging Face, Together AI, DeepSeek, Kimi, Qwen, ElevenLabs, Suno, Udio, Replica
 - [ ] System Health shows 5-tab monitor
 - [ ] Settings loads and shows key configuration
 - [ ] Old routes redirect: /workspace → /, /monitor → /system-health, /music-studio → /media-studio
-- [ ] Aiva floating widget not visible by default
+- [ ] AmarktAI Assistant floating widget not visible by default
 - [ ] Mobile nav works correctly

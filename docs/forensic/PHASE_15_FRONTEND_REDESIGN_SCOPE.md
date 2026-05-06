@@ -11,7 +11,7 @@ The redesign must not remove the backend work completed in Phases 5–14. It mus
 ## Product identity
 
 - Product: Amarktai Network
-- AI personality: Aiva
+- AI personality: AmarktAI Assistant
 - Public positioning: AI operating system and app-control layer
 - Do not market as “GenX-powered” in public copy
 - GenX remains internal infrastructure/gateway
@@ -24,15 +24,15 @@ Purpose: single executive overview.
 
 Must show:
 
-- Aiva status and conversation panel
+- AmarktAI Assistant status and conversation panel
 - provider health summary
 - active apps
 - repo workbench status
 - recent artifacts
-- recent Aiva action audit entries
+- recent AmarktAI Assistant action audit entries
 - go-live blockers
 
-### 2. Aiva
+### 2. AmarktAI Assistant
 
 Purpose: real-time conversational operator.
 
@@ -56,7 +56,7 @@ Must include:
 - Capability Tests
 - Stream Tests
 - App AI Setup
-- Aiva Actions
+- AmarktAI Assistant Actions
 - Artifact Gallery
 
 Existing useful routes:
@@ -66,7 +66,7 @@ Existing useful routes:
 /admin/dashboard/ai-engine/intelligence
 /admin/dashboard/ai-engine/artifacts
 /admin/dashboard/ai-engine/app-setup
-/admin/dashboard/ai-engine/aiva-actions
+/admin/dashboard/ai-engine/AmarktAI Assistant-actions
 ```
 
 ### 4. Apps
@@ -152,7 +152,7 @@ AI OS personality
 - Do not remove working backend routes.
 - Do not remove AI provider/model/capability logic.
 - Do not make fake success states.
-- Do not make Aiva execute risky actions without confirmation.
+- Do not make AmarktAI Assistant execute risky actions without confirmation.
 - Preserve streaming conversation.
 - Preserve smart routing.
 - Preserve app AI package persistence.
@@ -166,7 +166,7 @@ AI OS personality
 Add first-class dashboard nav links for:
 
 - Command Center
-- Aiva
+- AmarktAI Assistant
 - AI Engine
 - Apps
 - Repo Workbench
@@ -181,7 +181,7 @@ Build a high-level operator homepage pulling from existing APIs.
 
 Fold the Phase 12/13 pages into a polished AI Ops experience.
 
-### Step 4 — Aiva panel polish
+### Step 4 — AmarktAI Assistant panel polish
 
 Make the streaming conversation feel live and premium.
 
@@ -203,7 +203,7 @@ Phase 15 is complete when:
 
 - dashboard looks premium and coherent,
 - all new Phase 5–14 tools are discoverable,
-- Aiva streams quickly,
+- AmarktAI Assistant streams quickly,
 - app setup can be saved/reloaded,
 - artifacts and provider scores are visible,
 - repo simple mode is obvious,

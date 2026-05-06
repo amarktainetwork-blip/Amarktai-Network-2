@@ -5,18 +5,18 @@ Branch: `phase-2-routing-streaming-foundation`
 
 ## Goal
 
-Prepare Amarktai Network for a perfect current-app go-live and future app onboarding without bringing back broken UI or duplicate Aiva surfaces.
+Prepare Amarktai Network for a perfect current-app go-live and future app onboarding without bringing back broken UI or duplicate AmarktAI Assistant surfaces.
 
 This phase adds backend foundations only:
 
 1. App-aware model/provider routing.
 2. Cheap/free provider preference so Qwen, Groq, Together and HuggingFace are first-class options.
-3. Streaming conversation backend that future Aiva/chat UI can consume.
+3. Streaming conversation backend that future AmarktAI Assistant/chat UI can consume.
 4. Future app capability profiles for marketing, learning, adult, equine, religious and travel apps.
 
 ## Why this phase is backend-first
 
-Aiva was previously removed because it created duplication and did not work reliably. This PR does **not** re-add the floating assistant UI. It only adds the safe backend route needed for Aiva to return later when the frontend can be made clean and fully tested.
+AmarktAI Assistant was previously removed because it created duplication and did not work reliably. This PR does **not** re-add the floating assistant UI. It only adds the safe backend route needed for AmarktAI Assistant to return later when the frontend can be made clean and fully tested.
 
 ## New files
 
@@ -84,11 +84,11 @@ It:
 4. Falls back to direct provider call with simulated token chunks when direct provider is selected.
 5. Sends route/status/token/done/error events.
 
-This is the foundation for Aiva/chat streaming, not the final Aiva UI.
+This is the foundation for AmarktAI Assistant/chat streaming, not the final AmarktAI Assistant UI.
 
-## Aiva decision
+## AmarktAI Assistant decision
 
-Aiva should only return when all of this is true:
+AmarktAI Assistant should only return when all of this is true:
 
 - One visible assistant surface only.
 - It consumes `/api/admin/conversation/stream`.
@@ -114,7 +114,7 @@ These are not yet persisted DB records. They are the routing template for the ap
 ## What this phase deliberately does not do
 
 - Does not redesign the public website.
-- Does not re-add Aiva UI.
+- Does not re-add AmarktAI Assistant UI.
 - Does not add voice picker UI.
 - Does not create persisted app registry DB migrations.
 - Does not enable video/music routes.
@@ -157,10 +157,10 @@ event: done
 After this PR is merged and verified:
 
 1. Add a clean AI Engine routing tab that calls `/api/admin/ai-routing`.
-2. Add a single Aiva/chat panel that consumes `/api/admin/conversation/stream`.
+2. Add a single AmarktAI Assistant/chat panel that consumes `/api/admin/conversation/stream`.
 3. Add voice provider/voice selector backed by existing TTS routes.
 4. Redesign public website and dashboard polish in a separate UI-only PR.
 
 ## Verdict
 
-This phase makes the system smarter and safer without destabilising go-live. It makes cheap/free models first-class and creates the streaming backbone needed for Aiva to return correctly later.
+This phase makes the system smarter and safer without destabilising go-live. It makes cheap/free models first-class and creates the streaming backbone needed for AmarktAI Assistant to return correctly later.

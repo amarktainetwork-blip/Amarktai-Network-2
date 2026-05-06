@@ -204,7 +204,7 @@ This phase does not yet add:
 - Qwen result file download from returned image URLs,
 - artifact cleanup/retention policy,
 - app-level provider fallback editor,
-- Aiva tool permission registry.
+- AmarktAI Assistant tool permission registry.
 
 ## Next recommended phase
 
@@ -214,7 +214,7 @@ Phase 12 should be UI/product integration:
 2. Artifact Gallery UI.
 3. App AI Setup UI.
 4. Simple Repo Workbench UI.
-5. Switch Aiva route planning to smart routing after endpoint proves stable.
+5. Switch AmarktAI Assistant route planning to smart routing after endpoint proves stable.
 
 ## Verdict
 

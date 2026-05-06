@@ -141,9 +141,9 @@ curl -sS -X POST https://amarktai.com/api/admin/specialist/minimax-tts \
   -H 'Content-Type: application/json' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' \
   -d '{
-    "text":"Hello, this is Aiva using MiniMax voice.",
+    "text":"Hello, this is AmarktAI Assistant using MiniMax voice.",
     "model":"speech-2.6-turbo"
-  }' --output /tmp/minimax-aiva.mp3
+  }' --output /tmp/minimax-AmarktAI Assistant.mp3
 ```
 
 ### Capability test specialist execution

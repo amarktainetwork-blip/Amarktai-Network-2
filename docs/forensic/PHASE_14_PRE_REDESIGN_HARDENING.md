@@ -10,7 +10,7 @@ Complete the final hardening layer before the full frontend fix/redesign.
 This phase avoids a broad visual rewrite. It focuses on:
 
 1. Making the new AI Ops surfaces discoverable.
-2. Adding an Aiva action execution/audit shell.
+2. Adding an AmarktAI Assistant action execution/audit shell.
 3. Defining the exact Phase 15 frontend redesign scope.
 
 ## Added
@@ -28,23 +28,23 @@ This links the new operator tools created in recent phases:
 - Provider Intelligence
 - Artifact Gallery
 - App AI Setup
-- Aiva Actions
+- AmarktAI Assistant Actions
 - Simple Repo Workbench
 
 It also shows a pre-redesign readiness checklist.
 
-### 2. Aiva action audit helper
+### 2. AmarktAI Assistant action audit helper
 
 New file:
 
 ```text
-src/lib/aiva-action-audit.ts
+src/lib/AmarktAI Assistant-action-audit.ts
 ```
 
 Default storage path:
 
 ```text
-AIVA_ACTION_AUDIT_ROOT=/var/www/amarktai/repo/storage/aiva-action-audit
+AmarktAI Assistant_ACTION_AUDIT_ROOT=/var/www/amarktai/repo/storage/AmarktAI Assistant-action-audit
 ```
 
 It records:
@@ -62,18 +62,18 @@ It records:
 
 Secrets are redacted from payload previews.
 
-### 3. Aiva action execution/audit shell
+### 3. AmarktAI Assistant action execution/audit shell
 
 New endpoint:
 
 ```text
-GET /api/admin/aiva/action-execute
-POST /api/admin/aiva/action-execute
+GET /api/admin/AmarktAI Assistant/action-execute
+POST /api/admin/AmarktAI Assistant/action-execute
 ```
 
 `GET` returns recent audit entries.
 
-`POST` validates an action request against the Aiva action permission registry and records an audit entry.
+`POST` validates an action request against the AmarktAI Assistant action permission registry and records an audit entry.
 
 Important: this endpoint does **not** execute risky actions yet. It returns:
 
@@ -108,19 +108,19 @@ Defines the next phase:
 https://amarktai.com/admin/dashboard/ai-engine/ops
 ```
 
-### Aiva action audit API
+### AmarktAI Assistant action audit API
 
 List audit entries:
 
 ```bash
-curl -sS 'https://amarktai.com/api/admin/aiva/action-execute?days=7' \
+curl -sS 'https://amarktai.com/api/admin/AmarktAI Assistant/action-execute?days=7' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' | jq
 ```
 
 Blocked action without confirmation:
 
 ```bash
-curl -sS -X POST https://amarktai.com/api/admin/aiva/action-execute \
+curl -sS -X POST https://amarktai.com/api/admin/AmarktAI Assistant/action-execute \
   -H 'Content-Type: application/json' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' \
   -d '{
@@ -135,7 +135,7 @@ Expected: blocked / confirmation required.
 Approved-pending-executor action with confirmation:
 
 ```bash
-curl -sS -X POST https://amarktai.com/api/admin/aiva/action-execute \
+curl -sS -X POST https://amarktai.com/api/admin/AmarktAI Assistant/action-execute \
   -H 'Content-Type: application/json' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' \
   -d '{
@@ -156,8 +156,8 @@ status: approved_pending_executor
 Verify audit file on VPS:
 
 ```bash
-sudo find /var/www/amarktai/repo/storage/aiva-action-audit -type f | tail -10
-sudo tail -n 20 /var/www/amarktai/repo/storage/aiva-action-audit/*.jsonl 2>/dev/null || true
+sudo find /var/www/amarktai/repo/storage/AmarktAI Assistant-action-audit -type f | tail -10
+sudo tail -n 20 /var/www/amarktai/repo/storage/AmarktAI Assistant-action-audit/*.jsonl 2>/dev/null || true
 ```
 
 ## What this phase intentionally does not do
@@ -183,11 +183,11 @@ Recommended Phase 15 priorities:
 1. Navigation cleanup.
 2. New Command Center homepage.
 3. AI Engine redesign around the new Ops pages.
-4. Aiva streaming panel polish.
+4. AmarktAI Assistant streaming panel polish.
 5. Repo Workbench simple UX polish.
 6. Mobile responsiveness pass.
 7. Build/proof checks.
 
 ## Verdict
 
-The app now has a final pre-redesign hardening layer: new AI Ops links, a safe Aiva action audit shell, and a clear redesign scope. Phase 15 can focus on frontend quality and premium UX without losing the backend work from Phases 5–14.
+The app now has a final pre-redesign hardening layer: new AI Ops links, a safe AmarktAI Assistant action audit shell, and a clear redesign scope. Phase 15 can focus on frontend quality and premium UX without losing the backend work from Phases 5–14.

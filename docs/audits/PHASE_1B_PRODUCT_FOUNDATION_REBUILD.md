@@ -74,7 +74,7 @@ The following providers are in `hidden` or `backlog` governance group and do not
 | # | Label | Route |
 |---|-------|-------|
 | 1 | Command Center | `/admin/dashboard/command-center` |
-| 2 | Aiva Chat | `/admin/dashboard/aiva` |
+| 2 | AmarktAI Assistant Chat | `/admin/dashboard/AmarktAI Assistant` |
 | 3 | Apps / Packages | `/admin/dashboard/apps` |
 | 4 | Repo Workbench | `/admin/dashboard/repo-workbench` |
 | 5 | Scraping / Research | `/admin/dashboard/research` |
@@ -82,7 +82,7 @@ The following providers are in `hidden` or `backlog` governance group and do not
 | 7 | Media Studio | `/admin/dashboard/media-studio` |
 | 8 | Artifacts / Storage | `/admin/dashboard/artifacts` |
 | 9 | Agent Registry | `/admin/dashboard/agents` |
-| 10 | Actions / Approvals | `/admin/dashboard/ai-engine/aiva-actions` |
+| 10 | Actions / Approvals | `/admin/dashboard/ai-engine/AmarktAI Assistant-actions` |
 | 11 | Diagnostics | `/admin/dashboard/system-health` |
 | 12 | Settings | `/admin/dashboard/settings` |
 
@@ -103,10 +103,10 @@ The following providers are in `hidden` or `backlog` governance group and do not
 | `/admin/dashboard/brain` | Redirect | `/admin/dashboard/ai-engine` |
 | `/admin/dashboard/build-studio` | Redirect | `/admin/dashboard/repo-workbench` |
 | `/admin/dashboard/workspace` | Redirect | `/admin/dashboard` |
-| `/admin/dashboard/settings/aiva-avatar` | Redirect | `/admin/dashboard/settings` |
+| `/admin/dashboard/settings/AmarktAI Assistant-avatar` | Redirect | `/admin/dashboard/settings` |
 | `/admin/dashboard/live-readiness` | Hidden from nav — accessed via Diagnostics match | — |
 | `/admin/dashboard/system-health` | Consolidated Diagnostics surface | — |
-| `/admin/dashboard/ai-engine/hub` | Replaced by `/admin/dashboard/aiva` | — |
+| `/admin/dashboard/ai-engine/hub` | Replaced by `/admin/dashboard/AmarktAI Assistant` | — |
 | `/admin/dashboard/ai-engine/intelligence` | Replaced by `/admin/dashboard/research` | — |
 
 ---
@@ -115,7 +115,7 @@ The following providers are in `hidden` or `backlog` governance group and do not
 
 | Route | Purpose | Status |
 |-------|---------|--------|
-| `/admin/dashboard/aiva` | Aiva Chat — dedicated non-overlapping section | Frontend-ready |
+| `/admin/dashboard/AmarktAI Assistant` | AmarktAI Assistant Chat — dedicated non-overlapping section | Frontend-ready |
 | `/admin/dashboard/memory-emotions` | Memory / Emotions — user memory, emotional profile, consent | Frontend-ready |
 | `/admin/dashboard/research` | Scraping / Research — Firecrawl, crawler, storage | Frontend-ready |
 
@@ -125,8 +125,8 @@ The following providers are in `hidden` or `backlog` governance group and do not
 
 | Feature | Module | Status |
 |---------|--------|--------|
-| Aiva stream backend | Aiva Chat | Ready to wire |
-| Provider key for Aiva | Aiva Chat | Needs key |
+| AmarktAI Assistant stream backend | AmarktAI Assistant Chat | Ready to wire |
+| Provider key for AmarktAI Assistant | AmarktAI Assistant Chat | Needs key |
 | Memory storage backend | Memory / Emotions | Backend pending |
 | Mem0 integration | Memory / Emotions | Ready to wire |
 | Emotion profile backend | Memory / Emotions | Backend pending |
@@ -136,17 +136,17 @@ The following providers are in `hidden` or `backlog` governance group and do not
 | Scraped page storage | Scraping / Research | Backend pending |
 | Crawl job history | Scraping / Research | Backend pending |
 | Vector store (Qdrant / pgvector) | Memory / Emotions | Backend pending |
-| Action approval queue backend | Aiva Chat | Ready to wire |
-| Memory context in Aiva | Aiva Chat | Backend pending |
-| Voice STT / TTS | Aiva Chat, Media Studio | Ready to wire |
+| Action approval queue backend | AmarktAI Assistant Chat | Ready to wire |
+| Memory context in AmarktAI Assistant | AmarktAI Assistant Chat | Backend pending |
+| Voice STT / TTS | AmarktAI Assistant Chat, Media Studio | Ready to wire |
 | Streaming voice | Media Studio | Backend pending (batch works) |
 
 ---
 
 ## Backend Wiring Phases Still Needed
 
-### Phase 2B — Aiva backend
-- Wire provider stream to `/admin/dashboard/aiva`
+### Phase 2B — AmarktAI Assistant backend
+- Wire provider stream to `/admin/dashboard/AmarktAI Assistant`
 - Connect GenX routing with API key validation
 - Wire action approval queue backend
 
@@ -196,7 +196,7 @@ npm run lint
 
 ## Remaining Blockers
 
-1. **Aiva stream**: No provider key configured → Status: Needs key
+1. **AmarktAI Assistant stream**: No provider key configured → Status: Needs key
 2. **Memory backend**: No storage driver for memory/emotions → Status: Backend pending
 3. **Firecrawl**: `FIRECRAWL_API_KEY` not set → Status: Needs key
 4. **Vector store**: Qdrant/pgvector not configured → Status: Backend pending

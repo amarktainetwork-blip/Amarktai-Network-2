@@ -7,7 +7,7 @@ Branch: `phase-1-golive-operator-verification`
 
 This phase keeps the product stable and focuses only on getting the current Amarktai Network app ready for live verification.
 
-It does **not** redesign the website, revive Aiva, add video/music providers, or change future app architecture. Those are Phase 2+ items after the current app is production-proven.
+It does **not** redesign the website, revive AmarktAI Assistant, add video/music providers, or change future app architecture. Those are Phase 2+ items after the current app is production-proven.
 
 ## Fixed in this phase
 
@@ -90,7 +90,7 @@ docs/forensic/LIVE_VPS_GOLIVE_VERIFICATION.md
 These remain intentionally outside this PR so we do not destabilize the live candidate:
 
 - Full website redesign
-- Aiva resurrection / streaming avatar / voice UI
+- AmarktAI Assistant resurrection / streaming avatar / voice UI
 - Voice picker UI for 58 voices
 - Full GenX/Qwen/free-provider research and routing overhaul
 - Video generation route and quota

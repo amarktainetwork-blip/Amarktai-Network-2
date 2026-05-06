@@ -57,7 +57,7 @@ These pages exist but redirect to canonical destinations. They are not in the na
 | `/admin/dashboard/brain` | `/admin/dashboard/ai-engine` |
 | `/admin/dashboard/build-studio` | `/admin/dashboard/repo-workbench` |
 | `/admin/dashboard/workspace` | `/admin/dashboard` |
-| `/admin/dashboard/settings/aiva-avatar` | `/admin/dashboard/settings` |
+| `/admin/dashboard/settings/AmarktAI Assistant-avatar` | `/admin/dashboard/settings` |
 
 ---
 
@@ -72,7 +72,7 @@ The canonical workbench implements this exact flow:
 3. Branch selector
 4. Import / clone workspace
 5. Coding model selector
-6. Tell Aiva what to change (prompt)
+6. Tell AmarktAI Assistant what to change (prompt)
 7. Plan
 8. Generate diff (patch)
 9. Explicit approval checkbox before write/Git actions

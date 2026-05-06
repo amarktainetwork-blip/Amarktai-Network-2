@@ -168,7 +168,7 @@ else
 fi
 
 repo_page="$(fetch_path /admin/dashboard/repo-workbench 2>&1)"
-for label in "GitHub connection status" "Repo selector" "Tell Aiva what to change" "Plan" "Generate diff" "Apply patch" "Run lint" "Commit" "Create PR" "Logs panel"; do
+for label in "GitHub connection status" "Repo selector" "Tell AmarktAI Assistant what to change" "Plan" "Generate diff" "Apply patch" "Run lint" "Commit" "Create PR" "Logs panel"; do
   if printf '%s' "$repo_page" | grep -q "$label"; then
     record PASS "Repo page label: $label" "present"
   else
@@ -189,7 +189,7 @@ else
 fi
 
 command_center="$(fetch_path /admin/dashboard/command-center 2>&1)"
-if printf '%s' "$command_center" | grep -qi 'Aiva\|Command Center'; then
+if printf '%s' "$command_center" | grep -qi 'AmarktAI Assistant\|Command Center'; then
   record PASS "Command Center page" "real content detected"
 else
   record FAIL "Command Center page" "expected operator content missing"

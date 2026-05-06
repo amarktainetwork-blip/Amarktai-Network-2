@@ -94,8 +94,8 @@ check_admin_json "/api/admin/live-readiness" "Live readiness API"
 check_admin_json "/api/admin/provider-scores?appSlug=amarktai-network&days=14" "Provider scores API"
 check_admin_json "/api/admin/artifacts/media?appSlug=amarktai-network&limit=20" "Media artifacts API"
 check_admin_json "/api/admin/app-ai-package" "App AI packages API"
-check_admin_json "/api/admin/aiva/actions" "Aiva actions API"
-check_admin_json "/api/admin/aiva/action-execute?days=7" "Aiva action audit API"
+check_admin_json "/api/admin/AmarktAI Assistant/actions" "AmarktAI Assistant actions API"
+check_admin_json "/api/admin/AmarktAI Assistant/action-execute?days=7" "AmarktAI Assistant action audit API"
 
 section "Next.js static assets"
 # Discover built CSS/JS/font assets from the standalone static directory and

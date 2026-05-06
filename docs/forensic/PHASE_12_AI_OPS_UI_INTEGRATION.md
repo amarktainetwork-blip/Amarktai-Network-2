@@ -13,7 +13,7 @@ This phase focuses on practical operator UI:
 2. Artifact Gallery UI.
 3. App AI Setup UI.
 4. Simple Repo Workbench UI.
-5. Aiva conversation stream uses smart routing by default.
+5. AmarktAI Assistant conversation stream uses smart routing by default.
 
 ## Added
 
@@ -118,7 +118,7 @@ Repo URL + branch + command + quality → run command → return workspace/patch
 
 This is the first UI surface for the desired prompt-to-PR flow.
 
-### 5. Aiva smart routing by default
+### 5. AmarktAI Assistant smart routing by default
 
 Updated:
 
@@ -126,7 +126,7 @@ Updated:
 src/app/api/admin/conversation/stream/route.ts
 ```
 
-Aiva now applies provider-intelligence avoidance by default using provider result logs.
+AmarktAI Assistant now applies provider-intelligence avoidance by default using provider result logs.
 
 New request flag:
 
@@ -136,7 +136,7 @@ New request flag:
 
 Default: `true`.
 
-If provider logs show repeated failures for a provider/model/capability, Aiva will skip that route and select the next available candidate.
+If provider logs show repeated failures for a provider/model/capability, AmarktAI Assistant will skip that route and select the next available candidate.
 
 ## Manual checks after merge/deploy
 
@@ -164,7 +164,7 @@ https://amarktai.com/admin/dashboard/ai-engine/app-setup
 https://amarktai.com/admin/dashboard/repo-workbench/simple
 ```
 
-### Aiva smart routing stream
+### AmarktAI Assistant smart routing stream
 
 ```bash
 curl -N -X POST https://amarktai.com/api/admin/conversation/stream \
@@ -201,7 +201,7 @@ This phase intentionally avoids a full rewrite of the existing AI Engine page. T
 - Persist app AI packages to DB.
 - Add full UI to edit provider/model selections manually.
 - Add artifact retention/cleanup controls.
-- Add Aiva tool permission registry and action audit UI.
+- Add AmarktAI Assistant tool permission registry and action audit UI.
 - Final public website/dashboard redesign.
 
 ## Recommended next phase
@@ -211,9 +211,9 @@ Phase 13 should complete the app/repo product workflow:
 1. Persist app AI package selections.
 2. Add App AI package editor UI.
 3. Add Repo Workbench PR creation/approval UI if backend supports it.
-4. Add Aiva action permission registry.
+4. Add AmarktAI Assistant action permission registry.
 5. Add navigation links/cards into the main dashboard sections.
 
 ## Verdict
 
-The backend AI operations work now has usable UI surfaces. Aiva uses smart routing by default, and operators can inspect provider scores, artifacts, app AI package recommendations, and simple repo-command runs from the dashboard.
+The backend AI operations work now has usable UI surfaces. AmarktAI Assistant uses smart routing by default, and operators can inspect provider scores, artifacts, app AI package recommendations, and simple repo-command runs from the dashboard.

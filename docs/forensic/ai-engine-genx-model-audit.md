@@ -10,7 +10,7 @@
 
 | Capability | GenX models available | UI models shown | Fallbacks shown | Works? | Blocker | Fix required |
 | --- | --- | --- | --- | --- | --- | --- |
-| chat | Expected via GenX text models if key/quota live | AI Engine/model registry; Aiva uses chat routes | OpenAI/Groq/Gemini/direct depending routes | Partial | Live GenX not verified in audit | Live smoke: `/api/admin/genx/status` plus `/api/brain/execute` chat |
+| chat | Expected via GenX text models if key/quota live | AI Engine/model registry; AmarktAI Assistant uses chat routes | OpenAI/Groq/Gemini/direct depending routes | Partial | Live GenX not verified in audit | Live smoke: `/api/admin/genx/status` plus `/api/brain/execute` chat |
 | reasoning | Expected via GenX reasoning models | AI Engine/model registry | direct OpenAI/Groq/Gemini possible | Partial | Model catalog consistency | Use live catalog in all selectors |
 | coding agent | Expected via GenX coding/reasoning | Repo Workbench model endpoint | direct fallback if provider configured | Partial | Live Repo Workbench AI task unverified | E2E audit/patch disposable repo |
 | code review | Same as coding | Build Studio/Repo Workbench overlap | direct fallback | Partial | Legacy Build Studio duplication | Canonicalize to Repo Workbench |
@@ -22,7 +22,7 @@
 | avatar video | Possible models mentioned elsewhere | Not visible in Media Studio | none | Missing | No avatar video E2E | Add gated workflow or hide claims |
 | voice/TTS | GenX/Deepgram/OpenAI/Groq possible | Voice tab model/provider/speed | Direct `/api/brain/tts` | Partial | Batch only; live provider unverified | Add voice catalog/status and artifact persistence |
 | streaming voice | GenX stream exists for text; realtime voice pending | UI explicitly says pending | none | Fail for streaming voice | Needs realtime service | Implement or keep hidden |
-| STT/transcription | GenX/Deepgram possible | Aiva assistant uses `/api/brain/stt`; Media Studio lacks STT tab | Deepgram/OpenAI possible | Partial | Not in Media Studio workflow | Add STT UI and artifact storage |
+| STT/transcription | GenX/Deepgram possible | AmarktAI Assistant assistant uses `/api/brain/stt`; Media Studio lacks STT tab | Deepgram/OpenAI possible | Partial | Not in Media Studio workflow | Add STT UI and artifact storage |
 | music/song generation | Runtime truth says GenX music pending; Suno/Udio if keys | Media Studio music button disabled | Suno/Udio | Fail UI | No live audio generation path from Media Studio | Wire music-studio async route or hide |
 | translation | GenX catalog may include translation | Not surfaced clearly | none | Partial/Missing UI | No visible workflow | Add capability route UI or hide |
 | embeddings | GenX/direct possible | Not user-facing | OpenAI/Cohere/Qdrant | Partial | RAG not fully wired to app knowledge UI | Add health and ingestion verification |

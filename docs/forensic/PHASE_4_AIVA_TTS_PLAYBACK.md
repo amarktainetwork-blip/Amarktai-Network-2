@@ -1,11 +1,11 @@
-# Phase 4 — Aiva TTS Playback
+# Phase 4 — AmarktAI Assistant TTS Playback
 
 Generated: 2026-05-02  
-Branch: `phase-4-aiva-tts-playback`
+Branch: `phase-4-AmarktAI Assistant-tts-playback`
 
 ## Goal
 
-Add verified voice playback to Aiva without enabling fake or unverified voices.
+Add verified voice playback to AmarktAI Assistant without enabling fake or unverified voices.
 
 ## Added
 
@@ -36,15 +36,15 @@ elevenlabs:default:studio
 deepgram:aura-2:fast
 ```
 
-### 2. Aiva voice selector and playback
+### 2. AmarktAI Assistant voice selector and playback
 
 Updated:
 
 ```text
-src/components/admin/AivaAssistantPanel.tsx
+src/components/admin/AmarktAI AssistantAssistantPanel.tsx
 ```
 
-Aiva now:
+AmarktAI Assistant now:
 
 - loads `/api/admin/voice/options`
 - lists verified and locked voices
@@ -79,8 +79,8 @@ Expected:
 curl -sS -X POST https://amarktai.com/api/admin/voice/preview \
   -H 'Content-Type: application/json' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' \
-  -d '{"text":"Hello, this is Aiva voice verification.","voiceId":"genx:grok-tts:neutral"}' \
-  --output /tmp/aiva-preview.mp3
+  -d '{"text":"Hello, this is AmarktAI Assistant voice verification.","voiceId":"genx:grok-tts:neutral"}' \
+  --output /tmp/AmarktAI Assistant-preview.mp3
 ```
 
 Expected:
@@ -88,22 +88,22 @@ Expected:
 - audio file returned only when the selected voice is verified
 - JSON blocker returned if TTS is not verified
 
-### Aiva UI
+### AmarktAI Assistant UI
 
 Enable only after deploy verification:
 
 ```env
-NEXT_PUBLIC_AIVA_ENABLED=true
+NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true
 ```
 
 Then:
 
 1. Open dashboard.
-2. Open Aiva.
+2. Open AmarktAI Assistant.
 3. Confirm one assistant surface only.
 4. Select a verified voice.
 5. Ask a short question.
-6. Press `Play voice` on Aiva's answer.
+6. Press `Play voice` on AmarktAI Assistant's answer.
 7. Confirm audio plays.
 8. Confirm locked voices cannot be selected.
 
@@ -123,4 +123,4 @@ Then:
 
 ## Verdict
 
-Aiva now has verified voice playback without weakening runtime truth. Voice remains gated until provider tests and runtime capability checks pass.
+AmarktAI Assistant now has verified voice playback without weakening runtime truth. Voice remains gated until provider tests and runtime capability checks pass.

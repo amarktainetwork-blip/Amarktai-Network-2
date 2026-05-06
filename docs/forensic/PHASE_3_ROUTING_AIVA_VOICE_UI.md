@@ -1,11 +1,11 @@
-# Phase 3 — AI Routing Tab, Aiva Panel, Voice Verification UI
+# Phase 3 — AI Routing Tab, AmarktAI Assistant Panel, Voice Verification UI
 
 Generated: 2026-05-02  
-Branch: `phase-3-routing-aiva-voice-ui`
+Branch: `phase-3-routing-AmarktAI Assistant-voice-ui`
 
 ## Goal
 
-Add the visible operator UX on top of the Phase 2 backend routing and streaming foundation without reintroducing duplicated or broken Aiva surfaces.
+Add the visible operator UX on top of the Phase 2 backend routing and streaming foundation without reintroducing duplicated or broken AmarktAI Assistant surfaces.
 
 ## Added
 
@@ -51,20 +51,20 @@ It reads runtime truth and only marks voices as verified when the relevant TTS c
 
 Voice options exposed:
 
-- GenX Grok TTS / Aiva Neutral
-- GenX Aura 2 / Aiva Warm
-- GenX GenXLM Voice / Aiva Premium
+- GenX Grok TTS / AmarktAI Assistant Neutral
+- GenX Aura 2 / AmarktAI Assistant Warm
+- GenX GenXLM Voice / AmarktAI Assistant Premium
 - ElevenLabs Studio Voice
 - Deepgram Aura Fast
 
 The UI may show locked voices, but should only allow verified voices to be selected.
 
-### 3. One clean Aiva assistant panel
+### 3. One clean AmarktAI Assistant assistant panel
 
 New component:
 
 ```text
-src/components/admin/AivaAssistantPanel.tsx
+src/components/admin/AmarktAI AssistantAssistantPanel.tsx
 ```
 
 It consumes:
@@ -83,17 +83,17 @@ It supports:
 
 ### 4. Layout wiring behind the existing flag
 
-`src/app/admin/dashboard/layout.tsx` now renders Aiva only when:
+`src/app/admin/dashboard/layout.tsx` now renders AmarktAI Assistant only when:
 
 ```text
-NEXT_PUBLIC_AIVA_ENABLED=true
+NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true
 ```
 
-There is still only one Aiva surface.
+There is still only one AmarktAI Assistant surface.
 
 ## What this does not do
 
-- Does not enable Aiva by default.
+- Does not enable AmarktAI Assistant by default.
 - Does not add voice playback yet.
 - Does not allow unverified voices to be used.
 - Does not create duplicate chat widgets.
@@ -117,18 +117,18 @@ Verify:
 - adult routes show blockers unless adult-safe profile + adult gate are ready
 - voice routes show verified/locked voice options
 
-### Aiva panel
+### AmarktAI Assistant panel
 
 Set:
 
 ```env
-NEXT_PUBLIC_AIVA_ENABLED=true
+NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true
 ```
 
 Rebuild and redeploy, then verify:
 
-- one Aiva button appears
-- Aiva streams responses through `/api/admin/conversation/stream`
+- one AmarktAI Assistant button appears
+- AmarktAI Assistant streams responses through `/api/admin/conversation/stream`
 - route metadata appears
 - stop button aborts streaming
 - there are no duplicate assistant widgets
@@ -151,8 +151,8 @@ Expected:
 1. Add direct link/card from AI Engine main page to `/admin/dashboard/ai-engine/routing`.
 2. Add verified TTS playback using the existing TTS route.
 3. Add public website redesign as a separate UI-only PR.
-4. After TTS playback passes live, enable voice selector inside Aiva.
+4. After TTS playback passes live, enable voice selector inside AmarktAI Assistant.
 
 ## Verdict
 
-Aiva is back only as a single gated streaming operator panel. Voice selection is visible through verification data, but not yet used for playback until TTS is proven live.
+AmarktAI Assistant is back only as a single gated streaming operator panel. Voice selection is visible through verification data, but not yet used for playback until TTS is proven live.

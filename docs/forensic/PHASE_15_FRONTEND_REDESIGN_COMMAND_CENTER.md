@@ -5,13 +5,13 @@ Branch: `phase-15-frontend-redesign-command-center`
 
 ## Goal
 
-Start the full frontend fix/redesign by changing the direction of the public website and dashboard from provider-heavy technical pages into an Amarktai Network + Aiva product experience.
+Start the full frontend fix/redesign by changing the direction of the public website and dashboard from provider-heavy technical pages into an Amarktai Network + AmarktAI Assistant product experience.
 
 This is the first redesign PR. It does not attempt to redesign every dashboard page at once. It creates the new direction and the premium command-center surfaces that the remaining pages can be folded into.
 
 ## Added / changed
 
-### 1. Public homepage rewritten around Amarktai Network and Aiva
+### 1. Public homepage rewritten around Amarktai Network and AmarktAI Assistant
 
 Updated:
 
@@ -22,7 +22,7 @@ src/app/page.tsx
 The new homepage now focuses on:
 
 - Amarktai Network as the AI operating system and app-control layer.
-- Aiva as the central operator/personality.
+- AmarktAI Assistant as the central operator/personality.
 - App AI packages.
 - Prompt-to-PR workflow.
 - Permission-gated control.
@@ -91,10 +91,10 @@ Updated:
 
 The new page is a premium dashboard entry point with:
 
-- Aiva-first command-center copy,
+- AmarktAI Assistant-first command-center copy,
 - live go-live score,
 - blockers/warnings summary,
-- links to Aiva, Live Readiness, Provider Intelligence, App AI Setup, Artifact Gallery and Repo Workbench,
+- links to AmarktAI Assistant, Live Readiness, Provider Intelligence, App AI Setup, Artifact Gallery and Repo Workbench,
 - connected systems list,
 - go-live blockers list.
 
@@ -103,7 +103,7 @@ The new page is a premium dashboard entry point with:
 The product now starts to feel like:
 
 ```text
-Amarktai Network — an AI operating system for your app portfolio, operated by Aiva.
+Amarktai Network — an AI operating system for your app portfolio, operated by AmarktAI Assistant.
 ```
 
 not:
@@ -122,7 +122,7 @@ https://amarktai.com/
 
 Check:
 
-- copy is Amarktai/Aiva-first,
+- copy is Amarktai/AmarktAI Assistant-first,
 - provider names are not the main story,
 - design feels premium and modern,
 - CTA flows still work.
@@ -164,7 +164,7 @@ Still needed:
 - Sidebar/navigation redesign.
 - Main dashboard overview replacement or redirect to Command Center.
 - AI Engine page redesign.
-- Aiva streaming panel polish.
+- AmarktAI Assistant streaming panel polish.
 - Repo Workbench review/create-PR polish.
 - Apps page redesign.
 - Settings page cleanup.
@@ -178,9 +178,9 @@ Phase 16 should continue the redesign with:
 1. Dashboard navigation/sidebar cleanup.
 2. Make Command Center the default admin dashboard landing page.
 3. Redesign AI Engine main page to use the new Ops pages cleanly.
-4. Polish Aiva streaming panel and route metadata UI.
+4. Polish AmarktAI Assistant streaming panel and route metadata UI.
 5. Mobile pass on dashboard shell.
 
 ## Verdict
 
-The frontend now has the right product direction: Amarktai and Aiva are the public story, while providers remain internal infrastructure. The dashboard has a proper command-center target and a live readiness view to guide go-live work.
+The frontend now has the right product direction: Amarktai and AmarktAI Assistant are the public story, while providers remain internal infrastructure. The dashboard has a proper command-center target and a live readiness view to guide go-live work.

@@ -60,7 +60,7 @@
   - `ADULT_MODE_ENABLED` env var sets globalEnabled=true without DB config
   - `getDashboardRuntimeTruth()` exposes `adultGate` field
   - genx.configured matches service-vault key presence
-  - Aiva hidden unless `AIVA_ENABLED=true`
+  - AmarktAI Assistant hidden unless `AmarktAI Assistant_ENABLED=true`
   - Vault wins over env var (no duplicate key storage)
   - Placeholder keys rejected
 
@@ -164,7 +164,7 @@
 | Fallback providers | ✅ GO — if respective keys configured |
 | One source of truth | ✅ FIXED — all sections read via service-vault |
 | No duplicate key storage | ✅ FIXED — vault-first, env fallback, nowhere else |
-| Aiva hidden | ✅ — hidden unless `AIVA_ENABLED=true` |
+| AmarktAI Assistant hidden | ✅ — hidden unless `AmarktAI Assistant_ENABLED=true` |
 | Legal/safety exclusions | ✅ — CSAM, non-consensual, violence, minors always blocked |
 
 ---

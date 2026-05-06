@@ -12,7 +12,7 @@ This audit does **not** implement dashboard code. It defines what must stay, wha
 - Actions are repeated across multiple pages instead of one approval queue.
 - Health/readiness/proof concepts are still scattered instead of fully living in Diagnostics.
 - Repo Workbench still has too many visible mechanics and not enough prompt-first magic.
-- The assistant naming must be AmarktAI Assistant everywhere visible. Aiva/AIVA must not appear in user-facing UI.
+- The assistant naming must be AmarktAI Assistant everywhere visible. AmarktAI Assistant/AmarktAI Assistant must not appear in user-facing UI.
 - Settings, providers, tools, health and readiness need one source of truth.
 - Dashboard has too many feature stubs and not enough operational hierarchy.
 - Some old pages should be hidden, redirected, or deleted after mapping.
@@ -57,7 +57,7 @@ Everything else should be deleted, hidden, or redirected into one of these 11 se
   - Post-launch
 - Nothing is Working unless an endpoint and live proof exist.
 - No public/provider/marketing copy inside dashboard pages.
-- No visible Aiva/AIVA naming.
+- No visible AmarktAI Assistant/AmarktAI Assistant naming.
 - No overlapping floating assistant by default.
 - Settings is the only configuration surface.
 - Diagnostics is the only health/readiness/proof surface.
@@ -172,7 +172,7 @@ Main operator conversation page. It must not overlap dashboard content.
 ### Must remove
 
 - Floating overlap by default.
-- Aiva/AIVA visible copy.
+- AmarktAI Assistant/AmarktAI Assistant visible copy.
 - Fake online/working states.
 
 ### Option A — Chat + Context Split
@@ -811,7 +811,7 @@ The implementation PR must audit actual files before deleting, but conceptually:
 ## Redirect aliases
 
 - /admin/dashboard → /admin/dashboard/command-center
-- /admin/dashboard/aiva → /admin/dashboard/amarktai-assistant
+- /admin/dashboard/AmarktAI Assistant → /admin/dashboard/amarktai-assistant
 - /admin/dashboard/system-health → /admin/dashboard/diagnostics
 - /admin/dashboard/live-readiness → /admin/dashboard/diagnostics
 - /admin/dashboard/media-studio → /admin/dashboard/creative-studio
@@ -839,7 +839,7 @@ The next PR should be dashboard code only and should:
 
 1. Replace visible nav with the 11 canonical sections.
 2. Remove marketing copy from Command Center.
-3. Remove visible Aiva/AIVA copy.
+3. Remove visible AmarktAI Assistant/AmarktAI Assistant copy.
 4. Simplify Repo Workbench into prompt-first flow.
 5. Add/clean frontend pages for Agents, Memory, Actions, Diagnostics, Creative Studio.
 6. Hide/redirect old pages.
@@ -869,7 +869,7 @@ src/lib/__tests__/dashboard-section-options.test.ts
 or equivalent tests to enforce:
 
 - exactly 11 nav sections
-- no visible Aiva/AIVA copy in dashboard/public UI
+- no visible AmarktAI Assistant/AmarktAI Assistant copy in dashboard/public UI
 - Repo Workbench has no mandatory Choose Task step
 - Diagnostics is the only visible health/readiness/proof section
 - Settings is the only configuration surface

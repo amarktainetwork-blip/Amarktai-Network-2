@@ -17,7 +17,7 @@ The public website must sell and explain this clearly. The dashboard must operat
 3. Provider fallback is allowed only after GenX is unavailable or explicitly cannot handle the capability.
 4. API keys are managed in one unified key vault and reused across all features.
 5. Every generated output becomes a persistent artifact.
-6. Aiva is a system-aware operator, not just a floating chat widget.
+6. AmarktAI Assistant is a system-aware operator, not just a floating chat widget.
 7. Adult mode is explicit, tested, and truthfully reports READY, BLOCKED, or UNAVAILABLE.
 8. No fake readiness, no dead buttons, no silent safe-model fallback for specialized modes.
 
@@ -77,7 +77,7 @@ Goal: one place for all keys and feature readiness.
 - Consolidate AI provider keys and integration keys into one Settings surface.
 - Show real configured/healthy/degraded/blocked status.
 - Reuse existing keys across all features.
-- Remove duplicate key prompts from adult mode, media generation, workspace, and Aiva.
+- Remove duplicate key prompts from adult mode, media generation, workspace, and AmarktAI Assistant.
 - Add per-capability readiness tests:
   - chat
   - image
@@ -114,13 +114,13 @@ Workspace must support:
 
 The workspace UI should be cleaner and command-driven, closer to a focused build console than a scattered admin dashboard.
 
-## Phase 4: Aiva Rebuild
+## Phase 4: AmarktAI Assistant Rebuild
 
-Goal: make Aiva useful without blocking the UI.
+Goal: make AmarktAI Assistant useful without blocking the UI.
 
-- Move Aiva into a docked/resizable assistant panel.
+- Move AmarktAI Assistant into a docked/resizable assistant panel.
 - Prevent content overlap on all dashboard pages.
-- Give Aiva system context:
+- Give AmarktAI Assistant system context:
   - current page
   - current app
   - provider readiness
@@ -161,7 +161,7 @@ Required artifact actions:
 - preview
 - download
 - reuse in workspace
-- attach to Aiva context
+- attach to AmarktAI Assistant context
 - delete
 - filter by app/capability/provider
 
@@ -213,7 +213,7 @@ The site should showcase the real product:
 - GenX-powered AI operating system
 - capability router
 - workspace
-- Aiva
+- AmarktAI Assistant
 - app intelligence
 - artifact memory
 - model/provider control
@@ -239,7 +239,7 @@ Primary nav should be reduced to core jobs:
 - Command Center
 - Workspace
 - Apps
-- Aiva
+- AmarktAI Assistant
 - Artifacts
 - Models and Keys
 - Deployments
@@ -268,7 +268,7 @@ Goal: push, deploy, verify, rollback.
 1. Core execution and capability routing
 2. Unified keys and readiness
 3. Workspace rebuild
-4. Aiva rebuild
+4. AmarktAI Assistant rebuild
 5. Artifacts and app intelligence
 6. Adult mode readiness
 7. Public website redesign

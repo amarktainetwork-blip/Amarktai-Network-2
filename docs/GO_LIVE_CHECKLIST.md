@@ -80,7 +80,7 @@ Open:
 /admin/dashboard/ai-engine/app-setup
 /admin/dashboard/ai-engine/intelligence
 /admin/dashboard/ai-engine/artifacts
-/admin/dashboard/ai-engine/aiva-actions
+/admin/dashboard/ai-engine/AmarktAI Assistant-actions
 /admin/dashboard/repo-workbench
 ```
 
@@ -92,13 +92,13 @@ no blank screens
 no obvious mobile overflow
 ```
 
-## 6. Aiva stream works
+## 6. AmarktAI Assistant stream works
 
 ```bash
 curl -N -X POST https://amarktai.com/api/admin/conversation/stream \
   -H 'Content-Type: application/json' \
   --cookie /tmp/amarktai.cookies \
-  -d '{"message":"Confirm Aiva streaming works in one sentence.","capability":"chat","costPreference":"cheap","useSmartRouting":true,"appProfile":{"appSlug":"amarktai-network","safetyProfile":"standard"}}'
+  -d '{"message":"Confirm AmarktAI Assistant streaming works in one sentence.","capability":"chat","costPreference":"cheap","useSmartRouting":true,"appProfile":{"appSlug":"amarktai-network","safetyProfile":"standard"}}'
 ```
 
 Expected:
@@ -135,7 +135,7 @@ final proof FAIL=0
 homepage loads
 login loads
 dashboard Command Center loads
-Aiva stream emits token events
+AmarktAI Assistant stream emits token events
 Live Readiness works authenticated
 ```
 

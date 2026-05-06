@@ -5,7 +5,7 @@ Branch: `phase-8-provider-streaming-performance`
 
 ## Goal
 
-Make Aiva/live conversation fast and truthful.
+Make AmarktAI Assistant/live conversation fast and truthful.
 
 The problem before this phase:
 
@@ -46,7 +46,7 @@ minimax
 mimo
 ```
 
-### 2. Aiva/admin conversation now streams non-GenX providers natively
+### 2. AmarktAI Assistant/admin conversation now streams non-GenX providers natively
 
 Updated:
 
@@ -116,7 +116,7 @@ Still pending:
 
 A super AI system is useless if the operator waits too long or cannot see streaming responses.
 
-After this PR, Aiva can stream through multiple configured direct providers, not only GenX.
+After this PR, AmarktAI Assistant can stream through multiple configured direct providers, not only GenX.
 
 ## Manual tests after merge/deploy
 
@@ -145,7 +145,7 @@ curl -sS -X POST https://amarktai.com/api/admin/provider-stream-test \
   -d '{"provider":"groq","modelId":"llama-3.3-70b-versatile","timeoutMs":12000}' | jq
 ```
 
-### Test Aiva/direct-provider streaming
+### Test AmarktAI Assistant/direct-provider streaming
 
 ```bash
 curl -N -X POST https://amarktai.com/api/admin/conversation/stream \
@@ -188,4 +188,4 @@ Phase 9 should wire specialist execution routes, starting with the biggest pract
 
 ## Verdict
 
-Aiva/live conversation now has native streaming for the main direct OpenAI-compatible providers. The system can measure first-token speed and avoid pretending that slow/full-response calls are real streaming.
+AmarktAI Assistant/live conversation now has native streaming for the main direct OpenAI-compatible providers. The system can measure first-token speed and avoid pretending that slow/full-response calls are real streaming.
