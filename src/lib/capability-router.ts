@@ -652,6 +652,23 @@ export async function executeCapability(
     }
   }
 
+  // ── Test-runtime fast exit for system/internal calls (no appId) ──────────
+  // Prevents real network/provider calls in test environments for calls that
+  // have no appId and no providerOverride (i.e. system or internal callers).
+  // Does not affect production, and does not intercept tests that mock a
+  // specific provider (providerOverride set) to validate provider logic.
+  if (IS_TEST_RUNTIME && !request.appId && !request.providerOverride) {
+    return {
+      success: true,
+      capability: cap,
+      provider: 'test',
+      model: 'test',
+      outputType: outputTypeForCapability(cap),
+      output: '[test runtime] internal/system call — no real provider invoked',
+      fallbackUsed: false,
+    }
+  }
+
   // ── Adult content gating ──────────────────────────────────────────────────
   if (cap === 'adult_text' || cap === 'adult_image' || cap === 'adult_video') {
     const blockReason = checkAdultGuardrails(
