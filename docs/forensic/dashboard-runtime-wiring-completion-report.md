@@ -13,9 +13,9 @@
 - ✅ **AI Engine — Providers tab** — replaced hardcoded `wired: false` static array with live runtime truth from vault; shows "Configured + Wired" / "Configured + Not Wired" / "Not configured — Optional" / "Covered by GenX"
 - ✅ **AI Engine — Capabilities tab** — replaced static `CAPABILITIES_TABLE` with runtime truth; blockers derived from actual key state, not hardcoded strings
 - ✅ **AI Engine — GenX tab** — fetches both `/api/admin/genx/status` and `/api/admin/runtime-truth`; shows real model count and key source
-- ✅ **Settings page — Aiva hidden** — `AivaSection` only renders when `data.aivaEnabled === true` (driven by `AIVA_ENABLED` env var via integrations API)
+- ✅ **Settings page — AmarktAI Assistant hidden** — `AmarktAI AssistantSection` only renders when `data.AmarktAI AssistantEnabled === true` (driven by `AmarktAI Assistant_ENABLED` env var via integrations API)
 - ✅ **Settings page — Webdock 404 diagnostic** — HTTP 404 now shows: "Webdock key saved, but endpoint/account/server lookup failed. Check API base URL, account ID, server UUID, or Webdock route implementation." + actionable `nextAction`
-- ✅ **Integrations API** — Added `aivaEnabled: process.env.AIVA_ENABLED === 'true'` to GET response
+- ✅ **Integrations API** — Added `AmarktAI AssistantEnabled: process.env.AmarktAI Assistant_ENABLED === 'true'` to GET response
 - ✅ **Webdock test route** — HTTP 404 returns structured `{ blocker, nextAction }` fields
 - ✅ **Lint** — passes (0 errors; 2 pre-existing warnings in unrelated files)
 - ✅ **Build** — passes (0 errors, 0 type errors)
@@ -42,7 +42,7 @@
 | GenX key read unified | ✅ GO |
 | Provider keys read from vault | ✅ GO |
 | AI Engine no longer shows false "Needs GenX key" when key exists | ✅ GO |
-| Aiva hidden when AIVA_ENABLED=false | ✅ GO |
+| AmarktAI Assistant hidden when AmarktAI Assistant_ENABLED=false | ✅ GO |
 | Webdock 404 shows diagnostic | ✅ GO |
 | Build passing | ✅ GO |
 | Lint passing | ✅ GO |
@@ -92,7 +92,7 @@
 | Apps & Agents | ⚠️ Basic | Create/edit pending full implementation |
 | Artifacts & Jobs | ✅ Functional | Shows runs, empty state if none |
 | System Health | ✅ Functional | Shows live status with optional blockers |
-| Settings | ✅ Fixed | Aiva hidden; Webdock 404 diagnostic; aivaEnabled flag |
+| Settings | ✅ Fixed | AmarktAI Assistant hidden; Webdock 404 diagnostic; AmarktAI AssistantEnabled flag |
 
 ---
 

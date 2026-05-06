@@ -35,12 +35,12 @@ New page:
 /admin/dashboard/ai-engine/hub
 ```
 
-The new hub is Aiva-first and product-focused. It links to:
+The new hub is AmarktAI Assistant-first and product-focused. It links to:
 
 - Provider Intelligence
 - App AI Setup
 - Artifact Gallery
-- Aiva Actions
+- AmarktAI Assistant Actions
 - AI Ops Command Center
 - Live Readiness
 
@@ -90,9 +90,9 @@ redirects to /admin/dashboard/command-center
 
 Expected:
 
-- Aiva-first hero
+- AmarktAI Assistant-first hero
 - readiness metrics
-- links to Provider Intelligence, App AI Setup, Artifact Gallery, Aiva Actions, AI Ops and Live Readiness
+- links to Provider Intelligence, App AI Setup, Artifact Gallery, AmarktAI Assistant Actions, AI Ops and Live Readiness
 
 ### Legacy AI Engine technical page
 
@@ -107,7 +107,7 @@ Expected:
 
 ## Still pending
 
-- Aiva streaming panel polish.
+- AmarktAI Assistant streaming panel polish.
 - Repo Workbench simple flow polish.
 - Apps page redesign.
 - Settings page cleanup.
@@ -118,7 +118,7 @@ Expected:
 
 Phase 17 should focus on:
 
-1. Aiva streaming panel polish.
+1. AmarktAI Assistant streaming panel polish.
 2. Repo Workbench simple UX polish.
 3. Apps/Settings cleanup.
 4. Mobile responsiveness pass.
@@ -126,4 +126,4 @@ Phase 17 should focus on:
 
 ## Verdict
 
-The dashboard now starts in the redesigned Command Center, and the AI Engine default navigation now lands on a cleaner Aiva-first hub instead of a dense provider/model admin table.
+The dashboard now starts in the redesigned Command Center, and the AI Engine default navigation now lands on a cleaner AmarktAI Assistant-first hub instead of a dense provider/model admin table.

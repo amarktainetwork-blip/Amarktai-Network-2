@@ -3,7 +3,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { getProviderKey } from '@/lib/provider-config'
-import { getRepoWorkspaceRoot, resolveWorkspacePath } from '@/lib/workspace-security'
+import { getStorageRoot } from '@/lib/local-json-store'
 
 const execFileAsync = promisify(execFile)
 
@@ -26,7 +26,7 @@ export async function getSystemRuntimeStatus() {
       { name: 'node', status: node ? 'Available' : 'Unavailable', version: node },
     ],
     storage,
-    workspaceRoot: getRepoWorkspaceRoot(),
+    workspaceRoot: getStorageRoot(),
   }
 }
 
@@ -41,7 +41,7 @@ async function commandVersion(command: string) {
 
 async function storageWritable() {
   try {
-    const target = resolveWorkspacePath('storage-probe')
+    const target = path.join(getStorageRoot(), 'storage-probe')
     await fs.mkdir(target, { recursive: true })
     const file = path.join(target, `.probe-${process.pid}-${Date.now()}`)
     await fs.writeFile(file, 'ok', 'utf8')

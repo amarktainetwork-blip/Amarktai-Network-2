@@ -33,21 +33,21 @@ Pages hidden from nav or redirected to their canonical home. Code is kept — sa
 | `/admin/dashboard/lab` | Placeholder — no real functionality | None yet | Yes (after confirming dead) |
 | `/admin/dashboard/labs` | Placeholder — no real functionality | None yet | Yes (after confirming dead) |
 | `/admin/dashboard/intelligence` | Placeholder / incomplete | AI Engine > Learning | After v2 |
-| `/admin/dashboard/settings/aiva-avatar` | Aiva hidden until core system complete | Re-expose when Aiva enabled | No — keep code |
+| `/admin/dashboard/settings/AmarktAI Assistant-avatar` | AmarktAI Assistant hidden until core system complete | Re-expose when AmarktAI Assistant enabled | No — keep code |
 | `/admin/dashboard/deployments` | Deploy flow not production-ready | Will return when PR flow reliable | No — keep code |
 | `/admin/dashboard/alerts` | Accessible via System Health | System Health > Providers | No — keep code |
 | `/admin/dashboard/events` | Accessible via System Health | System Health | No — keep code |
 | `/admin/dashboard/access` | Voice access — niche feature | Settings > integrations | No — keep code |
 | `/admin/dashboard/integrations` | Accessible via Settings | Settings | No — keep code |
 
-## Aiva Status
+## AmarktAI Assistant Status
 
-- `src/components/AivaAssistant.tsx` — code kept, not rendered
-- `src/components/AivaCentralChat.tsx` — code kept, not rendered
-- `src/app/api/admin/aiva/` — all API routes kept, not exposed
-- `src/app/admin/dashboard/settings/aiva-avatar/` — page kept, not in nav
+- `src/components/AmarktAI AssistantAssistant.tsx` — code kept, not rendered
+- `src/components/AmarktAI AssistantCentralChat.tsx` — code kept, not rendered
+- `src/app/api/admin/AmarktAI Assistant/` — all API routes kept, not exposed
+- `src/app/admin/dashboard/settings/AmarktAI Assistant-avatar/` — page kept, not in nav
 - Floating widget: removed from layout.tsx (disabled by default)
-- Re-enable: set `NEXT_PUBLIC_AIVA_ENABLED=true` in `.env.local`
+- Re-enable: set `NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true` in `.env.local`
 
 ## Build Studio Tabs
 

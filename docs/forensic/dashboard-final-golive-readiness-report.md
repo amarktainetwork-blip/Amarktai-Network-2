@@ -15,7 +15,7 @@
 - [x] **Phase 5 — MCP/Tools/Webhooks audit**: `docs/forensic/mcp-tools-webhooks-audit.md` created. System Health → MCP/Tools tab shows honest status: not wired yet, no fake tool calls.
 - [x] **Phase 6 — Streaming voice audit**: Media Studio Voice tab clearly shows "Batch TTS: Ready / Streaming: Pending realtime service". Streaming mode button is disabled (not fake). Batch TTS routes to `/api/brain/tts`.
 - [x] **Phase 7 — Media Studio complete check**: Images (Recraft v3, Grok Imagine, DALL-E 3), Video (Veo 2, Kling, etc. with cost warning), Voice (batch TTS with provider/model/speed selector + streaming pending), Music (blueprint-only if no real provider), History (from `/api/admin/artifacts`).
-- [x] **Phase 8 — Duplicate pages redirected**: access→settings, deployments→repo-workbench, emotions→system-health, events→system-health, integrations→settings, intelligence→ai-engine, voice→media-studio, genx-models→ai-engine, brain→ai-engine, build-studio→repo-workbench, workspace→dashboard, settings/aiva-avatar→settings. Nav has exactly 9 sections.
+- [x] **Phase 8 — Duplicate pages redirected**: access→settings, deployments→repo-workbench, emotions→system-health, events→system-health, integrations→settings, intelligence→ai-engine, voice→media-studio, genx-models→ai-engine, brain→ai-engine, build-studio→repo-workbench, workspace→dashboard, settings/AmarktAI Assistant-avatar→settings. Nav has exactly 9 sections.
 - [x] **Phase 9 — Completion report**: This document.
 - [x] **Phase 10 — Tests**: 41 new dashboard go-live tests added in `src/lib/__tests__/dashboard-golive.test.ts`. All 1415 tests pass.
 
@@ -113,7 +113,7 @@
 
 | Item | Status |
 |---|---|
-| removed/hidden | access, deployments, emotions, events, integrations, intelligence, voice (login), genx-models, brain, build-studio, workspace, settings/aiva-avatar |
+| removed/hidden | access, deployments, emotions, events, integrations, intelligence, voice (login), genx-models, brain, build-studio, workspace, settings/AmarktAI Assistant-avatar |
 | Nav sections | Exactly 9 canonical sections |
 | remaining duplicates | None visible in nav |
 
@@ -140,7 +140,7 @@
 
 **New tests added:** `src/lib/__tests__/dashboard-golive.test.ts` — 41 tests covering:
 - Nav has exactly 9 sections
-- Aiva hidden by default
+- AmarktAI Assistant hidden by default
 - All duplicate pages redirect correctly (12 pages)
 - Repo Workbench: agent presets, cost estimate, delete/archive/reset/clear, deploy blocker
 - Adult Mode: settings section, provider test required, media studio gating

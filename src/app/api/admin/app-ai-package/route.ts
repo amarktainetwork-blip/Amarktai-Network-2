@@ -46,7 +46,7 @@ const packageSchema = z.object({
     maxPerRequestUsd: z.number().optional(),
     requiresApprovalAboveUsd: z.number().optional(),
   }).optional(),
-  adultPolicy: z.enum(['off', 'allowed']).optional(),
+  adultPolicy: z.enum(['off', 'suggestive', 'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'full_adult_app_mode', 'specialist', 'full_adult']).transform((value) => value === 'full_adult' ? 'full_adult_app_mode' : value).optional(),
   permissions: permissionsSchema,
   status: z.enum(['draft', 'ready', 'needs_configuration', 'blocked']),
   blockers: z.array(z.string()).default([]),

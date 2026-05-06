@@ -32,8 +32,8 @@ It checks:
 - Provider Scores API,
 - Media Artifacts API,
 - App AI Packages API,
-- Aiva Actions API,
-- Aiva Action Audit API,
+- AmarktAI Assistant Actions API,
+- AmarktAI Assistant Action Audit API,
 - systemd service hint,
 - artifact storage hint.
 
@@ -80,7 +80,7 @@ echo "== Ensure storage dirs =="
 sudo mkdir -p /var/www/amarktai/repo/public/generated-artifacts
 sudo mkdir -p /var/www/amarktai/repo/storage/provider-results
 sudo mkdir -p /var/www/amarktai/repo/storage/app-ai-packages
-sudo mkdir -p /var/www/amarktai/repo/storage/aiva-action-audit
+sudo mkdir -p /var/www/amarktai/repo/storage/AmarktAI Assistant-action-audit
 sudo chown -R www-data:www-data /var/www/amarktai/repo/public/generated-artifacts /var/www/amarktai/repo/storage || true
 
 echo "== Restart service =="
@@ -122,11 +122,11 @@ https://amarktai.com/admin/dashboard/ai-engine/hub
 https://amarktai.com/admin/dashboard/ai-engine/app-setup
 https://amarktai.com/admin/dashboard/ai-engine/intelligence
 https://amarktai.com/admin/dashboard/ai-engine/artifacts
-https://amarktai.com/admin/dashboard/ai-engine/aiva-actions
+https://amarktai.com/admin/dashboard/ai-engine/AmarktAI Assistant-actions
 https://amarktai.com/admin/dashboard/repo-workbench/simple
 ```
 
-## Aiva stream proof
+## AmarktAI Assistant stream proof
 
 Requires admin cookie.
 
@@ -135,7 +135,7 @@ curl -N -X POST https://amarktai.com/api/admin/conversation/stream \
   -H 'Content-Type: application/json' \
   --cookie /tmp/amarktai.cookies \
   -d '{
-    "message":"Reply in one sentence and confirm Aiva smart routing is active.",
+    "message":"Reply in one sentence and confirm AmarktAI Assistant smart routing is active.",
     "capability":"chat",
     "costPreference":"cheap",
     "useSmartRouting":true,
@@ -170,19 +170,19 @@ curl -sS 'https://amarktai.com/api/admin/app-ai-package' \
   --cookie /tmp/amarktai.cookies | jq
 ```
 
-### Aiva action permissions
+### AmarktAI Assistant action permissions
 
 ```bash
-curl -sS 'https://amarktai.com/api/admin/aiva/actions' \
+curl -sS 'https://amarktai.com/api/admin/AmarktAI Assistant/actions' \
   --cookie /tmp/amarktai.cookies | jq
 ```
 
-### Aiva action audit shell
+### AmarktAI Assistant action audit shell
 
 Blocked without confirmation:
 
 ```bash
-curl -sS -X POST https://amarktai.com/api/admin/aiva/action-execute \
+curl -sS -X POST https://amarktai.com/api/admin/AmarktAI Assistant/action-execute \
   -H 'Content-Type: application/json' \
   --cookie /tmp/amarktai.cookies \
   -d '{"actionId":"repo_create_pr","confirmed":false,"payload":{"repo":"amarktainetwork-blip/Amarktai-Network-2"}}' | jq
@@ -191,7 +191,7 @@ curl -sS -X POST https://amarktai.com/api/admin/aiva/action-execute \
 Approved pending executor:
 
 ```bash
-curl -sS -X POST https://amarktai.com/api/admin/aiva/action-execute \
+curl -sS -X POST https://amarktai.com/api/admin/AmarktAI Assistant/action-execute \
   -H 'Content-Type: application/json' \
   --cookie /tmp/amarktai.cookies \
   -d '{"actionId":"repo_create_pr","confirmed":true,"payload":{"repo":"amarktainetwork-blip/Amarktai-Network-2"}}' | jq
@@ -216,7 +216,7 @@ Do not call it live if any of these fail:
 5. dashboard redirects to Command Center
 6. Command Center loads
 7. Live Readiness loads
-8. Aiva stream emits token events
+8. AmarktAI Assistant stream emits token events
 9. `/api/admin/live-readiness` returns JSON when authenticated
 10. final proof script has `FAIL=0`
 
@@ -230,7 +230,7 @@ The product can continue improving after launch. Known post-launch enhancements:
 - full app registry/product onboarding UI,
 - per-action executors for PR/deploy/marketing with approval cards,
 - deeper mobile polish across every page,
-- Aiva voice controls after TTS provider proof,
+- AmarktAI Assistant voice controls after TTS provider proof,
 - artifact retention/cleanup policies,
 - more specialist media routes.
 

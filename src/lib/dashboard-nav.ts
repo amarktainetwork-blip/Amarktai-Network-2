@@ -1,32 +1,20 @@
 import {
-  Activity,
-  AppWindow,
-  Bot,
-  Coins,
-  Cpu,
-  FlaskConical,
+  BrainCircuit,
   GitBranch,
-  ListChecks,
-  Palette,
+  GraduationCap,
+  MonitorCog,
   Settings2,
-  ShieldCheck,
-  Users,
+  Sparkles,
 } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 export type DashboardSectionId =
-  | 'overview'
+  | 'studio'
   | 'workbench'
-  | 'apps'
-  | 'agents'
-  | 'ai-models'
-  | 'assistant'
-  | 'playground'
-  | 'creative-studio'
-  | 'costs'
-  | 'actions'
+  | 'apps-agents'
+  | 'memory-learning'
+  | 'operations'
   | 'settings'
-  | 'system'
 
 export type DashboardNavItem = {
   id: DashboardSectionId
@@ -38,87 +26,45 @@ export type DashboardNavItem = {
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
   {
-    id: 'overview',
+    id: 'studio',
     href: '/admin/dashboard',
-    label: 'Overview',
-    description: 'Current work, active repositories, and operational summary.',
-    icon: Activity,
+    label: 'Studio',
+    description: 'Main Superbrain AI workspace for chat, coding, research, media, voice, adult policy, and artifacts.',
+    icon: Sparkles,
   },
   {
     id: 'workbench',
     href: '/admin/dashboard/workbench',
     label: 'Workbench',
-    description: 'Repo selection, AI planning, patches, checks, PRs, merge, and deploy.',
+    description: 'Autonomous repo workflow: start work, approve changes, create PR.',
     icon: GitBranch,
   },
   {
-    id: 'apps',
-    href: '/admin/dashboard/apps',
-    label: 'Apps',
-    description: 'App inventory and routing targets.',
-    icon: AppWindow,
+    id: 'apps-agents',
+    href: '/admin/dashboard/apps-agents',
+    label: 'Apps & Agents',
+    description: 'Connected apps, app model packages, assigned agents, domains, repos, services, and policies.',
+    icon: BrainCircuit,
   },
   {
-    id: 'agents',
-    href: '/admin/dashboard/agents',
-    label: 'Agents',
-    description: 'Approved agent roles connected to the workbench flow.',
-    icon: Users,
+    id: 'memory-learning',
+    href: '/admin/dashboard/memory-learning',
+    label: 'Memory & Learning',
+    description: 'Shared Superbrain memory, emotional context, app memory, learning logs, and knowledge links.',
+    icon: GraduationCap,
   },
   {
-    id: 'ai-models',
-    href: '/admin/dashboard/ai-models',
-    label: 'AI Models',
-    description: 'Approved providers, model choices, and task routes.',
-    icon: Cpu,
-  },
-  {
-    id: 'assistant',
-    href: '/admin/dashboard/assistant',
-    label: 'Assistant',
-    description: 'AmarktAI Assistant with dashboard and workbench context.',
-    icon: Bot,
-  },
-  {
-    id: 'playground',
-    href: '/admin/dashboard/playground',
-    label: 'Playground',
-    description: 'Explore and test AI capabilities: chat, code, image, video, voice, and more.',
-    icon: FlaskConical,
-  },
-  {
-    id: 'creative-studio',
-    href: '/admin/dashboard/creative-studio',
-    label: 'Creative Studio',
-    description: 'Generate images, video, music, voice, and avatar media.',
-    icon: Palette,
-  },
-  {
-    id: 'costs',
-    href: '/admin/dashboard/costs',
-    label: 'Costs',
-    description: 'Cheap, balanced, and premium routing controls.',
-    icon: Coins,
-  },
-  {
-    id: 'actions',
-    href: '/admin/dashboard/actions',
-    label: 'Actions',
-    description: 'Human approvals for write, Git, merge, and deploy actions.',
-    icon: ShieldCheck,
+    id: 'operations',
+    href: '/admin/dashboard/operations',
+    label: 'Operations',
+    description: 'VPS, storage, jobs, artifacts, approvals, queues, logs, costs, provider usage, and alerts.',
+    icon: MonitorCog,
   },
   {
     id: 'settings',
     href: '/admin/dashboard/settings',
     label: 'Settings',
-    description: 'Keys for approved AI providers, GitHub, tools, and system services.',
+    description: 'Provider keys, defaults, routing, GitHub, Webdock, research tools, storage, adult policy, and deployment.',
     icon: Settings2,
-  },
-  {
-    id: 'system',
-    href: '/admin/dashboard/system',
-    label: 'System',
-    description: 'Runtime status, VPS monitoring, storage, and checks.',
-    icon: ListChecks,
   },
 ] as const

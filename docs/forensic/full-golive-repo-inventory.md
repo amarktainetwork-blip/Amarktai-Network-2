@@ -68,7 +68,7 @@ Additional dashboard pages, duplicates, redirects, or legacy surfaces found:
 - `src/app/admin/dashboard/video/page.tsx`
 - `src/app/admin/dashboard/voice/page.tsx`
 - `src/app/admin/dashboard/workspace/page.tsx`
-- `src/app/admin/dashboard/settings/aiva-avatar/page.tsx`
+- `src/app/admin/dashboard/settings/AmarktAI Assistant-avatar/page.tsx`
 - `src/app/admin/dashboard/system/voice-access/page.tsx`
 - `src/app/admin/dashboard/system/voice-access/enrollment/page.tsx`
 
@@ -82,7 +82,7 @@ Major route groups found:
 - Admin auth/session: `/api/admin/login`, `/api/admin/logout`, `/api/admin/voice-login`
 - Provider and key management: `/api/admin/providers`, `/api/admin/providers/[id]`, `/api/admin/providers/catalog`, `/api/admin/providers/health-check-all`, `/api/admin/integrations`, `/api/admin/integration-keys`, `/api/admin/settings/test-*`
 - AI engine and brain: `/api/brain/execute`, `/api/brain/stream`, `/api/brain/image`, `/api/brain/image-edit`, `/api/brain/video`, `/api/brain/video-generate`, `/api/brain/tts`, `/api/brain/stt`, `/api/brain/research`, `/api/brain/moderation`, `/api/brain/embeddings`, `/api/brain/rerank`
-- Aiva: `/api/aiva/run`, `/api/admin/aiva/chat`, `/api/admin/aiva/stream`, `/api/admin/aiva/context`, `/api/admin/aiva/memory`
+- AmarktAI Assistant: `/api/AmarktAI Assistant/run`, `/api/admin/AmarktAI Assistant/chat`, `/api/admin/AmarktAI Assistant/stream`, `/api/admin/AmarktAI Assistant/context`, `/api/admin/AmarktAI Assistant/memory`
 - Media/adult: `/api/brain/adult-image`, `/api/brain/adult-text`, `/api/brain/suggestive-image`, `/api/brain/suggestive-video`, `/api/brain/suggestive-video-gen`, `/api/admin/music-studio`, `/api/admin/music-studio/jobs/[jobId]`
 - Repo Workbench: `/api/admin/repo-workbench/status`, `/api/admin/repo-workbench/import`, `/api/admin/repo-workbench/models`, `/api/admin/repo-workbench/repos`, `/api/admin/repo-workbench/github/*`, `/api/admin/repo-workbench/[workspaceId]/*`, `/api/admin/repo-workbench/jobs/[jobId]/*`
 - Legacy GitHub admin routes: `/api/admin/github`, `/api/admin/github/repos`, `/api/admin/github/import`, `/api/admin/github/tree`, `/api/admin/github/file`, `/api/admin/github/push`, `/api/admin/github/pr`, `/api/admin/github/deploy`

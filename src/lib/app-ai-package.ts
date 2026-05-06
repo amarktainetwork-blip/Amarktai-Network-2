@@ -2,6 +2,7 @@ import { AI_CAPABILITY_TAXONOMY, type AiCapabilityDefinition } from '@/lib/ai-ca
 import { getAllProviderModelCatalogs, type ProviderModelCatalog } from '@/lib/ai-model-catalog'
 import { isApprovedAIProvider, type CostMode } from '@/lib/approved-ai-catalog'
 import { routeLiveModel, type AiCapability, type ModelStrategy } from '@/lib/live-ai-routing'
+import { normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
 
 export type AppAiPackageStatus = 'draft' | 'ready' | 'needs_configuration' | 'blocked'
 export type AppType = 'coding' | 'marketing' | 'companion' | 'avatar/video' | 'research' | 'operations' | 'custom'
@@ -44,7 +45,7 @@ export interface AppAiPackage {
     maxPerRequestUsd?: number
     requiresApprovalAboveUsd?: number
   }
-  adultPolicy?: 'off' | 'allowed'
+  adultPolicy?: AdultPolicyValue
   permissions: {
     canChat: boolean
     canUseTools: boolean
@@ -125,7 +126,7 @@ export async function recommendAppAiPackage(input: AppAiPackageRecommendationInp
       maxPerRequestUsd: input.preferCheap ? 0.05 : 0.25,
       requiresApprovalAboveUsd: input.preferCheap ? 0.05 : 0.25,
     },
-    adultPolicy: input.allowAdult ? 'allowed' : 'off',
+    adultPolicy: input.allowAdult ? 'full_adult_app_mode' : 'off',
     permissions: {
       canChat: true,
       canUseTools: true,
@@ -230,7 +231,7 @@ export function confirmAppAiPackage(pkg: AppAiPackage) {
     capability,
     appSlug: pkg.appSlug,
     costMode,
-    adultPolicy: pkg.adultPolicy,
+    adultPolicy: normalizeAdultPolicy(pkg.adultPolicy),
     selectedProvider: pkg.selections.find((selection) => selection.capabilityId === capability)?.provider,
     selectedModel: pkg.selections.find((selection) => selection.capabilityId === capability)?.modelId,
   }))
@@ -241,7 +242,7 @@ export function confirmAppAiPackage(pkg: AppAiPackage) {
     modelStrategy: pkg.modelStrategy ?? pkg.budget?.mode ?? 'balanced',
     monthlyBudgetUsd: pkg.budget?.monthlyUsd ?? 0,
     requiresApprovalAboveUsd: pkg.budget?.requiresApprovalAboveUsd ?? pkg.budget?.maxPerRequestUsd ?? 0,
-    adultPolicy: pkg.adultPolicy ?? 'off',
+    adultPolicy: normalizeAdultPolicy(pkg.adultPolicy),
     routes,
     canSave: routes.every((route) => !route.blockedReason),
   }

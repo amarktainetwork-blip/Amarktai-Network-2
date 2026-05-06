@@ -16,26 +16,26 @@
 
 ### Changed
 - Replaced flat nav with two groups:
-  - **Primary** (no label): Workspace, Aiva, Repo Workbench, Music Studio, Image Studio, Video Studio, Artifacts, Workflows, Apps & Agents, Admin/Settings
+  - **Primary** (no label): Workspace, AmarktAI Assistant, Repo Workbench, Music Studio, Image Studio, Video Studio, Artifacts, Workflows, Apps & Agents, Admin/Settings
   - **System**: Monitor, Deployments, AI Engine
 - Removed unused `LayoutDashboard` icon import
 - Added `Music2`, `ImageIcon`, `Film`, `Workflow`, `Music` icons
-- Sub-tab links (`?tab=aiva`, `?tab=music`, etc.) point to workspace with URL params
+- Sub-tab links (`?tab=AmarktAI Assistant`, `?tab=music`, etc.) point to workspace with URL params
 - `isActive` updated to avoid false-positive matching: `?tab=` links match when pathname starts with `/admin/dashboard/workspace`; workspace root only active on exact path or child path
 
 ---
 
-## Issue 2: AivaAssistant Widget Overlap
+## Issue 2: AmarktAI AssistantAssistant Widget Overlap
 
 **File**: `src/app/admin/dashboard/layout.tsx`
 
 ### Found
-- `<AivaAssistant />` was rendered unconditionally on all admin pages
-- When workspace Aiva tab was open, two Aiva chat interfaces were visible simultaneously
+- `<AmarktAI AssistantAssistant />` was rendered unconditionally on all admin pages
+- When workspace AmarktAI Assistant tab was open, two AmarktAI Assistant chat interfaces were visible simultaneously
 
 ### Changed
-- Added `showAivaAssistant` flag using `usePathname()`
-- `<AivaAssistant />` only rendered when `!pathname.startsWith('/admin/dashboard/workspace')`
+- Added `showAmarktAI AssistantAssistant` flag using `usePathname()`
+- `<AmarktAI AssistantAssistant />` only rendered when `!pathname.startsWith('/admin/dashboard/workspace')`
 
 ---
 
@@ -54,12 +54,12 @@
 
 #### Changed
 - Hero: "Your AI operating system for apps, agents, media, code, workflows, and automation."
-- Added "Meet Aiva" section introducing Aiva as the intelligent operations layer
+- Added "Meet AmarktAI Assistant" section introducing AmarktAI Assistant as the intelligent operations layer
 - CTAs: "Enter Workspace" → `/admin/login`, "Explore Capabilities" → `/apps`, "Contact" → `/contact`
-- How-it-works steps: "Describe your task" → "Aiva understands and routes" → "Controlled execution" → "Output & artifacts"
+- How-it-works steps: "Describe your task" → "AmarktAI Assistant understands and routes" → "Controlled execution" → "Output & artifacts"
 - Removed GenX callout section entirely
-- GitHub flow: "AI Code Edit (Aiva)" instead of GenX
-- Capabilities list now includes: Aiva Assistant, Music Creation, Repo Workbench
+- GitHub flow: "AI Code Edit (AmarktAI Assistant)" instead of GenX
+- Capabilities list now includes: AmarktAI Assistant Assistant, Music Creation, Repo Workbench
 - Removed unused imports (`Zap`, `Rocket`, `AppWindow`, `Settings2`)
 
 ### 3b. About Page (`src/app/about/page.tsx`)
@@ -73,24 +73,24 @@
 - Differentiators card labelled "GenX first" with GenX references
 
 #### Changed
-- Pillar 1: "Aiva Intelligence" — natural language understanding, routing, execution
+- Pillar 1: "AmarktAI Assistant Intelligence" — natural language understanding, routing, execution
 - Pillar 5: "Safety & Policy"
 - Pillar 6: "Unified Workspace"
-- Routing flow step 1: "Describe your task", step 2: "Aiva classifies"
-- Hero description: "routes AI tasks through Aiva — the intelligent operations layer"
-- Differentiators card: "Smart routing first" label, GenX → Aiva/primary engine references
+- Routing flow step 1: "Describe your task", step 2: "AmarktAI Assistant classifies"
+- Hero description: "routes AI tasks through AmarktAI Assistant — the intelligent operations layer"
+- Differentiators card: "Smart routing first" label, GenX → AmarktAI Assistant/primary engine references
 
 ### 3c. Apps Page (`src/app/apps/page.tsx`)
 
 #### Found
 - GenX badge: "All capabilities execute through GenX — the primary AI layer"
 - Hero description mentioned "shared GenX routing"
-- Capability list missing: Aiva, Repo Workbench, Image Editor, app connectors
+- Capability list missing: AmarktAI Assistant, Repo Workbench, Image Editor, app connectors
 - `Code2`, `Rocket`, `Zap` imports (unused after changes)
 
 #### Changed
-- Added capabilities: Aiva, Repo Workbench, Image Editor, Voice STT/TTS (renamed), Video Generator, Music Creator, App Connectors
-- Badge updated: "All capabilities are accessible through Aiva — your intelligent operations layer"
+- Added capabilities: AmarktAI Assistant, Repo Workbench, Image Editor, Voice STT/TTS (renamed), Video Generator, Music Creator, App Connectors
+- Badge updated: "All capabilities are accessible through AmarktAI Assistant — your intelligent operations layer"
 - Hero: "shared intelligent routing" instead of "shared GenX routing"
 - Fixed imports: removed `Code2`, `Rocket`, `Zap`; added `Sparkles`
 
@@ -137,7 +137,7 @@
 **File**: `src/app/admin/dashboard/workspace/page.tsx`
 
 ### Found
-- Used `useState('aiva')` as initial tab — ignored URL `?tab=` params
+- Used `useState('AmarktAI Assistant')` as initial tab — ignored URL `?tab=` params
 - Nav links like `/admin/dashboard/workspace?tab=music` had no effect on tab selection
 - No `Suspense` wrapper for `useSearchParams`
 

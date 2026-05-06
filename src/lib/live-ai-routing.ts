@@ -6,6 +6,7 @@ import {
   type CostMode,
 } from '@/lib/approved-ai-catalog'
 import { STATIC_PROVIDER_MODELS, type ProviderModelOption } from '@/lib/ai-model-catalog'
+import { adultPolicyAllows, normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
 
 export type AiCapability =
   | 'chat'
@@ -31,7 +32,7 @@ export interface LiveRouteInput {
   selectedProvider?: string
   selectedModel?: string
   costMode?: CostMode
-  adultPolicy?: 'off' | 'allowed'
+  adultPolicy?: AdultPolicyValue | 'allowed' | 'full_adult'
   budgetRemainingUsd?: number
   requiresStreaming?: boolean
   requiresMedia?: boolean
@@ -98,8 +99,9 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
 export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const costMode = input.costMode ?? 'balanced'
   const appSlug = input.appSlug ?? 'dashboard'
-  if (input.capability.startsWith('adult_') && input.adultPolicy !== 'allowed') {
-    return blocked(input, costMode, 'Adult capabilities are off for this app.')
+  const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
+  if (input.capability.startsWith('adult_') && !adultPolicyAllows(adultPolicy, input.capability)) {
+    return blocked(input, costMode, 'Adult capability needs an app policy that allows this content type.')
   }
 
   if (typeof input.budgetRemainingUsd === 'number' && input.budgetRemainingUsd < COST_ESTIMATE[costMode]) {
@@ -171,10 +173,14 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
     .filter((model) => model.enabled)
     .filter((model) => {
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
+      if (capability === 'adult_text') return ['genx', 'together', 'huggingface', 'openai'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
+      if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
+      if (capability === 'adult_video') return ['genx', 'huggingface'].includes(model.provider) && (model.modalities.includes('video') || model.modalities.includes('multimodal'))
+      if (capability === 'adult_voice') return ['genx', 'minimax', 'openai'].includes(model.provider) && (model.modalities.includes('voice_tts') || model.roles.includes('chat'))
       if (capability === 'voice_tts') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
       if (capability === 'voice_stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
-      if (capability === 'image' || capability === 'adult_image') return model.modalities.includes('image') || model.modalities.includes('multimodal')
-      if (capability === 'video' || capability === 'avatar_video' || capability === 'adult_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
+      if (capability === 'image') return model.modalities.includes('image') || model.modalities.includes('multimodal')
+      if (capability === 'video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
       return model.roles.some((role) => roles.includes(role))
     })
 

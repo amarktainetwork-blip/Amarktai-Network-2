@@ -48,14 +48,14 @@ All pages under `src/app/admin/dashboard/` audited for purpose, real API calls, 
 | `/admin/dashboard/access` | Voice/access settings | `/api/admin/voice-access-settings` | Real | Hidden | — | KEEP (sub-route ok) |
 | `/admin/dashboard/integrations` | Integrations | `/api/admin/integrations` | Real | Merged into Settings | — | KEEP (sub-route ok) |
 | `/admin/dashboard/settings` | Admin settings | `/api/admin/settings/*` | Real | Settings | KEEP | KEEP |
-| `/admin/dashboard/settings/aiva-avatar` | Aiva avatar config | `/api/admin/aiva/avatar-config` | Real | Hidden (Aiva hidden) | — | KEEP (code kept, not in nav) |
+| `/admin/dashboard/settings/AmarktAI Assistant-avatar` | AmarktAI Assistant avatar config | `/api/admin/AmarktAI Assistant/avatar-config` | Real | Hidden (AmarktAI Assistant hidden) | — | KEEP (code kept, not in nav) |
 
 ---
 
 ## Nav Change Summary
 
 ### Removed from Nav
-Workspace, Aiva, Music Studio, Image Studio, Video Studio, Workflows, Monitor, Deployments, AI Engine (old), GenX Models, Models, Media Hub, Media, Music Studio, Video, Voice, Jobs, Brain, Onboarding, Access, Integrations, Labs, Lab, Intelligence, Operations, Readiness, Events, Alerts, System
+Workspace, AmarktAI Assistant, Music Studio, Image Studio, Video Studio, Workflows, Monitor, Deployments, AI Engine (old), GenX Models, Models, Media Hub, Media, Music Studio, Video, Voice, Jobs, Brain, Onboarding, Access, Integrations, Labs, Lab, Intelligence, Operations, Readiness, Events, Alerts, System
 
 ### New Nav (9 sections)
 1. Overview
@@ -68,7 +68,7 @@ Workspace, Aiva, Music Studio, Image Studio, Video Studio, Workflows, Monitor, D
 8. System Health (new, replaces monitor/readiness/operations)
 9. Settings (kept)
 
-### Aiva Status
-- All Aiva pages and components: code kept, not exposed in nav
-- Floating AivaAssistant widget: disabled by default
-- Re-enable: set `NEXT_PUBLIC_AIVA_ENABLED=true`
+### AmarktAI Assistant Status
+- All AmarktAI Assistant pages and components: code kept, not exposed in nav
+- Floating AmarktAI AssistantAssistant widget: disabled by default
+- Re-enable: set `NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true`

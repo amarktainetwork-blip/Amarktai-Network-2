@@ -1,23 +1,23 @@
-# Phase 17 — Aiva + Repo Workbench Polish
+# Phase 17 — AmarktAI Assistant + Repo Workbench Polish
 
 Generated: 2026-05-03  
-Branch: `phase-17-aiva-repo-mobile-polish`
+Branch: `phase-17-AmarktAI Assistant-repo-mobile-polish`
 
 ## Goal
 
 Polish the two highest-impact operator surfaces before the final proof/deploy phase:
 
-1. Aiva streaming assistant panel.
+1. AmarktAI Assistant streaming assistant panel.
 2. Simple Repo Workbench prompt-to-PR flow.
 
 ## Changed
 
-### 1. Aiva panel polish
+### 1. AmarktAI Assistant panel polish
 
 Updated:
 
 ```text
-src/components/admin/AivaAssistantPanel.tsx
+src/components/admin/AmarktAI AssistantAssistantPanel.tsx
 ```
 
 Improvements:
@@ -31,7 +31,7 @@ Improvements:
 - route status updated from SSE status/route/done events,
 - less cramped assistant/user message layout on small screens.
 
-Aiva still uses:
+AmarktAI Assistant still uses:
 
 ```text
 POST /api/admin/conversation/stream
@@ -65,15 +65,15 @@ POST /api/admin/repo-workbench/simple
 
 ## Manual checks after merge/deploy
 
-### Aiva panel
+### AmarktAI Assistant panel
 
 If enabled with:
 
 ```text
-NEXT_PUBLIC_AIVA_ENABLED=true
+NEXT_PUBLIC_AmarktAI Assistant_ENABLED=true
 ```
 
-Open dashboard and click Aiva.
+Open dashboard and click AmarktAI Assistant.
 
 Check:
 
@@ -121,4 +121,4 @@ The system will continue improving after launch, but the launch path should be d
 
 ## Verdict
 
-Aiva and Repo Workbench now feel much closer to the intended operator experience: real-time, controlled, review-gated and less technical for normal use.
+AmarktAI Assistant and Repo Workbench now feel much closer to the intended operator experience: real-time, controlled, review-gated and less technical for normal use.

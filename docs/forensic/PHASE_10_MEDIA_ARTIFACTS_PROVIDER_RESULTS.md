@@ -113,11 +113,11 @@ curl -i -sS -X POST https://amarktai.com/api/admin/specialist/minimax-tts \
   -H 'Content-Type: application/json' \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' \
   -d '{
-    "text":"Hello, this is Aiva using MiniMax voice with artifact storage.",
+    "text":"Hello, this is AmarktAI Assistant using MiniMax voice with artifact storage.",
     "model":"speech-2.6-turbo",
     "appSlug":"amarktai-network",
     "saveArtifact":true
-  }' --output /tmp/minimax-aiva.mp3
+  }' --output /tmp/minimax-AmarktAI Assistant.mp3
 ```
 
 Expected headers on success:

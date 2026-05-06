@@ -25,16 +25,7 @@ const PRODUCTION_ROOT = '/var/www/amarktai/storage'
 export function getStorageRoot(): string {
   const env = process.env.AMARKTAI_STORAGE_ROOT?.trim()
   if (env) return env
-
-  // Check if the production path is accessible
-  try {
-    fs.accessSync(PRODUCTION_ROOT, fs.constants.W_OK)
-    return PRODUCTION_ROOT
-  } catch {
-    // Fall through to dev fallback
-  }
-
-  return path.join(process.cwd(), 'storage')
+  return PRODUCTION_ROOT
 }
 
 // ── ID generation ─────────────────────────────────────────────────────────────

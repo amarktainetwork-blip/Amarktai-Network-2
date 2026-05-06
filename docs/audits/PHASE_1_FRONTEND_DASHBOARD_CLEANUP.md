@@ -11,7 +11,7 @@ This phase does **not** claim unfinished capabilities are working. It makes the 
 Visible dashboard sections now focus on the product foundation:
 
 1. Command Center
-2. Aiva
+2. AmarktAI Assistant
 3. Repo Workbench
 4. Apps / Packages
 5. Media Studio
@@ -47,7 +47,7 @@ These must be handled in follow-up PRs after this foundation PR lands:
 - Provider stack hard cleanup and saved-key reset script.
 - Deleting or redirecting old hidden dashboard route files.
 - Repo Workbench UX refinements around Import / Update / Add / Audit.
-- Backend wiring for Aiva actions, scraping storage, media, voice and tool execution.
+- Backend wiring for AmarktAI Assistant actions, scraping storage, media, voice and tool execution.
 - Public homepage full redesign pass if desired.
 
 ## Verification expected before merge

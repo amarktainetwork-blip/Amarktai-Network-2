@@ -1,7 +1,7 @@
-# Phase 13 — App AI Persistence + Aiva Action Permissions
+# Phase 13 — App AI Persistence + AmarktAI Assistant Action Permissions
 
 Generated: 2026-05-02  
-Branch: `phase-13-app-ai-persistence-aiva-actions`
+Branch: `phase-13-app-ai-persistence-AmarktAI Assistant-actions`
 
 ## Goal
 
@@ -11,8 +11,8 @@ This phase focuses on:
 
 1. Persisting app-level AI packages.
 2. Letting the dashboard save/load recommended app AI packages.
-3. Defining Aiva action permissions so “full control” is safe and explicit.
-4. Adding an Aiva Actions dashboard page.
+3. Defining AmarktAI Assistant action permissions so “full control” is safe and explicit.
+4. Adding an AmarktAI Assistant Actions dashboard page.
 
 ## Added
 
@@ -74,12 +74,12 @@ Now supports:
 - version display,
 - saved package selector.
 
-### 4. Aiva action permission registry
+### 4. AmarktAI Assistant action permission registry
 
 New file:
 
 ```text
-src/lib/aiva-action-permissions.ts
+src/lib/AmarktAI Assistant-action-permissions.ts
 ```
 
 Defines safe action categories and risk levels.
@@ -114,12 +114,12 @@ Action examples:
 - change adult mode
 - delete data
 
-### 5. Aiva action permission API
+### 5. AmarktAI Assistant action permission API
 
 New endpoint:
 
 ```text
-GET /api/admin/aiva/actions
+GET /api/admin/AmarktAI Assistant/actions
 ```
 
 Returns:
@@ -128,12 +128,12 @@ Returns:
 - actions grouped by category,
 - rules stating which actions require confirmation.
 
-### 6. Aiva Actions dashboard page
+### 6. AmarktAI Assistant Actions dashboard page
 
 New page:
 
 ```text
-/admin/dashboard/ai-engine/aiva-actions
+/admin/dashboard/ai-engine/AmarktAI Assistant-actions
 ```
 
 Shows:
@@ -164,22 +164,22 @@ https://amarktai.com/admin/dashboard/ai-engine/app-setup
 3. Refresh.
 4. Confirm saved package appears.
 
-### Aiva actions API
+### AmarktAI Assistant actions API
 
 ```bash
-curl -sS https://amarktai.com/api/admin/aiva/actions \
+curl -sS https://amarktai.com/api/admin/AmarktAI Assistant/actions \
   --cookie 'YOUR_ADMIN_COOKIE_HERE' | jq
 ```
 
-### Aiva actions UI
+### AmarktAI Assistant actions UI
 
 ```text
-https://amarktai.com/admin/dashboard/ai-engine/aiva-actions
+https://amarktai.com/admin/dashboard/ai-engine/AmarktAI Assistant-actions
 ```
 
 ## Important control model
 
-Aiva can eventually control the system, but control must be tool-gated:
+AmarktAI Assistant can eventually control the system, but control must be tool-gated:
 
 - read operations can be default allowed,
 - writes require explicit confirmation,
@@ -190,13 +190,13 @@ Aiva can eventually control the system, but control must be tool-gated:
 - destructive actions require explicit confirmation,
 - adult-mode changes require explicit confirmation.
 
-This is the right way to give Aiva “full control” without making the system unsafe.
+This is the right way to give AmarktAI Assistant “full control” without making the system unsafe.
 
 ## Still pending
 
 - Database-backed app AI packages.
 - Manual model/package editor for every capability row.
-- Aiva action execution endpoint with audit trail.
+- AmarktAI Assistant action execution endpoint with audit trail.
 - Repo Workbench review/apply/create-PR UI polish.
 - Main dashboard navigation cards for all new AI Ops pages.
 - Final frontend fix/redesign.
@@ -207,7 +207,7 @@ Phase 14 should be final pre-redesign hardening:
 
 1. Add navigation cards/links into AI Engine and dashboard.
 2. Add Repo Workbench review/create-PR polish if available.
-3. Add Aiva action execution/audit shell.
+3. Add AmarktAI Assistant action execution/audit shell.
 4. Run a production readiness/code audit prompt.
 5. Prepare redesign scope and final UI sitemap.
 
@@ -215,4 +215,4 @@ Then Phase 15 can be the major frontend fix/redesign.
 
 ## Verdict
 
-App AI packages can now be saved and reloaded. Aiva has an explicit action permission model. This gives the product a safer foundation before the final dashboard/frontend redesign.
+App AI packages can now be saved and reloaded. AmarktAI Assistant has an explicit action permission model. This gives the product a safer foundation before the final dashboard/frontend redesign.

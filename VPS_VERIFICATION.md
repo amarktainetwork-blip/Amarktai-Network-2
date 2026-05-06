@@ -35,7 +35,7 @@ ls -la scripts/final_go_live_audit.sh
 | 4 | `src/lib/__tests__/go-live-clean-slate-audit.test.ts` exists | ✅ |
 | 5 | Old unsupported providers removed from Settings UI | ✅ |
 | 6 | `/admin/dashboard/operations` redirects to `/admin/dashboard/actions` | ✅ |
-| 7 | No visible Aiva/AIVA copy in user-facing UI | ✅ |
+| 7 | No visible AmarktAI Assistant/AmarktAI Assistant copy in user-facing UI | ✅ |
 | 8 | Adult policy is app-level and clean-slate gated | ✅ |
 | 9 | Settings clean-slate status does not pretend keys are configured | ✅ |
 

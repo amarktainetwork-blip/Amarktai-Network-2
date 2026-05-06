@@ -7,7 +7,7 @@ Branch: `phase-7-app-ai-capabilities-simple-workspace`
 
 Move the system closer to the real product target:
 
-1. Aiva can eventually control the full system through approved tools.
+1. AmarktAI Assistant can eventually control the full system through approved tools.
 2. Each added app gets its own AI provider/model package.
 3. Hugging Face is treated as a broad capability platform, not one fixed model.
 4. Provider capabilities are tested by capability, not only by API key.
@@ -175,9 +175,9 @@ It:
 
 It does **not** auto-merge, auto-deploy, or claim PR creation until those separate actions happen and return proof.
 
-## Aiva control model
+## AmarktAI Assistant control model
 
-Aiva should eventually control the full system through tool-gated actions, not hidden direct access.
+AmarktAI Assistant should eventually control the full system through tool-gated actions, not hidden direct access.
 
 Safe control model:
 
@@ -187,7 +187,7 @@ Safe control model:
 - require approval for repo changes, PR creation, deploys, spend, marketing sends, adult-mode changes, external writes, and destructive actions,
 - log every action to artifacts/jobs/audit trail.
 
-This PR lays the capability and package foundation for that control model, but does not give Aiva unrestricted direct system access.
+This PR lays the capability and package foundation for that control model, but does not give AmarktAI Assistant unrestricted direct system access.
 
 ## Hugging Face setup direction
 
@@ -215,8 +215,8 @@ These are intentionally not faked:
 - MiniMax/Mimo video/voice/music route.
 - Gemini image/video/voice specialist routes.
 - Hugging Face dedicated endpoint execution router.
-- Real-time microphone/STT input for Aiva.
-- Tool permission registry for Aiva actions.
+- Real-time microphone/STT input for AmarktAI Assistant.
+- Tool permission registry for AmarktAI Assistant actions.
 - UI for app AI package selector.
 - UI for Repo Workbench simple mode.
 - Persisting app AI package selections into DB.

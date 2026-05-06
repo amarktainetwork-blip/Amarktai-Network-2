@@ -56,12 +56,12 @@ Settings shows GenX key configured and many providers configured, but AI Engine 
 |--------|---------|---------|----------------|-----|
 | `src/app/api/admin/settings/test-webdock/route.ts` | Settings → Webdock test | Returns raw "HTTP 404" error message with no guidance | Show actionable diagnostic message | **Fixed** — 404 now shows full diagnostic |
 
-### AIVA_ENABLED Flag
+### AmarktAI Assistant_ENABLED Flag
 
 | Source | Used by | Problem | Correct source | Fix |
 |--------|---------|---------|----------------|-----|
-| `process.env.NEXT_PUBLIC_AIVA_ENABLED` | `admin/dashboard/layout.tsx` | Correct (controls floating assistant) | ✓ Already correct | No change |
-| None — always rendered | `settings/page.tsx` AivaSection | AivaSection always visible regardless of AIVA_ENABLED | `data.aivaEnabled` from integrations API | **Fixed** — Aiva section now hidden unless enabled |
+| `process.env.NEXT_PUBLIC_AmarktAI Assistant_ENABLED` | `admin/dashboard/layout.tsx` | Correct (controls floating assistant) | ✓ Already correct | No change |
+| None — always rendered | `settings/page.tsx` AmarktAI AssistantSection | AmarktAI AssistantSection always visible regardless of AmarktAI Assistant_ENABLED | `data.AmarktAI AssistantEnabled` from integrations API | **Fixed** — AmarktAI Assistant section now hidden unless enabled |
 
 ---
 
@@ -83,11 +83,11 @@ Settings shows GenX key configured and many providers configured, but AI Engine 
 - Capabilities tab: derives blockers from runtime truth — no more hardcoded "Needs GenX key" when key exists
 
 ### Fixed: `src/app/admin/dashboard/settings/page.tsx`
-- `AivaSection` only rendered when `data.aivaEnabled === true`
+- `AmarktAI AssistantSection` only rendered when `data.AmarktAI AssistantEnabled === true`
 - Webdock test result banner shows full diagnostic for HTTP 404 (blocker + nextAction)
 
 ### Fixed: `src/app/api/admin/settings/integrations/route.ts`
-- Added `aivaEnabled: process.env.AIVA_ENABLED === 'true'` to GET response
+- Added `AmarktAI AssistantEnabled: process.env.AmarktAI Assistant_ENABLED === 'true'` to GET response
 
 ### Fixed: `src/app/api/admin/settings/test-webdock/route.ts`
 - HTTP 404 → returns actionable message instead of raw "Webdock API responded 404"
