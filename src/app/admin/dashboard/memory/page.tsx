@@ -82,6 +82,7 @@ function Row({ label, value, status }: { label: string; value?: string; status?:
 export default function MemoryPage() {
   const [memStatus, setMemStatus] = useState<{
     available?: boolean
+    isWorking?: boolean
     totalEntries?: number
     statusLabel?: string
     storage?: { driver?: string; writable?: boolean; root?: string; file?: string }
@@ -96,9 +97,9 @@ export default function MemoryPage() {
       .catch(() => null)
   }, [])
 
-  const isWorking = memStatus?.available === true ||
-    memStatus?.statusLabel === 'working' ||
-    memStatus?.storage?.writable === true
+  const isWorking = memStatus?.isWorking === true ||
+    memStatus?.available === true ||
+    memStatus?.statusLabel === 'working'
 
   const liveStatus: StatusLabel = isWorking
     ? 'Working'

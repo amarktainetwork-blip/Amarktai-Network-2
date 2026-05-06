@@ -119,7 +119,8 @@ export function checkWritable(relPath: string): { writable: boolean; root: strin
  */
 export function appendRecord<T extends object>(relPath: string, record: T): T & { id: string } {
   const records = readJsonFile<T & { id: string }>(relPath)
-  const withId = { ...record, id: (record as { id?: string }).id ?? generateId() } as T & { id: string }
+  const id = (record as { id?: string }).id ?? generateId()
+  const withId = { ...record, id } as T & { id: string }
   records.push(withId)
   writeJsonFile(relPath, records)
   return withId

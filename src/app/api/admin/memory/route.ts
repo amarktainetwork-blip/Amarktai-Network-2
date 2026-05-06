@@ -28,9 +28,11 @@ function buildLocalStatus() {
   const storage = checkWritable(LOCAL_STORE_FILES.memory)
   const entries = listRecords<LocalMemoryEntry>(LOCAL_STORE_FILES.memory)
   const appSlugs = [...new Set(entries.map((e) => e.appSlug))]
+  const isWorking = storage.writable
   return {
-    available: storage.writable,
-    statusLabel: storage.writable ? 'working' : 'not_configured',
+    available: isWorking,
+    isWorking,
+    statusLabel: isWorking ? 'working' : 'not_configured',
     storage: {
       driver: 'local_vps',
       writable: storage.writable,
@@ -61,6 +63,7 @@ export async function GET() {
         const localRoot = getStorageRoot()
         return NextResponse.json({
           ...status,
+          isWorking: true,
           statusLabel: 'working',
           storage: {
             driver: 'db+local_vps',
