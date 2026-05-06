@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, GitMerge, Loader2, Rocket, Wand2 } from 'lucide-react'
+import { CheckCircle2, GitCommit, GitMerge, GitPullRequest, Loader2, Rocket, Upload, Wand2 } from 'lucide-react'
 import { APPROVED_WORKBENCH_MODELS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
@@ -9,6 +9,7 @@ type Branch = { name: string; sha: string; isDefault?: boolean }
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
 type OutputTab = 'plan' | 'files' | 'diff' | 'checks' | 'pr' | 'deploy'
+type RouteEstimate = { selectedProvider?: string | null; selectedModel?: string | null; estimatedCostUsd?: number; reason?: string; blockedReason?: string | null }
 
 const outputTabs: Array<{ id: OutputTab; label: string }> = [
   { id: 'plan', label: 'Plan' },
@@ -35,6 +36,10 @@ export default function WorkbenchPage() {
   const [prompt, setPrompt] = useState('')
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
   const [patchId, setPatchId] = useState('')
+  const [taskId, setTaskId] = useState('')
+  const [worktree, setWorktree] = useState<{ dirty?: boolean; currentBranch?: string; currentCommit?: string; dirtyFiles?: string[] } | null>(null)
+  const [availableChecks, setAvailableChecks] = useState<string[]>([])
+  const [routeEstimate, setRouteEstimate] = useState<RouteEstimate | null>(null)
   const [tab, setTab] = useState<OutputTab>('plan')
   const [loading, setLoading] = useState('')
   const [error, setError] = useState('')
@@ -53,7 +58,7 @@ export default function WorkbenchPage() {
   )
 
   const selectedModel = useMemo(
-    () => APPROVED_WORKBENCH_MODELS.find((model) => model.id === modelId) ?? modelsForMode[0],
+    () => modelId === 'auto' ? undefined : APPROVED_WORKBENCH_MODELS.find((model) => model.id === modelId) ?? modelsForMode[0],
     [modelId, modelsForMode],
   )
 
@@ -98,10 +103,23 @@ export default function WorkbenchPage() {
   }, [loadRepos])
 
   useEffect(() => {
-    if (modelsForMode[0] && !modelsForMode.some((model) => model.id === modelId)) {
+    if (modelId !== 'auto' && modelsForMode[0] && !modelsForMode.some((model) => model.id === modelId)) {
       setModelId(modelsForMode[0].id)
     }
   }, [modelId, modelsForMode])
+
+  useEffect(() => {
+    const provider = selectedModel?.provider ?? 'auto'
+    const selected = selectedModel?.id
+    fetch('/api/admin/ai-routing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ capability: 'coding', appSlug: 'repo-workbench', selectedProvider: provider, selectedModel: selected, costMode }),
+    })
+      .then((response) => response.json())
+      .then((data) => setRouteEstimate(data.route ?? null))
+      .catch(() => setRouteEstimate(null))
+  }, [costMode, selectedModel])
 
   async function loadBranches(nextRepo = repoFullName) {
     if (!nextRepo) return
@@ -121,14 +139,24 @@ export default function WorkbenchPage() {
     })
     const nextWorkspace = data.workspace as Workspace
     setWorkspace(nextWorkspace)
+    await loadWorkspaceStatus(nextWorkspace.id)
     return nextWorkspace
+  }
+
+  async function loadWorkspaceStatus(workspaceId: string) {
+    const [statusData, checksData] = await Promise.all([
+      call('Load workspace status', `/api/admin/repo-workbench/${workspaceId}/status`).catch(() => null),
+      call('Load checks', `/api/admin/repo-workbench/${workspaceId}/checks`).catch(() => null),
+    ])
+    if (statusData) setWorktree(statusData as never)
+    if (checksData && Array.isArray(checksData.checks)) setAvailableChecks(checksData.checks as string[])
   }
 
   function workbenchPayload() {
     return {
       request: prompt,
-      modelId: selectedModel?.id ?? modelId,
-      provider: selectedModel?.provider,
+      modelId: selectedModel?.id,
+      provider: selectedModel?.provider ?? 'auto',
       costMode,
       taskType: 'auto',
       scope: 'auto',
@@ -143,37 +171,44 @@ export default function WorkbenchPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(workbenchPayload()),
     })
+    const task = data.task as { id?: string } | undefined
+    setTaskId(String(task?.id ?? data.taskId ?? ''))
     appendOutput('plan', asText(data.plan ?? data.planJson ?? data.task ?? data))
   }
 
-  async function applyFix() {
+  async function generatePatch() {
     const activeWorkspace = await ensureWorkspace()
     setTab('diff')
-    const patchData = patchId
-      ? { patch: { id: patchId, diffText: outputs.diff } }
-      : await call('Prepare patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
+    const patchData = await call('Generate patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(workbenchPayload()),
+      body: JSON.stringify({ ...workbenchPayload(), taskId: taskId || undefined }),
       })
     const patch = patchData.patch as { id?: string; diffText?: string; filesAffected?: string[] } | undefined
     const nextPatchId = String(patch?.id ?? patchData.patchId ?? '')
     setPatchId(nextPatchId)
     appendOutput('diff', String(patch?.diffText ?? patchData.diffText ?? ''))
     appendOutput('files', asText(patch?.filesAffected ?? patchData.filesAffected ?? patchData.changedFiles ?? []))
-    if (!nextPatchId) return
+    return nextPatchId
+  }
+
+  async function applyFix() {
+    const activeWorkspace = await ensureWorkspace()
+    const activePatchId = patchId || await generatePatch()
+    if (!activePatchId) return
     const applied = await call('Apply fix', `/api/admin/repo-workbench/${activeWorkspace.id}/apply-patch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ patchId: nextPatchId, confirm: true }),
+      body: JSON.stringify({ patchId: activePatchId, confirm: true }),
     })
     appendOutput('files', asText(applied.changedFiles ?? applied.files ?? applied))
+    await loadWorkspaceStatus(activeWorkspace.id)
   }
 
   async function runChecks() {
     const activeWorkspace = await ensureWorkspace()
     setTab('checks')
-    const commands = ['lint', 'test', 'build']
+    const commands = availableChecks.length ? availableChecks : ['lint', 'test', 'build']
     const results: string[] = []
     for (const command of commands) {
       const data = await call(`Run ${command}`, `/api/admin/repo-workbench/${activeWorkspace.id}/run-check`, {
@@ -186,21 +221,33 @@ export default function WorkbenchPage() {
     appendOutput('checks', results.join('\n\n'))
   }
 
+  async function commitChanges() {
+    const activeWorkspace = await ensureWorkspace()
+    setTab('files')
+    if (!patchId) throw new Error('Generate and apply a patch before committing.')
+    const data = await call('Commit', `/api/admin/repo-workbench/${activeWorkspace.id}/commit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patchId, message: prompt.slice(0, 180) || 'Repo Workbench update', branchName: `repo-workbench/${Date.now()}`, confirm: true }),
+    })
+    appendOutput('files', asText(data))
+    await loadWorkspaceStatus(activeWorkspace.id)
+  }
+
+  async function pushBranch() {
+    const activeWorkspace = await ensureWorkspace()
+    setTab('pr')
+    const data = await call('Push', `/api/admin/repo-workbench/${activeWorkspace.id}/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    })
+    appendOutput('pr', asText(data))
+  }
+
   async function createPr() {
     const activeWorkspace = await ensureWorkspace()
     setTab('pr')
-    if (patchId) {
-      await call('Commit', `/api/admin/repo-workbench/${activeWorkspace.id}/commit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patchId, message: prompt.slice(0, 180) || 'Repo Workbench update', branchName: `repo-workbench/${Date.now()}`, confirm: true }),
-      })
-      await call('Push', `/api/admin/repo-workbench/${activeWorkspace.id}/push`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirm: true }),
-      })
-    }
     const data = await call('Create PR', `/api/admin/repo-workbench/${activeWorkspace.id}/pr`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -279,6 +326,7 @@ export default function WorkbenchPage() {
               onChange={(event) => setModelId(event.target.value)}
               className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white"
             >
+              <option value="auto">Auto approved route</option>
               {modelsForMode.map((model) => (
                 <option key={`${model.provider}:${model.id}`} value={model.id}>
                   {providerLabel(model.provider)} - {model.label}
@@ -314,16 +362,29 @@ export default function WorkbenchPage() {
 
         <div className="mt-5 flex flex-wrap gap-2">
           <ActionButton onClick={planFix} disabled={!repoFullName || !prompt || Boolean(loading)} label="Plan fix" loading={loading === 'Plan fix'} icon={<Wand2 className="h-4 w-4" />} />
+          <ActionButton onClick={generatePatch} disabled={!workspace || !prompt || Boolean(loading)} label="Generate patch" loading={loading === 'Generate patch'} />
           <ActionButton onClick={applyFix} disabled={!repoFullName || !prompt || Boolean(loading)} label="Apply fix" loading={loading === 'Apply fix' || loading === 'Prepare patch'} />
           <ActionButton onClick={runChecks} disabled={!workspace || Boolean(loading)} label="Run checks" loading={loading.startsWith('Run ')} icon={<CheckCircle2 className="h-4 w-4" />} />
-          <ActionButton onClick={createPr} disabled={!workspace || Boolean(loading)} label="Create PR" loading={loading === 'Create PR' || loading === 'Commit' || loading === 'Push'} />
+          <ActionButton onClick={commitChanges} disabled={!workspace || !patchId || Boolean(loading)} label="Commit" loading={loading === 'Commit'} icon={<GitCommit className="h-4 w-4" />} />
+          <ActionButton onClick={pushBranch} disabled={!workspace || Boolean(loading)} label="Push" loading={loading === 'Push'} icon={<Upload className="h-4 w-4" />} />
+          <ActionButton onClick={createPr} disabled={!workspace || Boolean(loading)} label="Create PR" loading={loading === 'Create PR'} icon={<GitPullRequest className="h-4 w-4" />} />
           <ActionButton onClick={mergePr} disabled={!workspace || !prNumber || Boolean(loading)} label="Merge" loading={loading === 'Merge'} icon={<GitMerge className="h-4 w-4" />} />
           <ActionButton onClick={deploy} disabled={!workspace || Boolean(loading)} label="Deploy" loading={loading === 'Deploy'} icon={<Rocket className="h-4 w-4" />} />
         </div>
 
+        {routeEstimate && (
+          <p className="mt-4 text-xs text-slate-500">
+            Route: {routeEstimate.selectedProvider ?? 'auto'} / {routeEstimate.selectedModel ?? routeEstimate.selectedProvider ?? 'selected by policy'} - estimated ${Number(routeEstimate.estimatedCostUsd ?? 0).toFixed(2)}
+          </p>
+        )}
         {workspace && (
           <p className="mt-4 text-xs text-slate-500">
             Active workspace: {workspace.owner}/{workspace.repo} on {workspace.branch} ({workspace.currentCommit?.slice(0, 12) || 'current checkout'})
+          </p>
+        )}
+        {worktree && (
+          <p className="mt-2 text-xs text-slate-500">
+            Worktree: {worktree.dirty ? `${worktree.dirtyFiles?.length ?? 0} file(s) changed` : 'clean'} on {worktree.currentBranch ?? branch}. Checks: {availableChecks.length ? availableChecks.join(', ') : 'none detected'}.
           </p>
         )}
         {error && <p className="mt-4 rounded-lg border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-200">{error}</p>}

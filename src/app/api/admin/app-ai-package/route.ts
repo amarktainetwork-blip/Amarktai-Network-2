@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { deleteAppAiPackage, getAppAiPackage, listAppAiPackages, saveAppAiPackage } from '@/lib/app-ai-package-store'
+import { isApprovedAIProvider } from '@/lib/approved-ai-catalog'
+import { confirmAppAiPackage, type AppAiPackage } from '@/lib/app-ai-package'
 
 const selectionSchema = z.object({
   capabilityId: z.string(),
@@ -28,13 +30,23 @@ const permissionsSchema = z.object({
 const packageSchema = z.object({
   appSlug: z.string().min(1),
   appName: z.string().min(1),
-  appType: z.string().min(1),
+  domain: z.string().optional(),
+  appType: z.enum(['coding', 'marketing', 'companion', 'avatar/video', 'research', 'operations', 'custom']).or(z.string().min(1)),
   safetyProfile: z.string().min(1),
   enabledCapabilityIds: z.array(z.string()).default([]),
+  allowedCapabilities: z.array(z.string()).optional(),
+  modelStrategy: z.enum(['cheap', 'balanced', 'premium', 'custom']).optional(),
   selections: z.array(selectionSchema).default([]),
+  fallbackSelections: z.array(selectionSchema).optional(),
   voice: z.object({ provider: z.string(), modelId: z.string(), voiceId: z.string().optional(), label: z.string().optional() }).optional(),
-  crawler: z.object({ provider: z.enum(['firecrawl', 'genx', 'manual']), websiteUrl: z.string().optional(), lastCrawledAt: z.string().optional() }).optional(),
-  budget: z.object({ mode: z.enum(['cheap', 'balanced', 'premium', 'custom']), monthlyUsd: z.number().optional(), maxPerRequestUsd: z.number().optional() }).optional(),
+  crawler: z.object({ provider: z.enum(['firecrawl', 'crawl4ai', 'playwright', 'manual']), websiteUrl: z.string().optional(), lastCrawledAt: z.string().optional() }).optional(),
+  budget: z.object({
+    mode: z.enum(['cheap', 'balanced', 'premium', 'custom']),
+    monthlyUsd: z.number().optional(),
+    maxPerRequestUsd: z.number().optional(),
+    requiresApprovalAboveUsd: z.number().optional(),
+  }).optional(),
+  adultPolicy: z.enum(['off', 'allowed']).optional(),
   permissions: permissionsSchema,
   status: z.enum(['draft', 'ready', 'needs_configuration', 'blocked']),
   blockers: z.array(z.string()).default([]),
@@ -67,8 +79,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid app AI package', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const stored = await saveAppAiPackage(parsed.data)
-  return NextResponse.json({ success: true, package: stored })
+  const invalidSelection = parsed.data.selections.find((selection) => selection.provider && !isApprovedAIProvider(selection.provider))
+  if (invalidSelection) {
+    return NextResponse.json({ success: false, error: `Provider is not approved: ${invalidSelection.provider}` }, { status: 422 })
+  }
+
+  const pkg = parsed.data as AppAiPackage
+  const confirmation = confirmAppAiPackage(pkg)
+  const stored = await saveAppAiPackage(pkg)
+  return NextResponse.json({ success: true, package: stored, confirmation })
 }
 
 export async function DELETE(request: NextRequest) {

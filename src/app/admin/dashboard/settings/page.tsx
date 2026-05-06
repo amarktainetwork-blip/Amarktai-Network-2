@@ -30,6 +30,8 @@ export default function SettingsPage() {
           {APPROVED_AI_PROVIDERS.map((provider) => (
             <KeyForm
               key={provider.key}
+              keyId={provider.key}
+              type="provider"
               label={provider.settingsLabel}
               description={provider.notes}
               placeholder={provider.envVars[0]}
@@ -44,6 +46,8 @@ export default function SettingsPage() {
           {TOOL_KEYS.map((tool) => (
             <KeyForm
               key={tool.key}
+              keyId={tool.key}
+              type="tool"
               label={tool.label}
               description={tool.description}
               placeholder={tool.placeholder}
@@ -55,9 +59,23 @@ export default function SettingsPage() {
   )
 }
 
-function KeyForm({ label, description, placeholder }: { label: string; description: string; placeholder: string }) {
+function KeyForm({ keyId, type, label, description, placeholder }: { keyId: string; type: 'provider' | 'tool'; label: string; description: string; placeholder: string }) {
   const [value, setValue] = useState('')
   const [show, setShow] = useState(false)
+  const [status, setStatus] = useState('')
+
+  async function saveKey() {
+    if (!value.trim()) return
+    setStatus('Saving')
+    const response = await fetch('/api/admin/settings/key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: keyId, type, label, value }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setStatus(response.ok ? `Saved ${data.masked ?? ''}` : data.error ?? 'Save failed')
+    if (response.ok) setValue('')
+  }
 
   return (
     <div className="rounded-lg border border-white/10 bg-black/20 p-4">
@@ -87,11 +105,12 @@ function KeyForm({ label, description, placeholder }: { label: string; descripti
             {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
-        <button className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-400/15">
+        <button onClick={saveKey} className="inline-flex items-center gap-2 rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-2 text-sm font-semibold text-cyan-100 hover:bg-cyan-400/15">
           <Save className="h-4 w-4" />
           Save
         </button>
       </div>
+      {status && <p className="mt-2 text-xs text-slate-500">{status}</p>}
     </div>
   )
 }

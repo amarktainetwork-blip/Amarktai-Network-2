@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { APPROVED_ASSISTANT_MODELS, isApprovedAIProvider } from '@/lib/approved-ai-catalog'
 import { executeCapability } from '@/lib/capability-router'
 import { getSession } from '@/lib/session'
+import { recordEstimatedCost } from '@/lib/cost-tracking'
+import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
 
 function detectCapability(text: string): string {
   const value = text.toLowerCase()
@@ -23,6 +25,7 @@ export async function POST(req: NextRequest) {
     capability?: string
     providerOverride?: string
     modelOverride?: string
+    costMode?: 'cheap' | 'balanced' | 'premium'
     files?: string[]
     metadata?: Record<string, unknown>
   }
@@ -36,12 +39,28 @@ export async function POST(req: NextRequest) {
   }
 
   const capability = body.capability || detectCapability(body.message)
+  const route = routeLiveModel({
+    capability: normalizeCapability(capability),
+    appSlug: 'assistant',
+    selectedProvider: providerOverride || 'auto',
+    selectedModel: selectedModel?.id ?? body.modelOverride,
+    costMode: body.costMode ?? 'balanced',
+    adultPolicy: 'off',
+  })
+  if (route.blockedReason || !route.selectedProvider || !route.selectedModel) {
+    return NextResponse.json({
+      success: false,
+      error: route.blockedReason ?? 'No approved route is available for this assistant request',
+      route,
+    }, { status: 409 })
+  }
+
   const result = await executeCapability({
     input: body.message,
     capability,
     files: body.files,
-    providerOverride,
-    modelOverride: selectedModel?.id ?? body.modelOverride,
+    providerOverride: route.selectedProvider,
+    modelOverride: route.selectedModel,
     traceId: `amarktai-assistant-${Date.now()}`,
     metadata: {
       ...body.metadata,
@@ -50,6 +69,17 @@ export async function POST(req: NextRequest) {
       workbenchContext: true,
     },
   })
+
+  await recordEstimatedCost({
+    provider: route.selectedProvider,
+    model: route.selectedModel,
+    appSlug: 'assistant',
+    agentId: 'amarktai-assistant',
+    capability,
+    runType: 'assistant-chat',
+    costMode: route.costMode,
+    estimatedCostUsd: route.estimatedCostUsd,
+  }).catch(() => null)
 
   return NextResponse.json({
     output: result.output,
@@ -60,7 +90,21 @@ export async function POST(req: NextRequest) {
     artifactId: result.artifactId,
     fallbackUsed: result.fallbackUsed,
     warning: result.warning,
+    route,
     success: result.success,
     error: result.error,
   })
+}
+
+function normalizeCapability(value: string): AiCapability {
+  if (value === 'code') return 'coding'
+  if (value === 'image_generation') return 'image'
+  if (value === 'video_generation') return 'video'
+  if (value === 'tts') return 'voice_tts'
+  if (value === 'stt') return 'voice_stt'
+  if (value === 'scrape_website') return 'research'
+  if (['chat', 'reasoning', 'coding', 'research', 'image', 'video', 'voice_tts', 'voice_stt', 'avatar_video', 'moderation', 'adult_text', 'adult_image', 'adult_video', 'adult_voice'].includes(value)) {
+    return value as AiCapability
+  }
+  return 'chat'
 }
