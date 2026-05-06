@@ -4,12 +4,30 @@
  * Scrape or manually record a URL as a research source.
  * Uses Firecrawl if key is available; falls back to recording manual notes.
  * Saves result as an Artifact (type=document, subType=research_source).
+ * If artifact-store fails, saves locally to research/research-jobs.json.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
 import { getServiceKey } from '@/lib/service-vault'
+import { appendRecord, checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+
+interface LocalResearchJob {
+  id: string
+  url: string
+  appSlug: string
+  title: string
+  notes: string
+  tags: string[]
+  scrapedMethod: 'firecrawl' | 'manual'
+  firecrawlAvailable: boolean
+  content: string
+  status: 'completed' | 'failed'
+  createdAt: string
+  artifactId?: string
+  warning?: string
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -87,6 +105,37 @@ export async function POST(req: NextRequest) {
       })
     } catch (e) {
       storageError = e instanceof Error ? e.message : 'Artifact storage not ready'
+    }
+
+    // If artifact-store failed, save locally
+    if (!artifact) {
+      const localCheck = checkWritable(LOCAL_STORE_FILES.research)
+      if (localCheck.writable) {
+        const job: Omit<LocalResearchJob, 'id'> = {
+          url,
+          appSlug: appSlug ?? 'admin',
+          title,
+          notes: notes ?? '',
+          tags: tags ?? [],
+          scrapedMethod: scraped.method as 'firecrawl' | 'manual',
+          firecrawlAvailable: !!firecrawlKey,
+          content,
+          status: 'completed',
+          createdAt: new Date().toISOString(),
+          warning: scraped.error ?? storageError ?? undefined,
+        }
+        const saved = appendRecord(LOCAL_STORE_FILES.research, job)
+        return NextResponse.json({
+          success: true,
+          artifact: null,
+          localJob: saved,
+          scrapedMethod: scraped.method,
+          firecrawlAvailable: !!firecrawlKey,
+          warning: scraped.error ?? storageError ?? null,
+          storageReady: true,
+          driver: 'local_vps',
+        })
+      }
     }
 
     return NextResponse.json({
