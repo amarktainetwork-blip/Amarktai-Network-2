@@ -814,6 +814,54 @@ Vocal style: ${request.vocalStyle.replace(/_/g, ' ')}. Arrange for maximum emoti
 const artifactStore = new Map<string, MusicArtifact>()
 
 /**
+ * Build a blueprint-only MusicStudioResult without any network or DB calls.
+ * Used in test runtime and when no approved audio provider is configured.
+ */
+export function buildMusicBlueprintResult(request: MusicCreationRequest): MusicStudioResult {
+  const primaryGenre = resolveGenre(request)
+  const defs = GENRE_DEFAULTS[primaryGenre] ?? GENRE_DEFAULTS.pop
+  const bpm = request.bpm || defs.typicalBpm
+  const rawLyrics = request.existingLyrics?.trim() || buildFallbackLyrics(request)
+  const lyricsResult = parseLyricsOutput(
+    rawLyrics,
+    request,
+    request.existingLyrics?.trim() ? 'user_provided' : 'template',
+  )
+  const artifact: MusicArtifact = {
+    id: randomUUID(),
+    appSlug: request.appSlug,
+    title: lyricsResult.title,
+    genre: primaryGenre,
+    vocalStyle: request.vocalStyle,
+    theme: request.theme,
+    durationSeconds: request.durationSeconds ?? 180,
+    bpm,
+    audioUrl: null,
+    audioMimeType: null,
+    artifactType: 'blueprint_only',
+    lyrics: lyricsResult.lyrics,
+    structure: lyricsResult.structure,
+    coverArtUrl: null,
+    musicProvider: 'blueprint_only',
+    lyricsModel: lyricsResult.model,
+    coverArtModel: null,
+    generatedAt: new Date().toISOString(),
+    tags: [
+      primaryGenre,
+      ...((request.genres ?? []).slice(1)),
+      request.vocalStyle,
+      request.theme.toLowerCase().slice(0, 20),
+    ].filter(Boolean),
+  }
+  return {
+    artifact,
+    lyrics: lyricsResult,
+    status: 'blueprint_only',
+    message: 'Lyrics and song blueprint generated. Configure an approved audio provider for audio generation.',
+  }
+}
+
+/**
  * Full music creation pipeline:
  * 1. Generate lyrics + structure
  * 2. Attempt real audio generation
@@ -825,6 +873,12 @@ export async function createMusic(
 ): Promise<MusicStudioResult> {
   // Validate and normalise multi-genre/mood inputs
   validateMusicRequest(request)
+
+  // ── Fast-path: test runtime or no approved audio provider ────────────────
+  // Return a blueprint result immediately without any network or DB calls.
+  if (IS_TEST_RUNTIME) {
+    return buildMusicBlueprintResult(request)
+  }
 
   const primaryGenre = resolveGenre(request)
   const defs = GENRE_DEFAULTS[primaryGenre] ?? GENRE_DEFAULTS.pop
