@@ -17,10 +17,37 @@ import {
   getWiredProviderKeys,
   type ProviderGovernanceStatus,
 } from '@/lib/ai-provider-governance'
+import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
 const WIRED_PROVIDER_KEYS = getWiredProviderKeys()
 const ADULT_SPECIALIST_PROVIDER_KEYS = getAdultSpecialistProviderKeys()
+
+function getLocalCoreStatus(): LocalCoreStatus {
+  const memory = checkWritable(LOCAL_STORE_FILES.memory)
+  const approvals = checkWritable(LOCAL_STORE_FILES.approvals)
+  const artifacts = checkWritable(LOCAL_STORE_FILES.artifacts)
+  const research = checkWritable(LOCAL_STORE_FILES.research)
+  const apps = checkWritable(LOCAL_STORE_FILES.apps)
+  const agents = checkWritable(LOCAL_STORE_FILES.agents)
+
+  interface WithId { id: string }
+  const appCount = listRecords<WithId>(LOCAL_STORE_FILES.apps).length
+  const agentCount = listRecords<WithId>(LOCAL_STORE_FILES.agents).length
+
+  const allWorking = memory.writable && approvals.writable && artifacts.writable &&
+    research.writable && apps.writable && agents.writable
+
+  return {
+    memory: { writable: memory.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.memory },
+    approvals: { writable: approvals.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.approvals },
+    artifacts: { writable: artifacts.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.artifacts },
+    research: { writable: research.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.research },
+    apps: { writable: apps.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.apps, count: appCount },
+    agents: { writable: agents.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.agents, count: agentCount },
+    allWorking,
+  }
+}
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -61,6 +88,16 @@ export interface CapabilityRuntimeEntry {
   nextAction: string | null
 }
 
+export interface LocalCoreStatus {
+  memory: { writable: boolean; driver: string; file: string }
+  approvals: { writable: boolean; driver: string; file: string }
+  artifacts: { writable: boolean; driver: string; file: string }
+  research: { writable: boolean; driver: string; file: string }
+  apps: { writable: boolean; driver: string; file: string; count: number }
+  agents: { writable: boolean; driver: string; file: string; count: number }
+  allWorking: boolean
+}
+
 export interface DashboardRuntimeTruth {
   success: true
   genx: GenXRuntimeStatus
@@ -68,6 +105,7 @@ export interface DashboardRuntimeTruth {
   capabilities: CapabilityRuntimeEntry[]
   adultGate: AdultCapabilityGate
   blockers: string[]
+  localCore: LocalCoreStatus
 }
 
 async function resolveKey(integrationKey: string): Promise<{ hasKey: boolean; source: ProviderRuntimeEntry['keySource'] }> {
@@ -496,6 +534,8 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     if (cap.blocker) blockers.push(`${cap.name}: ${cap.blocker}`)
   }
 
+  const localCore = getLocalCoreStatus()
+
   return {
     success: true,
     genx,
@@ -503,5 +543,6 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     capabilities,
     adultGate,
     blockers,
+    localCore,
   }
 }

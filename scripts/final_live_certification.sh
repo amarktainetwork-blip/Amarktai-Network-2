@@ -231,6 +231,113 @@ fi
 check_url_any "/api/admin/research/jobs" "$BASE_URL/api/admin/research/jobs" 200 401 403
 
 # =============================================================================
+# PART 7b — LOCAL CORE BACKEND PROOF
+# =============================================================================
+section "Part 7b — Local core backend proof"
+
+# Memory local backend
+MEM_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/memory" 2>/dev/null || echo "{}")
+MEM_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/memory" 2>/dev/null || echo "000")
+if [[ "$MEM_STATUS" == "200" ]]; then
+  pass "/api/admin/memory → 200"
+  if echo "$MEM_BODY" | grep -qE '"available"\s*:\s*true'; then
+    pass "/api/admin/memory returns available:true"
+  elif echo "$MEM_BODY" | grep -qE '"statusLabel"\s*:\s*"working"'; then
+    pass "/api/admin/memory returns statusLabel:working"
+  elif echo "$MEM_BODY" | grep -qE '"writable"\s*:\s*true'; then
+    pass "/api/admin/memory returns writable:true (local VPS working)"
+  else
+    warn "/api/admin/memory returned 200 but status unclear — check body"
+  fi
+elif [[ "$MEM_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped memory working status proof ($MEM_STATUS)"
+else
+  fail "/api/admin/memory → $MEM_STATUS (expected 200 or auth redirect)"
+fi
+
+# Artifact storage-info
+ARTIFACT_INFO_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/artifacts?storage-info" 2>/dev/null || echo "{}")
+ARTIFACT_INFO_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/artifacts?storage-info" 2>/dev/null || echo "000")
+if [[ "$ARTIFACT_INFO_STATUS" == "200" ]]; then
+  pass "/api/admin/artifacts?storage-info → 200"
+  if echo "$ARTIFACT_INFO_BODY" | grep -qE '"localVpsWritable"\s*:\s*true'; then
+    pass "/api/admin/artifacts?storage-info shows local VPS writable"
+  elif echo "$ARTIFACT_INFO_BODY" | grep -qE '"writable"\s*:\s*true'; then
+    pass "/api/admin/artifacts?storage-info shows writable:true"
+  else
+    warn "/api/admin/artifacts?storage-info storage not confirmed writable — may need storage dir setup"
+  fi
+elif [[ "$ARTIFACT_INFO_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped artifact storage-info proof"
+else
+  warn "/api/admin/artifacts?storage-info → $ARTIFACT_INFO_STATUS"
+fi
+
+# Research jobs local
+RESEARCH_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/research/jobs" 2>/dev/null || echo "{}")
+RESEARCH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/research/jobs" 2>/dev/null || echo "000")
+if [[ "$RESEARCH_STATUS" == "200" ]]; then
+  pass "/api/admin/research/jobs → 200"
+  if echo "$RESEARCH_BODY" | grep -qE '"jobs"\s*:\s*\['; then
+    pass "/api/admin/research/jobs returns jobs array"
+  else
+    warn "/api/admin/research/jobs body missing jobs array"
+  fi
+elif [[ "$RESEARCH_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped research jobs proof"
+else
+  fail "/api/admin/research/jobs → $RESEARCH_STATUS"
+fi
+
+# Apps local (should have starter data)
+APPS_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/apps" 2>/dev/null || echo "{}")
+APPS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/apps" 2>/dev/null || echo "000")
+if [[ "$APPS_STATUS" == "200" ]]; then
+  pass "/api/admin/apps → 200"
+  if echo "$APPS_BODY" | grep -q "AmarktAI\|amarktai\|starter_local\|slug"; then
+    pass "/api/admin/apps returns real app records"
+  else
+    warn "/api/admin/apps returned 200 but no recognizable app data"
+  fi
+elif [[ "$APPS_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped apps local records proof"
+else
+  fail "/api/admin/apps → $APPS_STATUS (expected 200 or auth redirect)"
+fi
+
+# Agents local (should have starter data)
+AGENTS_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/agents" 2>/dev/null || echo "{}")
+AGENTS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/agents" 2>/dev/null || echo "000")
+if [[ "$AGENTS_STATUS" == "200" ]]; then
+  pass "/api/admin/agents → 200"
+  if echo "$AGENTS_BODY" | grep -q "agents\|agent\|type"; then
+    pass "/api/admin/agents returns agent records"
+  else
+    warn "/api/admin/agents returned 200 but no recognizable agent data"
+  fi
+elif [[ "$AGENTS_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped agents local records proof"
+else
+  fail "/api/admin/agents → $AGENTS_STATUS"
+fi
+
+# Approvals local
+APPROVALS_BODY=$(curl -s --max-time 10 "$BASE_URL/api/admin/approvals" 2>/dev/null || echo "{}")
+APPROVALS_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$BASE_URL/api/admin/approvals" 2>/dev/null || echo "000")
+if [[ "$APPROVALS_STATUS" == "200" ]]; then
+  pass "/api/admin/approvals → 200"
+  if echo "$APPROVALS_BODY" | grep -qE '"approvals"\s*:\s*\['; then
+    pass "/api/admin/approvals returns approvals array (no blocking)"
+  else
+    warn "/api/admin/approvals body missing approvals array"
+  fi
+elif [[ "$APPROVALS_STATUS" =~ ^(401|403)$ ]]; then
+  warn "AUTH REQUIRED — skipped approvals local proof"
+else
+  fail "/api/admin/approvals → $APPROVALS_STATUS"
+fi
+
+# =============================================================================
 # PART 8 — ADULT POLICY PROOF
 # =============================================================================
 section "Part 8 — Adult policy proof"
