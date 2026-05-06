@@ -148,6 +148,9 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // Accept the full app-level policy vocabulary and map it to specialist provider routing.
   // "specialist" is kept as the internal routing mode for backwards compatibility.
   // All other non-disabled policy levels route through the specialist provider stack.
+  // Legacy alias: "full_adult" is treated as "full_adult_app_mode" for backward compatibility.
+  if (mode === 'full_adult') mode = 'full_adult_app_mode'
+
   const ACCEPTED_ADULT_MODES = new Set([
     'specialist',
     'suggestive',

@@ -1089,7 +1089,7 @@ const ADULT_MODES = [
   { value: 'adult_image', label: 'Adult Image' },
   { value: 'adult_video', label: 'Adult Video' },
   { value: 'adult_voice', label: 'Adult Voice' },
-  { value: 'full_adult',  label: 'Full Adult App Mode' },
+  { value: 'full_adult_app_mode',  label: 'Full Adult App Mode' },
 ]
 
 const ADULT_BLOCKED = [
@@ -1320,7 +1320,7 @@ function AdultSection({ config, onSaved }: { config: AdultConfig; onSaved: () =>
 
 function ServiceIntegrationsSection({ data, onSaved }: { data: IntegrationsData; onSaved: () => void }) {
   const [open, setOpen] = useState(false)
-  const [keys, setKeys] = useState({ firecrawl: '', mem0: '', posthog: '', qdrantApiKey: '', qdrantUrl: '' })
+  const [keys, setKeys] = useState({ firecrawl: '' })
   const [showKey, setShowKey] = useState<Record<string, boolean>>({})
   const [saving, setSaving] = useState<string | null>(null)
   const [msgs, setMsgs] = useState<Record<string, string>>({})
@@ -1343,7 +1343,7 @@ function ServiceIntegrationsSection({ data, onSaved }: { data: IntegrationsData;
         setMsg(service, `Error: ${d.error ?? 'Save failed'}`)
       } else {
         setMsg(service, 'Saved')
-        setKeys(prev => ({ ...prev, [service]: '', [`${service}ApiKey`]: '' }))
+        setKeys(prev => ({ ...prev, [service]: '' }))
         onSaved()
       }
     } finally {
@@ -1355,15 +1355,10 @@ function ServiceIntegrationsSection({ data, onSaved }: { data: IntegrationsData;
 
   const badge = [
     configured(data.firecrawl) && 'Firecrawl',
-    configured(data.mem0) && 'Mem0',
-    configured(data.posthog) && 'PostHog',
-    configured(data.qdrant) && 'Qdrant',
   ].filter(Boolean)
 
-  const badgeColor = badge.length === 4
+  const badgeColor = badge.length > 0
     ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-    : badge.length > 0
-    ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
     : 'text-slate-500 bg-slate-500/10 border-slate-500/20'
   const badgeLabel = badge.length > 0 ? `${badge.join(' · ')} configured` : 'not configured'
 
@@ -1420,7 +1415,7 @@ function ServiceIntegrationsSection({ data, onSaved }: { data: IntegrationsData;
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-500">
-            Third-party service keys for web crawling, vector memory, analytics, and observability. All keys are encrypted in the vault.
+            Third-party service keys for web crawling and document extraction. All keys are encrypted in the vault.
           </p>
 
           {open && (
@@ -1433,67 +1428,6 @@ function ServiceIntegrationsSection({ data, onSaved }: { data: IntegrationsData;
                 configured(data.firecrawl),
                 () => save('firecrawl', { apiKey: keys.firecrawl }),
               )}
-
-              {/* Mem0 */}
-              {keyField(
-                'Mem0 — Persistent AI memory',
-                'mem0', 'mem0',
-                'mem0-…',
-                configured(data.mem0),
-                () => save('mem0', { apiKey: keys.mem0 }),
-              )}
-
-              {/* PostHog */}
-              {keyField(
-                'PostHog — Usage analytics',
-                'posthog', 'posthog',
-                'phc_…',
-                configured(data.posthog),
-                () => save('posthog', { apiKey: keys.posthog }),
-              )}
-
-              {/* Qdrant — URL + optional API key */}
-              <div className="space-y-2 pt-2 border-t border-white/[0.04]">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-slate-300">Qdrant — Vector database</p>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${configured(data.qdrant) ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-slate-500 bg-slate-500/10 border-slate-500/20'}`}>
-                    {configured(data.qdrant) ? (data.qdrant?.url || 'configured') : 'not set'}
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={keys.qdrantUrl}
-                  onChange={e => setKeys(prev => ({ ...prev, qdrantUrl: e.target.value }))}
-                  placeholder={data.qdrant?.url || 'https://your-qdrant.example.com:6333'}
-                  className={inputCls}
-                />
-                <div className="relative">
-                  <input
-                    type={showKey.qdrantApiKey ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={keys.qdrantApiKey}
-                    onChange={e => setKeys(prev => ({ ...prev, qdrantApiKey: e.target.value }))}
-                    placeholder="API key (leave blank if no auth)"
-                    className={inputCls + ' pr-10'}
-                  />
-                  <button type="button" onClick={() => setShowKey(prev => ({ ...prev, qdrantApiKey: !prev.qdrantApiKey }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300">
-                    {showKey.qdrantApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => save('qdrant', { url: keys.qdrantUrl || undefined, apiKey: keys.qdrantApiKey || undefined })}
-                    disabled={saving === 'qdrant' || (!keys.qdrantUrl && !keys.qdrantApiKey)}
-                    className={btnPrimary}
-                  >
-                    {saving === 'qdrant' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                    Save
-                  </button>
-                  {msgs.qdrant && (
-                    <span className={`text-xs ${msgs.qdrant.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}>{msgs.qdrant}</span>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </div>
@@ -1879,6 +1813,12 @@ const PROVIDER_DEFS_PRIMARY = [
   { key: 'xai',         label: 'xAI / Grok',        placeholder: 'xai-…',      caps: ['chat', 'reasoning', 'vision', 'adult_image'], hint: 'Env: XAI_API_KEY or GROK_API_KEY' },
 ]
 
+/**
+ * Set of approved provider keys for count purposes — only these count as "configured"
+ * in the Settings badge. Legacy/env keys for providers not in this list are not counted.
+ */
+const APPROVED_PROVIDER_KEYS = new Set(PROVIDER_DEFS_PRIMARY.map(d => d.key))
+
 function ProvidersSection() {
   const [providers, setProviders] = useState<ProviderRecord[]>([])
   const [loading, setLoading] = useState(false)
@@ -1896,7 +1836,9 @@ function ProvidersSection() {
 
   useEffect(() => { if (open) load() }, [open, load])
 
-  const configured = providers.filter(p => p.maskedPreview || p.enabled).length
+  const configured = providers.filter(p =>
+    APPROVED_PROVIDER_KEYS.has(p.providerKey) && (p.maskedPreview || p.enabled)
+  ).length
 
   return (
     <motion.div variants={fadeUp}>
