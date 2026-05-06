@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     } catch { /* Fall through to local */ }
 
     // Local VPS fallback
-    const record = appendRecord(LOCAL_STORE_FILES.research, {
+    const localOpportunity = appendRecord(LOCAL_STORE_FILES.research, {
       url: '',
       appSlug: appSlug ?? 'admin',
       title,
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
       driver: 'local_vps',
     })
-    return NextResponse.json({ success: true, artifact: record, driver: 'local_vps' })
+    return NextResponse.json({ success: true, opportunity: localOpportunity, driver: 'local_vps' })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to save opportunity' }, { status: 500 })
   }

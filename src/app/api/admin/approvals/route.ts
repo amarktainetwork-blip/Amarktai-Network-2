@@ -56,7 +56,7 @@ function dbApprovalToShape(a: {
     agent: (meta.agent as string) ?? '',
     risk: a.severity,
     requestedBy: (meta.requestedBy as string) ?? 'admin',
-    status: a.resolved ? 'resolved' : ('pending' as 'pending' | 'resolved'),
+    status: a.resolved ? ('approved' as const) : ('pending' as const),
     createdAt: a.createdAt.toISOString(),
     decidedAt: a.resolvedAt?.toISOString() ?? undefined,
     decisionNote: undefined as string | undefined,
