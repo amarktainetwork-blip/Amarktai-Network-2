@@ -19,7 +19,7 @@ import path from 'path'
 
 const REPO_ROOT   = path.resolve(__dirname, '../../..')
 const APP_ROOT    = path.resolve(__dirname, '../../app')
-const DASH_ROOT   = path.resolve(__dirname, '../../app/admin/dashboard')
+const _DASH_ROOT   = path.resolve(__dirname, '../../app/admin/dashboard')
 const API_ROOT    = path.resolve(__dirname, '../../app/api/admin')
 const SCRIPTS_ROOT = path.resolve(REPO_ROOT, 'scripts')
 
