@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, GitCommit, GitMerge, GitPullRequest, Loader2, Rocket, Upload, Wand2 } from 'lucide-react'
 import { APPROVED_WORKBENCH_MODELS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+import { GENX_TEXT_MODELS } from '@/lib/genx-client'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
 type Branch = { name: string; sha: string; isDefault?: boolean }
@@ -332,6 +333,11 @@ export default function WorkbenchPage() {
                   {providerLabel(model.provider)} - {model.label}
                 </option>
               ))}
+              <optgroup label="GenX — all text models">
+                {GENX_TEXT_MODELS.map((id) => (
+                  <option key={`genx-full:${id}`} value={id}>GenX - {id}</option>
+                ))}
+              </optgroup>
             </select>
           </Field>
 

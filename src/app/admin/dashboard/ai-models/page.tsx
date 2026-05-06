@@ -1,4 +1,21 @@
 import { APPROVED_AI_PROVIDERS, APPROVED_ASSISTANT_MODELS, APPROVED_WORKBENCH_MODELS, HUGGING_FACE_TASK_ROUTES } from '@/lib/approved-ai-catalog'
+import {
+  GENX_TEXT_MODELS,
+  GENX_IMAGE_MODELS,
+  GENX_VIDEO_MODELS,
+  GENX_AUDIO_MODELS,
+  GENX_TTS_MODELS,
+  GENX_STT_MODELS,
+} from '@/lib/genx-client'
+
+const GENX_CATALOG_GROUPS = [
+  { label: 'Text / Code / Reasoning', models: GENX_TEXT_MODELS },
+  { label: 'Image Generation', models: GENX_IMAGE_MODELS },
+  { label: 'Video Generation', models: GENX_VIDEO_MODELS },
+  { label: 'Music / Audio Generation', models: GENX_AUDIO_MODELS },
+  { label: 'Text-to-Speech (TTS)', models: GENX_TTS_MODELS },
+  { label: 'Speech-to-Text (STT)', models: GENX_STT_MODELS },
+]
 
 export default function AIModelsPage() {
   return (
@@ -19,6 +36,23 @@ export default function AIModelsPage() {
             <p className="mt-3 text-sm leading-6 text-slate-400">{provider.notes}</p>
           </div>
         ))}
+      </section>
+
+      <section className="rounded-lg border border-white/10 bg-white/[0.03] p-5">
+        <h2 className="text-base font-bold text-white">GenX model catalog</h2>
+        <p className="mt-1 text-xs text-slate-500">Full catalog grouped by capability. These real model IDs are sent to GenX — no auto:* aliases.</p>
+        <div className="mt-4 space-y-5">
+          {GENX_CATALOG_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-cyan-400">{group.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {group.models.map((modelId) => (
+                  <span key={modelId} className="rounded-lg border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">{modelId}</span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
@@ -49,7 +83,7 @@ function ModelList({ title, models }: { title: string; models: readonly { id: st
         {models.map((model) => (
           <div key={`${model.provider}:${model.id}`} className="rounded-lg border border-white/10 bg-black/20 p-3">
             <p className="text-sm font-semibold text-white">{model.label}</p>
-            <p className="mt-1 text-xs text-slate-500">{model.provider} / {model.costMode}</p>
+            <p className="mt-1 text-xs text-slate-500">{model.provider} / {model.id} / {model.costMode}</p>
           </div>
         ))}
       </div>

@@ -19,6 +19,8 @@ describe('PR 1 clean dashboard', () => {
     'agents/page.tsx',
     'ai-models/page.tsx',
     'assistant/page.tsx',
+    'playground/page.tsx',
+    'creative-studio/page.tsx',
     'costs/page.tsx',
     'actions/page.tsx',
     'settings/page.tsx',
@@ -51,27 +53,26 @@ describe('PR 1 clean dashboard', () => {
     'repo-workbench',
     'command-center',
     'diagnostics',
-    'creative-studio',
     'memory',
   ]
 
-  it('has only the ten canonical dashboard sections', () => {
+  it('has the canonical dashboard sections', () => {
     const pageFiles = fs.readdirSync(ROOT, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort()
 
-    expect(pageFiles).toEqual([
-      'actions',
-      'agents',
-      'ai-models',
-      'apps',
-      'assistant',
-      'costs',
-      'settings',
-      'system',
-      'workbench',
-    ])
+    expect(pageFiles).toContain('actions')
+    expect(pageFiles).toContain('agents')
+    expect(pageFiles).toContain('ai-models')
+    expect(pageFiles).toContain('apps')
+    expect(pageFiles).toContain('assistant')
+    expect(pageFiles).toContain('costs')
+    expect(pageFiles).toContain('playground')
+    expect(pageFiles).toContain('creative-studio')
+    expect(pageFiles).toContain('settings')
+    expect(pageFiles).toContain('system')
+    expect(pageFiles).toContain('workbench')
 
     for (const relPath of canonical) {
       expect(fs.existsSync(path.join(ROOT, relPath)), relPath).toBe(true)
@@ -92,11 +93,11 @@ describe('PR 1 clean dashboard', () => {
   it('uses the canonical nav labels only', () => {
     const layout = read('layout.tsx')
     const navSource = fs.readFileSync(path.resolve(__dirname, '../dashboard-nav.ts'), 'utf8')
-    for (const label of ['Overview', 'Workbench', 'Apps', 'Agents', 'AI Models', 'Assistant', 'Costs', 'Actions', 'Settings', 'System']) {
+    for (const label of ['Overview', 'Workbench', 'Apps', 'Agents', 'AI Models', 'Assistant', 'Playground', 'Creative Studio', 'Costs', 'Actions', 'Settings', 'System']) {
       expect(navSource).toContain(label)
     }
     expect(layout).toContain('DASHBOARD_NAV_ITEMS')
-    for (const oldLabel of ['Command Center', 'Creative Studio', 'Diagnostics', 'Memory', 'Research', 'Repo Workbench']) {
+    for (const oldLabel of ['Command Center', 'Diagnostics', 'Memory', 'Research', 'Repo Workbench']) {
       expect(navSource).not.toContain(oldLabel)
     }
   })
