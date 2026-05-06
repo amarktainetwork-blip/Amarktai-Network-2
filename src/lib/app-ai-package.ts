@@ -1,10 +1,13 @@
 import { AI_CAPABILITY_TAXONOMY, type AiCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import { getAllProviderModelCatalogs, type ProviderModelCatalog } from '@/lib/ai-model-catalog'
+import { isApprovedAIProvider, type CostMode } from '@/lib/approved-ai-catalog'
+import { routeLiveModel, type AiCapability, type ModelStrategy } from '@/lib/live-ai-routing'
 
 export type AppAiPackageStatus = 'draft' | 'ready' | 'needs_configuration' | 'blocked'
+export type AppType = 'coding' | 'marketing' | 'companion' | 'avatar/video' | 'research' | 'operations' | 'custom'
 
 export interface AppAiModelSelection {
-  capabilityId: string
+  capabilityId: AiCapability | string
   provider: string
   modelId: string
   endpointUrl?: string
@@ -16,10 +19,14 @@ export interface AppAiModelSelection {
 export interface AppAiPackage {
   appSlug: string
   appName: string
-  appType: string
+  domain?: string
+  appType: AppType | string
   safetyProfile: string
-  enabledCapabilityIds: string[]
+  enabledCapabilityIds: Array<AiCapability | string>
+  allowedCapabilities?: AiCapability[]
+  modelStrategy?: ModelStrategy
   selections: AppAiModelSelection[]
+  fallbackSelections?: AppAiModelSelection[]
   voice?: {
     provider: string
     modelId: string
@@ -32,10 +39,12 @@ export interface AppAiPackage {
     lastCrawledAt?: string
   }
   budget?: {
-    mode: 'cheap' | 'balanced' | 'premium' | 'custom'
+    mode: ModelStrategy
     monthlyUsd?: number
     maxPerRequestUsd?: number
+    requiresApprovalAboveUsd?: number
   }
+  adultPolicy?: 'off' | 'allowed'
   permissions: {
     canChat: boolean
     canUseTools: boolean
@@ -63,7 +72,13 @@ export interface AppAiPackageRecommendationInput {
 }
 
 const APP_TYPE_CAPABILITY_DEFAULTS: Record<string, string[]> = {
+  coding: ['repo_coding_agent', 'text_generation', 'summarization'],
   marketing: ['text_generation', 'summarization', 'translation', 'text_to_image', 'website_crawl_intelligence', 'sentence_similarity'],
+  companion: ['text_generation', 'question_answering', 'text_to_speech', 'automatic_speech_recognition'],
+  'avatar/video': ['text_generation', 'text_to_speech', 'automatic_speech_recognition', 'text_to_image', 'image_text_to_text'],
+  research: ['website_crawl_intelligence', 'summarization', 'question_answering'],
+  operations: ['text_generation', 'repo_coding_agent', 'website_crawl_intelligence'],
+  custom: ['text_generation', 'question_answering', 'summarization'],
   'learning-courses': ['text_generation', 'question_answering', 'summarization', 'translation', 'text_to_speech', 'automatic_speech_recognition'],
   'adult-companion': ['text_generation', 'text_to_speech', 'text_to_image', 'image_text_to_text'],
   'horse-equine-management': ['text_generation', 'question_answering', 'document_question_answering', 'image_text_to_text', 'website_crawl_intelligence'],
@@ -82,21 +97,35 @@ export async function recommendAppAiPackage(input: AppAiPackageRecommendationInp
   const adultRequested = capabilities.some((capability) => capability.id.includes('adult')) || input.allowAdult === true
   const mediaRequested = capabilities.some((capability) => capability.group === 'computer_vision' || capability.group === 'multimodal')
   const voiceRequested = capabilities.some((capability) => capability.group === 'audio' || capability.id === 'text_to_speech')
+  const allowedCapabilities = mapCapabilities(capabilities, adultRequested)
+  const budgetMode: CostMode = input.preferCheap ? 'cheap' : 'balanced'
 
   return {
     appSlug: input.appSlug,
     appName: input.appName,
     appType: input.appType,
+    domain: input.websiteUrl ? new URL(input.websiteUrl).hostname : '',
     safetyProfile: input.safetyProfile ?? defaultSafetyProfile(input.appType, input.allowAdult === true),
     enabledCapabilityIds: capabilities.map((capability) => capability.id),
+    allowedCapabilities,
+    modelStrategy: budgetMode,
     selections,
+    fallbackSelections: selections
+      .filter((selection) => selection.fallbackProvider && selection.fallbackModelId)
+      .map((selection) => ({
+        capabilityId: selection.capabilityId,
+        provider: selection.fallbackProvider!,
+        modelId: selection.fallbackModelId!,
+      })),
     voice: voiceRequested ? { provider: 'genx', modelId: 'auto:voice-tts', label: 'Assistant/app voice auto route' } : undefined,
     crawler: input.websiteUrl ? { provider: 'firecrawl', websiteUrl: input.websiteUrl } : { provider: 'manual' },
     budget: {
-      mode: input.preferCheap ? 'cheap' : 'balanced',
+      mode: budgetMode,
       monthlyUsd: input.preferCheap ? 25 : 100,
       maxPerRequestUsd: input.preferCheap ? 0.05 : 0.25,
+      requiresApprovalAboveUsd: input.preferCheap ? 0.05 : 0.25,
     },
+    adultPolicy: input.allowAdult ? 'allowed' : 'off',
     permissions: {
       canChat: true,
       canUseTools: true,
@@ -123,10 +152,11 @@ function resolveCapabilities(input: AppAiPackageRecommendationInput): AiCapabili
 
 function selectForCapability(capability: AiCapabilityDefinition, catalogs: ProviderModelCatalog[], preferCheap: boolean): AppAiModelSelection {
   const providerOrder = preferCheap
-    ? [...capability.defaultProviders.filter((provider) => ['huggingface', 'qwen', 'deepseek', 'groq', 'together', 'minimax'].includes(provider)), ...capability.defaultProviders]
+    ? [...capability.defaultProviders.filter((provider) => ['huggingface', 'qwen', 'groq', 'together', 'minimax'].includes(provider)), ...capability.defaultProviders]
     : capability.defaultProviders
 
   for (const provider of [...new Set(providerOrder)]) {
+    if (!isApprovedAIProvider(provider)) continue
     const catalog = catalogs.find((entry) => entry.provider === provider)
     if (!catalog) continue
     const configuredBonus = catalog.configured ? 1 : 0
@@ -167,7 +197,7 @@ function costScore(costTier: string) {
 }
 
 function fallbackProvider(provider: string, capability: AiCapabilityDefinition) {
-  return capability.defaultProviders.find((candidate) => candidate !== provider) ?? undefined
+  return capability.defaultProviders.find((candidate) => candidate !== provider && isApprovedAIProvider(candidate)) ?? undefined
 }
 
 function defaultSafetyProfile(appType: string, allowAdult: boolean) {
@@ -177,4 +207,42 @@ function defaultSafetyProfile(appType: string, allowAdult: boolean) {
   if (appType.includes('religious')) return 'religious_safe'
   if (appType.includes('travel')) return 'travel_safe'
   return 'standard'
+}
+
+function mapCapabilities(capabilities: AiCapabilityDefinition[], adultRequested: boolean): AiCapability[] {
+  const mapped = new Set<AiCapability>()
+  for (const capability of capabilities) {
+    if (capability.id === 'repo_coding_agent') mapped.add('coding')
+    if (capability.id.includes('crawl')) mapped.add('research')
+    if (capability.id.includes('image')) mapped.add(adultRequested ? 'adult_image' : 'image')
+    if (capability.id.includes('speech') || capability.id.includes('voice')) mapped.add('voice_tts')
+    if (capability.group === 'audio') mapped.add('voice_tts')
+    if (capability.group === 'natural_language_processing') mapped.add(adultRequested ? 'adult_text' : 'chat')
+  }
+  if (mapped.size === 0) mapped.add('chat')
+  return [...mapped]
+}
+
+export function confirmAppAiPackage(pkg: AppAiPackage) {
+  const costMode = pkg.budget?.mode === 'custom' ? 'balanced' : (pkg.budget?.mode ?? 'balanced')
+  const capabilities: AiCapability[] = pkg.allowedCapabilities?.length ? pkg.allowedCapabilities : ['chat']
+  const routes = capabilities.map((capability) => routeLiveModel({
+    capability,
+    appSlug: pkg.appSlug,
+    costMode,
+    adultPolicy: pkg.adultPolicy,
+    selectedProvider: pkg.selections.find((selection) => selection.capabilityId === capability)?.provider,
+    selectedModel: pkg.selections.find((selection) => selection.capabilityId === capability)?.modelId,
+  }))
+
+  return {
+    appSlug: pkg.appSlug,
+    appName: pkg.appName,
+    modelStrategy: pkg.modelStrategy ?? pkg.budget?.mode ?? 'balanced',
+    monthlyBudgetUsd: pkg.budget?.monthlyUsd ?? 0,
+    requiresApprovalAboveUsd: pkg.budget?.requiresApprovalAboveUsd ?? pkg.budget?.maxPerRequestUsd ?? 0,
+    adultPolicy: pkg.adultPolicy ?? 'off',
+    routes,
+    canSave: routes.every((route) => !route.blockedReason),
+  }
 }

@@ -254,6 +254,11 @@ export async function importRepo(repoUrl: string, branchInput = 'main') {
   const exists = await pathExists(gitDir)
   let gitResult
   if (exists) {
+    const dirty = await runGit(localPath, ['status', '--short'], 30_000)
+    const dirtyFiles = dirty.stdout.split(/\r?\n/).filter(Boolean)
+    if (dirtyFiles.length > 0) {
+      throw new Error(`Existing repo has uncommitted changes: ${dirtyFiles.slice(0, 12).join(', ')}`)
+    }
     gitResult = await runGit(localPath, ['fetch', 'origin', branch, '--prune'], 180_000, token ?? undefined)
     if (gitResult.ok) {
       gitResult = await runGit(localPath, ['checkout', branch], 60_000, token ?? undefined)
@@ -1004,6 +1009,31 @@ export const ALLOWED_CHECKS = {
   build: ['npm', ['run', 'build']],
   audit: ['npm', ['audit', '--audit-level=moderate']],
 } as const
+
+export type AvailablePackageCheck = keyof Pick<typeof ALLOWED_CHECKS, 'lint' | 'test' | 'build'>
+
+export async function getAvailablePackageChecks(workspaceId: string): Promise<AvailablePackageCheck[]> {
+  const workspace = await getWorkspace(workspaceId)
+  const packageJsonPath = resolveRepoPath(workspace.localPath, 'package.json')
+  const raw = await fs.readFile(packageJsonPath, 'utf8').catch(() => '')
+  if (!raw) return []
+  const parsed = JSON.parse(raw) as { scripts?: Record<string, string> }
+  const scripts = parsed.scripts ?? {}
+  return (['lint', 'test', 'build'] as AvailablePackageCheck[]).filter((check) => Boolean(scripts[check]))
+}
+
+export async function runAvailablePackageCheck(workspaceId: string, command: AvailablePackageCheck) {
+  const available = await getAvailablePackageChecks(workspaceId)
+  if (!available.includes(command)) {
+    return {
+      ok: true,
+      skipped: true,
+      output: `${command} script is not defined in package.json; skipped.`,
+      durationMs: 0,
+    }
+  }
+  return runAllowedCheck(workspaceId, command)
+}
 
 export async function runAllowedCheck(workspaceId: string, command: keyof typeof ALLOWED_CHECKS, taskId?: string) {
   const workspace = await getWorkspace(workspaceId)
