@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Save } from 'lucide-react'
 import { APPROVED_ASSISTANT_MODELS, APPROVED_WORKBENCH_MODELS, providerLabel } from '@/lib/approved-ai-catalog'
+import { GENX_TEXT_MODELS } from '@/lib/genx-client'
 
 const appTypes = ['coding', 'marketing', 'companion', 'avatar/video', 'research', 'operations', 'custom'] as const
 const capabilities = ['chat', 'reasoning', 'coding', 'research', 'image', 'video', 'voice_tts', 'voice_stt', 'avatar_video', 'moderation', 'adult_text', 'adult_image', 'adult_video', 'adult_voice']
@@ -38,7 +39,7 @@ export default function AppsPage() {
   const [appType, setAppType] = useState<(typeof appTypes)[number]>('coding')
   const [strategy, setStrategy] = useState<'cheap' | 'balanced' | 'premium' | 'custom'>('balanced')
   const [capability, setCapability] = useState('coding')
-  const [modelId, setModelId] = useState('gpt-5.4-mini')
+  const [modelId, setModelId] = useState(GENX_TEXT_MODELS[0])
   const [monthlyBudget, setMonthlyBudget] = useState(100)
   const [approvalThreshold, setApprovalThreshold] = useState(0.25)
   const [adultPolicy, setAdultPolicy] = useState<'off' | 'allowed'>('off')
