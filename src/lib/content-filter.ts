@@ -451,7 +451,14 @@ export async function scanContentWithModeration(
         const data = await response.json();
         const result = data.results?.[0];
         if (result) {
-          return mapOpenAIModerationResult(result, appSlug);
+          const openAiResult = mapOpenAIModerationResult(result, appSlug);
+          // Always run keyword scanner as a conservative secondary check.
+          // If keywords flag content that OpenAI missed, use the keyword result.
+          const keywordResult = scanContent(text);
+          if (!openAiResult.flagged && keywordResult.flagged) {
+            return appSlug ? applySafetyConfig(keywordResult, appSlug) : keywordResult;
+          }
+          return openAiResult;
         }
       }
     } catch {

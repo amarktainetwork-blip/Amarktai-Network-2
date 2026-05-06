@@ -4,7 +4,7 @@
  * Validates the config validation module detects placeholder DB URLs,
  * invalid session secrets, and classifies DB errors correctly.
  */
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 import {
   isDatabaseUrlPlaceholder,
   isSessionSecretInvalid,
@@ -234,8 +234,19 @@ describe('validateProviderKeys (type/export verification)', () => {
   })
 
   it('returns warning when database is unreachable', async () => {
+    // Simulate DB being unreachable so the warning is deterministically added
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: {
+        aiProvider: {
+          findMany: vi.fn().mockRejectedValue(new Error('Connection refused in test')),
+        },
+      },
+    }))
+    vi.resetModules()
     const { validateProviderKeys } = await import('@/lib/config-validator')
     const result = await validateProviderKeys()
+    vi.doUnmock('@/lib/prisma')
+    vi.resetModules()
     // Without a database, should get a warning about provider table
     const dbWarning = result.issues.find(i => i.key === 'PROVIDER_VALIDATION')
     expect(dbWarning).toBeDefined()

@@ -29,7 +29,7 @@ import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
-const REPO_ROOT  = path.resolve(__dirname, '../../..')
+const _REPO_ROOT  = path.resolve(__dirname, '../../..')
 const APP_ROOT   = path.resolve(__dirname, '../../app')
 const DASH_ROOT  = path.resolve(__dirname, '../../app/admin/dashboard')
 const API_ROOT   = path.resolve(__dirname, '../../app/api')
@@ -405,7 +405,7 @@ describe('12. Adult policy endpoint', () => {
     expect(src).toContain('full_adult_app_mode')
     // Must NOT return "Unknown mode" for it — check the handler maps it
     const lines = src.split('\n')
-    const unknownModeLines = lines.filter(l =>
+    const _unknownModeLines = lines.filter(l =>
       l.includes('Unknown mode') &&
       !l.trim().startsWith('//')
     )

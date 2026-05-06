@@ -314,6 +314,8 @@ async function tryGenXMedia(
 
 // ── Fallback text chain ───────────────────────────────────────────────────────
 
+const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
+
 const TEXT_FALLBACK_CHAIN: Array<{ key: string; model: string }> = [
   { key: 'gemini',      model: 'gemini-2.0-flash' },
   { key: 'groq',       model: 'llama-3.3-70b-versatile' },
@@ -326,6 +328,10 @@ async function tryFallbackText(
   input: string,
   chain = TEXT_FALLBACK_CHAIN,
 ): Promise<{ success: boolean; output: string | null; provider: string | null; model: string | null; error: string | null }> {
+  // In test runtime, skip provider network calls for deterministic behaviour.
+  if (IS_TEST_RUNTIME) {
+    return { success: false, output: null, provider: null, model: null, error: 'Fallback providers disabled in test runtime' }
+  }
   for (const { key, model } of chain) {
     try {
       const result = await callProvider(key, model, input, undefined)

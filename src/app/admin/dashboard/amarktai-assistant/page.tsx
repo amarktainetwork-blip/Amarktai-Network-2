@@ -59,6 +59,8 @@ export default function AmarktAIAssistantPage() {
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([])
   const [loading, setLoading] = useState(false)
   const [selectedApp] = useState<string>('')
+
+  async function handleSend() {
     const text = input.trim()
     if (!text) return
     setMessages((prev) => [...prev, { role: 'user', text }])

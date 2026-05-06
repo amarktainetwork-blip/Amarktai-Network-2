@@ -2,7 +2,7 @@
  * Tests for the per-app agent architecture, integration services,
  * admin setup flow, daily learning, and go-live hardening.
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import type { AppAgentConfig } from '@/lib/app-agent'
 
 // ── App Agent Tests ─────────────────────────────────────────────────────────
@@ -182,6 +182,20 @@ describe('App Agent — Core Architecture', () => {
 // ── Firecrawl Tests ─────────────────────────────────────────────────────────
 
 describe('Firecrawl Integration', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    delete process.env.FIRECRAWL_API_KEY
+    // Mock prisma so the vault returns no key for clean-slate test isolation
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: { integrationConfig: { findUnique: vi.fn().mockResolvedValue(null) } },
+    }))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.resetModules()
+  })
+
   it('getFirecrawlStatus reports unavailable when no API key', async () => {
     const { getFirecrawlStatus } = await import('@/lib/firecrawl')
     const status = await getFirecrawlStatus()
@@ -201,6 +215,20 @@ describe('Firecrawl Integration', () => {
 // ── Mem0 Tests ──────────────────────────────────────────────────────────────
 
 describe('Mem0 Integration', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    delete process.env.MEM0_API_KEY
+    // Mock prisma so the vault returns no key for clean-slate test isolation
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: { integrationConfig: { findUnique: vi.fn().mockResolvedValue(null) } },
+    }))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.resetModules()
+  })
+
   it('getMem0Status reports unavailable when no API key', async () => {
     const { getMem0Status } = await import('@/lib/mem0-client')
     const status = await getMem0Status()
@@ -482,6 +510,21 @@ describe('Religious App Specialist Support', () => {
 // ── Go-Live Hardening Tests ──────────────────────────────────────────────────
 
 describe('Go-Live Hardening', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    delete process.env.FIRECRAWL_API_KEY
+    delete process.env.MEM0_API_KEY
+    // Mock prisma so the vault returns no keys for clean-slate test isolation
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: { integrationConfig: { findUnique: vi.fn().mockResolvedValue(null) } },
+    }))
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.resetModules()
+  })
+
   it('all integration status functions return valid objects', async () => {
     const { getFirecrawlStatus } = await import('@/lib/firecrawl')
     const { getMem0Status } = await import('@/lib/mem0-client')
