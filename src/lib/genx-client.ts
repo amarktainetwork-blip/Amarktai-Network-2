@@ -750,7 +750,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
 
 /**
  * Stream GenX chat completions through the OpenAI-compatible SSE endpoint.
- * This is used by Aiva so conversation can render token-by-token.
+ * This is used by AmarktAI Assistant so conversation can render token-by-token.
  */
 export async function streamGenXChat(
   request: GenXChatRequest,

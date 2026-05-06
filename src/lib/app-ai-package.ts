@@ -90,7 +90,7 @@ export async function recommendAppAiPackage(input: AppAiPackageRecommendationInp
     safetyProfile: input.safetyProfile ?? defaultSafetyProfile(input.appType, input.allowAdult === true),
     enabledCapabilityIds: capabilities.map((capability) => capability.id),
     selections,
-    voice: voiceRequested ? { provider: 'genx', modelId: 'auto:voice-tts', label: 'Aiva/App voice auto route' } : undefined,
+    voice: voiceRequested ? { provider: 'genx', modelId: 'auto:voice-tts', label: 'Assistant/app voice auto route' } : undefined,
     crawler: input.websiteUrl ? { provider: 'firecrawl', websiteUrl: input.websiteUrl } : { provider: 'manual' },
     budget: {
       mode: input.preferCheap ? 'cheap' : 'balanced',

@@ -119,12 +119,11 @@ export async function GET() {
   let adultNotes: Record<string, string> = {}
   try { adultNotes = JSON.parse(adultRow?.notes ?? '{}') } catch { /* ignore */ }
   const adultMode = adultNotes.mode || 'disabled'
-
-  // ── Aiva ──
-  const AIVA_KEY = 'aiva_config'
-  const aivaRow = await getIntegrationConfig(AIVA_KEY).catch(() => null)
-  let aivaNotes: Record<string, unknown> = {}
-  try { aivaNotes = JSON.parse(aivaRow?.notes ?? '{}') } catch { /* ignore */ }
+  // Assistant settings
+  const ASSISTANT_KEY = 'assistant_config'
+  const assistantRow = await getIntegrationConfig(ASSISTANT_KEY).catch(() => null)
+  let assistantNotes: Record<string, unknown> = {}
+  try { assistantNotes = JSON.parse(assistantRow?.notes ?? '{}') } catch { /* ignore */ }
 
   // ── Qdrant URL stored in notes ──
   let qdrantNotes: Record<string, string> = {}
@@ -165,13 +164,13 @@ export async function GET() {
       providerModel: adultNotes.providerModel || '',
       lastTestStatus: adultNotes.lastTestStatus || null,
     },
-    aiva: {
-      typedEnabled:          aivaNotes.typedEnabled          !== undefined ? Boolean(aivaNotes.typedEnabled)          : true,
-      voiceEnabled:          aivaNotes.voiceEnabled          !== undefined ? Boolean(aivaNotes.voiceEnabled)          : false,
-      sttProvider:           String(aivaNotes.sttProvider    || 'auto'),
-      ttsProvider:           String(aivaNotes.ttsProvider    || 'auto'),
-      preferredVoiceModel:   String(aivaNotes.preferredVoiceModel || ''),
-      continuousConversation: aivaNotes.continuousConversation !== undefined ? Boolean(aivaNotes.continuousConversation) : false,
+    assistant: {
+      typedEnabled:          assistantNotes.typedEnabled          !== undefined ? Boolean(assistantNotes.typedEnabled)          : true,
+      voiceEnabled:          assistantNotes.voiceEnabled          !== undefined ? Boolean(assistantNotes.voiceEnabled)          : false,
+      sttProvider:           String(assistantNotes.sttProvider    || 'auto'),
+      ttsProvider:           String(assistantNotes.ttsProvider    || 'auto'),
+      preferredVoiceModel:   String(assistantNotes.preferredVoiceModel || ''),
+      continuousConversation: assistantNotes.continuousConversation !== undefined ? Boolean(assistantNotes.continuousConversation) : false,
     },
     // ── Service integrations ────────────────────────────────────────────────
     webdock: {
@@ -197,7 +196,7 @@ export async function GET() {
       source: posthogRow?.apiKey ? 'database' : (process.env.POSTHOG_API_KEY ? 'env' : 'none'),
     },
     // Feature flags
-    aivaEnabled: process.env.AIVA_ENABLED === 'true',
+    assistantEnabled: process.env.ASSISTANT_ENABLED === 'true',
   })
 }
 
@@ -232,7 +231,7 @@ const patchSchema = z.object({
   webdock: z.object({
     apiKey: z.string().optional(),
   }).optional(),
-  aiva: z.object({
+  assistant: z.object({
     typedEnabled: z.boolean().optional(),
     voiceEnabled: z.boolean().optional(),
     sttProvider: z.string().optional(),
@@ -411,25 +410,24 @@ export async function PATCH(req: NextRequest) {
       }),
     )
   }
-
-  // ── Save Aiva ──
-  if (data.aiva) {
-    const AIVA_KEY = 'aiva_config'
-    const existing = await getIntegrationConfig(AIVA_KEY)
+  // Assistant settings
+  if (data.assistant) {
+    const ASSISTANT_KEY = 'assistant_config'
+    const existing = await getIntegrationConfig(ASSISTANT_KEY)
     let notes: Record<string, unknown> = {}
     try { notes = JSON.parse(existing?.notes ?? '{}') } catch { /* ignore */ }
 
-    if (data.aiva.typedEnabled !== undefined)          notes.typedEnabled          = data.aiva.typedEnabled
-    if (data.aiva.voiceEnabled !== undefined)          notes.voiceEnabled          = data.aiva.voiceEnabled
-    if (data.aiva.sttProvider !== undefined)           notes.sttProvider           = data.aiva.sttProvider
-    if (data.aiva.ttsProvider !== undefined)           notes.ttsProvider           = data.aiva.ttsProvider
-    if (data.aiva.preferredVoiceModel !== undefined)   notes.preferredVoiceModel   = data.aiva.preferredVoiceModel
-    if (data.aiva.continuousConversation !== undefined) notes.continuousConversation = data.aiva.continuousConversation
+    if (data.assistant.typedEnabled !== undefined)          notes.typedEnabled          = data.assistant.typedEnabled
+    if (data.assistant.voiceEnabled !== undefined)          notes.voiceEnabled          = data.assistant.voiceEnabled
+    if (data.assistant.sttProvider !== undefined)           notes.sttProvider           = data.assistant.sttProvider
+    if (data.assistant.ttsProvider !== undefined)           notes.ttsProvider           = data.assistant.ttsProvider
+    if (data.assistant.preferredVoiceModel !== undefined)   notes.preferredVoiceModel   = data.assistant.preferredVoiceModel
+    if (data.assistant.continuousConversation !== undefined) notes.continuousConversation = data.assistant.continuousConversation
 
     ops.push(
       upsertIntegrationConfig({
-        key: AIVA_KEY,
-        displayName: 'Aiva Config',
+        key: ASSISTANT_KEY,
+        displayName: 'AmarktAI Assistant Config',
         notes: JSON.stringify(notes),
       }),
     )
