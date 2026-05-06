@@ -214,8 +214,8 @@ describe('Repo import — git auth fix', () => {
     const { readFile } = await import('fs/promises')
     const src = await readFile('src/lib/repo-workbench.ts', 'utf8')
 
-    // Token-first clone pattern: if (token) { clone with token } else { clone without }
-    expect(src).toContain('if (token) {')
+    // Token is passed directly to runGit using ?? undefined — no retry fallback
+    expect(src).toContain('token ?? undefined')
     // The old fallback pattern (clone without token first, retry with token) should be gone
     expect(src).not.toContain('if (!gitResult.ok && token) {')
   })
@@ -279,7 +279,10 @@ describe('Research page — local storage/jobs status', () => {
     const localStorageOk: boolean | null = null
     const jobCount: number | null = null
 
-    const storageStatus = localStorageOk === null ? 'Backend pending' : localStorageOk ? 'Working' : 'Backend pending'
+    const storageStatus: string = (() => {
+      if (localStorageOk === null) return 'Backend pending'
+      return localStorageOk ? 'Working' : 'Backend pending'
+    })()
     const jobsStatus = jobCount === null ? 'Backend pending' : 'Working'
 
     expect(storageStatus).toBe('Backend pending')

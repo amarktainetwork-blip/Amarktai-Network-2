@@ -236,11 +236,8 @@ export async function importRepo(repoUrl: string, branchInput = 'main') {
   } else {
     // Always try with token first if available — prevents git from asking for username
     // interactively (which fails in server context with "No such device or address").
-    if (token) {
-      gitResult = await runGit(path.dirname(localPath), ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath], 240_000, token)
-    } else {
-      gitResult = await runGit(path.dirname(localPath), ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath], 240_000)
-    }
+    const cloneArgs = ['clone', '--branch', branch, '--single-branch', remoteUrl, localPath]
+    gitResult = await runGit(path.dirname(localPath), cloneArgs, 240_000, token ?? undefined)
   }
 
   if (!gitResult.ok) {
