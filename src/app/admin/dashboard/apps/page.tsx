@@ -11,19 +11,22 @@ import Link from 'next/link'
 
 // ── Types ────────────────────────────────────────────────────────
 interface AppRecord {
-  id: number
+  id: number | string
   name: string
   slug: string
-  category: string
+  category?: string
+  type?: string
   status: string
-  primaryUrl: string
-  aiEnabled: boolean
-  connectedToBrain: boolean
-  monitoringEnabled: boolean
-  integrationEnabled: boolean
-  appSecret: string
-  onboardingStatus: string
-  integration: {
+  primaryUrl?: string
+  aiEnabled?: boolean
+  connectedToBrain?: boolean
+  monitoringEnabled?: boolean
+  integrationEnabled?: boolean
+  appSecret?: string
+  onboardingStatus?: string
+  description?: string
+  source?: string
+  integration?: {
     id: number
     integrationToken: string
     healthStatus: string
@@ -73,7 +76,6 @@ function HealthBadge({ app }: { app: AppRecord }) {
     </span>
   )
 }
-
 // ── Stagger variants ─────────────────────────────────────────────
 const stagger = {
   hidden: {},
@@ -159,15 +161,30 @@ export default function AppsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [registryWorking, setRegistryWorking] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
+      // Try DB-backed products endpoint first
       const res = await fetch('/api/admin/products')
-      if (!res.ok) throw new Error(`Failed to load apps (${res.status})`)
-      const data = await res.json()
-      setApps(Array.isArray(data) ? data : [])
+      if (res.ok) {
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          setApps(data)
+          setRegistryWorking(true)
+          return
+        }
+      }
+      // Fall back to local-VPS apps endpoint (seeded starter records)
+      const localRes = await fetch('/api/admin/apps')
+      if (!localRes.ok) throw new Error(`Failed to load apps (${localRes.status})`)
+      const localData = await localRes.json()
+      // /api/admin/apps returns either an array directly or { apps: [...] }
+      const appList = Array.isArray(localData) ? localData : (Array.isArray(localData.apps) ? localData.apps : [])
+      setApps(appList)
+      setRegistryWorking(appList.length > 0)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
@@ -191,14 +208,32 @@ export default function AppsPage() {
           <h1 className="text-2xl font-bold text-white tracking-tight">Apps</h1>
           <p className="text-sm text-slate-500 mt-1">App Cards + detail drawer/panel — manage and monitor connected applications.</p>
         </div>
-        <Link
-          href="/admin/dashboard/apps/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-sm text-white font-medium transition-colors flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" />
-          Add App
-        </Link>
+        <div className="flex items-center gap-3">
+          {registryWorking && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-400">
+              Registry Working
+            </span>
+          )}
+          <Link
+            href="/admin/dashboard/apps/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-sm text-white font-medium transition-colors flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" />
+            Add App
+          </Link>
+        </div>
       </div>
+
+      {/* Registry working notice */}
+      {registryWorking && !loading && (
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <p className="text-xs font-semibold text-emerald-300">App registry is active.</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {apps.length} app record{apps.length !== 1 ? 's' : ''} loaded from the registry.
+            App health status depends on live integration heartbeats.
+          </p>
+        </div>
+      )}
 
       {/* Search */}
       <div className="relative max-w-md">

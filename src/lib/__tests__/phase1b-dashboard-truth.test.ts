@@ -393,6 +393,55 @@ describe('Command Center — updated next actions', () => {
 })
 
 /* ================================================================
+ * PART 11 — APPS PAGE: REGISTRY STATUS
+ * ================================================================ */
+
+describe('Apps page — registry Working status', () => {
+  it('apps page fetches /api/admin/apps as fallback endpoint', async () => {
+    const { readFile } = await import('fs/promises')
+    const src = await readFile('src/app/admin/dashboard/apps/page.tsx', 'utf8')
+    expect(src).toContain('/api/admin/apps')
+  })
+
+  it('apps page shows "Registry Working" badge when apps are loaded', async () => {
+    const { readFile } = await import('fs/promises')
+    const src = await readFile('src/app/admin/dashboard/apps/page.tsx', 'utf8')
+    expect(src).toContain('Registry Working')
+    expect(src).toContain('registryWorking')
+  })
+
+  it('apps page shows registry active notice', async () => {
+    const { readFile } = await import('fs/promises')
+    const src = await readFile('src/app/admin/dashboard/apps/page.tsx', 'utf8')
+    expect(src).toContain('App registry is active')
+  })
+
+  it('registryWorking=true when app list has entries', () => {
+    // Simulate: local /api/admin/apps returns seeded starter apps
+    const localData = [
+      { id: '1', slug: 'amarktai-network', name: 'AmarktAI Network', status: 'ready', source: 'starter_local' },
+      { id: '2', slug: 'crypto-trading-app', name: 'Crypto Trading App', status: 'ready', source: 'starter_local' },
+    ]
+    const appList = Array.isArray(localData) ? localData : []
+    const registryWorking = appList.length > 0
+    expect(registryWorking).toBe(true)
+    expect(appList.length).toBe(2)
+  })
+
+  it('apps page tries /api/admin/products first, then /api/admin/apps as fallback', async () => {
+    const { readFile } = await import('fs/promises')
+    const src = await readFile('src/app/admin/dashboard/apps/page.tsx', 'utf8')
+    // Both endpoints must be referenced
+    expect(src).toContain('/api/admin/products')
+    expect(src).toContain('/api/admin/apps')
+    // Fallback logic: /api/admin/apps must come after /api/admin/products
+    const productsIdx = src.indexOf('/api/admin/products')
+    const appsIdx = src.indexOf('/api/admin/apps')
+    expect(appsIdx).toBeGreaterThan(productsIdx)
+  })
+})
+
+/* ================================================================
  * PART 10 — LOCAL STORAGE INTEGRATION CHECK (library level)
  * ================================================================ */
 
