@@ -27,6 +27,7 @@ import {
   type GenXOperationType,
   type GenXChatMessage,
 } from '@/lib/genx-client'
+import { resolveModelAlias } from '@/lib/genx-model-resolver'
 import { callProvider } from '@/lib/brain'
 import { prisma } from '@/lib/prisma'
 
@@ -165,7 +166,10 @@ export async function routeWorkspaceTask(
   // 3. Select GenX model
   const capability    = input.capability    ?? 'chat'
   const operationType = input.operationType ?? 'chat'
-  const resolvedModel = await selectGenXModel(policy, capability, operationType, fixedModelId)
+  const safeFixedModelId = fixedModelId
+    ? resolveModelAlias({ provider: 'genx', selectedModelId: fixedModelId })
+    : undefined
+  const resolvedModel = await selectGenXModel(policy, capability, operationType, safeFixedModelId)
 
   // 4. Build messages
   const messages: GenXChatMessage[] = []

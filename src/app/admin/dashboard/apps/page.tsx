@@ -11,10 +11,16 @@ type PackageSummary = {
   appSlug: string
   appName: string
   domain?: string
+  repo?: string
+  vpsPath?: string
+  serviceName?: string
+  healthEndpoint?: string
+  storageNamespace?: string
   appType: string
   modelStrategy?: string
   allowedCapabilities?: string[]
   selections?: Array<{ capabilityId: string; provider: string; modelId: string }>
+  agentsAssigned?: string[]
   budget?: { mode: string; monthlyUsd?: number; requiresApprovalAboveUsd?: number }
   adultPolicy?: string
 }
@@ -24,10 +30,15 @@ export default function AppsPage() {
   const [appName, setAppName] = useState('AmarktAI Network')
   const [appSlug, setAppSlug] = useState('amarktai-network')
   const [domain, setDomain] = useState('amarktai.network')
+  const [repo, setRepo] = useState('')
+  const [vpsPath, setVpsPath] = useState('')
+  const [serviceName, setServiceName] = useState('')
+  const [healthEndpoint, setHealthEndpoint] = useState('')
+  const [storageNamespace, setStorageNamespace] = useState('')
   const [appType, setAppType] = useState<(typeof appTypes)[number]>('coding')
   const [strategy, setStrategy] = useState<'cheap' | 'balanced' | 'premium' | 'custom'>('balanced')
   const [capability, setCapability] = useState('coding')
-  const [modelId, setModelId] = useState('auto:coding-balanced')
+  const [modelId, setModelId] = useState('gpt-5.4-mini')
   const [monthlyBudget, setMonthlyBudget] = useState(100)
   const [approvalThreshold, setApprovalThreshold] = useState(0.25)
   const [adultPolicy, setAdultPolicy] = useState<'off' | 'allowed'>('off')
@@ -49,6 +60,11 @@ export default function AppsPage() {
       appSlug,
       appName,
       domain,
+      repo,
+      vpsPath,
+      serviceName,
+      healthEndpoint,
+      storageNamespace,
       appType,
       safetyProfile: adultPolicy === 'allowed' ? 'adult_safe' : 'standard',
       enabledCapabilityIds: [capability],
@@ -59,7 +75,7 @@ export default function AppsPage() {
         provider: selectedModel.provider,
         modelId: selectedModel.id,
         fallbackProvider: 'genx',
-        fallbackModelId: 'auto:assistant',
+        fallbackModelId: 'gpt-5.4-mini',
       }],
       budget: { mode: strategy, monthlyUsd: monthlyBudget, maxPerRequestUsd: approvalThreshold, requiresApprovalAboveUsd: approvalThreshold },
       adultPolicy,
@@ -103,6 +119,11 @@ export default function AppsPage() {
             <Field label="App name"><input value={appName} onChange={(event) => setAppName(event.target.value)} className="field" /></Field>
             <Field label="App slug"><input value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="field" /></Field>
             <Field label="Domain"><input value={domain} onChange={(event) => setDomain(event.target.value)} className="field" /></Field>
+            <Field label="Repo (owner/name)"><input value={repo} onChange={(event) => setRepo(event.target.value)} placeholder="org/repo" className="field" /></Field>
+            <Field label="VPS path"><input value={vpsPath} onChange={(event) => setVpsPath(event.target.value)} placeholder="/var/www/app" className="field" /></Field>
+            <Field label="Service name"><input value={serviceName} onChange={(event) => setServiceName(event.target.value)} placeholder="app.service" className="field" /></Field>
+            <Field label="Health endpoint"><input value={healthEndpoint} onChange={(event) => setHealthEndpoint(event.target.value)} placeholder="/api/health" className="field" /></Field>
+            <Field label="Storage namespace"><input value={storageNamespace} onChange={(event) => setStorageNamespace(event.target.value)} placeholder="app-slug" className="field" /></Field>
             <Field label="App type">
               <select value={appType} onChange={(event) => setAppType(event.target.value as never)} className="field">
                 {appTypes.map((type) => <option key={type} value={type}>{type}</option>)}
@@ -157,6 +178,11 @@ export default function AppsPage() {
                 <div>
                   <p className="text-lg font-bold text-white">{pkg.appName}</p>
                   <p className="mt-1 text-sm text-slate-400">{pkg.appSlug} - {pkg.domain || 'no domain'} - {pkg.appType}</p>
+                  {(pkg.repo || pkg.serviceName) && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      {pkg.repo ? `Repo: ${pkg.repo}` : ''}{pkg.repo && pkg.serviceName ? ' · ' : ''}{pkg.serviceName ? `Service: ${pkg.serviceName}` : ''}
+                    </p>
+                  )}
                 </div>
                 <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{pkg.modelStrategy ?? pkg.budget?.mode ?? 'balanced'}</span>
               </div>

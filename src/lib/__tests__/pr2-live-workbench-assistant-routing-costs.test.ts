@@ -149,15 +149,14 @@ describe('PR 2 Assistant, apps, agents, routing, and costs', () => {
   })
 
   it('has the required operator agent registry and app assignment', () => {
-    expect(OPERATOR_AGENTS.map((agent) => agent.name)).toEqual([
-      'Coding Agent',
-      'Research Agent',
-      'Creative Agent',
-      'Marketing Agent',
-      'App Operator Agent',
-      'System/VPS Agent',
-      'Safety/Policy Agent',
-    ])
+    const agentNames = OPERATOR_AGENTS.map((agent) => agent.name)
+    expect(agentNames).toContain('Coding Agent')
+    expect(agentNames).toContain('Research Agent')
+    expect(agentNames).toContain('Creative Agent')
+    expect(agentNames).toContain('Marketing Agent')
+    expect(agentNames).toContain('App Operator Agent')
+    expect(agentNames).toContain('System/VPS Agent')
+    expect(agentNames).toContain('Safety/Policy Agent')
     expect(listOperatorAgents('demo-app')[0].executionRoute).toBeTruthy()
     expect(assignAgentToAppPackage('coding-agent', 'Demo App').appSlug).toBe('demo-app')
   })

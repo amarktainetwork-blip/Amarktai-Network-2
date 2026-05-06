@@ -110,14 +110,14 @@ export const APPROVED_WORKBENCH_MODELS: readonly ApprovedModel[] = [
   { provider: 'qwen', id: 'qwen-turbo', label: 'Qwen Turbo', costMode: 'cheap', capability: 'repo_workbench' },
   { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', costMode: 'cheap', capability: 'repo_workbench' },
   { provider: 'together', id: 'meta-llama/Llama-3-70b-chat-hf', label: 'Llama 3 70B Chat', costMode: 'balanced', capability: 'repo_workbench' },
-  { provider: 'genx', id: 'auto:coding-balanced', label: 'GenX Coding Balanced', costMode: 'balanced', capability: 'repo_workbench' },
+  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Coding Balanced', costMode: 'balanced', capability: 'repo_workbench' },
   { provider: 'minimax', id: 'MiniMax-M2.7', label: 'MiniMax M2.7', costMode: 'balanced', capability: 'repo_workbench' },
   { provider: 'openai', id: 'gpt-4o', label: 'GPT-4o', costMode: 'premium', capability: 'repo_workbench' },
-  { provider: 'genx', id: 'auto:coding-best', label: 'GenX Coding Best', costMode: 'premium', capability: 'repo_workbench' },
+  { provider: 'genx', id: 'gpt-5.3-codex', label: 'GenX Coding Best', costMode: 'premium', capability: 'repo_workbench' },
 ] as const
 
 export const APPROVED_ASSISTANT_MODELS: readonly ApprovedModel[] = [
-  { provider: 'genx', id: 'auto:assistant', label: 'GenX Assistant Route', costMode: 'balanced', capability: 'assistant' },
+  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Assistant Route', costMode: 'balanced', capability: 'assistant' },
   { provider: 'qwen', id: 'qwen-plus', label: 'Qwen Plus', costMode: 'cheap', capability: 'assistant' },
   { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Groq Llama 3.3', costMode: 'cheap', capability: 'assistant' },
   { provider: 'openai', id: 'gpt-4o', label: 'GPT-4o', costMode: 'premium', capability: 'assistant' },

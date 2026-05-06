@@ -4,8 +4,10 @@ import {
   Bot,
   Coins,
   Cpu,
+  FlaskConical,
   GitBranch,
   ListChecks,
+  Palette,
   Settings2,
   ShieldCheck,
   Users,
@@ -19,6 +21,8 @@ export type DashboardSectionId =
   | 'agents'
   | 'ai-models'
   | 'assistant'
+  | 'playground'
+  | 'creative-studio'
   | 'costs'
   | 'actions'
   | 'settings'
@@ -74,6 +78,20 @@ export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
     label: 'Assistant',
     description: 'AmarktAI Assistant with dashboard and workbench context.',
     icon: Bot,
+  },
+  {
+    id: 'playground',
+    href: '/admin/dashboard/playground',
+    label: 'Playground',
+    description: 'Explore and test AI capabilities: chat, code, image, video, voice, and more.',
+    icon: FlaskConical,
+  },
+  {
+    id: 'creative-studio',
+    href: '/admin/dashboard/creative-studio',
+    label: 'Creative Studio',
+    description: 'Generate images, video, music, voice, and avatar media.',
+    icon: Palette,
   },
   {
     id: 'costs',
