@@ -740,7 +740,7 @@ export interface GitHubDeployResult {
 /**
  * Trigger a GitHub Actions workflow via workflow_dispatch event.
  * This fires the deploy pipeline and returns immediately.
- * Callers can poll /api/admin/github/deploy/status for run results.
+ * Repo Workbench owns deploy polling through its workspace deploy routes.
  */
 export async function triggerDeploy(input: GitHubDeployInput): Promise<GitHubDeployResult> {
   const token = await getAccessToken()

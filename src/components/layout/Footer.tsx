@@ -2,7 +2,7 @@ import Link from 'next/link'
 
 const links = [
   { href: '/', label: 'Platform' },
-  { href: '/about', label: 'Aiva' },
+  { href: '/about', label: 'Assistant' },
   { href: '/apps', label: 'Ecosystem' },
   { href: '/contact', label: 'Request Access' },
   { href: '/privacy', label: 'Privacy' },

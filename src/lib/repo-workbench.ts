@@ -1,5 +1,6 @@
 import { execFile } from 'child_process'
 import fs from 'fs/promises'
+import os from 'os'
 import path from 'path'
 import { promisify } from 'util'
 import { prisma } from '@/lib/prisma'
@@ -8,6 +9,12 @@ import { getProviderKey } from '@/lib/provider-config'
 import { MODEL_REGISTRY } from '@/lib/model-registry'
 import { listGenXModels } from '@/lib/genx-client'
 import { routeWorkspaceTask } from '@/lib/workspace-executor'
+import {
+  APPROVED_WORKBENCH_MODELS,
+  isApprovedAIProvider,
+  providerLabel,
+  type CostMode,
+} from '@/lib/approved-ai-catalog'
 import {
   assertInsideWorkspace,
   redactSecretsFromLogs,
@@ -182,18 +189,21 @@ export async function getGitHubToken(): Promise<string | null> {
 
 export async function runGit(cwd: string, args: string[], timeoutMs = 120_000, token?: string) {
   assertInsideWorkspace(cwd)
-  const safeArgs = token ? ['-c', `http.extraHeader=Authorization: Bearer ${token}`, ...args] : args
+  const askPass = token ? await createGitAskPass() : null
   try {
-    const result = await execFileAsync('git', safeArgs, {
+    const result = await execFileAsync('git', args, {
       cwd,
       timeout: timeoutMs,
       maxBuffer: 1024 * 1024 * 8,
       windowsHide: true,
       env: {
         ...process.env,
-        // Prevent git from prompting for credentials interactively (no TTY in server context)
         GIT_TERMINAL_PROMPT: '0',
-        GIT_ASKPASS: '',
+        ...(askPass && token ? {
+          GIT_ASKPASS: askPass,
+          GIT_ASKPASS_TOKEN: token,
+          GIT_USERNAME: 'x-access-token',
+        } : { GIT_ASKPASS: '' }),
       },
     })
     return {
@@ -208,7 +218,25 @@ export async function runGit(cwd: string, args: string[], timeoutMs = 120_000, t
       stdout: scrubSecrets(err.stdout ?? ''),
       stderr: scrubSecrets(err.stderr ?? err.message ?? 'git command failed'),
     }
+  } finally {
+    if (askPass) await fs.rm(askPass, { force: true }).catch(() => null)
   }
+}
+
+export async function createGitAskPass(): Promise<string> {
+  const ext = process.platform === 'win32' ? '.cmd' : '.sh'
+  const scriptPath = path.join(os.tmpdir(), `amarktai-git-askpass-${process.pid}-${Date.now()}${ext}`)
+  const content = process.platform === 'win32'
+    ? '@echo off\r\n' +
+      'echo %~1 | findstr /I "Username" >nul\r\n' +
+      'if %errorlevel%==0 (echo %GIT_USERNAME%) else (echo %GIT_ASKPASS_TOKEN%)\r\n'
+    : '#!/bin/sh\n' +
+      'case "$1" in\n' +
+      '  *Username*) printf "%s\\n" "$GIT_USERNAME" ;;\n' +
+      '  *) printf "%s\\n" "$GIT_ASKPASS_TOKEN" ;;\n' +
+      'esac\n'
+  await fs.writeFile(scriptPath, content, { mode: 0o700 })
+  return scriptPath
 }
 
 export function scrubSecrets(text: string): string {
@@ -335,7 +363,7 @@ export async function getRepoModelChoices() {
     .map((m) => ({
       id: m.id,
       label: m.name || m.id,
-      provider: m.provider ?? 'genx',
+      provider: isApprovedAIProvider(m.provider ?? 'genx') ? (m.provider ?? 'genx') : 'genx',
       source: 'genx',
       capabilityTags: m.capabilities,
       costTier: m.costTier,
@@ -345,7 +373,7 @@ export async function getRepoModelChoices() {
     }))
 
   const registryChoices: RepoModelChoice[] = MODEL_REGISTRY
-    .filter((m) => m.enabled && (m.supports_code || m.supports_reasoning || m.primary_role === 'coding'))
+    .filter((m) => isApprovedAIProvider(m.provider) && m.enabled && (m.supports_code || m.supports_reasoning || m.primary_role === 'coding'))
     .map((m) => ({
       id: m.model_id,
       label: m.model_name,
@@ -362,16 +390,29 @@ export async function getRepoModelChoices() {
       available: m.health_status === 'healthy' || m.health_status === 'configured',
     }))
 
+  const approvedChoices: RepoModelChoice[] = APPROVED_WORKBENCH_MODELS.map((m) => ({
+    id: m.id,
+    label: `${providerLabel(m.provider)} - ${m.label}`,
+    provider: m.provider,
+    source: 'approved_catalog',
+    capabilityTags: ['code_generation', 'reasoning', `cost:${m.costMode}`],
+    costTier: costModeToTier(m.costMode),
+    contextWindow: 128_000,
+    bestFor: bestForModel(m.id, costModeToTier(m.costMode)),
+    available: true,
+  }))
+
   const byId = new Map<string, RepoModelChoice>()
-  for (const choice of [...genxChoices, ...registryChoices]) {
+  for (const choice of [...approvedChoices, ...genxChoices, ...registryChoices]) {
+    if (!isApprovedAIProvider(choice.provider)) continue
     if (!byId.has(choice.id)) byId.set(choice.id, choice)
   }
   const all = [...byId.values()].sort((a, b) => Number(b.available) - Number(a.available) || b.contextWindow - a.contextWindow)
-  const fast = all.filter((m) => ['free', 'very_low', 'low'].includes(m.costTier) || /mini|nano|flash|lite|groq|qwen/i.test(m.id)).slice(0, 10)
-  const balanced = all.filter((m) => ['low', 'medium'].includes(m.costTier) || /sonnet|gemini|gpt-5|grok/i.test(m.id)).slice(0, 10)
-  const premium = all.filter((m) => ['high', 'premium'].includes(m.costTier) || /codex|opus|gpt-5\.4|gpt-5\.5|reasoning|multi-agent/i.test(m.id)).slice(0, 10)
+  const fast = all.filter((m) => ['free', 'very_low', 'low'].includes(m.costTier) || m.capabilityTags.includes('cost:cheap')).slice(0, 10)
+  const balanced = all.filter((m) => ['low', 'medium'].includes(m.costTier) || m.capabilityTags.includes('cost:balanced')).slice(0, 10)
+  const premium = all.filter((m) => ['high', 'premium'].includes(m.costTier) || m.capabilityTags.includes('cost:premium')).slice(0, 10)
   const recommended = [
-    premium.find((m) => /codex|gpt|sonnet|opus|grok/i.test(m.id)) ?? premium[0],
+    premium.find((m) => /gpt|genx|reasoning/i.test(m.id)) ?? premium[0],
     balanced[0],
     fast[0],
   ].filter((m): m is RepoModelChoice => !!m)
@@ -379,8 +420,14 @@ export async function getRepoModelChoices() {
   return { recommended, fast, balanced, premium, all }
 }
 
+function costModeToTier(costMode: CostMode): string {
+  if (costMode === 'cheap') return 'low'
+  if (costMode === 'premium') return 'premium'
+  return 'medium'
+}
+
 function bestForModel(modelId: string, costTier: string): string {
-  if (/codex|opus|5\.5|5\.4|reasoning|multi-agent/i.test(modelId)) return 'Deep repo audits, large patches, complex debugging'
+  if (/gpt|best|reasoning/i.test(modelId) || costTier === 'premium') return 'Deep repo audits, large patches, complex debugging'
   if (/mini|nano|flash|lite|groq/i.test(modelId) || ['free', 'very_low', 'low'].includes(costTier)) return 'Fast audits, summaries, small changes'
   return 'Balanced planning, patch generation, and code review'
 }
@@ -388,7 +435,7 @@ function bestForModel(modelId: string, costTier: string): string {
 export function modelTierFor(modelId?: string): 'manual' | 'fast' | 'balanced' | 'premium' | 'recommended' {
   if (!modelId) return 'recommended'
   if (/nano|mini|flash|lite|groq|qwen/i.test(modelId)) return 'fast'
-  if (/codex|opus|5\.5|5\.4|reasoning|multi-agent/i.test(modelId)) return 'premium'
+  if (/gpt|best|reasoning/i.test(modelId)) return 'premium'
   return 'balanced'
 }
 

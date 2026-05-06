@@ -1,8 +1,3 @@
-/**
- * POST /api/admin/amarktai-assistant/stream
- *
- * AmarktAI Assistant streaming endpoint.
- * Adapter to the same streaming backend as /api/admin/aiva/stream.
- */
+import { POST as chatPost } from '@/app/api/admin/amarktai-assistant/chat/route'
 
-export { POST } from '@/app/api/admin/aiva/stream/route'
+export const POST = chatPost
