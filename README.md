@@ -290,7 +290,7 @@ The admin login at `/admin/login` uses a three-tier credential fallback:
 If login returns "Invalid credentials":
 - Verify `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set correctly in `/var/www/amarktai-network/.env`
 - Or seed a DB admin user: `npx ts-node prisma/seed.ts`
-- Default fallback email is `admin@amarktai.network`
+- Default fallback email is `admin@amarktai.com`
 
 ---
 
@@ -301,7 +301,7 @@ If login returns "Invalid credentials":
 | `DATABASE_URL` | ✅ | PostgreSQL connection string |
 | `SESSION_SECRET` | ✅ | Min 32-char secret for iron-session |
 | `NEXT_PUBLIC_APP_URL` | ✅ | Public URL of the app |
-| `ADMIN_EMAIL` | ✅ (prod) | Admin login email (defaults to `admin@amarktai.network`) |
+| `ADMIN_EMAIL` | ✅ (prod) | Admin login email (defaults to `admin@amarktai.com`) |
 | `ADMIN_PASSWORD` | ✅ (prod) | Admin login password fallback when no DB user exists |
 
 ---
