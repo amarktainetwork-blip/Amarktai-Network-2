@@ -267,26 +267,29 @@ export default function WorkbenchPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl lg:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-700">Workbench</p>
-        <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl lg:p-7">
+        <div className="pointer-events-none absolute right-0 top-0 h-48 w-72 rounded-bl-[6rem] bg-gradient-to-br from-sky-500/10 via-cyan-500/6 to-transparent blur-3xl" />
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 className="max-w-3xl text-4xl font-black tracking-tight text-slate-950 lg:text-5xl">Autonomous repo workflow.</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600">
-              Choose a repo, branch, AI route, and prompt. Start work creates the plan and patch; approval runs checks, commits, pushes, and prepares a PR.
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Workbench</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Autonomous repo workflow.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Prompt → Plan → Patch → Checks → Commit → PR → Deploy. The Workbench orchestrates each step with approval gates.
             </p>
           </div>
-          <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-xs font-bold text-cyan-900">
-            Token-safe GitHub auth, branch validation, path checks, artifact logs, guarded merge and deploy.
-            {currentJobId && <span className="mt-1 block">Resumed persisted job: {currentJobId}</span>}
+          <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs font-semibold text-cyan-400/80">
+            Token-safe · branch-validated · artifact-logged · guarded merge
+            {currentJobId && <span className="mt-1 block text-cyan-500/60">Resumed: {currentJobId}</span>}
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-        <div className="grid gap-4 lg:grid-cols-4">
-          <Field label="Repo">
+      {/* Prompt + controls */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <WbField label="Repo">
             <select
               value={repoFullName}
               onChange={(event) => {
@@ -294,84 +297,107 @@ export default function WorkbenchPage() {
                 setWorkspace(null)
                 loadBranches(event.target.value).catch(() => null)
               }}
-              className="input"
+              className="wb-select"
             >
               <option value="">Select repo</option>
               {repos.map((repo) => <option key={repo.full_name} value={repo.full_name}>{repo.full_name}</option>)}
             </select>
-          </Field>
-          <Field label="Branch">
-            <select value={branch} onChange={(event) => setBranch(event.target.value)} className="input">
+          </WbField>
+          <WbField label="Branch">
+            <select value={branch} onChange={(event) => setBranch(event.target.value)} className="wb-select">
               <option value="auto">Auto work branch</option>
               {branches.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
             </select>
-          </Field>
-          <Field label="AI / model">
-            <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="input">
-              <option value="auto">Auto best agent/model</option>
-              {codingModels.map((model: UniversalModelRoute) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
+          </WbField>
+          <WbField label="AI / model">
+            <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="wb-select">
+              <option value="auto">Auto best model</option>
+              {codingModels.map((model: UniversalModelRoute) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} – {model.displayName}</option>)}
             </select>
-          </Field>
-          <Field label="Cost mode">
-            <select value={costMode} onChange={(event) => setCostMode(event.target.value as CostMode)} className="input">
+          </WbField>
+          <WbField label="Cost mode">
+            <select value={costMode} onChange={(event) => setCostMode(event.target.value as CostMode)} className="wb-select">
               <option value="cheap">cheap</option>
               <option value="balanced">balanced</option>
               <option value="premium">premium</option>
             </select>
-          </Field>
+          </WbField>
         </div>
 
-        <div className="mt-5">
-          <Field label="Prompt">
+        <div className="mt-4">
+          <label className="block">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Prompt</span>
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
-              rows={6}
-              placeholder="Describe the change. The Workbench will audit context, choose the right agent/model, plan, prepare a patch, and wait for approval."
-              className="min-h-36 w-full resize-none rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm leading-6 text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
+              rows={5}
+              placeholder="Describe the change. The Workbench will audit context, choose the right agent/model, plan, prepare a patch, and wait for your approval."
+              className="mt-1.5 min-h-32 w-full resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20"
             />
-          </Field>
+          </label>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <MainButton onClick={startWork} disabled={!repoFullName || !prompt || Boolean(loading)} label="Start work" loading={loading === 'Start work' || loading === 'Prepare patch'} icon={<Play className="h-4 w-4" />} />
-          <MainButton onClick={approveChanges} disabled={!workspace || !patchId || Boolean(loading)} label="Approve changes" loading={loading.startsWith('Run ') || loading.includes('approved') || loading.includes('Commit') || loading.includes('Push')} icon={<ShieldCheck className="h-4 w-4" />} />
-          <MainButton onClick={createPr} disabled={!workspace || Boolean(loading)} label="Create PR" loading={loading === 'Create PR'} icon={<GitPullRequest className="h-4 w-4" />} />
+        <div className="mt-4 flex flex-wrap gap-2.5">
+          <WbButton onClick={startWork} disabled={!repoFullName || !prompt || Boolean(loading)} loading={loading === 'Start work' || loading === 'Prepare patch'} label="Start work" icon={<Play className="h-3.5 w-3.5" />} primary />
+          <WbButton onClick={approveChanges} disabled={!workspace || !patchId || Boolean(loading)} loading={loading.startsWith('Run ') || loading.includes('approved') || loading.includes('Commit') || loading.includes('Push')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
+          <WbButton onClick={createPr} disabled={!workspace || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
         </div>
-        {error && <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
+        {error && <p className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-sm font-semibold text-red-400">{error}</p>}
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+      {/* Timeline + logs */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 backdrop-blur-xl">
         <button
-          onClick={() => setAdvancedOpen((value) => !value)}
-          className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-black text-slate-950"
+          onClick={() => setAdvancedOpen((v) => !v)}
+          className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-black text-slate-300"
         >
-          Advanced / Progress Timeline
-          <ChevronDown className={['h-4 w-4 transition', advancedOpen ? 'rotate-180' : ''].join(' ')} />
+          Progress timeline & logs
+          <ChevronDown className={['h-4 w-4 text-slate-500 transition-transform', advancedOpen ? 'rotate-180' : ''].join(' ')} />
         </button>
         {advancedOpen && (
-          <div className="border-t border-white/70 p-5">
-            <div className="grid gap-3 lg:grid-cols-7">
-              {timeline.map((step) => (
-                <div key={step} className="rounded-2xl border border-slate-200 bg-white/75 p-3">
-                  <CheckCircle2 className={['h-4 w-4', stepStatus[step] === 'done' ? 'text-emerald-600' : stepStatus[step] === 'active' ? 'text-cyan-700' : stepStatus[step] === 'needs-approval' ? 'text-amber-600' : 'text-slate-300'].join(' ')} />
-                  <p className="mt-2 text-xs font-black text-slate-800">{step}</p>
-                  <p className="mt-1 text-[11px] font-semibold text-slate-400">{stepStatus[step]}</p>
-                </div>
-              ))}
+          <div className="border-t border-slate-800/60 p-5">
+            {/* Step pills */}
+            <div className="grid gap-2 sm:grid-cols-4 lg:grid-cols-7">
+              {timeline.map((step) => {
+                const st = stepStatus[step]
+                return (
+                  <div key={step} className={[
+                    'rounded-xl border p-2.5',
+                    st === 'done' ? 'border-emerald-500/20 bg-emerald-500/8' :
+                    st === 'active' ? 'border-cyan-500/25 bg-cyan-500/8' :
+                    st === 'needs-approval' ? 'border-amber-500/20 bg-amber-500/8' :
+                    'border-slate-700/40 bg-slate-800/30',
+                  ].join(' ')}>
+                    <CheckCircle2 className={[
+                      'h-3.5 w-3.5',
+                      st === 'done' ? 'text-emerald-400' :
+                      st === 'active' ? 'text-cyan-400' :
+                      st === 'needs-approval' ? 'text-amber-400' :
+                      'text-slate-700',
+                    ].join(' ')} />
+                    <p className="mt-1.5 text-[10px] font-black text-slate-300">{step}</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-slate-600">{st}</p>
+                  </div>
+                )
+              })}
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+
+            {/* Log panels */}
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
               {Object.entries(log).map(([key, value]) => (
-                <div key={key} className="rounded-2xl border border-slate-200 bg-slate-950 p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">{key}</p>
-                  <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-200">{value}</pre>
+                <div key={key} className="rounded-xl border border-slate-700/40 bg-slate-950/80 p-3.5">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/70">{key}</p>
+                  <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{value}</pre>
                 </div>
               ))}
-              {Object.keys(log).length === 0 && <p className="text-sm font-semibold text-slate-500">Plan, files, diff, checks, commit, PR, and deploy logs appear here. The latest persisted Workbench job is rehydrated from the backend when you return.</p>}
+              {Object.keys(log).length === 0 && (
+                <p className="text-sm font-semibold text-slate-500">Plan, diff, checks, commit, PR, and deploy logs appear here after steps complete.</p>
+              )}
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button onClick={mergePr} disabled={!workspace || !prNumber || Boolean(loading)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-45">Merge when allowed</button>
-              <button onClick={deploy} disabled={!workspace || Boolean(loading)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-45">Deploy when allowed</button>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={mergePr} disabled={!workspace || !prNumber || Boolean(loading)} className="rounded-full border border-slate-700/50 bg-slate-800/50 px-3 py-1.5 text-xs font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">Merge when allowed</button>
+              <button onClick={deploy} disabled={!workspace || Boolean(loading)} className="rounded-full border border-slate-700/50 bg-slate-800/50 px-3 py-1.5 text-xs font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">Deploy when allowed</button>
             </div>
           </div>
         )}
@@ -380,23 +406,28 @@ export default function WorkbenchPage() {
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function WbField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</span>
-      <span className="mt-2 block [&_.input]:w-full [&_.input]:rounded-2xl [&_.input]:border [&_.input]:border-slate-200 [&_.input]:bg-white/85 [&_.input]:px-3 [&_.input]:py-2.5 [&_.input]:text-sm [&_.input]:font-semibold [&_.input]:text-slate-800 [&_.input]:outline-none [&_.input]:focus:border-cyan-300 [&_.input]:focus:ring-4 [&_.input]:focus:ring-cyan-100">{children}</span>
+      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <span className="mt-1.5 block [&_.wb-select]:w-full [&_.wb-select]:rounded-xl [&_.wb-select]:border [&_.wb-select]:border-slate-700/50 [&_.wb-select]:bg-slate-800/60 [&_.wb-select]:px-3 [&_.wb-select]:py-2 [&_.wb-select]:text-sm [&_.wb-select]:font-semibold [&_.wb-select]:text-slate-300 [&_.wb-select]:outline-none [&_.wb-select]:focus:border-cyan-500/50">{children}</span>
     </label>
   )
 }
 
-function MainButton({ label, onClick, disabled, loading, icon }: { label: string; onClick: () => void; disabled: boolean; loading: boolean; icon?: React.ReactNode }) {
+function WbButton({ label, onClick, disabled, loading, icon, primary = false }: { label: string; onClick: () => void; disabled: boolean; loading: boolean; icon?: React.ReactNode; primary?: boolean }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45"
+      className={[
+        'inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-40',
+        primary
+          ? 'bg-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.2)] hover:bg-cyan-400 disabled:shadow-none'
+          : 'border border-slate-700/50 bg-slate-800/60 text-slate-300 hover:bg-slate-800 hover:text-slate-100',
+      ].join(' ')}
     >
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
       {label}
     </button>
   )
