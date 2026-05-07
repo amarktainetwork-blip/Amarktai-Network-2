@@ -67,7 +67,7 @@ describe('public website rebuild — cinematic command constellation', () => {
       'components/public/PublicShell.tsx',
       'components/public/CommandConstellationScene.tsx',
     ]
-    const retiredName = String.fromCharCode(65, 105, 118, 97) // retired assistant name (char codes only)
+    const retiredName = String.fromCharCode(65, 105, 118, 97) // character codes only — literal string avoided to prevent grep false positives
     for (const file of files) {
       const source = read(file)
       expect(source, file).not.toContain(retiredName)

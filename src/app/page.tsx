@@ -12,8 +12,6 @@ const commandNodes = [
   { label: 'Settings',    body: 'Policy controls, model routing guardrails, and governance surfaces that keep autonomous actions safe and reviewable.' },
 ]
 
-const workbenchFlow = ['Prompt', 'Plan', 'Patch', 'Checks', 'PR', 'Deploy']
-
 const commandSignals = [
   { label: 'Model Routing',          desc: 'Intelligent dispatch to the right provider for each task type and context.' },
   { label: 'Provider Orchestration', desc: 'Parallel and sequential coordination across multiple AI providers.' },
@@ -31,6 +29,8 @@ const appMesh = [
   'Deployment confidence controls',
   'Cross-app signal propagation',
 ]
+
+const workbenchFlow = ['Prompt', 'Plan', 'Patch', 'Checks', 'PR', 'Deploy']
 
 export default function HomePage() {
   return (
