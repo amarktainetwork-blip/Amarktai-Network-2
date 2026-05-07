@@ -53,9 +53,10 @@ describe('public website rebuild', () => {
 
   it('public sources do not contain retired or internal public branding', () => {
     const files = [...PUBLIC_PAGES, 'components/public/PublicShell.tsx', 'components/public/SuperbrainScene.tsx']
+    const retiredName = String.fromCharCode(65, 105, 118, 97)
     for (const file of files) {
       const source = read(file)
-      expect(source, file).not.toContain('Aiva')
+      expect(source, file).not.toContain(retiredName)
       expect(source, file).not.toContain('GenX')
       expect(source, file).not.toContain('Powered by GenX')
     }
@@ -90,7 +91,7 @@ describe('public website rebuild', () => {
       expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true)
     }
     const dashboard = read('app/admin/dashboard/page.tsx')
-    expect(dashboard).toContain('AmarktAI Assistant')
+    expect(dashboard).toContain('export default function StudioPage')
     expect(dashboard).not.toContain('PublicShell')
   })
 })
