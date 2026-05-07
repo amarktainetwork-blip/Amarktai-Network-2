@@ -78,6 +78,7 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
 
     let raf = 0
     let last = performance.now()
+    let pausedAt = 0
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
@@ -181,9 +182,22 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
 
     raf = requestAnimationFrame(draw)
 
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        pausedAt = performance.now()
+        return
+      }
+      if (pausedAt > 0) {
+        last = performance.now()
+        pausedAt = 0
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
     return () => {
       cancelAnimationFrame(raf)
       ro.disconnect()
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 

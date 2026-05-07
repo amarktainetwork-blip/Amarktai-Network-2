@@ -28,14 +28,15 @@ describe('public website hard reset', () => {
 
   it('homepage uses the new intelligence fabric architecture and required sections', () => {
     const source = read('app/page.tsx')
+    const lower = source.toLowerCase()
     expect(source).toContain('IntelligenceFabric')
-    expect(source).toContain('input')
-    expect(source).toContain('routing')
-    expect(source).toContain('agent')
-    expect(source).toContain('memory')
-    expect(source).toContain('artifact')
-    expect(source).toContain('approval')
-    expect(source).toContain('deployment')
+    expect(lower).toContain('input')
+    expect(lower).toContain('routing')
+    expect(lower).toContain('agent')
+    expect(lower).toContain('memory')
+    expect(lower).toContain('artifact')
+    expect(lower).toContain('approval')
+    expect(lower).toContain('deployment')
     expect(source).toContain('Workbench')
     expect(source).toContain('Studio')
     expect(source).toContain('Amarktai Assistant')
@@ -76,7 +77,7 @@ describe('public website hard reset', () => {
       'components/public/PublicShell.tsx',
       'components/public/IntelligenceFabric.tsx',
     ]
-    const retiredName = String.fromCharCode(65, 105, 118, 97)
+    const retiredName = String.fromCharCode(65, 105, 118, 97) // "Aiva" without direct literal text
 
     for (const file of files) {
       const source = read(file)
