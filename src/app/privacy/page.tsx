@@ -1,33 +1,31 @@
 import PublicShell from '@/components/public/PublicShell'
-import { SectionInner, SectionWrap, SurfaceCard } from '@/components/public/PublicSection'
 
 const sections = [
-  ['Data we collect', 'We collect account, inquiry, and operational usage data required to provide and secure the AmarktAI Network service.'],
-  ['How data is used', 'Data is used to run system features, route requests, maintain safety controls, and improve product performance.'],
-  ['Retention and deletion', 'We retain data only as needed for operational, legal, and security obligations, then delete or anonymize records.'],
-  ['Security controls', 'Traffic protection, access controls, and operational guardrails are used to protect stored and in-transit data.'],
-  ['Contact', 'For privacy requests or concerns, contact privacy@amarktai.com.'],
+  ['Scope', 'This policy explains how operational and inquiry data is processed on the public website and connected service systems.'],
+  ['Data handling', 'Data is processed for service delivery, security controls, system integrity, and legal obligations.'],
+  ['Retention', 'Records are retained only for required operational and compliance periods, then removed or anonymized.'],
+  ['Security', 'Traffic controls, access restrictions, and infrastructure monitoring are used to protect stored and transmitted data.'],
+  ['Contact', 'Privacy inquiries: privacy@amarktai.com'],
 ]
 
 export default function PrivacyPage() {
   return (
     <PublicShell>
-      <SectionWrap className="pt-14 lg:pt-18">
-        <SectionInner>
-          <h1 className="text-5xl font-black tracking-[-0.06em] text-white sm:text-6xl">Privacy Policy</h1>
-          <p className="mt-4 text-slate-300">Last updated: May 2026</p>
-        </SectionInner>
-      </SectionWrap>
-      <SectionWrap>
-        <SectionInner className="space-y-4">
+      <section className="mx-auto max-w-7xl px-5 pb-8 pt-16 lg:px-8 lg:pt-24">
+        <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#edf1fb] sm:text-5xl">Privacy Policy</h1>
+        <p className="mt-4 text-sm text-[#98a2bc]">Last updated: May 2026</p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-24">
+        <div className="space-y-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142]">
           {sections.map(([title, body]) => (
-            <SurfaceCard key={title}>
-              <h2 className="text-xl font-black text-white">{title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-400">{body}</p>
-            </SurfaceCard>
+            <article key={title} className="bg-[#0b0f19] p-6">
+              <h2 className="text-base font-semibold text-[#edf0fa]">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[#bbc5dc]">{body}</p>
+            </article>
           ))}
-        </SectionInner>
-      </SectionWrap>
+        </div>
+      </section>
     </PublicShell>
   )
 }

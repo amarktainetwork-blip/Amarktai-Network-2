@@ -2,14 +2,18 @@
 
 import { useState } from 'react'
 import PublicShell from '@/components/public/PublicShell'
-import CommandConstellationScene from '@/components/public/CommandConstellationScene'
-import { SectionInner, SectionWrap, SurfaceCard } from '@/components/public/PublicSection'
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false)
   const [ok, setOk] = useState(false)
   const [error, setError] = useState(false)
-  const [form, setForm] = useState({ name: '', email: '', building: '', capabilities: '', message: '' })
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    operation: '',
+    scope: '',
+    message: '',
+  })
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -22,8 +26,8 @@ export default function ContactPage() {
         body: JSON.stringify({
           name: form.name,
           email: form.email,
-          companyOrProject: form.building,
-          message: `[RESTRICTED INQUIRY]\nWhat are you building: ${form.building}\nCapabilities needed: ${form.capabilities}\nAdditional context: ${form.message}`,
+          companyOrProject: form.operation,
+          message: `[OPERATIONAL INQUIRY]\nOperating environment: ${form.operation}\nCurrent scope: ${form.scope}\nNotes: ${form.message}`,
         }),
       })
       if (!res.ok) throw new Error('request failed')
@@ -37,110 +41,91 @@ export default function ContactPage() {
 
   return (
     <PublicShell>
-      {/* HERO */}
-      <section className="relative overflow-hidden pb-12 pt-20 lg:pt-28">
-        <div className="pointer-events-none absolute inset-0 opacity-35">
-          <CommandConstellationScene variant="ambient" className="h-full w-full" />
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#020612]/50 via-transparent to-[#020612]/80" />
-        <SectionInner className="relative z-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Restricted contact</p>
-          <h1 className="mt-5 max-w-3xl text-5xl font-black leading-[1.04] tracking-[-0.05em] text-white sm:text-6xl">
-            Submit a restricted access inquiry.
-          </h1>
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-            AmarktAI Network access is reviewed and provisioned for verified operator teams. Share your environment, workflows, and operational requirements.
-          </p>
-        </SectionInner>
+      <section className="mx-auto max-w-7xl px-5 pb-12 pt-16 lg:px-8 lg:pt-24">
+        <p className="text-xs uppercase tracking-[0.2em] text-[#95a0bc]">Contact</p>
+        <h1 className="mt-6 max-w-5xl text-4xl font-semibold leading-tight tracking-[-0.03em] text-[#edf1fb] sm:text-5xl">
+          Operational inquiry channel for private AI infrastructure discussions.
+        </h1>
       </section>
 
-      {/* FORM */}
-      <SectionWrap>
-        <SectionInner className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Access model</p>
-            <p className="mt-4 text-sm leading-7 text-slate-300">
-              This is a reviewed access process. We evaluate the operational environment, required capabilities, and trust requirements before provisioning access. There is no self-serve signup.
-            </p>
-            <div className="mt-8 grid gap-3">
-              {['Operational AI environment', 'Verified operator team', 'Real production workloads', 'Reviewed access provisioning'].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-                  <span className="text-sm text-slate-300">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-24">
+        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <aside className="border border-[#2a3142] bg-[#0b0f19] p-6">
+            <p className="text-xs uppercase tracking-[0.14em] text-[#9ca8c3]">Inquiry profile</p>
+            <ul className="mt-4 space-y-3 text-sm leading-7 text-[#c2cce0]">
+              <li>• Private infrastructure scope</li>
+              <li>• Model and agent routing context</li>
+              <li>• Deployment governance requirements</li>
+              <li>• Operational timeline and constraints</li>
+            </ul>
+          </aside>
 
-          <SurfaceCard>
+          <div className="border border-[#2a3142] bg-[#0b0f19] p-6">
             {ok ? (
-              <div className="py-12">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Inquiry received</p>
-                <h2 className="mt-4 text-2xl font-black text-white">Your restricted access request is under review.</h2>
-                <p className="mt-3 text-sm text-slate-400">We will respond through the provided contact if the inquiry meets access criteria.</p>
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#9ca8c3]">Inquiry received</p>
+                <p className="mt-4 text-sm leading-7 text-[#cad2e6]">Your operational inquiry has been recorded. Follow-up will be sent to the provided contact.</p>
               </div>
             ) : (
               <form className="space-y-4" onSubmit={onSubmit}>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">Restricted inquiry</p>
-                <label className="block text-xs text-slate-400">
-                  Full name
+                <label className="block text-xs uppercase tracking-[0.12em] text-[#94a0bc]">
+                  Name
                   <input
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                    className="mt-2 w-full border border-[#2d3448] bg-[#0a0d16] px-3 py-3 text-sm text-[#e6ebf8] outline-none focus:border-[#6e7dc4]"
                     required
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
                 </label>
-                <label className="block text-xs text-slate-400">
-                  Work email
+                <label className="block text-xs uppercase tracking-[0.12em] text-[#94a0bc]">
+                  Email
                   <input
                     type="email"
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                    className="mt-2 w-full border border-[#2d3448] bg-[#0a0d16] px-3 py-3 text-sm text-[#e6ebf8] outline-none focus:border-[#6e7dc4]"
                     required
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                   />
                 </label>
-                <label className="block text-xs text-slate-400">
-                  What are you building?
+                <label className="block text-xs uppercase tracking-[0.12em] text-[#94a0bc]">
+                  Operating environment
                   <input
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                    className="mt-2 w-full border border-[#2d3448] bg-[#0a0d16] px-3 py-3 text-sm text-[#e6ebf8] outline-none focus:border-[#6e7dc4]"
                     required
-                    value={form.building}
-                    onChange={(e) => setForm({ ...form, building: e.target.value })}
+                    value={form.operation}
+                    onChange={(e) => setForm({ ...form, operation: e.target.value })}
                   />
                 </label>
-                <label className="block text-xs text-slate-400">
-                  Required capabilities
+                <label className="block text-xs uppercase tracking-[0.12em] text-[#94a0bc]">
+                  Current scope
                   <input
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
-                    placeholder="Studio, Workbench, agents, memory, approvals"
-                    value={form.capabilities}
-                    onChange={(e) => setForm({ ...form, capabilities: e.target.value })}
+                    className="mt-2 w-full border border-[#2d3448] bg-[#0a0d16] px-3 py-3 text-sm text-[#e6ebf8] outline-none focus:border-[#6e7dc4]"
+                    value={form.scope}
+                    onChange={(e) => setForm({ ...form, scope: e.target.value })}
                   />
                 </label>
-                <label className="block text-xs text-slate-400">
-                  Operational context
+                <label className="block text-xs uppercase tracking-[0.12em] text-[#94a0bc]">
+                  Notes
                   <textarea
                     rows={5}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none focus:border-cyan-300/50"
+                    className="mt-2 w-full border border-[#2d3448] bg-[#0a0d16] px-3 py-3 text-sm text-[#e6ebf8] outline-none focus:border-[#6e7dc4]"
                     value={form.message}
                     onChange={(e) => setForm({ ...form, message: e.target.value })}
                   />
                 </label>
-                {error && <p className="text-xs text-red-300">Unable to submit right now. Please retry.</p>}
+                {error && <p className="text-xs text-[#f0a9b1]">Unable to submit right now. Please retry.</p>}
                 <button
                   disabled={loading}
-                  className="rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100 disabled:opacity-50"
+                  className="border border-[#3a4561] bg-[#10162a] px-5 py-3 text-xs uppercase tracking-[0.13em] text-[#dde4f8] transition hover:bg-[#151c33] disabled:opacity-50"
                   type="submit"
                 >
-                  {loading ? 'Sending…' : 'Send restricted inquiry'}
+                  {loading ? 'Sending' : 'Submit inquiry'}
                 </button>
               </form>
             )}
-          </SurfaceCard>
-        </SectionInner>
-      </SectionWrap>
+          </div>
+        </div>
+      </section>
     </PublicShell>
   )
 }

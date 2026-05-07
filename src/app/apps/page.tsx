@@ -1,85 +1,44 @@
 import PublicShell from '@/components/public/PublicShell'
-import CommandConstellationScene from '@/components/public/CommandConstellationScene'
-import { SectionInner, SectionWrap, SurfaceCard } from '@/components/public/PublicSection'
 
-const meshCapabilities = [
-  { label: 'App-specific agent orchestration', desc: 'Specialist agents attach to each product surface and operate within its context.' },
-  { label: 'Workflow automation pipelines',    desc: 'Instruction flows convert into multi-step automated sequences with approval checkpoints.' },
-  { label: 'Memory-informed decisions',        desc: 'Persistent memory across apps ensures each action builds on prior operational knowledge.' },
-  { label: 'Deployment confidence controls',   desc: 'Checks, previews, and staged rollouts reduce risk at every deployment boundary.' },
-  { label: 'Cross-app signal propagation',     desc: 'Events in one app surface inform agents and routing decisions across the entire network.' },
-  { label: 'Guarded autonomy',                 desc: 'Approval gates prevent high-impact actions from executing without operator review.' },
-]
-
-const agentTypes = [
-  'Coding agents',
-  'Repo audit agents',
-  'Deployment agents',
-  'Research agents',
-  'Operations agents',
-  'Safety agents',
-  'Creative agents',
-  'Media workflow agents',
+const network = [
+  { app: 'Repository Workbench', agents: 'Planner, Patch, QA, Release', role: 'Code path governance' },
+  { app: 'Studio', agents: 'Research, Media, Transcript, Artifact', role: 'Multimodal execution' },
+  { app: 'Operations', agents: 'Runtime, Queue, Policy, Audit', role: 'Infrastructure control' },
+  { app: 'Memory', agents: 'Context index, Retrieval, Session link', role: 'Historical continuity' },
 ]
 
 export default function AppsPage() {
   return (
     <PublicShell>
-      {/* HERO */}
-      <section className="relative overflow-hidden pb-12 pt-20 lg:pt-28">
-        <div className="pointer-events-none absolute inset-0 opacity-40">
-          <CommandConstellationScene variant="ambient" className="h-full w-full" />
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#020612]/40 via-transparent to-[#020612]/80" />
-        <SectionInner className="relative z-10">
-          <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Apps & Agent Orchestration</p>
-          <h1 className="mt-5 max-w-4xl text-5xl font-black leading-[1.04] tracking-[-0.05em] text-white sm:text-6xl">
-            Every app becomes part of the same intelligent command network.
-          </h1>
-          <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-300">
-            Connect products, attach specialist agents, wire Workbench automation flows, and keep every action tied to runtime truth, persistent memory, and governed approvals.
-          </p>
-        </SectionInner>
+      <section className="mx-auto max-w-7xl px-5 pb-12 pt-16 lg:px-8 lg:pt-24">
+        <p className="text-xs uppercase tracking-[0.2em] text-[#95a0bc]">Apps</p>
+        <h1 className="mt-6 max-w-5xl text-4xl font-semibold leading-tight tracking-[-0.03em] text-[#edf1fb] sm:text-5xl">
+          Connected applications and assigned agents form one operating network.
+        </h1>
       </section>
 
-      {/* APP MESH */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">App Mesh</p>
-          <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-            Applications orchestrated as one connected mesh.
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg text-slate-300">
-            Each application connects into the command network. Agents, memory, and deployment flows are shared across the mesh — reducing redundancy and compounding operational intelligence over time.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {meshCapabilities.map((item) => (
-              <SurfaceCard key={item.label}>
-                <p className="text-sm font-black text-white">{item.label}</p>
-                <p className="mt-3 text-xs leading-6 text-slate-400">{item.desc}</p>
-              </SurfaceCard>
-            ))}
+      <section className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+        <div className="overflow-hidden border border-[#2a3142] bg-[#0b0f19]">
+          <div className="grid border-b border-[#2a3142] bg-[#0c1120] p-4 text-xs uppercase tracking-[0.14em] text-[#9da8c4] md:grid-cols-[1.1fr_1.3fr_1fr]">
+            <span>Application</span>
+            <span>Assigned agents</span>
+            <span>Operational role</span>
           </div>
-        </SectionInner>
-      </SectionWrap>
+          {network.map((row) => (
+            <div key={row.app} className="grid gap-2 border-b border-[#1f2432] p-4 last:border-b-0 md:grid-cols-[1.1fr_1.3fr_1fr]">
+              <p className="text-sm font-medium text-[#edf0fa]">{row.app}</p>
+              <p className="text-sm text-[#cad2e6]">{row.agents}</p>
+              <p className="text-sm text-[#b4bed5]">{row.role}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* AGENT TYPES */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Specialist Agent System</p>
-          <h2 className="mt-4 text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-            Purpose-built agents for every operation type.
-          </h2>
-          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {agentTypes.map((agent) => (
-              <div key={agent} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
-                <span className="text-sm font-medium text-slate-200">{agent}</span>
-              </div>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
+      <section className="mx-auto max-w-7xl px-5 pb-20 pt-10 lg:px-8 lg:pb-24">
+        <p className="max-w-4xl border-t border-[#2a3142] pt-8 text-sm leading-8 text-[#b9c2d8]">
+          Agent assignments remain bound to application context while sharing route policies, memory systems, artifact storage, and deployment controls.
+        </p>
+      </section>
     </PublicShell>
   )
 }
