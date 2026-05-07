@@ -18,7 +18,7 @@ function read(rel: string) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8')
 }
 
-describe('public website rebuild', () => {
+describe('public website rebuild — cinematic command constellation', () => {
   it('public pages render from one shared website shell', () => {
     for (const page of PUBLIC_PAGES) {
       const source = read(page)
@@ -26,13 +26,23 @@ describe('public website rebuild', () => {
     }
   })
 
-  it('homepage is rebuilt with new flagship sections', () => {
+  it('homepage is rebuilt with cinematic command constellation sections', () => {
     const source = read('app/page.tsx')
-    expect(source).toContain('self-learning superbrain')
-    expect(source).toContain('Living Superbrain')
+    expect(source).toContain('CommandConstellationScene')
+    expect(source).toContain('Command Layer')
     expect(source).toContain('Amarktai Assistant')
     expect(source).toContain('Prompt')
     expect(source).toContain('Deploy')
+    expect(source).toContain('Workbench')
+    expect(source).toContain('Operations')
+  })
+
+  it('homepage does not contain old superbrain branding', () => {
+    const source = read('app/page.tsx')
+    expect(source).not.toContain('superbrain')
+    expect(source).not.toContain('Superbrain')
+    expect(source).not.toContain('Living Superbrain')
+    expect(source).not.toContain('self-learning superbrain')
   })
 
   it('hidden login behavior is preserved with typed login reveal', () => {
@@ -52,14 +62,28 @@ describe('public website rebuild', () => {
   })
 
   it('public sources do not contain retired or internal public branding', () => {
-    const files = [...PUBLIC_PAGES, 'components/public/PublicShell.tsx', 'components/public/SuperbrainScene.tsx']
-    const retiredName = String.fromCharCode(65, 105, 118, 97)
+    const files = [
+      ...PUBLIC_PAGES,
+      'components/public/PublicShell.tsx',
+      'components/public/CommandConstellationScene.tsx',
+    ]
+    const retiredName = String.fromCharCode(65, 105, 118, 97) // character codes only — literal string avoided to prevent grep false positives
     for (const file of files) {
       const source = read(file)
       expect(source, file).not.toContain(retiredName)
       expect(source, file).not.toContain('GenX')
       expect(source, file).not.toContain('Powered by GenX')
+      expect(source, file).not.toContain('superbrain')
+      expect(source, file).not.toContain('Superbrain')
     }
+  })
+
+  it('old SuperbrainScene component is removed and CommandConstellationScene replaces it', () => {
+    expect(fs.existsSync(path.join(ROOT, 'components/public/SuperbrainScene.tsx'))).toBe(false)
+    expect(fs.existsSync(path.join(ROOT, 'components/public/CommandConstellationScene.tsx'))).toBe(true)
+    const scene = read('components/public/CommandConstellationScene.tsx')
+    expect(scene).toContain('CommandConstellationScene')
+    expect(scene).not.toContain('superbrain')
   })
 
   it('old public components and duplicate landing route are removed', () => {
@@ -71,6 +95,7 @@ describe('public website rebuild', () => {
       'components/visual/NetworkPulseBackground.tsx',
       'components/voice/VoiceAccessVisualizer.tsx',
       'app/about-amarktai-network/page.tsx',
+      'components/public/SuperbrainScene.tsx',
     ]
     for (const rel of removed) {
       expect(fs.existsSync(path.join(ROOT, rel)), rel).toBe(false)
