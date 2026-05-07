@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { decryptVaultKey } from '@/lib/crypto-vault'
-import { getStorageStatus } from '@/lib/storage-driver'
+import { getStorageRoot, getStorageStatus, verifyStorage } from '@/lib/storage-driver'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -76,35 +76,17 @@ export async function POST(req: NextRequest) {
 
   // ── VPS Local (persistent) ──
   if (driver === 'local_vps') {
-    const VPS_BASE = '/var/www/amarktai/storage'
-    const REQUIRED_SUBDIRS = ['artifacts', 'workspaces', 'repos', 'uploads', 'logs']
     const start = Date.now()
-    try {
-      const { mkdir, writeFile, unlink } = await import('fs/promises')
-      // Ensure all required subdirectories exist
-      await Promise.all([
-        mkdir(VPS_BASE, { recursive: true }),
-        ...REQUIRED_SUBDIRS.map(sub => mkdir(`${VPS_BASE}/${sub}`, { recursive: true })),
-      ])
-      const testFile = `${VPS_BASE}/.write-test-${Date.now()}`
-      await writeFile(testFile, 'test')
-      await unlink(testFile)
-      return NextResponse.json({
-        success: true,
-        driver: 'local_vps',
-        persistent: true,
-        basePath: VPS_BASE,
-        subdirectories: REQUIRED_SUBDIRS,
-        latencyMs: Date.now() - start,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        success: false,
-        driver: 'local_vps',
-        error: `Write access test failed: ${err instanceof Error ? err.message : 'unknown error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
+    const health = await verifyStorage()
+    return NextResponse.json({
+      success: health.writable,
+      driver: 'local_vps',
+      persistent: true,
+      basePath: getStorageRoot(),
+      subdirectories: health.requiredDirectories,
+      error: health.error,
+      latencyMs: Date.now() - start,
+    })
   }
 
   // ── Local (ephemeral) ──

@@ -6,8 +6,14 @@ import {
   getToolsAsOpenAIFunctions,
   type ToolCall,
 } from '@/lib/tool-runtime'
+import { getSession } from '@/lib/session'
 
 export async function POST(req: NextRequest) {
+  const session = await getSession()
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const body = await req.json()
     const { action } = body
@@ -46,6 +52,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET() {
+  const session = await getSession()
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const tools = getAvailableTools()
     const schemas = getToolsAsOpenAIFunctions()

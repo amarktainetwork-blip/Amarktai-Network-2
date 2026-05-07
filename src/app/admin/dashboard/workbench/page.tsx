@@ -69,6 +69,13 @@ export default function WorkbenchPage() {
     }
   }, [])
 
+  const loadBranches = useCallback(async (nextRepo: string) => {
+    if (!nextRepo) return
+    const data = await call('Load branches', `/api/admin/repo-workbench/github/branches?repo=${encodeURIComponent(nextRepo)}`)
+    const nextBranches = Array.isArray(data.branches) ? data.branches as Branch[] : []
+    setBranches(nextBranches)
+  }, [call])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const incomingPrompt = params.get('prompt')
@@ -82,17 +89,11 @@ export default function WorkbenchPage() {
       if (nextRepos[0]) {
         setRepoFullName(nextRepos[0].full_name)
         setBranch('auto')
+        loadBranches(nextRepos[0].full_name).catch(() => null)
       }
       setCatalog(modelData?.universal ?? null)
     })
-  }, [call])
-
-  async function loadBranches(nextRepo = repoFullName) {
-    if (!nextRepo) return
-    const data = await call('Load branches', `/api/admin/repo-workbench/github/branches?repo=${encodeURIComponent(nextRepo)}`)
-    const nextBranches = Array.isArray(data.branches) ? data.branches as Branch[] : []
-    setBranches(nextBranches)
-  }
+  }, [call, loadBranches])
 
   async function ensureWorkspace() {
     if (workspace) return workspace
@@ -325,7 +326,7 @@ export default function WorkbenchPage() {
                   <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-200">{value}</pre>
                 </div>
               ))}
-              {Object.keys(log).length === 0 && <p className="text-sm font-semibold text-slate-500">Plan, files, diff, checks, commit, PR, and deploy logs appear here.</p>}
+              {Object.keys(log).length === 0 && <p className="text-sm font-semibold text-slate-500">Plan, files, diff, checks, commit, PR, and deploy logs appear here for the active browser session. Durable job persistence UI is pending.</p>}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={mergePr} disabled={!workspace || !prNumber || Boolean(loading)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-45">Merge when allowed</button>

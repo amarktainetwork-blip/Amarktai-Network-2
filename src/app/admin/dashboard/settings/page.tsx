@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Eye, EyeOff, Save } from 'lucide-react'
 import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
 import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
+import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
 const TOOL_KEYS = [
   { key: 'github', label: 'GitHub', description: 'Repository import, branches, PRs, merge, and deploy handoff.', placeholder: 'ghp_...' },
@@ -14,7 +15,29 @@ const TOOL_KEYS = [
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
 ]
 
+type SettingsTruth = {
+  providers: SettingsTruthEntry[]
+  tools: SettingsTruthEntry[]
+  storage: SettingsTruthEntry
+  connectedCount: number
+}
+
 export default function SettingsPage() {
+  const [truth, setTruth] = useState<SettingsTruth | null>(null)
+
+  useEffect(() => {
+    fetch('/api/admin/settings/status')
+      .then((response) => response.json())
+      .then((data) => setTruth(data.truth ?? null))
+      .catch(() => setTruth(null))
+  }, [])
+
+  const statusFor = (key: string, kind: 'provider' | 'tool' | 'storage') => {
+    if (kind === 'provider') return truth?.providers.find((item) => item.key === key)
+    if (kind === 'storage') return truth?.storage
+    return truth?.tools.find((item) => item.key === key)
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl lg:p-8">
@@ -23,6 +46,9 @@ export default function SettingsPage() {
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
           Configure the one universal provider catalog, assistant defaults, voice defaults, model defaults, GitHub, Webdock, research tools, storage, adult policy defaults, and deployment defaults.
         </p>
+        <div className="mt-5 inline-flex rounded-2xl border border-slate-200 bg-white/75 px-4 py-3 text-xs font-black text-slate-700">
+          Configured and testable keys: {truth?.connectedCount ?? 0}
+        </div>
       </section>
 
       <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
@@ -36,6 +62,7 @@ export default function SettingsPage() {
               label={provider.settingsLabel}
               description={provider.notes}
               placeholder={provider.envVars[0]}
+              truth={statusFor(provider.key, 'provider')}
             />
           ))}
         </div>
@@ -52,6 +79,7 @@ export default function SettingsPage() {
               label={tool.label}
               description={tool.description}
               placeholder={tool.placeholder}
+              truth={statusFor(tool.key, tool.key === 'storage' ? 'storage' : 'tool')}
             />
           ))}
         </div>
@@ -72,7 +100,7 @@ export default function SettingsPage() {
   )
 }
 
-function KeyForm({ keyId, type, label, description, placeholder }: { keyId: string; type: 'provider' | 'tool'; label: string; description: string; placeholder: string }) {
+function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyId: string; type: 'provider' | 'tool'; label: string; description: string; placeholder: string; truth?: SettingsTruthEntry }) {
   const [value, setValue] = useState('')
   const [show, setShow] = useState(false)
   const [status, setStatus] = useState('')
@@ -97,8 +125,14 @@ function KeyForm({ keyId, type, label, description, placeholder }: { keyId: stri
           <p className="text-sm font-black text-slate-950">{label}</p>
           <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500">Key vault</span>
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500">
+          {truth?.status ?? 'Needs key'}
+        </span>
       </div>
+      <p className="mt-3 text-[11px] font-semibold text-slate-500">
+        {truth?.testRoute ? `Status route: ${truth.testRoute}` : 'Needs test route'}
+        {truth?.source && truth.source !== 'missing' ? ` - source: ${truth.source}` : ''}
+      </p>
       <div className="mt-4 flex gap-2">
         <div className="relative flex-1">
           <input

@@ -12,9 +12,10 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { DEFAULT_VPS_STORAGE_ROOT, getUnifiedStorageRoot } from '@/lib/storage-root'
 
 export const REQUIRED_STORAGE_DRIVER = 'local_vps'
-export const DEFAULT_STORAGE_ROOT = '/var/www/amarktai/storage'
+export const DEFAULT_STORAGE_ROOT = DEFAULT_VPS_STORAGE_ROOT
 export const REQUIRED_STORAGE_DIRS = ['artifacts', 'uploads', 'repos', 'workspaces', 'logs'] as const
 
 export interface StoragePutResult {
@@ -51,8 +52,8 @@ export interface StorageHealth extends StorageStatus {
   error: string | null
 }
 
-function getStorageRoot(): string {
-  return process.env.STORAGE_ROOT?.trim() || DEFAULT_STORAGE_ROOT
+export function getStorageRoot(): string {
+  return getUnifiedStorageRoot()
 }
 
 function encodeStorageKey(key: string): string {
@@ -253,7 +254,7 @@ export function getStorageStatus(): StorageStatus {
     missingSetup.push(`Set STORAGE_DRIVER=${REQUIRED_STORAGE_DRIVER}`)
   }
   if (root !== DEFAULT_STORAGE_ROOT && process.env.NODE_ENV === 'production') {
-    missingSetup.push(`Set STORAGE_ROOT=${DEFAULT_STORAGE_ROOT}`)
+    missingSetup.push(`Set AMARKTAI_STORAGE_ROOT=${DEFAULT_STORAGE_ROOT}`)
   }
 
   const baseStatus = {
@@ -302,7 +303,7 @@ export function getStorageStatus(): StorageStatus {
     configured: false,
     persistent: false,
     basePath: LOCAL_BASE_DIR,
-    note: 'Local file storage is ephemeral. Set STORAGE_DRIVER=local_vps and STORAGE_ROOT=/var/www/amarktai/storage.',
+    note: 'Local file storage is ephemeral. Set STORAGE_DRIVER=local_vps and AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage.',
   }
 }
 

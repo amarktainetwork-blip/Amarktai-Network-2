@@ -1,6 +1,7 @@
 import path from 'path'
+import { resolveStoragePath } from '@/lib/storage-root'
 
-const DEFAULT_WORKSPACE_ROOT = '/var/amarktai/workspaces'
+const WORKSPACE_STORAGE_DIR = 'workspaces'
 
 export type AllowedWorkbenchCommand =
   | 'npm ci'
@@ -28,7 +29,7 @@ export const ALLOWED_WORKBENCH_COMMANDS: Record<AllowedWorkbenchCommand, { comma
 }
 
 export function getRepoWorkspaceRoot(): string {
-  return path.resolve(process.env.REPO_WORKSPACE_ROOT || DEFAULT_WORKSPACE_ROOT)
+  return path.resolve(process.env.REPO_WORKSPACE_ROOT || resolveStoragePath(WORKSPACE_STORAGE_DIR))
 }
 
 export function resolveWorkspacePath(...segments: string[]): string {

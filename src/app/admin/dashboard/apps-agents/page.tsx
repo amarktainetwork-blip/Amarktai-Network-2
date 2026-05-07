@@ -36,6 +36,11 @@ export default async function AppsAgentsPage() {
         <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">
           Apps run from this VPS and its subdomains. The Superbrain assigns model packages, agents, memory namespaces, storage namespaces, adult policy, deployment profiles, and operational status.
         </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {['Registry available', 'Create/edit UI pending', 'Assignment UI pending', 'Backend package store available'].map((status) => (
+            <span key={status} className="rounded-full border border-slate-200 bg-white/75 px-3 py-1.5 text-xs font-black text-slate-700">{status}</span>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
@@ -58,16 +63,7 @@ export default async function AppsAgentsPage() {
         </div>
 
         <div className="space-y-4">
-          {(packages.length ? packages : [{
-            appSlug: 'superbrain',
-            appName: 'AmarktAI Network',
-            domain: 'amarktai.network',
-            appType: 'operations',
-            modelStrategy: 'premium',
-            allowedCapabilities: ['chat', 'reasoning', 'coding', 'research', 'image', 'video', 'voice_tts', 'voice_stt', 'adult_text', 'adult_image', 'adult_video', 'adult_voice'],
-            budget: { mode: 'premium', monthlyUsd: 0, requiresApprovalAboveUsd: 0 },
-            adultPolicy: 'full_adult_app_mode',
-          }]).map((pkg) => (
+          {packages.map((pkg) => (
             <article key={pkg.appSlug} className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
@@ -86,6 +82,12 @@ export default async function AppsAgentsPage() {
               </div>
             </article>
           ))}
+          {!packages.length && (
+            <div className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+              <p className="text-lg font-black text-slate-950">No app packages saved yet.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Backend package store available. Create/edit and assignment UI wiring is pending, so this page does not show unsaved sample apps as real records.</p>
+            </div>
+          )}
         </div>
       </section>
 

@@ -2,17 +2,24 @@ import { listRecords, LOCAL_STORE_FILES, getStorageRoot, checkWritable } from '@
 import { getCostSummary } from '@/lib/cost-tracking'
 import { getResearchToolStatus } from '@/lib/research-tools'
 import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
 
 export default async function OperationsPage() {
-  const [costs, research, system] = await Promise.all([
+  const [costs, research, system, runtime] = await Promise.all([
     getCostSummary().catch(() => null),
     getResearchToolStatus().catch(() => null),
     getSystemRuntimeStatus().catch(() => null),
+    getDashboardRuntimeTruth().catch(() => null),
   ])
   const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
   const approvals = listRecords(LOCAL_STORE_FILES.approvals)
   const jobs = listRecords('jobs/jobs.json')
   const storage = checkWritable(LOCAL_STORE_FILES.artifacts)
+  const approvedProviderKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
+  const providerRows = (runtime?.providers ?? [])
+    .filter((provider) => approvedProviderKeys.has(provider.key as never))
+    .map((provider) => [provider.displayName, provider.configured ? provider.status : 'Needs key'])
 
   return (
     <div className="space-y-6">
@@ -54,6 +61,20 @@ export default async function OperationsPage() {
       </section>
 
       <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+        <h3 className="text-xl font-black text-slate-950">Provider health truth</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">Only approved visible AI providers are shown here. Status is derived from vault/env key resolution and runtime truth, not static claims.</p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {providerRows.map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-slate-200 bg-white/75 p-3">
+              <p className="text-xs font-black text-slate-950">{label}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">{value}</p>
+            </div>
+          ))}
+          {!providerRows.length && <p className="text-sm font-semibold text-slate-500">Runtime provider truth unavailable.</p>}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
         <h3 className="text-xl font-black text-slate-950">Recent expensive runs</h3>
         <div className="mt-5 space-y-2">
           {(costs?.recentExpensiveRuns ?? []).map((run) => (
@@ -61,7 +82,7 @@ export default async function OperationsPage() {
               ${run.estimatedCostUsd.toFixed(2)} - {run.appSlug} - {run.agentId ?? 'operator'} - {run.provider}/{run.model}
             </div>
           ))}
-          {!costs?.recentExpensiveRuns?.length && <p className="text-sm font-semibold text-slate-500">Cost monitoring is active; runs appear after Studio, Workbench, or agent execution.</p>}
+          {!costs?.recentExpensiveRuns?.length && <p className="text-sm font-semibold text-slate-500">No storage-backed cost runs recorded yet.</p>}
         </div>
       </section>
     </div>

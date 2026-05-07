@@ -11,7 +11,6 @@
 import { getServiceKey, getServiceConfigField } from '@/lib/service-vault'
 import { getProviderKeyWithSource, type CoreProvider } from '@/lib/provider-config'
 import {
-  getAdultSpecialistProviderKeys,
   getGenXCoveredProviderKeys,
   getRuntimeProviderGovernance,
   getWiredProviderKeys,
@@ -21,7 +20,7 @@ import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-
 
 const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
 const WIRED_PROVIDER_KEYS = getWiredProviderKeys()
-const ADULT_SPECIALIST_PROVIDER_KEYS = getAdultSpecialistProviderKeys()
+const ADULT_APPROVED_PROVIDER_KEYS = new Set(['genx', 'huggingface', 'together', 'openai', 'minimax'])
 
 function getLocalCoreStatus(): LocalCoreStatus {
   const memory = checkWritable(LOCAL_STORE_FILES.memory)
@@ -233,17 +232,13 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
     return providers.find(p => p.key === key)?.configured === true
   }
 
-  const envEnabled = process.env.ADULT_MODE_ENABLED?.trim().toLowerCase() === 'true'
-  const adultMode = await getServiceConfigField('adult_mode', 'mode', '').catch(() => null) ?? ''
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
   const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
   const savedProvider = await getServiceConfigField('adult_mode', 'providerType', '').catch(() => null) ?? ''
   const savedModel = await getServiceConfigField('adult_mode', 'providerModel', '').catch(() => null) ?? ''
 
-  const globalEnabled = envEnabled || adultMode === 'specialist'
-  const xaiKey = await resolveKey('xai')
-  const configuredProviders = [...ADULT_SPECIALIST_PROVIDER_KEYS].filter((key) => hasProvider(key))
-  if (xaiKey.hasKey && !configuredProviders.includes('xai')) configuredProviders.push('xai')
+  const globalEnabled = true
+  const configuredProviders = [...ADULT_APPROVED_PROVIDER_KEYS].filter((key) => hasProvider(key))
   const providerAvailable = configuredProviders.length > 0
   const selectedProvider = savedProvider && configuredProviders.includes(savedProvider)
     ? savedProvider
@@ -257,28 +252,18 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
     enabled: globalEnabled,
     selectedProvider,
     selectedModel: savedModel || null,
-    allowedCategories: ['consensual_adult_suggestive', 'adult_lingerie', 'adult_nudity_without_visible_genitals'],
-    blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'sexual_violence', 'real_person_sexual_deepfakes', 'explicit_sex_acts', 'visible_genitals', 'illegal_content', 'self_harm'],
+    allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
+    blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content', 'exploitation_abuse', 'self_harm_exploitation'],
     lastTestStatus: lastTestStatus || null,
     lastError: lastError || null,
     configuredProviders,
-  }
-
-  if (!globalEnabled) {
-    return {
-      ...base,
-      status: 'global_flag_disabled',
-      blocker: 'Adult mode is disabled. Enable it in Settings → Adult Mode (set mode to "Specialist provider only") or set ADULT_MODE_ENABLED=true.',
-      globalEnabled: false,
-      enabled: false,
-    }
   }
 
   if (!providerAvailable) {
     return {
       ...base,
       status: 'not_wired',
-      blocker: 'No specialist adult provider configured. Add Together AI, HuggingFace, Replicate, or xAI/Grok in Settings → AI Providers.',
+      blocker: 'No approved adult-capable provider key is configured. Add GenX, Hugging Face, Together AI, OpenAI, or MiniMax/Mimo in Settings.',
       providerAvailable: false,
     }
   }
@@ -289,8 +274,8 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
       ...base,
       status: lastTestStatus === 'failed' ? 'configured_with_last_error' : 'needs_provider_test',
       blocker: lastTestStatus === 'failed'
-        ? 'Last specialist provider test failed. Re-run "Test provider" in Settings → Adult Mode to confirm the provider works.'
-        : 'Specialist provider test has not been run. Run "Test provider" in Settings → Adult Mode to unlock adult generation.',
+        ? 'Last provider test failed. Re-run the provider test in Settings to confirm the provider works.'
+        : 'Provider key exists, but a live provider test has not been run yet.',
     }
   }
 
