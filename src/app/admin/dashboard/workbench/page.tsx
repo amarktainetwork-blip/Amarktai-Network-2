@@ -9,6 +9,17 @@ type Repo = { full_name: string; default_branch: string; private?: boolean }
 type Branch = { name: string; sha: string; isDefault?: boolean }
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
+type PersistedWorkbenchJob = {
+  id: string
+  workspaceId: string
+  workspace?: Workspace
+  userRequest?: string
+  plan?: unknown
+  changedFiles?: unknown
+  patch?: { id: string; diffText?: string; status?: string; branchName?: string; commitSha?: string | null; prUrl?: string | null }
+  logs?: string
+  status?: string
+}
 type StepId = 'Planning' | 'Files selected' | 'Patch prepared' | 'Checks running' | 'Commit ready' | 'PR ready' | 'Deploy ready'
 
 const timeline: StepId[] = ['Planning', 'Files selected', 'Patch prepared', 'Checks running', 'Commit ready', 'PR ready', 'Deploy ready']
@@ -29,6 +40,7 @@ export default function WorkbenchPage() {
   const [costMode, setCostMode] = useState<CostMode>('balanced')
   const [prompt, setPrompt] = useState('')
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const [currentJobId, setCurrentJobId] = useState('')
   const [patchId, setPatchId] = useState('')
   const [prNumber, setPrNumber] = useState<number | null>(null)
   const [loading, setLoading] = useState('')
@@ -76,6 +88,30 @@ export default function WorkbenchPage() {
     setBranches(nextBranches)
   }, [call])
 
+  const rehydrateJob = useCallback((job: PersistedWorkbenchJob | null | undefined) => {
+    if (!job?.workspace) return
+    const fullName = `${job.workspace.owner}/${job.workspace.repo}`
+    setCurrentJobId(job.id)
+    setWorkspace(job.workspace)
+    setRepoFullName(fullName)
+    setBranch(job.workspace.branch || 'auto')
+    setPrompt(job.userRequest ?? '')
+    setPatchId(job.patch?.id ?? '')
+    const prUrl = job.patch?.prUrl ?? ''
+    const match = prUrl.match(/\/pull\/(\d+)/)
+    setPrNumber(match ? Number(match[1]) : null)
+    setLog({
+      plan: asText(job.plan ?? {}),
+      files: asText(job.changedFiles ?? []),
+      diff: String(job.patch?.diffText ?? ''),
+      checks: job.logs ? String(job.logs) : '',
+      commit: job.patch?.commitSha ? asText({ branch: job.patch.branchName, commitSha: job.patch.commitSha }) : '',
+      pr: prUrl,
+    })
+    setStepStatus(statusForPersistedJob(job))
+    loadBranches(fullName).catch(() => null)
+  }, [loadBranches])
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const incomingPrompt = params.get('prompt')
@@ -83,17 +119,20 @@ export default function WorkbenchPage() {
     Promise.all([
       call('Load repos', '/api/admin/repo-workbench/github/repos').catch(() => null),
       fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
-    ]).then(([repoData, modelData]) => {
+      incomingPrompt ? Promise.resolve(null) : fetch('/api/admin/repo-workbench/jobs/latest').then((response) => response.json()).catch(() => null),
+    ]).then(([repoData, modelData, latestData]) => {
       const nextRepos = Array.isArray(repoData?.repos) ? repoData!.repos as Repo[] : []
       setRepos(nextRepos)
-      if (nextRepos[0]) {
+      if (latestData?.job) {
+        rehydrateJob(latestData.job as PersistedWorkbenchJob)
+      } else if (nextRepos[0]) {
         setRepoFullName(nextRepos[0].full_name)
         setBranch('auto')
         loadBranches(nextRepos[0].full_name).catch(() => null)
       }
       setCatalog(modelData?.universal ?? null)
     })
-  }, [call, loadBranches])
+  }, [call, loadBranches, rehydrateJob])
 
   async function ensureWorkspace() {
     if (workspace) return workspace
@@ -130,6 +169,7 @@ export default function WorkbenchPage() {
       body: JSON.stringify(payload()),
     })
     const task = plan.task as { id?: string } | undefined
+    setCurrentJobId(String(task?.id ?? plan.taskId ?? ''))
     setLog((current) => ({ ...current, plan: asText(plan.plan ?? plan.planJson ?? plan.task ?? plan) }))
     updateStep('Planning', 'done')
     updateStep('Files selected', 'done')
@@ -239,6 +279,7 @@ export default function WorkbenchPage() {
           </div>
           <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-xs font-bold text-cyan-900">
             Token-safe GitHub auth, branch validation, path checks, artifact logs, guarded merge and deploy.
+            {currentJobId && <span className="mt-1 block">Resumed persisted job: {currentJobId}</span>}
           </div>
         </div>
       </section>
@@ -326,7 +367,7 @@ export default function WorkbenchPage() {
                   <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-200">{value}</pre>
                 </div>
               ))}
-              {Object.keys(log).length === 0 && <p className="text-sm font-semibold text-slate-500">Plan, files, diff, checks, commit, PR, and deploy logs appear here for the active browser session. Durable job persistence UI is pending.</p>}
+              {Object.keys(log).length === 0 && <p className="text-sm font-semibold text-slate-500">Plan, files, diff, checks, commit, PR, and deploy logs appear here. The latest persisted Workbench job is rehydrated from the backend when you return.</p>}
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <button onClick={mergePr} disabled={!workspace || !prNumber || Boolean(loading)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 disabled:opacity-45">Merge when allowed</button>
@@ -359,4 +400,20 @@ function MainButton({ label, onClick, disabled, loading, icon }: { label: string
       {label}
     </button>
   )
+}
+
+function statusForPersistedJob(job: PersistedWorkbenchJob): Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'> {
+  const base: Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'> = {
+    Planning: job.plan ? 'done' : 'waiting',
+    'Files selected': Array.isArray(job.changedFiles) && job.changedFiles.length ? 'done' : job.plan ? 'done' : 'waiting',
+    'Patch prepared': job.patch ? 'needs-approval' : 'waiting',
+    'Checks running': job.logs ? 'done' : 'waiting',
+    'Commit ready': job.patch?.commitSha ? 'done' : 'waiting',
+    'PR ready': job.patch?.prUrl ? 'done' : job.patch?.commitSha ? 'needs-approval' : 'waiting',
+    'Deploy ready': job.patch?.prUrl ? 'needs-approval' : 'waiting',
+  }
+  if (job.patch?.status === 'applied') base['Checks running'] = 'needs-approval'
+  if (job.patch?.status === 'committed') base['PR ready'] = 'needs-approval'
+  if (job.patch?.status === 'pr_created') base['Deploy ready'] = 'needs-approval'
+  return base
 }

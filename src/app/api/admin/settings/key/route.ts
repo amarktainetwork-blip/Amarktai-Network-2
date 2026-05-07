@@ -31,13 +31,22 @@ export async function POST(request: NextRequest) {
       apiKey: encryptVaultKey(parsed.data.value),
       displayName: parsed.data.label,
       enabled: true,
+      notes: JSON.stringify({
+        type: parsed.data.type,
+        savedAt: new Date().toISOString(),
+        lastTestStatus: 'needs_live_test',
+      }),
     },
     create: {
       key: parsed.data.key,
       displayName: parsed.data.label,
       apiKey: encryptVaultKey(parsed.data.value),
       enabled: true,
-      notes: JSON.stringify({ type: parsed.data.type, savedAt: new Date().toISOString() }),
+      notes: JSON.stringify({
+        type: parsed.data.type,
+        savedAt: new Date().toISOString(),
+        lastTestStatus: 'needs_live_test',
+      }),
     },
   })
 

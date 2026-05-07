@@ -53,13 +53,27 @@ describe('Phase 1 platform truth stabilization', () => {
       'OpenAI',
     ])
     expect(settings).toContain('/api/admin/settings/status')
-    expect(settings).toContain('Configured and testable keys')
+    expect(settings).toContain('Connected keys with passed live tests')
     for (const banned of ['DeepSeek', 'Google Gemini', 'OpenRouter', 'Replicate', 'ElevenLabs', 'Webdock AI']) {
       expect(settings).not.toContain(banned)
     }
   })
 
   it('provider connected count only counts configured entries with test/status routes', async () => {
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: {
+        integrationConfig: {
+          findUnique: vi.fn(async ({ where }: { where: { key: string } }) => (
+            where.key === 'genx'
+              ? { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }) }
+              : null
+          )),
+        },
+        gitHubConfig: {
+          findFirst: vi.fn(async () => ({ lastValidatedAt: new Date('2026-05-07T00:00:00Z') })),
+        },
+      },
+    }))
     vi.doMock('@/lib/provider-config', () => ({
       getProviderKeyWithSource: vi.fn(async (key: string) => ({
         key: key === 'genx' || key === 'github' ? `${key}_configured_token` : null,
@@ -70,7 +84,7 @@ describe('Phase 1 platform truth stabilization', () => {
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const truth = await getPlatformSettingsTruth()
     expect(truth.connectedCount).toBe(2)
-    expect(truth.providers.find((provider) => provider.key === 'genx')?.status).toBe('Configured')
+    expect(truth.providers.find((provider) => provider.key === 'genx')?.status).toBe('Connected')
     expect(truth.providers.find((provider) => provider.key === 'groq')?.status).toBe('Needs key')
     expect(truth.tools.find((tool) => tool.key === 'firecrawl')?.status).toBe('Needs key')
     expect(truth.storage.connected).toBe(true)
@@ -113,8 +127,10 @@ describe('Phase 1 platform truth stabilization', () => {
 
   it('makes Studio media tabs truthful instead of claiming complete wiring', () => {
     const studio = read('app/admin/dashboard/page.tsx')
+    const routeMap = read('lib/studio-route-map.ts')
     const streamRoute = read('app/api/admin/amarktai-assistant/stream/route.ts')
-    expect(studio).toContain('Backend route available, UI wiring pending')
+    expect(studio).toContain('/api/admin/studio/execute')
+    expect(routeMap).toContain('Backend missing - Phase 3/provider-specific implementation required.')
     expect(streamRoute).toContain('Selected provider streaming pending')
     expect(studio).not.toContain('Studio is ready for')
   })

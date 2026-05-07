@@ -1336,17 +1336,57 @@ export async function runWorkbenchCommand(workspaceId: string, commandLabel: str
 }
 
 export async function getWorkbenchJob(jobId: string) {
-  const task = await prisma.repoTask.findUnique({ where: { id: jobId } })
+  const task = await prisma.repoTask.findUnique({
+    where: { id: jobId },
+    include: {
+      workspace: true,
+      patches: { orderBy: { updatedAt: 'desc' }, take: 1 },
+    },
+  })
   if (!task) throw new Error('Job not found')
+  const patch = task.patches[0] ?? null
   return {
     id: task.id,
     workspaceId: task.repoWorkspaceId,
+    workspace: {
+      id: task.workspace.id,
+      owner: task.workspace.owner,
+      repo: task.workspace.repo,
+      branch: task.workspace.branch,
+      currentCommit: task.workspace.currentCommit,
+      status: task.workspace.status,
+    },
     title: task.title,
+    userRequest: task.userRequest,
+    selectedModel: task.selectedModel,
+    selectedModelTier: task.selectedModelTier,
     status: task.status === 'completed' ? 'passed' : task.status,
-    artifactIds: JSON.parse(task.artifactIdsJson || '[]') as string[],
+    plan: parseJsonSafe(task.planJson, {}),
+    changedFiles: parseJsonSafe(task.changedFilesJson, []),
+    testStatus: task.testStatus,
+    buildStatus: task.buildStatus,
+    artifactIds: parseJsonSafe(task.artifactIdsJson, []),
+    patch: patch ? {
+      id: patch.id,
+      title: patch.title,
+      diffText: patch.diffText,
+      status: patch.status,
+      branchName: patch.branchName,
+      commitSha: patch.commitSha,
+      prUrl: patch.prUrl,
+      artifactId: patch.artifactId,
+      updatedAt: patch.updatedAt,
+    } : null,
+    logs: await getWorkbenchJobLogs(task.id),
     createdAt: task.createdAt,
     updatedAt: task.updatedAt,
   }
+}
+
+export async function getLatestWorkbenchJob() {
+  const task = await prisma.repoTask.findFirst({ orderBy: { updatedAt: 'desc' }, select: { id: true } })
+  if (!task) return null
+  return getWorkbenchJob(task.id)
 }
 
 export async function getWorkbenchJobLogs(jobId: string) {
@@ -1355,6 +1395,14 @@ export async function getWorkbenchJobLogs(jobId: string) {
     return redactSecretsFromLogs(await fs.readFile(logPath, 'utf8'))
   } catch {
     return ''
+  }
+}
+
+function parseJsonSafe<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw || '') as T
+  } catch {
+    return fallback
   }
 }
 

@@ -47,7 +47,7 @@ export default function SettingsPage() {
           Configure the one universal provider catalog, assistant defaults, voice defaults, model defaults, GitHub, Webdock, research tools, storage, adult policy defaults, and deployment defaults.
         </p>
         <div className="mt-5 inline-flex rounded-2xl border border-slate-200 bg-white/75 px-4 py-3 text-xs font-black text-slate-700">
-          Configured and testable keys: {truth?.connectedCount ?? 0}
+          Connected keys with passed live tests: {truth?.connectedCount ?? 0}
         </div>
       </section>
 
