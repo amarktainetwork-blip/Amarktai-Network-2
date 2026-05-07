@@ -39,21 +39,25 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl lg:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-700">Settings</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">Provider keys, routing defaults, and deployment controls.</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          Configure the one universal provider catalog, assistant defaults, voice defaults, model defaults, GitHub, Webdock, research tools, storage, adult policy defaults, and deployment defaults.
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl lg:p-7">
+        <div className="pointer-events-none absolute right-0 top-0 h-48 w-72 rounded-bl-[6rem] bg-gradient-to-br from-sky-500/8 via-cyan-500/5 to-transparent blur-3xl" />
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Settings</p>
+        <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Provider keys, routing, and deployment.</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Configure AI providers, voice defaults, model routing, GitHub, Webdock, research tools, storage, adult policy, and deployment defaults.
         </p>
-        <div className="mt-5 inline-flex rounded-2xl border border-slate-200 bg-white/75 px-4 py-3 text-xs font-black text-slate-700">
-          Connected keys with passed live tests: {truth?.connectedCount ?? 0}
+        <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2">
+          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+          <p className="text-xs font-bold text-slate-300">Connected keys with passed live tests: {truth?.connectedCount ?? 0}</p>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-        <h2 className="text-xl font-black text-slate-950">AI providers</h2>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      {/* AI Providers */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">AI providers</h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {APPROVED_AI_PROVIDERS.map((provider) => (
             <KeyForm
               key={provider.key}
@@ -68,9 +72,10 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-        <h2 className="text-xl font-black text-slate-950">Tools and system services</h2>
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      {/* Tools & Services */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Tools & system services</h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {TOOL_KEYS.map((tool) => (
             <KeyForm
               key={tool.key}
@@ -85,14 +90,15 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-        <h2 className="text-xl font-black text-slate-950">Adult policy defaults</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Adult capability is app-policy gated and uses the same approved providers. It does not require a separate adult key.
+      {/* Adult policy */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Adult policy defaults</h2>
+        <p className="mt-1.5 max-w-3xl text-xs leading-5 text-slate-500">
+          Adult capability is app-policy gated and uses approved providers — it does not require a separate adult key.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {ADULT_POLICY_VALUES.map((policy) => (
-            <span key={policy} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-800">{policy}</span>
+            <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>
           ))}
         </div>
       </section>
@@ -105,9 +111,15 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
   const [show, setShow] = useState(false)
   const [status, setStatus] = useState('')
 
+  const statusColor = truth?.status === 'Connected' || truth?.status === 'Configured'
+    ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
+    : truth?.status === 'Configured - needs live test' || truth?.status === 'Needs key' || truth?.status === 'Needs live test'
+      ? 'border-amber-500/20 bg-amber-500/8 text-amber-400'
+      : 'border-slate-700/40 bg-slate-800/40 text-slate-500'
+
   async function saveKey() {
     if (!value.trim()) return
-    setStatus('Saving')
+    setStatus('Saving…')
     const response = await fetch('/api/admin/settings/key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,21 +131,22 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
   }
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white/75 p-4 shadow-sm">
+    <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-black text-slate-950">{label}</p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+          <p className="text-sm font-black text-slate-200">{label}</p>
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">{description}</p>
         </div>
-        <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500">
+        <span className={['rounded-full border px-2 py-0.5 text-[10px] font-bold', statusColor].join(' ')}>
           {truth?.status ?? 'Needs key'}
         </span>
       </div>
-      <p className="mt-3 text-[11px] font-semibold text-slate-500">
-        {truth?.testRoute ? `Status route: ${truth.testRoute}` : 'Needs test route'}
-        {truth?.source && truth.source !== 'missing' ? ` - source: ${truth.source}` : ''}
-      </p>
-      <div className="mt-4 flex gap-2">
+      {truth?.testRoute && (
+        <p className="mt-2 text-[10px] font-semibold text-slate-600">
+          {truth.testRoute}{truth.source && truth.source !== 'missing' ? ` · ${truth.source}` : ''}
+        </p>
+      )}
+      <div className="mt-3 flex gap-2">
         <div className="relative flex-1">
           <input
             value={value}
@@ -141,23 +154,23 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
             type={show ? 'text' : 'password'}
             autoComplete="new-password"
             placeholder={placeholder}
-            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 pr-10 text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
+            className="w-full rounded-xl border border-slate-700/50 bg-slate-900/60 px-3 py-2 pr-9 text-sm font-semibold text-slate-300 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20"
           />
           <button
             type="button"
-            onClick={() => setShow((next) => !next)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:text-slate-950"
+            onClick={() => setShow((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:text-slate-300"
             aria-label={show ? 'Hide key' : 'Show key'}
           >
-            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
           </button>
         </div>
-        <button onClick={saveKey} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-sm font-black text-white hover:bg-slate-800">
-          <Save className="h-4 w-4" />
+        <button onClick={saveKey} className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-500 px-3 py-2 text-sm font-black text-slate-950 transition hover:bg-cyan-400">
+          <Save className="h-3.5 w-3.5" />
           Save
         </button>
       </div>
-      {status && <p className="mt-2 text-xs text-slate-500">{status}</p>}
+      {status && <p className="mt-1.5 text-xs font-semibold text-slate-500">{status}</p>}
     </div>
   )
 }

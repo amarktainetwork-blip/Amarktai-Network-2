@@ -220,192 +220,212 @@ export default function StudioPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-white/70 bg-white/70 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
-        <div className="relative p-6 lg:p-8">
-          <div className="absolute right-0 top-0 h-44 w-80 rounded-bl-[8rem] bg-gradient-to-br from-cyan-300/55 via-indigo-300/35 to-transparent blur-2xl" />
-          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-700">Studio</p>
-              <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-tight text-slate-950 lg:text-5xl">The Superbrain workspace.</h2>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600">
-                Chat, code, research, generate media, manage voice, use app-aware memory, and hand work to the autonomous Workbench from one console.
-              </p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <StudioMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
-              <StudioMetric label="Models/tasks" value={String(catalog?.models.length ?? 0)} />
-              <StudioMetric label="GenX catalog" value={catalog?.genx.live ? 'Live' : 'Fallback'} />
-            </div>
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-[0_0_60px_rgba(34,211,238,0.04)] backdrop-blur-xl lg:p-7">
+        <div className="pointer-events-none absolute right-0 top-0 h-60 w-80 rounded-bl-[8rem] bg-gradient-to-br from-cyan-500/10 via-indigo-500/8 to-transparent blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Studio</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">The Superbrain Workspace</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+              Chat · Code · Research · Image · Video · Audio · Voice · Artifacts — all wired to the real model router.
+            </p>
+          </div>
+          <div className="flex shrink-0 gap-3">
+            <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
+            <DarkMetric label="Models" value={String(catalog?.models.length ?? '…')} />
+            <DarkMetric label="GenX" value={catalog?.genx.live ? 'Live' : 'Fallback'} accent={catalog?.genx.live} />
           </div>
         </div>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[320px_1fr]">
-        <aside className="space-y-4 rounded-3xl border border-white/70 bg-white/60 p-4 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-          <div className="grid gap-2">
+      <section className="grid gap-4 lg:grid-cols-[240px_1fr]">
+        {/* Tab rail */}
+        <aside className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-3 backdrop-blur-xl">
+          <div className="space-y-0.5">
             {studioTabs.map((item) => (
               <button
                 key={item}
                 onClick={() => setTab(item)}
                 className={[
-                  'rounded-2xl px-3 py-2.5 text-left text-sm font-bold transition',
-                  tab === item ? 'bg-slate-950 text-white shadow-lg' : 'text-slate-500 hover:bg-white/70 hover:text-slate-950',
+                  'w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all',
+                  tab === item
+                    ? 'bg-cyan-500/10 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.06)]'
+                    : 'text-slate-500 hover:bg-slate-800/60 hover:text-slate-300',
                 ].join(' ')}
               >
                 {item}
               </button>
             ))}
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Context</p>
-            <div className="mt-3 space-y-2 text-xs text-slate-600">
-              <p className="flex items-center gap-2"><Brain className="h-4 w-4 text-cyan-700" /> Dashboard-aware context loaded</p>
-              <p className="flex items-center gap-2"><DatabaseZap className="h-4 w-4 text-cyan-700" /> Memory and emotion state available</p>
-              <p className="flex items-center gap-2"><FolderInput className="h-4 w-4 text-cyan-700" /> Workbench handoff enabled</p>
+          <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Context</p>
+            <div className="mt-2 space-y-1.5 text-xs text-slate-500">
+              <p className="flex items-center gap-2"><Brain className="h-3.5 w-3.5 text-cyan-500" /> Dashboard-aware context loaded</p>
+              <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Memory and emotion state available</p>
+              <p className="flex items-center gap-2"><FolderInput className="h-3.5 w-3.5 text-cyan-500" /> Workbench handoff enabled</p>
             </div>
           </div>
         </aside>
 
-        <div className="space-y-5">
-          <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-            <div className="grid gap-3 lg:grid-cols-5">
-              <Field label="Provider">
-                <select value={provider} onChange={(event) => setProvider(event.target.value)} className="input">
+        <div className="space-y-4">
+          {/* Model controls */}
+          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <DarkField label="Provider">
+                <select value={provider} onChange={(event) => setProvider(event.target.value)} className="dark-select">
                   <option value="auto">Auto routing</option>
                   {APPROVED_AI_PROVIDERS.map((item) => <option key={item.key} value={item.key}>{item.displayName}</option>)}
                 </select>
-              </Field>
-              <Field label="Model / task">
-                <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="input">
-                  <option value="auto">Auto resolved model</option>
-                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
+              </DarkField>
+              <DarkField label="Model / task">
+                <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="dark-select">
+                  <option value="auto">Auto resolved</option>
+                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} – {model.displayName}</option>)}
                 </select>
-              </Field>
-              <Field label="Cost mode">
-                <select value={costMode} onChange={(event) => setCostMode(event.target.value as CostMode)} className="input">
+              </DarkField>
+              <DarkField label="Cost mode">
+                <select value={costMode} onChange={(event) => setCostMode(event.target.value as CostMode)} className="dark-select">
                   <option value="cheap">cheap</option>
                   <option value="balanced">balanced</option>
                   <option value="premium">premium</option>
                 </select>
-              </Field>
-              <Field label="Voice">
-                <select value={voice} onChange={(event) => setVoice(event.target.value)} className="input">
-                  {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label} - {item.status}</option>)}
-                  {!context?.voice?.length && <option value="minimax">MiniMax/Mimo - Needs key/test</option>}
+              </DarkField>
+              <DarkField label="Voice">
+                <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
+                  {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
+                  {!context?.voice?.length && <option value="minimax">MiniMax/Mimo</option>}
                 </select>
-              </Field>
-              <Field label="Adult policy">
-                <select value={adultPolicy} onChange={(event) => setAdultPolicy(event.target.value)} className="input">
+              </DarkField>
+              <DarkField label="Adult policy">
+                <select value={adultPolicy} onChange={(event) => setAdultPolicy(event.target.value)} className="dark-select">
                   {(catalog?.adultPolicies ?? ['off', 'suggestive', 'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'full_adult_app_mode', 'specialist']).map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
-              </Field>
+              </DarkField>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-white/70 bg-white/70 p-5 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
+          {/* Workspace panel */}
+          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">{tab}</p>
-                <h3 className="mt-1 text-2xl font-black text-slate-950">Ask, generate, research, or route work.</h3>
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">{tab}</p>
+                <h3 className="mt-1 text-lg font-black text-slate-100">Ask, generate, research, or route work.</h3>
               </div>
-              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">{status || tabTruth.status}</span>
+              {(status || tabTruth.status) && (
+                <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-slate-400">
+                  {status || tabTruth.status}
+                </span>
+              )}
             </div>
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-sm font-semibold text-slate-600">
+            <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-xs font-semibold text-slate-500">
               {tabTruth.detail}
-            </div>
+            </p>
 
-            <div className="mt-5 h-[420px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            {/* Conversation / artifact area */}
+            <div className="mt-4 h-[380px] overflow-auto rounded-xl border border-slate-700/40 bg-slate-950/60 p-4">
               {tab === 'Artifacts' ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {artifacts.map((artifact) => (
-                    <div key={artifact.id} className="rounded-2xl border border-slate-200 bg-white p-3">
-                      <p className="text-sm font-black text-slate-900">{artifact.title || artifact.id}</p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{artifact.type} / {artifact.subType || 'artifact'} - {artifact.provider || 'stored'}</p>
-                      {artifact.storageUrl && <a href={artifact.storageUrl} className="mt-2 inline-block text-xs font-black text-cyan-700">Open artifact</a>}
+                    <div key={artifact.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 p-3">
+                      <p className="text-sm font-black text-slate-200">{artifact.title || artifact.id}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{artifact.type} / {artifact.subType || 'artifact'} — {artifact.provider || 'stored'}</p>
+                      {artifact.storageUrl && <a href={artifact.storageUrl} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open artifact ↗</a>}
                     </div>
                   ))}
                   {artifacts.length === 0 && <p className="text-sm font-semibold text-slate-500">No persisted artifacts returned yet.</p>}
                 </div>
-              ) : conversation.length === 0 && (
+              ) : conversation.length === 0 ? (
                 <div className="grid h-full place-items-center text-center">
                   <div>
-                    <Sparkles className="mx-auto h-10 w-10 text-cyan-700" />
-                    <p className="mt-3 text-sm font-bold text-slate-700">{tabTruth.status}</p>
-                    <p className="mt-1 text-xs text-slate-500">{tabTruth.detail}</p>
+                    <Sparkles className="mx-auto h-9 w-9 text-cyan-500/50" />
+                    <p className="mt-3 text-sm font-bold text-slate-500">{tabTruth.status}</p>
+                    <p className="mt-1 text-xs text-slate-600">{tabTruth.detail}</p>
                   </div>
                 </div>
-              )}
+              ) : null}
               <div className="space-y-3">
                 {conversation.map((entry, index) => (
-                  <div key={index} className={entry.role === 'user' ? 'ml-auto max-w-[78%] rounded-2xl bg-slate-950 p-3 text-sm text-white' : 'max-w-[82%] rounded-2xl border border-slate-200 bg-white p-3 text-sm leading-6 text-slate-700'}>
-                    {entry.content || (streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : '')}
+                  <div
+                    key={index}
+                    className={entry.role === 'user'
+                      ? 'ml-auto max-w-[78%] rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-3 py-2.5 text-sm text-cyan-100'
+                      : 'max-w-[82%] rounded-xl border border-slate-700/40 bg-slate-800/60 px-3 py-2.5 text-sm leading-6 text-slate-300'}
+                  >
+                    {entry.content || (streaming ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : '')}
                   </div>
                 ))}
               </div>
             </div>
+
             {audioPreview && <audio controls src={audioPreview} className="mt-3 w-full" />}
 
             {tab === 'STT / Transcription' && (
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white/75 p-3">
+              <div className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
                 <input
                   type="file"
                   accept="audio/*,video/*"
                   onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
-                  className="text-sm font-semibold text-slate-700"
+                  className="text-sm font-semibold text-slate-400"
                 />
               </div>
             )}
 
             {(tab === 'Image' || tab === 'Adult') && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Field label="Output mode">
-                  <select value={tab === 'Adult' ? adultMode : 'image'} onChange={(event) => setAdultMode(event.target.value as 'text' | 'image')} disabled={tab !== 'Adult'} className="input">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <DarkField label="Output mode">
+                  <select value={tab === 'Adult' ? adultMode : 'image'} onChange={(event) => setAdultMode(event.target.value as 'text' | 'image')} disabled={tab !== 'Adult'} className="dark-select">
                     {tab === 'Adult' && <option value="text">adult text</option>}
                     <option value="image">image</option>
                   </select>
-                </Field>
-                <Field label="Size">
-                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="input">
-                    <option value="1024x1024">1024x1024</option>
-                    <option value="1024x1792">1024x1792</option>
-                    <option value="1792x1024">1792x1024</option>
-                    <option value="768x768">768x768 adult image</option>
+                </DarkField>
+                <DarkField label="Size">
+                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="dark-select">
+                    <option value="1024x1024">1024×1024</option>
+                    <option value="1024x1792">1024×1792</option>
+                    <option value="1792x1024">1792×1024</option>
+                    <option value="768x768">768×768 adult</option>
                   </select>
-                </Field>
+                </DarkField>
               </div>
             )}
 
+            {/* Input + actions */}
             <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
               <textarea
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
-                rows={4}
+                rows={3}
                 placeholder={placeholderForTab(tab)}
-                className="min-h-28 resize-none rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
+                className="min-h-24 resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
               />
               <div className="flex flex-col gap-2">
-                <button onClick={runStudioAction} disabled={(tab !== 'Artifacts' && tab !== 'STT / Transcription' && !message.trim()) || streaming || executing || tab === 'Avatar / Talking Video'} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:opacity-45">
+                <button
+                  onClick={runStudioAction}
+                  disabled={(tab !== 'Artifacts' && tab !== 'STT / Transcription' && !message.trim()) || streaming || executing || tab === 'Avatar / Talking Video'}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)] transition hover:bg-cyan-400 disabled:opacity-40 disabled:shadow-none"
+                >
                   {streaming || executing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   {actionLabelForTab(tab)}
                 </button>
-                <button onClick={() => abortRef.current?.abort()} disabled={!streaming} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-45">
+                <button onClick={() => abortRef.current?.abort()} disabled={!streaming} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
                   <Play className="h-4 w-4" />
                   Stop
                 </button>
-                <button onClick={saveMemory} disabled={!conversation.length} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-45">
+                <button onClick={saveMemory} disabled={!conversation.length} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
                   <Save className="h-4 w-4" />
                   Save
                 </button>
               </div>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-black text-cyan-800 hover:bg-cyan-100">
-                Send coding task to Workbench <ArrowRight className="h-3.5 w-3.5" />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/8 px-3 py-1.5 text-xs font-bold text-cyan-400 hover:bg-cyan-500/15">
+                Send to Workbench <ArrowRight className="h-3 w-3" />
               </Link>
-              <Link href="/admin/dashboard/apps-agents" className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">
-                Send app idea to Apps & Agents <ArrowRight className="h-3.5 w-3.5" />
+              <Link href="/admin/dashboard/apps-agents" className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/40 bg-slate-800/40 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-800 hover:text-slate-300">
+                Send to Apps & Agents <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
           </section>
@@ -415,20 +435,20 @@ export default function StudioPage() {
   )
 }
 
-function StudioMetric({ label, value }: { label: string; value: string }) {
+function DarkMetric({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className="rounded-2xl border border-white/70 bg-white/65 px-4 py-3 shadow-sm">
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-black text-slate-950">{value}</p>
+    <div className={['rounded-xl border px-3 py-2.5', accent ? 'border-cyan-500/20 bg-cyan-500/8' : 'border-slate-700/40 bg-slate-800/40'].join(' ')}>
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
+      <p className={['mt-1 text-lg font-black', accent ? 'text-cyan-300' : 'text-slate-200'].join(' ')}>{value}</p>
     </div>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function DarkField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</span>
-      <span className="mt-2 block [&_.input]:w-full [&_.input]:rounded-2xl [&_.input]:border [&_.input]:border-slate-200 [&_.input]:bg-white/85 [&_.input]:px-3 [&_.input]:py-2.5 [&_.input]:text-sm [&_.input]:font-semibold [&_.input]:text-slate-800 [&_.input]:outline-none [&_.input]:focus:border-cyan-300 [&_.input]:focus:ring-4 [&_.input]:focus:ring-cyan-100">{children}</span>
+      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{label}</span>
+      <span className="mt-1.5 block [&_.dark-select]:w-full [&_.dark-select]:rounded-xl [&_.dark-select]:border [&_.dark-select]:border-slate-700/50 [&_.dark-select]:bg-slate-800/60 [&_.dark-select]:px-3 [&_.dark-select]:py-2 [&_.dark-select]:text-sm [&_.dark-select]:font-semibold [&_.dark-select]:text-slate-300 [&_.dark-select]:outline-none [&_.dark-select]:focus:border-cyan-500/50">{children}</span>
     </label>
   )
 }

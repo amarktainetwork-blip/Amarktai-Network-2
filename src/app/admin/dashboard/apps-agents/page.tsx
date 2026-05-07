@@ -3,21 +3,9 @@ import { listAppAiPackages } from '@/lib/app-ai-package-store'
 import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
 
 const appFields = [
-  'name',
-  'slug',
-  'domain/subdomain',
-  'repo',
-  'VPS path',
-  'service name',
-  'health endpoint',
-  'app type',
-  'assigned agents',
-  'assigned model package',
-  'memory namespace',
-  'storage namespace',
-  'adult policy',
-  'deployment profile',
-  'status',
+  'name', 'slug', 'domain/subdomain', 'repo', 'VPS path', 'service name',
+  'health endpoint', 'app type', 'assigned agents', 'assigned model package',
+  'memory namespace', 'storage namespace', 'adult policy', 'deployment profile', 'status',
 ]
 
 const appTypes = ['companion/chat', 'marketing', 'coding/dev', 'research', 'media/avatar', 'operations', 'custom']
@@ -29,87 +17,91 @@ export default async function AppsAgentsPage() {
   ])
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border border-white/70 bg-white/70 p-6 shadow-[0_24px_100px_rgba(15,23,42,0.12)] backdrop-blur-2xl lg:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-700">Apps & Agents</p>
-        <h2 className="mt-3 max-w-4xl text-4xl font-black tracking-tight text-slate-950 lg:text-5xl">Connected app orchestration.</h2>
-        <p className="mt-4 max-w-3xl text-sm leading-6 text-slate-600">
-          Apps run from this VPS and its subdomains. The Superbrain assigns model packages, agents, memory namespaces, storage namespaces, adult policy, deployment profiles, and operational status.
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl lg:p-7">
+        <div className="pointer-events-none absolute right-0 top-0 h-48 w-72 rounded-bl-[6rem] bg-gradient-to-br from-violet-500/8 via-cyan-500/5 to-transparent blur-3xl" />
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Apps & Agents</p>
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Connected app orchestration.</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Apps run from this VPS. The Superbrain assigns model packages, agents, memory, storage, adult policy, and deployment profiles.
         </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {['Registry available', 'Create/edit UI pending', 'Assignment UI pending', 'Backend package store available'].map((status) => (
-            <span key={status} className="rounded-full border border-slate-200 bg-white/75 px-3 py-1.5 text-xs font-black text-slate-700">{status}</span>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {['Registry available', 'Package store active', 'Agent dispatch wired'].map((s) => (
+            <span key={s} className="rounded-full border border-slate-700/50 bg-slate-800/50 px-2.5 py-1 text-[10px] font-bold text-slate-400">{s}</span>
           ))}
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-          <h3 className="text-xl font-black text-slate-950">App package shape</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">The app registry uses one VPS-aware structure instead of implying separate infrastructure per app.</p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        {/* App schema */}
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+          <h3 className="text-sm font-black text-slate-200">App package schema</h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">One VPS-aware structure per app. No implied separate infrastructure.</p>
+          <div className="mt-4 grid gap-1.5 sm:grid-cols-2">
             {appFields.map((field) => (
-              <div key={field} className="rounded-2xl border border-slate-200 bg-white/75 px-3 py-2 text-xs font-bold text-slate-600">{field}</div>
+              <div key={field} className="rounded-lg border border-slate-700/40 bg-slate-800/40 px-2.5 py-1.5 text-xs font-semibold text-slate-400">{field}</div>
             ))}
           </div>
-          <h4 className="mt-6 text-sm font-black text-slate-900">App types</h4>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {appTypes.map((type) => <span key={type} className="rounded-full bg-slate-950 px-3 py-1.5 text-xs font-bold text-white">{type}</span>)}
+          <h4 className="mt-5 text-xs font-black text-slate-300">App types</h4>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {appTypes.map((type) => <span key={type} className="rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-xs font-bold text-cyan-400">{type}</span>)}
           </div>
-          <h4 className="mt-6 text-sm font-black text-slate-900">Adult policy values</h4>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {ADULT_POLICY_VALUES.map((policy) => <span key={policy} className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-800">{policy}</span>)}
+          <h4 className="mt-5 text-xs font-black text-slate-300">Adult policy values</h4>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {ADULT_POLICY_VALUES.map((policy) => <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>)}
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* App packages */}
+        <div className="space-y-3">
           {packages.map((pkg) => (
-            <article key={pkg.appSlug} className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <article key={pkg.appSlug} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-xl font-black text-slate-950">{pkg.appName}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">{pkg.appSlug} - {pkg.domain || 'domain needed'} - {pkg.appType}</p>
+                  <p className="font-black text-slate-100">{pkg.appName}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-slate-500">{pkg.appSlug} · {(pkg as { domain?: string }).domain || 'domain needed'} · {pkg.appType}</p>
                 </div>
-                <span className="rounded-full bg-slate-950 px-3 py-1.5 text-xs font-bold text-white">{pkg.modelStrategy ?? pkg.budget?.mode ?? 'balanced'}</span>
+                <span className="inline-flex rounded-full border border-cyan-500/20 bg-cyan-500/8 px-2.5 py-1 text-xs font-bold text-cyan-400">{pkg.modelStrategy ?? pkg.budget?.mode ?? 'balanced'}</span>
               </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <Detail label="Repo" value={(pkg as { repo?: string }).repo ?? 'Configured in Workbench'} />
-                <Detail label="VPS path" value={(pkg as { vpsPath?: string }).vpsPath ?? '/var/www/amarktai/apps'} />
-                <Detail label="Service" value={(pkg as { serviceName?: string }).serviceName ?? `${pkg.appSlug}.service`} />
-                <Detail label="Memory" value={(pkg as { memoryNamespace?: string }).memoryNamespace ?? `app:${pkg.appSlug}`} />
-                <Detail label="Storage" value={(pkg as { storageNamespace?: string }).storageNamespace ?? `apps/${pkg.appSlug}`} />
-                <Detail label="Adult policy" value={pkg.adultPolicy ?? 'off'} />
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <AgentDetail label="Repo" value={(pkg as { repo?: string }).repo ?? 'Configured in Workbench'} />
+                <AgentDetail label="VPS path" value={(pkg as { vpsPath?: string }).vpsPath ?? '/var/www/amarktai/apps'} />
+                <AgentDetail label="Service" value={(pkg as { serviceName?: string }).serviceName ?? `${pkg.appSlug}.service`} />
+                <AgentDetail label="Memory" value={(pkg as { memoryNamespace?: string }).memoryNamespace ?? `app:${pkg.appSlug}`} />
+                <AgentDetail label="Storage" value={(pkg as { storageNamespace?: string }).storageNamespace ?? `apps/${pkg.appSlug}`} />
+                <AgentDetail label="Adult policy" value={pkg.adultPolicy ?? 'off'} />
               </div>
             </article>
           ))}
           {!packages.length && (
-            <div className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-              <p className="text-lg font-black text-slate-950">No app packages saved yet.</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Backend package store available. Create/edit and assignment UI wiring is pending, so this page does not show unsaved sample apps as real records.</p>
+            <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+              <p className="font-black text-slate-300">No app packages saved yet.</p>
+              <p className="mt-1.5 text-sm text-slate-500">Package store available. Assignment UI wiring pending — no placeholder data shown.</p>
             </div>
           )}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-white/70 bg-white/65 p-5 shadow-[0_18px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-black text-slate-950">Agent registry</h3>
-            <p className="mt-2 text-sm text-slate-600">{OPERATOR_AGENTS.length} canonical agents with purpose, capabilities, providers, routing strategy, scope, approvals, and route status.</p>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+      {/* Agent registry */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h3 className="text-sm font-black text-slate-200">Agent registry</h3>
+        <p className="mt-1.5 text-xs text-slate-500">{OPERATOR_AGENTS.length} canonical agents with purpose, capabilities, providers, routing strategy, and status.</p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {agents.map((agent) => (
-            <article key={agent.id} className="rounded-2xl border border-slate-200 bg-white/75 p-4">
+            <article key={agent.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-black text-slate-950">{agent.name}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{agent.purpose}</p>
+                  <p className="text-sm font-black text-slate-200">{agent.name}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">{agent.purpose}</p>
                 </div>
-                <span className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-800">{agent.status}</span>
+                <span className={[
+                  'rounded-full border px-2 py-0.5 text-[10px] font-bold',
+                  agent.status === 'active' ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400' : 'border-slate-700/40 bg-slate-800/40 text-slate-500',
+                ].join(' ')}>{agent.status}</span>
               </div>
-              <p className="mt-3 text-xs font-semibold text-slate-500">Capabilities: {agent.allowedCapabilities.join(', ')}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">Route: {agent.executionRoute ? `${agent.executionRoute.provider}/${agent.executionRoute.model}` : agent.unavailableReason}</p>
+              <p className="mt-2 text-[10px] font-semibold text-slate-600">Capabilities: {agent.allowedCapabilities.join(', ')}</p>
+              <p className="mt-0.5 text-[10px] font-semibold text-slate-600">Route: {agent.executionRoute ? `${agent.executionRoute.provider}/${agent.executionRoute.model}` : agent.unavailableReason}</p>
             </article>
           ))}
         </div>
@@ -118,11 +110,11 @@ export default async function AppsAgentsPage() {
   )
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function AgentDetail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white/75 p-3">
-      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="mt-1 truncate text-xs font-bold text-slate-700">{value}</p>
+    <div className="rounded-lg border border-slate-700/40 bg-slate-800/40 p-2.5">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-bold text-slate-300">{value}</p>
     </div>
   )
 }
