@@ -683,6 +683,18 @@ function resolveDefaultByOperation(operationType: GenXOperationType): string {
   return GENX_DEFAULT_MODELS[operationType]
 }
 
+function resolveGenXExecutionModel(model: string | undefined, fallback: string): string {
+  if (!model?.trim()) return fallback
+  if (!model.startsWith('auto:')) return model
+  const alias = model.toLowerCase()
+  if (alias === 'auto:coding-best') return 'gpt-5.3-codex'
+  if (alias === 'auto:coding-balanced' || alias === 'auto:assistant' || alias === 'auto:chat-balanced') return 'gpt-5.4-mini'
+  if (alias === 'auto:image') return GENX_IMAGE_MODELS[0]
+  if (alias === 'auto:video') return GENX_VIDEO_MODELS[0]
+  if (alias === 'auto:voice-tts') return GENX_TTS_MODELS[0]
+  return fallback
+}
+
 // ── Chat Execution ────────────────────────────────────────────────────────────
 
 /**
@@ -691,11 +703,15 @@ function resolveDefaultByOperation(operationType: GenXOperationType): string {
  */
 export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallResult> {
   const start = Date.now()
+  const resolvedRequest = {
+    ...request,
+    model: resolveGenXExecutionModel(request.model, GENX_TEXT_MODELS[0]),
+  }
 
   const profile = await getEndpointProfile()
   if (!profile) {
     return {
-      success: false, output: null, model: request.model,
+      success: false, output: null, model: resolvedRequest.model,
       usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       latencyMs: 0, error: 'GenX not configured (GENX_API_URL not set)', genxUsed: false,
     }
@@ -707,7 +723,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
     const res = await fetch(chatUrl, {
       method: 'POST',
       headers: await buildHeaders(),
-      body: JSON.stringify(request),
+      body: JSON.stringify(resolvedRequest),
       signal: AbortSignal.timeout(GENX_TIMEOUT),
     })
 
@@ -716,7 +732,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({})) as { error?: { message?: string } | string }
       const msg = typeof errBody.error === 'string' ? errBody.error : errBody.error?.message ?? `HTTP ${res.status}`
-      return { success: false, output: null, model: request.model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, latencyMs, error: `GenX error: ${msg}`, genxUsed: true }
+      return { success: false, output: null, model: resolvedRequest.model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, latencyMs, error: `GenX error: ${msg}`, genxUsed: true }
     }
 
     const data = await res.json() as GenXChatResponse
@@ -725,7 +741,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
     return {
       success: true,
       output,
-      model: data.model ?? request.model,
+      model: data.model ?? resolvedRequest.model,
       usage: {
         prompt_tokens: data.usage?.prompt_tokens ?? 0,
         completion_tokens: data.usage?.completion_tokens ?? 0,
@@ -737,7 +753,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
     }
   } catch (err) {
     return {
-      success: false, output: null, model: request.model,
+      success: false, output: null, model: resolvedRequest.model,
       usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
       latencyMs: Date.now() - start,
       error: `GenX request failed: ${err instanceof Error ? err.message : 'unknown error'}`,
@@ -757,11 +773,15 @@ export async function streamGenXChat(
   onEvent: (event: GenXStreamEvent) => void,
   signal?: AbortSignal,
 ): Promise<{ success: boolean; output: string; model: string; error: string | null }> {
+  const resolvedRequest = {
+    ...request,
+    model: resolveGenXExecutionModel(request.model, GENX_TEXT_MODELS[0]),
+  }
   const profile = await getEndpointProfile()
   if (!profile) {
     const error = 'GenX not configured (GENX_API_URL not set)'
     onEvent({ type: 'error', error })
-    return { success: false, output: '', model: request.model, error }
+    return { success: false, output: '', model: resolvedRequest.model, error }
   }
 
   let output = ''
@@ -769,7 +789,7 @@ export async function streamGenXChat(
     const res = await fetch(`${profile.baseUrl}${profile.chatPath}`, {
       method: 'POST',
       headers: await buildHeaders(),
-      body: JSON.stringify({ ...request, stream: true }),
+      body: JSON.stringify({ ...resolvedRequest, stream: true }),
       signal,
     })
 
@@ -777,7 +797,7 @@ export async function streamGenXChat(
       const errBody = await res.text().catch(() => '')
       const error = `GenX stream error: ${errBody || `HTTP ${res.status}`}`
       onEvent({ type: 'error', error })
-      return { success: false, output, model: request.model, error }
+      return { success: false, output, model: resolvedRequest.model, error }
     }
 
     const reader = res.body.getReader()
@@ -804,7 +824,7 @@ export async function streamGenXChat(
           const chunk = parsed.choices?.[0]?.delta?.content ?? parsed.choices?.[0]?.message?.content ?? ''
           if (chunk) {
             output += chunk
-            onEvent({ type: 'chunk', content: chunk, model: parsed.model ?? request.model })
+            onEvent({ type: 'chunk', content: chunk, model: parsed.model ?? resolvedRequest.model })
           }
         } catch {
           // Ignore malformed provider heartbeat lines.
@@ -812,14 +832,14 @@ export async function streamGenXChat(
       }
     }
 
-    onEvent({ type: 'done', model: request.model })
-    return { success: true, output, model: request.model, error: null }
+    onEvent({ type: 'done', model: resolvedRequest.model })
+    return { success: true, output, model: resolvedRequest.model, error: null }
   } catch (err) {
     const error = err instanceof Error && err.name === 'AbortError'
       ? 'Stream cancelled'
       : `GenX stream failed: ${err instanceof Error ? err.message : 'unknown error'}`
     onEvent({ type: 'error', error })
-    return { success: false, output, model: request.model, error }
+    return { success: false, output, model: resolvedRequest.model, error }
   }
 }
 
@@ -829,33 +849,42 @@ export async function streamGenXChat(
  */
 export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMediaResult> {
   const start = Date.now()
+  const fallbackModel = request.type === 'image'
+    ? GENX_IMAGE_MODELS[0]
+    : request.type === 'video'
+      ? GENX_VIDEO_MODELS[0]
+      : GENX_AUDIO_MODELS[0]
+  const resolvedRequest = {
+    ...request,
+    model: resolveGenXExecutionModel(request.model, fallbackModel),
+  }
 
   const profile = await getEndpointProfile()
   if (!profile) {
     return {
       success: false, url: null, jobId: null, status: 'failed',
-      model: request.model, latencyMs: 0,
+      model: resolvedRequest.model, latencyMs: 0,
       error: 'GenX not configured (GENX_API_URL not set)',
     }
   }
 
   const generateUrl = `${profile.baseUrl}${profile.generatePath}`
   const params: Record<string, unknown> = {
-    prompt: request.prompt,
-    ...request.params,
+    prompt: resolvedRequest.prompt,
+    ...resolvedRequest.params,
   }
-  if (request.width) params.width = request.width
-  if (request.height) params.height = request.height
-  if (request.duration) params.duration = request.duration
-  if (request.style) params.style = request.style
+  if (resolvedRequest.width) params.width = resolvedRequest.width
+  if (resolvedRequest.height) params.height = resolvedRequest.height
+  if (resolvedRequest.duration) params.duration = resolvedRequest.duration
+  if (resolvedRequest.style) params.style = resolvedRequest.style
 
   // GenX accepts model-specific params. Keep type as a hint for this app's
   // generic execution layer; providers that do not need it can ignore it.
-  params.type = request.type
+  params.type = resolvedRequest.type
 
-  const metadata = request.metadata
+  const metadata = resolvedRequest.metadata
     ? Object.fromEntries(
-        Object.entries(request.metadata)
+        Object.entries(resolvedRequest.metadata)
           .filter(([, value]) => value !== undefined && value !== null)
           .slice(0, 16)
           .map(([key, value]) => [key, typeof value === 'string' ? value : JSON.stringify(value)]),
@@ -867,7 +896,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       method: 'POST',
       headers: await buildHeaders(),
       body: JSON.stringify({
-        model: request.model,
+        model: resolvedRequest.model,
         params,
         ...(metadata ? { metadata } : {}),
       }),
@@ -881,7 +910,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       const error = typeof errBody.error === 'string'
         ? errBody.error
         : errBody.error?.message ?? errBody.message ?? `GenX HTTP ${res.status}`
-      return { success: false, url: null, jobId: null, status: 'failed' as const, model: request.model, latencyMs, error }
+      return { success: false, url: null, jobId: null, status: 'failed' as const, model: resolvedRequest.model, latencyMs, error }
     }
 
     const data = await res.json() as Record<string, unknown>
@@ -894,7 +923,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       ?? asString(data.url)
       ?? asString(data.output_url)
       ?? asString(data.file_url)
-    const model = asString(data.model) ?? request.model
+    const model = asString(data.model) ?? resolvedRequest.model
     const error = asString(data.error) ?? (isRecord(data.error) ? asString(data.error.message) : undefined)
 
     return {
@@ -909,7 +938,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
   } catch (err) {
     return {
       success: false, url: null, jobId: null, status: 'failed',
-      model: request.model, latencyMs: Date.now() - start,
+      model: resolvedRequest.model, latencyMs: Date.now() - start,
       error: `GenX media request failed: ${err instanceof Error ? err.message : 'unknown error'}`,
     }
   }

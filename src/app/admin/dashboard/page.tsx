@@ -20,6 +20,20 @@ const studioTabs = [
   'Artifacts',
 ] as const
 
+const STUDIO_TAB_TRUTH: Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }> = {
+  Chat: { status: 'Configured when stream route passes auth/provider checks', detail: 'Protected streaming route available through AmarktAI Assistant.', chatEnabled: true },
+  Coding: { status: 'Available backend route', detail: 'Coding prompts can be drafted here and sent to Workbench for guarded repo changes.', chatEnabled: true },
+  Research: { status: 'Available backend route', detail: 'Research backend routes exist; full Studio research workflow wiring is pending.', chatEnabled: true },
+  Image: { status: 'Backend route available, UI wiring pending', detail: '/api/brain/image exists, but this Studio tab is not yet wired to persist image outputs.', chatEnabled: false },
+  Video: { status: 'Backend route available, UI wiring pending', detail: '/api/brain/video-generate exists; video jobs remain guarded and high-cost.', chatEnabled: false },
+  'Music / Audio': { status: 'Not implemented', detail: 'Music generation stays disabled until a real approved route and provider are present.', chatEnabled: false },
+  'Voice / TTS': { status: 'Backend route available, UI wiring pending', detail: '/api/brain/tts and assistant TTS status routes exist; playback wiring is pending.', chatEnabled: false },
+  'STT / Transcription': { status: 'Backend route available, UI wiring pending', detail: '/api/brain/stt exists; upload/transcription UI wiring is pending.', chatEnabled: false },
+  'Avatar / Talking Video': { status: 'Not implemented', detail: 'Avatar video needs a real provider route before controls are shown.', chatEnabled: false },
+  Adult: { status: 'Backend route available, UI wiring pending', detail: 'Adult capability is app-policy gated and uses approved provider keys only.', chatEnabled: true },
+  Artifacts: { status: 'Available backend route', detail: 'Artifact storage and listing routes exist; richer artifact workspace wiring is pending.', chatEnabled: true },
+}
+
 type StudioTab = (typeof studioTabs)[number]
 type AssistantContext = {
   workbench?: Record<string, unknown>
@@ -55,6 +69,7 @@ export default function StudioPage() {
   }, [])
 
   const tabCapability = useMemo(() => capabilityForTab(tab), [tab])
+  const tabTruth = STUDIO_TAB_TRUTH[tab]
   const modelOptions = useMemo(() => {
     if (!catalog) return []
     if (tab === 'Adult') return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
@@ -64,7 +79,7 @@ export default function StudioPage() {
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
 
   async function sendMessage() {
-    if (!message.trim()) return
+    if (!message.trim() || !tabTruth.chatEnabled) return
     const nextUser = { role: 'user' as const, content: message }
     setConversation((current) => [...current, nextUser, { role: 'assistant', content: '' }])
     setMessage('')
@@ -218,7 +233,10 @@ export default function StudioPage() {
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">{tab}</p>
                 <h3 className="mt-1 text-2xl font-black text-slate-950">Ask, generate, research, or route work.</h3>
               </div>
-              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">{status || 'Ready'}</span>
+              <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">{status || tabTruth.status}</span>
+            </div>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 text-sm font-semibold text-slate-600">
+              {tabTruth.detail}
             </div>
 
             <div className="mt-5 h-[420px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -226,8 +244,8 @@ export default function StudioPage() {
                 <div className="grid h-full place-items-center text-center">
                   <div>
                     <Sparkles className="mx-auto h-10 w-10 text-cyan-700" />
-                    <p className="mt-3 text-sm font-bold text-slate-700">Studio is ready for {tab.toLowerCase()} work.</p>
-                    <p className="mt-1 text-xs text-slate-500">Streaming responses, app context, memory, emotion state, and artifact handoff are wired through existing routes.</p>
+                    <p className="mt-3 text-sm font-bold text-slate-700">{tabTruth.status}</p>
+                    <p className="mt-1 text-xs text-slate-500">{tabTruth.detail}</p>
                   </div>
                 </div>
               )}
@@ -249,7 +267,7 @@ export default function StudioPage() {
                 className="min-h-28 resize-none rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
               />
               <div className="flex flex-col gap-2">
-                <button onClick={sendMessage} disabled={!message.trim() || streaming} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:opacity-45">
+                <button onClick={sendMessage} disabled={!message.trim() || streaming || !tabTruth.chatEnabled} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:opacity-45">
                   {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Send
                 </button>

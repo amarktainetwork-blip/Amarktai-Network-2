@@ -9,7 +9,7 @@
  * Storage root resolution order:
  *   1. process.env.AMARKTAI_STORAGE_ROOT
  *   2. /var/www/amarktai/storage (production VPS default)
- *   3. process.cwd()/storage (local dev/test fallback)
+ *   3. process.cwd()/storage only when AMARKTAI_ALLOW_DEV_STORAGE_FALLBACK=true outside production
  *
  * Server-side only — do NOT import from client components.
  */
@@ -17,15 +17,12 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { getUnifiedStorageRoot, resolveStoragePath } from '@/lib/storage-root'
 
 // ── Storage root ─────────────────────────────────────────────────────────────
 
-const PRODUCTION_ROOT = '/var/www/amarktai/storage'
-
 export function getStorageRoot(): string {
-  const env = process.env.AMARKTAI_STORAGE_ROOT?.trim()
-  if (env) return env
-  return PRODUCTION_ROOT
+  return getUnifiedStorageRoot()
 }
 
 // ── ID generation ─────────────────────────────────────────────────────────────
@@ -41,13 +38,7 @@ function ensureDir(dirPath: string): void {
 }
 
 function resolveFilePath(relPath: string): string {
-  const root = getStorageRoot()
-  const full = path.resolve(root, relPath)
-  // Path traversal guard
-  if (!full.startsWith(path.resolve(root))) {
-    throw new Error(`Path traversal detected: ${relPath}`)
-  }
-  return full
+  return resolveStoragePath(relPath)
 }
 
 // ── Core read/write ──────────────────────────────────────────────────────────

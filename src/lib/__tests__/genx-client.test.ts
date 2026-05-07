@@ -150,4 +150,38 @@ describe('genx-client', () => {
     expect(result.output).toBe('Hello')
     expect(chunks).toEqual(['Hel', 'lo'])
   })
+
+  it('resolves auto:* aliases before GenX chat execution', async () => {
+    const bodies: Array<{ model?: string }> = []
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/v1/models')) {
+        return new Response(JSON.stringify({ models: [] }), { status: 200 })
+      }
+      if (url.endsWith('/api/v1/generate')) {
+        return new Response(JSON.stringify({ error: 'probe model' }), { status: 400 })
+      }
+      if (url.endsWith('/v1/chat/completions')) {
+        const body = JSON.parse(String(init?.body ?? '{}'))
+        bodies.push(body)
+        return new Response(JSON.stringify({
+          model: body.model,
+          choices: [{ message: { content: 'ok' } }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }))
+
+    const { callGenXChat, invalidateEndpointProfile } = await import('@/lib/genx-client')
+    invalidateEndpointProfile()
+    const result = await callGenXChat({
+      model: 'auto:coding-best',
+      messages: [{ role: 'user', content: 'plan' }],
+    })
+
+    expect(result.success).toBe(true)
+    expect(bodies.at(-1)?.model).toBe('gpt-5.3-codex')
+    expect(bodies.at(-1)?.model).not.toMatch(/^auto:/)
+  })
 })

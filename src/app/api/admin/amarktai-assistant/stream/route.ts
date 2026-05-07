@@ -57,8 +57,11 @@ export async function POST(request: NextRequest) {
             if (event.type === 'done') send({ status: 'Done' })
           }, request.signal)
         } else {
-          send({ content: `Route selected: ${selectedProvider}/${selectedModel}.\n\n${body.message}` })
-          send({ status: 'Done' })
+          send({
+            status: 'Selected provider streaming pending',
+            route: { selectedProvider, selectedModel },
+            blocker: 'This Studio streaming route currently streams through GenX only. Phase 2 should wire this provider to its real protected execution route before showing streamed output.',
+          })
         }
         await recordEstimatedCost({
           provider: selectedProvider,

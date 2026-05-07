@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { resolveStoragePath } from '@/lib/storage-root'
 
 export interface ProviderResultLogEntry {
   timestamp: string
@@ -17,7 +18,7 @@ export interface ProviderResultLogEntry {
   metadata?: Record<string, unknown>
 }
 
-const LOG_ROOT = process.env.PROVIDER_RESULT_LOG_ROOT || '/var/www/amarktai/repo/storage/provider-results'
+const LOG_ROOT = process.env.PROVIDER_RESULT_LOG_ROOT || resolveStoragePath('logs/provider-results')
 
 function safeSegment(input: string) {
   return input.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'default'
