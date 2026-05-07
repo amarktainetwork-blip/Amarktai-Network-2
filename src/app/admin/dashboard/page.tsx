@@ -5,42 +5,24 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Brain, DatabaseZap, FolderInput, Loader2, Play, Save, Send, Sparkles } from 'lucide-react'
 import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
 import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+import { STUDIO_TABS, STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
 
-const studioTabs = [
-  'Chat',
-  'Coding',
-  'Research',
-  'Image',
-  'Video',
-  'Music / Audio',
-  'Voice / TTS',
-  'STT / Transcription',
-  'Avatar / Talking Video',
-  'Adult',
-  'Artifacts',
-] as const
+const studioTabs = STUDIO_TABS
 
-const STUDIO_TAB_TRUTH: Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }> = {
-  Chat: { status: 'Configured when stream route passes auth/provider checks', detail: 'Protected streaming route available through AmarktAI Assistant.', chatEnabled: true },
-  Coding: { status: 'Available backend route', detail: 'Coding prompts can be drafted here and sent to Workbench for guarded repo changes.', chatEnabled: true },
-  Research: { status: 'Available backend route', detail: 'Research backend routes exist; full Studio research workflow wiring is pending.', chatEnabled: true },
-  Image: { status: 'Backend route available, UI wiring pending', detail: '/api/brain/image exists, but this Studio tab is not yet wired to persist image outputs.', chatEnabled: false },
-  Video: { status: 'Backend route available, UI wiring pending', detail: '/api/brain/video-generate exists; video jobs remain guarded and high-cost.', chatEnabled: false },
-  'Music / Audio': { status: 'Not implemented', detail: 'Music generation stays disabled until a real approved route and provider are present.', chatEnabled: false },
-  'Voice / TTS': { status: 'Backend route available, UI wiring pending', detail: '/api/brain/tts and assistant TTS status routes exist; playback wiring is pending.', chatEnabled: false },
-  'STT / Transcription': { status: 'Backend route available, UI wiring pending', detail: '/api/brain/stt exists; upload/transcription UI wiring is pending.', chatEnabled: false },
-  'Avatar / Talking Video': { status: 'Not implemented', detail: 'Avatar video needs a real provider route before controls are shown.', chatEnabled: false },
-  Adult: { status: 'Backend route available, UI wiring pending', detail: 'Adult capability is app-policy gated and uses approved provider keys only.', chatEnabled: true },
-  Artifacts: { status: 'Available backend route', detail: 'Artifact storage and listing routes exist; richer artifact workspace wiring is pending.', chatEnabled: true },
-}
-
-type StudioTab = (typeof studioTabs)[number]
+const STUDIO_TAB_TRUTH: Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }> = Object.fromEntries(
+  STUDIO_TABS.map((item) => [item, {
+    status: STUDIO_ROUTE_MAP[item].status === 'missing' ? 'Not implemented' : 'Available backend route',
+    detail: STUDIO_ROUTE_MAP[item].detail,
+    chatEnabled: item === 'Chat',
+  }]),
+) as Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }>
 type AssistantContext = {
   workbench?: Record<string, unknown>
   costs?: Record<string, unknown>
   voice?: Array<{ provider: string; label: string; status: string }>
   modelCatalog?: unknown[]
 }
+type ArtifactSummary = { id: string; title?: string; type?: string; subType?: string; provider?: string; model?: string; storageUrl?: string; createdAt?: string }
 
 export default function StudioPage() {
   const [tab, setTab] = useState<StudioTab>('Chat')
@@ -54,7 +36,13 @@ export default function StudioPage() {
   const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
+  const [audioPreview, setAudioPreview] = useState('')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [adultMode, setAdultMode] = useState<'text' | 'image'>('text')
+  const [mediaSize, setMediaSize] = useState('1024x1024')
   const [streaming, setStreaming] = useState(false)
+  const [executing, setExecuting] = useState(false)
   const [status, setStatus] = useState('')
   const abortRef = useRef<AbortController | null>(null)
 
@@ -68,6 +56,10 @@ export default function StudioPage() {
     })
   }, [])
 
+  useEffect(() => {
+    if (tab === 'Artifacts') loadArtifacts().catch(() => null)
+  }, [tab])
+
   const tabCapability = useMemo(() => capabilityForTab(tab), [tab])
   const tabTruth = STUDIO_TAB_TRUTH[tab]
   const modelOptions = useMemo(() => {
@@ -77,6 +69,12 @@ export default function StudioPage() {
   }, [catalog, tab])
 
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
+
+  async function loadArtifacts() {
+    const response = await fetch('/api/admin/artifacts?appSlug=superbrain&limit=30')
+    const data = await response.json().catch(() => ({}))
+    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
+  }
 
   async function sendMessage() {
     if (!message.trim() || !tabTruth.chatEnabled) return
@@ -129,6 +127,84 @@ export default function StudioPage() {
       setStatus(error instanceof Error ? error.message : 'Studio request failed')
     } finally {
       setStreaming(false)
+    }
+  }
+
+  async function runStudioAction() {
+    if (tab === 'Chat') return sendMessage()
+    if (tab === 'Artifacts') return loadArtifacts()
+    if (tab === 'Avatar / Talking Video') {
+      setStatus(STUDIO_ROUTE_MAP[tab].detail)
+      return
+    }
+    if (tab === 'STT / Transcription') return transcribeUpload()
+    if (!message.trim()) return
+
+    setExecuting(true)
+    setAudioPreview('')
+    setStatus('Running real backend route')
+    try {
+      const endpoint = tab === 'Coding' ? '/api/admin/studio/workbench-handoff' : '/api/admin/studio/execute'
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tab,
+          prompt: message,
+          appSlug,
+          provider: selectedModel?.provider ?? provider,
+          model: selectedModel?.modelId === 'auto' ? undefined : selectedModel?.modelId ?? modelId,
+          costMode,
+          adultPolicy,
+          mode: adultMode,
+          voiceId: voice,
+          size: mediaSize,
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Studio execution failed')
+      if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
+      setConversation((current) => [
+        ...current,
+        { role: 'user', content: message },
+        { role: 'assistant', content: summarizeStudioResult(data) },
+      ])
+      setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : 'Backend executed')
+      await loadArtifacts().catch(() => null)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+    } finally {
+      setExecuting(false)
+    }
+  }
+
+  async function transcribeUpload() {
+    if (!uploadFile) {
+      setStatus('Select an audio file first')
+      return
+    }
+    setExecuting(true)
+    setStatus('Uploading to STT route')
+    try {
+      const form = new FormData()
+      form.append('file', uploadFile)
+      form.append('appSlug', appSlug)
+      form.append('provider', selectedModel?.provider ?? provider)
+      if (selectedModel?.modelId && selectedModel.modelId !== 'auto') form.append('model', selectedModel.modelId)
+      const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'STT failed')
+      setConversation((current) => [
+        ...current,
+        { role: 'user', content: `Transcribe: ${uploadFile.name}` },
+        { role: 'assistant', content: String(data.result?.transcript ?? summarizeStudioResult(data)) },
+      ])
+      setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
+      await loadArtifacts().catch(() => null)
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'STT request failed')
+    } finally {
+      setExecuting(false)
     }
   }
 
@@ -240,7 +316,18 @@ export default function StudioPage() {
             </div>
 
             <div className="mt-5 h-[420px] overflow-auto rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
-              {conversation.length === 0 && (
+              {tab === 'Artifacts' ? (
+                <div className="space-y-3">
+                  {artifacts.map((artifact) => (
+                    <div key={artifact.id} className="rounded-2xl border border-slate-200 bg-white p-3">
+                      <p className="text-sm font-black text-slate-900">{artifact.title || artifact.id}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">{artifact.type} / {artifact.subType || 'artifact'} - {artifact.provider || 'stored'}</p>
+                      {artifact.storageUrl && <a href={artifact.storageUrl} className="mt-2 inline-block text-xs font-black text-cyan-700">Open artifact</a>}
+                    </div>
+                  ))}
+                  {artifacts.length === 0 && <p className="text-sm font-semibold text-slate-500">No persisted artifacts returned yet.</p>}
+                </div>
+              ) : conversation.length === 0 && (
                 <div className="grid h-full place-items-center text-center">
                   <div>
                     <Sparkles className="mx-auto h-10 w-10 text-cyan-700" />
@@ -257,6 +344,37 @@ export default function StudioPage() {
                 ))}
               </div>
             </div>
+            {audioPreview && <audio controls src={audioPreview} className="mt-3 w-full" />}
+
+            {tab === 'STT / Transcription' && (
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white/75 p-3">
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                  className="text-sm font-semibold text-slate-700"
+                />
+              </div>
+            )}
+
+            {(tab === 'Image' || tab === 'Adult') && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Field label="Output mode">
+                  <select value={tab === 'Adult' ? adultMode : 'image'} onChange={(event) => setAdultMode(event.target.value as 'text' | 'image')} disabled={tab !== 'Adult'} className="input">
+                    {tab === 'Adult' && <option value="text">adult text</option>}
+                    <option value="image">image</option>
+                  </select>
+                </Field>
+                <Field label="Size">
+                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="input">
+                    <option value="1024x1024">1024x1024</option>
+                    <option value="1024x1792">1024x1792</option>
+                    <option value="1792x1024">1792x1024</option>
+                    <option value="768x768">768x768 adult image</option>
+                  </select>
+                </Field>
+              </div>
+            )}
 
             <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
               <textarea
@@ -267,9 +385,9 @@ export default function StudioPage() {
                 className="min-h-28 resize-none rounded-2xl border border-slate-200 bg-white/85 px-4 py-3 text-sm text-slate-950 outline-none placeholder:text-slate-400 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100"
               />
               <div className="flex flex-col gap-2">
-                <button onClick={sendMessage} disabled={!message.trim() || streaming || !tabTruth.chatEnabled} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:opacity-45">
-                  {streaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Send
+                <button onClick={runStudioAction} disabled={(tab !== 'Artifacts' && tab !== 'STT / Transcription' && !message.trim()) || streaming || executing || tab === 'Avatar / Talking Video'} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-slate-800 disabled:opacity-45">
+                  {streaming || executing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {actionLabelForTab(tab)}
                 </button>
                 <button onClick={() => abortRef.current?.abort()} disabled={!streaming} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-45">
                   <Play className="h-4 w-4" />
@@ -345,4 +463,26 @@ function placeholderForTab(tab: StudioTab) {
   if (tab === 'Adult') return 'Adult-capable requests are routed only when the app policy allows the requested content type.'
   if (tab === 'Artifacts') return 'Ask to summarize, link, or retrieve generated artifacts and job outputs.'
   return 'Ask the Superbrain to help with this app, another connected app, or an operator task.'
+}
+
+function actionLabelForTab(tab: StudioTab) {
+  if (tab === 'Coding') return 'Send to Workbench'
+  if (tab === 'Artifacts') return 'Refresh'
+  if (tab === 'STT / Transcription') return 'Transcribe'
+  if (tab === 'Chat') return 'Send'
+  return 'Run'
+}
+
+function summarizeStudioResult(data: Record<string, unknown>) {
+  if (typeof data.workbenchUrl === 'string') return `Workbench task saved.\n${data.workbenchUrl}`
+  const result = data.result as Record<string, unknown> | undefined
+  if (typeof result?.transcript === 'string') return result.transcript
+  if (typeof result?.output === 'string') return result.output
+  if (typeof result?.script === 'string') return result.script
+  if (typeof result?.imageUrl === 'string') return `Image generated: ${result.imageUrl}`
+  if (typeof result?.jobId === 'string') return `Job created: ${result.jobId}`
+  if (data.artifact && typeof data.artifact === 'object' && 'id' in data.artifact) {
+    return `Artifact saved: ${String((data.artifact as { id?: unknown }).id)}`
+  }
+  return JSON.stringify(data, null, 2)
 }

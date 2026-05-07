@@ -1,9 +1,12 @@
 import { APPROVED_AI_PROVIDERS, type ApprovedProviderKey } from '@/lib/approved-ai-catalog'
 import { getProviderKeyWithSource, type CoreProvider, type ProviderKeySource } from '@/lib/provider-config'
 import { getStorageRoot } from '@/lib/storage-driver'
+import { prisma } from '@/lib/prisma'
 
 export type SettingsTruthStatus =
+  | 'Connected'
   | 'Configured'
+  | 'Configured - needs live test'
   | 'Needs key'
   | 'Needs live test'
   | 'Needs test route'
@@ -29,6 +32,46 @@ const TEST_ROUTES: Record<string, string> = {
   storage: '/api/admin/settings/test-storage',
 }
 
+function parseNotes(raw: string | null | undefined): Record<string, unknown> {
+  if (!raw) return {}
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
+  } catch {
+    return {}
+  }
+}
+
+function isPassedStatus(value: unknown): boolean {
+  if (value === true) return true
+  if (typeof value !== 'string') return false
+  return ['passed', 'success', 'successful', 'ok', 'healthy', 'connected', 'valid'].includes(value.trim().toLowerCase())
+}
+
+async function getLastKnownTestPassed(key: string): Promise<boolean> {
+  if (key === 'github') {
+    const row = await prisma.gitHubConfig.findFirst({
+      orderBy: { id: 'desc' },
+      select: { lastValidatedAt: true },
+    }).catch(() => null)
+    if (row?.lastValidatedAt) return true
+  }
+
+  const row = await prisma.integrationConfig.findUnique({
+    where: { key },
+    select: { notes: true },
+  }).catch(() => null)
+  const notes = parseNotes(row?.notes)
+  return [
+    notes.lastTestPassed,
+    notes.lastTestStatus,
+    notes.testStatus,
+    notes.status,
+    notes.lastStatus,
+    notes.valid,
+  ].some(isPassedStatus)
+}
+
 const TOOL_ENTRIES = [
   { key: 'github', label: 'GitHub', note: 'Repository list, branch list, push, PR, merge, and deploy handoff.' },
   { key: 'firecrawl', label: 'Firecrawl', note: 'Research and scraping service. Status route lives in the research stack.' },
@@ -51,10 +94,13 @@ async function entryForKey(input: {
     : { key: null, source: 'missing' as const }
 
   const configured = Boolean(resolved.key)
-  const connected = configured && Boolean(testRoute)
+  const lastKnownTestPassed = configured && testRoute ? await getLastKnownTestPassed(input.key) : false
+  const connected = configured && Boolean(testRoute) && lastKnownTestPassed
   const status: SettingsTruthStatus = configured
     ? testRoute
-      ? 'Configured'
+      ? lastKnownTestPassed
+        ? 'Connected'
+        : 'Configured - needs live test'
       : 'Needs test route'
     : input.kind === 'tool' && testRoute
       ? 'Needs key'

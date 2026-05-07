@@ -68,6 +68,37 @@ export async function POST(req: NextRequest) {
     const raw = await res.json()
     const data = Array.isArray(raw) ? raw : []
     const serverCount = data.length
+    if (!inlineKey) {
+      try {
+        const row = await prisma.integrationConfig.findUnique({ where: { key: 'webdock' } })
+        let notes: Record<string, unknown> = {}
+        try { notes = JSON.parse(row?.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
+        await prisma.integrationConfig.upsert({
+          where: { key: 'webdock' },
+          update: {
+            notes: JSON.stringify({
+              ...notes,
+              lastTestStatus: 'passed',
+              lastTestPassed: true,
+              lastTestedAt: new Date().toISOString(),
+              serverCount,
+            }),
+          },
+          create: {
+            key: 'webdock',
+            displayName: 'Webdock',
+            apiKey: '',
+            enabled: true,
+            notes: JSON.stringify({
+              lastTestStatus: 'passed',
+              lastTestPassed: true,
+              lastTestedAt: new Date().toISOString(),
+              serverCount,
+            }),
+          },
+        })
+      } catch { /* status persistence is best-effort */ }
+    }
 
     return NextResponse.json({
       success: true,

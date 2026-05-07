@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+import { getProviderKey } from '@/lib/provider-config'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -30,6 +31,7 @@ export async function POST(req: NextRequest) {
       token = row?.accessToken ?? ''
     } catch { /* ignore */ }
   }
+  if (!token) token = await getProviderKey('github') ?? ''
 
   if (!token) {
     return NextResponse.json({
@@ -84,6 +86,35 @@ export async function POST(req: NextRequest) {
             },
           })
         }
+        const integration = await prisma.integrationConfig.findUnique({ where: { key: 'github' } })
+        let notes: Record<string, unknown> = {}
+        try { notes = JSON.parse(integration?.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
+        await prisma.integrationConfig.upsert({
+          where: { key: 'github' },
+          update: {
+            notes: JSON.stringify({
+              ...notes,
+              username: userData.login ?? null,
+              repoCount,
+              lastTestStatus: 'passed',
+              lastTestPassed: true,
+              lastTestedAt: new Date().toISOString(),
+            }),
+          },
+          create: {
+            key: 'github',
+            displayName: 'GitHub',
+            apiKey: '',
+            enabled: true,
+            notes: JSON.stringify({
+              username: userData.login ?? null,
+              repoCount,
+              lastTestStatus: 'passed',
+              lastTestPassed: true,
+              lastTestedAt: new Date().toISOString(),
+            }),
+          },
+        })
       } catch { /* ignore */ }
     }
 

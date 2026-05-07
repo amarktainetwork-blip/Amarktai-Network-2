@@ -258,6 +258,44 @@ export async function POST(req: NextRequest) {
 
   const latencyMs = Date.now() - start
   const success = catalogOk && chatOk
+  if (!inlineKey) {
+    try {
+      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+      let notes: Record<string, unknown> = {}
+      try { notes = JSON.parse(row?.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
+      await prisma.integrationConfig.upsert({
+        where: { key: 'genx' },
+        update: {
+          notes: JSON.stringify({
+            ...notes,
+            lastTestStatus: success ? 'passed' : 'failed',
+            lastTestPassed: success,
+            lastTestedAt: new Date().toISOString(),
+            modelCount,
+            catalogOk,
+            chatOk,
+            generateOk,
+          }),
+        },
+        create: {
+          key: 'genx',
+          displayName: 'GenX',
+          apiKey: '',
+          apiUrl: baseUrl,
+          enabled: true,
+          notes: JSON.stringify({
+            lastTestStatus: success ? 'passed' : 'failed',
+            lastTestPassed: success,
+            lastTestedAt: new Date().toISOString(),
+            modelCount,
+            catalogOk,
+            chatOk,
+            generateOk,
+          }),
+        },
+      })
+    } catch { /* status persistence is best-effort; response stays factual */ }
+  }
 
   return NextResponse.json({
     success,
