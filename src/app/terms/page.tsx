@@ -1,33 +1,31 @@
 import PublicShell from '@/components/public/PublicShell'
-import { SectionInner, SectionWrap, SurfaceCard } from '@/components/public/PublicSection'
 
 const sections = [
-  ['Use of service', 'By using AmarktAI Network, you agree to these terms and to using the platform lawfully and responsibly.'],
-  ['Restricted access', 'Access is provisioned for approved operators and may be suspended for policy or security violations.'],
-  ['Operational responsibility', 'You are responsible for actions initiated from your environment and for reviewing high-impact operations.'],
-  ['Warranty and liability', 'The platform is provided as available, with liability limits to the maximum extent permitted by law.'],
-  ['Contact', 'For legal inquiries, contact legal@amarktai.com.'],
+  ['Use', 'Use of AmarktAI Network services is subject to lawful and responsible operation within applicable regulations.'],
+  ['Responsibility', 'Operators are responsible for submitted instructions, integrated systems, and downstream usage of produced artifacts.'],
+  ['Controls', 'Infrastructure controls, approval flows, and policy checks may limit or block unsafe or non-compliant operations.'],
+  ['Liability', 'Service is provided on an available basis with limits as permitted by law and contract terms.'],
+  ['Contact', 'Legal inquiries: legal@amarktai.com'],
 ]
 
 export default function TermsPage() {
   return (
     <PublicShell>
-      <SectionWrap className="pt-14 lg:pt-18">
-        <SectionInner>
-          <h1 className="text-5xl font-black tracking-[-0.06em] text-white sm:text-6xl">Terms of Service</h1>
-          <p className="mt-4 text-slate-300">Last updated: May 2026</p>
-        </SectionInner>
-      </SectionWrap>
-      <SectionWrap>
-        <SectionInner className="space-y-4">
+      <section className="mx-auto max-w-7xl px-5 pb-8 pt-16 lg:px-8 lg:pt-24">
+        <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#edf1fb] sm:text-5xl">Terms of Service</h1>
+        <p className="mt-4 text-sm text-[#98a2bc]">Last updated: May 2026</p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-24">
+        <div className="space-y-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142]">
           {sections.map(([title, body]) => (
-            <SurfaceCard key={title}>
-              <h2 className="text-xl font-black text-white">{title}</h2>
-              <p className="mt-3 text-sm leading-7 text-slate-400">{body}</p>
-            </SurfaceCard>
+            <article key={title} className="bg-[#0b0f19] p-6">
+              <h2 className="text-base font-semibold text-[#edf0fa]">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[#bbc5dc]">{body}</p>
+            </article>
           ))}
-        </SectionInner>
-      </SectionWrap>
+        </div>
+      </section>
     </PublicShell>
   )
 }

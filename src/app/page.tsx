@@ -1,273 +1,135 @@
-import Link from 'next/link'
 import PublicShell from '@/components/public/PublicShell'
-import CommandConstellationScene from '@/components/public/CommandConstellationScene'
-import { SectionInner, SectionWrap, SurfaceCard } from '@/components/public/PublicSection'
+import IntelligenceFabric from '@/components/public/IntelligenceFabric'
 
-const commandNodes = [
-  { label: 'Studio',      body: 'Multimodal execution across chat, research, image, video, audio, and artifact workflows with full provider intelligence.' },
-  { label: 'Workbench',   body: 'Instruction to shipped change: prompt → plan → patch → checks → PR → deploy, with operator review at every step.' },
-  { label: 'Apps & Agents', body: 'Purpose-built agent packs per application — coding, audit, deployment, research, operations, and safety.' },
-  { label: 'Memory',      body: 'Persistent operational memory that compounds context, improves routing decisions, and sharpens each future cycle.' },
-  { label: 'Operations',  body: 'Runtime truth for queues, approvals, provider health, storage, deployment status, and workload execution.' },
-  { label: 'Settings',    body: 'Policy controls, model routing guardrails, and governance surfaces that keep autonomous actions safe and reviewable.' },
+const operatingLayers = [
+  'Model routing',
+  'Agent orchestration',
+  'Memory',
+  'Workbench',
+  'Studio',
+  'Runtime operations',
+  'Guarded deployment',
 ]
 
-const commandSignals = [
-  { label: 'Model Routing',          desc: 'Intelligent dispatch to the right provider for each task type and context.' },
-  { label: 'Provider Orchestration', desc: 'Parallel and sequential coordination across multiple AI providers.' },
-  { label: 'Approval Gates',         desc: 'Human-in-the-loop controls on high-impact actions before execution.' },
-  { label: 'Artifact Pipeline',      desc: 'Structured output generation, storage, and downstream delivery.' },
-  { label: 'Memory Integration',     desc: 'Operational context persisted and retrieved across every session.' },
-  { label: 'Execution Logging',      desc: 'Complete traceability from instruction to deployed result.' },
+const workbench = [
+  { step: 'Prompt', detail: 'Operator intent and repository scope.' },
+  { step: 'Plan', detail: 'Change map and implementation path.' },
+  { step: 'Patch', detail: 'Code edits with explicit boundaries.' },
+  { step: 'Checks', detail: 'Validation, policy checks, and security scan.' },
+  { step: 'PR', detail: 'Traceable review record and approval state.' },
+  { step: 'Deploy', detail: 'Controlled release into runtime operations.' },
 ]
 
-const appMesh = [
-  'App-specific agent orchestration',
-  'Workflow automation pipelines',
-  'Memory-informed decision loops',
-  'Continuous approval flows',
-  'Deployment confidence controls',
-  'Cross-app signal propagation',
-]
+const studio = ['Chat', 'Research', 'Image', 'Video', 'Audio', 'Transcription', 'Artifacts']
 
-const workbenchFlow = ['Prompt', 'Plan', 'Patch', 'Checks', 'PR', 'Deploy']
+const operations = [
+  { label: 'Provider health', value: 'Live route quality and failover state' },
+  { label: 'Queues', value: 'Execution pressure across active workloads' },
+  { label: 'Storage', value: 'Artifact and memory durability status' },
+  { label: 'Approvals', value: 'Pending, accepted, and blocked operations' },
+]
 
 export default function HomePage() {
   return (
     <PublicShell>
-      {/* HERO */}
-      <section className="relative flex min-h-[92vh] items-center overflow-hidden">
-        <div className="pointer-events-none absolute inset-0">
-          <CommandConstellationScene variant="hero" className="h-full w-full opacity-80" />
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#020612]/20 via-transparent to-[#020612]/70" />
-        <SectionInner className="relative z-10 py-24 lg:py-32">
-          <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.26em] text-cyan-300">Private AI Operations Layer</p>
-            <h1 className="mt-5 text-5xl font-black leading-[1.04] tracking-[-0.05em] text-white sm:text-6xl lg:text-7xl">
-              A private AI operations layer for building, running, and improving digital systems.
-            </h1>
-            <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              AmarktAI Network routes intelligence, coordinates agents, builds artifacts, and delivers decisive actions through one controlled Command Layer.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Link
-                href="/apps"
-                className="rounded-2xl bg-white px-6 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-100"
-              >
-                Explore the system
-              </Link>
-              <Link
-                href="/contact"
-                className="rounded-2xl border border-white/15 bg-white/[0.02] px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/[0.06]"
-              >
-                Request restricted briefing
-              </Link>
-            </div>
-            <p className="mt-5 text-xs uppercase tracking-[0.18em] text-slate-500">
-              Type <span className="text-slate-400">&ldquo;login&rdquo;</span> to open restricted operator access.
-            </p>
-          </div>
-        </SectionInner>
+      <section className="mx-auto max-w-7xl px-5 pb-20 pt-16 lg:px-8 lg:pt-24">
+        <p className="text-xs uppercase tracking-[0.2em] text-[#95a0bc]">Private intelligence infrastructure</p>
+        <h1 className="mt-6 max-w-5xl text-4xl font-semibold leading-tight tracking-[-0.03em] text-[#edf1fb] sm:text-5xl lg:text-6xl">
+          AmarktAI Network is a private AI operations layer for coordinating models, agents, memory, repositories, media workflows, and deployment controls.
+        </h1>
       </section>
 
-      {/* COMMAND LAYER */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Command Layer</p>
-          <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-            Orchestration intelligence at every layer.
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg text-slate-300">
-            Signals move through a live orchestration system — routing models, coordinating providers, gating approvals, persisting memory, and returning artifacts through one traceable execution path.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {commandSignals.map((signal) => (
-              <SurfaceCard key={signal.label}>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">{signal.label}</p>
-                <p className="mt-3 text-sm leading-7 text-slate-400">{signal.desc}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
-
-      {/* STUDIO */}
-      <SectionWrap>
-        <SectionInner className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <section className="relative min-h-[70vh] overflow-hidden border-y border-[#262b3b]">
+        <div className="absolute inset-0">
+          <IntelligenceFabric className="h-full w-full" />
+        </div>
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-8 px-5 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-8 lg:py-16">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Studio</p>
-            <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-              Multimodal execution in one workspace.
-            </h2>
-            <p className="mt-5 text-lg text-slate-300">
-              Chat, research, image, video, audio, and artifact generation run in the same operator environment. Every output is grounded in provider-aware runtime truth.
-            </p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Intelligence Fabric</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-[#edf0fa] sm:text-4xl">Operational flow as an architectural command map.</h2>
           </div>
-          <div className="grid gap-3">
-            {['Chat & Research', 'Image Generation', 'Video Creation', 'Audio & Voice', 'Artifact Delivery', 'Provider Routing'].map((cap) => (
-              <div key={cap} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400" />
-                <span className="text-sm font-medium text-slate-200">{cap}</span>
-              </div>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
+          <ol className="space-y-2 border border-[#2a3142] bg-[#0a0d15]/80 p-5 text-sm text-[#c4ccde]">
+            <li>Input</li>
+            <li>Routing</li>
+            <li>Agent</li>
+            <li>Memory</li>
+            <li>Artifact</li>
+            <li>Approval</li>
+            <li>Deployment</li>
+          </ol>
+        </div>
+      </section>
 
-      {/* WORKBENCH */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Workbench</p>
-          <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-            From instruction to deployed change.
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg text-slate-300">
-            A controlled pipeline that takes a plain-language instruction through planning, patch generation, automated checks, pull request creation, and deployment — with operator review gates built in.
-          </p>
-          <div className="mt-10 flex flex-wrap items-center gap-0">
-            {workbenchFlow.map((step, i) => (
-              <div key={step} className="flex items-center">
-                <div className="rounded-2xl border border-white/15 bg-white/[0.05] px-5 py-3 text-sm font-bold uppercase tracking-[0.14em] text-slate-200">
-                  {step}
-                </div>
-                {i < workbenchFlow.length - 1 && (
-                  <div className="mx-1 h-px w-6 bg-gradient-to-r from-cyan-400/60 to-blue-400/40 sm:w-8" />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-            {[
-              { label: 'Safety first', desc: 'Checks run before any commit is created.' },
-              { label: 'Operator control', desc: 'Approve or reject at every handoff point.' },
-              { label: 'Full traceability', desc: 'Every step logged from prompt to production.' },
-            ].map((item) => (
-              <SurfaceCard key={item.label}>
-                <p className="text-sm font-black text-white">{item.label}</p>
-                <p className="mt-2 text-xs text-slate-400">{item.desc}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
-
-      {/* APPS & AGENTS */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Apps & Agents</p>
-          <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-            Every app orchestrated as one mesh.
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg text-slate-300">
-            Applications connect into a single command network. Specialist agents attach to each product surface, sharing memory, receiving instructions, and coordinating deployments through one governed layer.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {appMesh.map((item) => (
-              <SurfaceCard key={item}>
-                <p className="text-sm font-semibold text-slate-200">{item}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
-
-      {/* MEMORY & LEARNING */}
-      <SectionWrap>
-        <SectionInner className="grid gap-8 lg:grid-cols-2 lg:items-center">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Memory & Learning</p>
-            <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-              Operational memory that compounds.
-            </h2>
-            <p className="mt-5 text-lg text-slate-300">
-              The system maintains persistent knowledge across sessions — remembering production context, tracking outcomes, adapting model routing, and improving decision quality with every completed operation.
-            </p>
-          </div>
-          <div className="grid gap-3">
-            {[
-              { label: 'Session Memory',       desc: 'Context carried across all workspace interactions.' },
-              { label: 'Historical Awareness', desc: 'Past decisions inform current routing and agent behavior.' },
-              { label: 'Routing Adaptation',   desc: 'Model selection refined based on observed outcomes.' },
-              { label: 'Learning Loops',       desc: 'System performance improves with each completed task cycle.' },
-            ].map((item) => (
-              <SurfaceCard key={item.label}>
-                <p className="text-sm font-black text-white">{item.label}</p>
-                <p className="mt-1 text-xs text-slate-400">{item.desc}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
-
-      {/* OPERATIONS */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Operations & Runtime</p>
-          <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-            Calm, trustworthy operational control.
-          </h2>
-          <p className="mt-5 max-w-3xl text-lg text-slate-300">
-            Live visibility into provider health, deployment status, approval queues, storage state, and workload execution. The command infrastructure stays calm, transparent, and always reviewable.
-          </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {['Provider Health', 'Deployment Status', 'Approval Queues', 'Storage Truth'].map((item) => (
-              <SurfaceCard key={item}>
-                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
-                <p className="mt-3 text-sm font-black text-white">{item}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
-
-      {/* AMARKTAI ASSISTANT */}
-      <SectionWrap>
-        <SectionInner className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <SurfaceCard>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Amarktai Assistant</p>
-            <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white">
-              The operator interface across the entire network.
-            </h2>
-            <p className="mt-5 text-slate-300">
-              Amarktai Assistant is workspace-aware, memory-aware, and action-aware. It routes requests, coordinates agents, surfaces operational context, and executes tasks through the command layer — calm, direct, and built for real operations.
-            </p>
-          </SurfaceCard>
-          <SurfaceCard className="flex flex-col justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Restricted Access</p>
-              <p className="mt-4 text-sm leading-7 text-slate-300">
-                AmarktAI Network is not an open-access platform. Access is reviewed and provisioned for verified operator teams building real systems.
-              </p>
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Operating layers</p>
+        <div className="mt-6 grid gap-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142] md:grid-cols-2 lg:grid-cols-4">
+          {operatingLayers.map((layer) => (
+            <div key={layer} className="bg-[#0b0f19] p-5 text-sm uppercase tracking-[0.13em] text-[#d2d9eb]">
+              {layer}
             </div>
-            <Link
-              href="/contact"
-              className="mt-6 inline-flex w-fit rounded-xl border border-cyan-300/35 px-4 py-2.5 text-sm text-cyan-100 transition hover:bg-cyan-300/10"
-            >
-              Submit restricted inquiry
-            </Link>
-          </SurfaceCard>
-        </SectionInner>
-      </SectionWrap>
+          ))}
+        </div>
+      </section>
 
-      {/* SYSTEM PILLARS */}
-      <SectionWrap>
-        <SectionInner>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300">Command Constellation</p>
-          <h2 className="mt-4 text-4xl font-black tracking-[-0.04em] text-white sm:text-5xl">
-            One network. Nine command surfaces.
-          </h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {commandNodes.map((node) => (
-              <SurfaceCard key={node.label}>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-300">System surface</p>
-                <h3 className="mt-3 text-2xl font-black text-white">{node.label}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-400">{node.body}</p>
-              </SurfaceCard>
-            ))}
-          </div>
-        </SectionInner>
-      </SectionWrap>
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Workbench</p>
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#edf0fa]">Repository path from prompt to production deployment.</h2>
+        <div className="mt-8 grid gap-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142] lg:grid-cols-6">
+          {workbench.map((item) => (
+            <article key={item.step} className="bg-[#0b0f19] p-5">
+              <p className="text-xs uppercase tracking-[0.14em] text-[#9da8c4]">{item.step}</p>
+              <p className="mt-2 text-sm text-[#ced5e7]">{item.detail}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Studio</p>
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#edf0fa]">Multimodal execution for operational teams.</h2>
+        <div className="mt-8 flex flex-wrap gap-2">
+          {studio.map((mode) => (
+            <span key={mode} className="border border-[#30384d] bg-[#0b0f19] px-4 py-2 text-xs uppercase tracking-[0.14em] text-[#cad2e6]">
+              {mode}
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Memory</p>
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#edf0fa]">Operational context that compounds over time.</h2>
+        <p className="mt-5 max-w-3xl text-base leading-8 text-[#b9c2d8]">
+          Historical outcomes, repository decisions, and deployment history remain addressable across sessions so routing, agent behavior, and approval context improve with every cycle.
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Operations</p>
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#edf0fa]">Runtime truth for infrastructure governance.</h2>
+        <div className="mt-8 grid gap-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142] md:grid-cols-2">
+          {operations.map((item) => (
+            <article key={item.label} className="bg-[#0b0f19] p-5">
+              <p className="text-xs uppercase tracking-[0.14em] text-[#9da8c4]">{item.label}</p>
+              <p className="mt-2 text-sm text-[#ced5e7]">{item.value}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8">
+        <p className="text-xs uppercase tracking-[0.18em] text-[#9aa4c0]">Amarktai Assistant</p>
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-[#edf0fa]">Operator interface for command execution and oversight.</h2>
+        <p className="mt-5 max-w-3xl text-base leading-8 text-[#b9c2d8]">
+          Amarktai Assistant is the control interface for instructions, routing decisions, memory retrieval, workflow transitions, and governed execution states.
+        </p>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-5 pb-20 pt-10 lg:px-8 lg:pb-24">
+        <p className="max-w-3xl border-t border-[#2a3142] pt-8 text-base leading-8 text-[#b9c2d8]">
+          Private AI operations require controlled routing, persistent context, and reviewable deployment governance.
+        </p>
+      </section>
     </PublicShell>
   )
 }

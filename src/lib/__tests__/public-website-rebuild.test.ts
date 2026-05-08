@@ -18,91 +18,109 @@ function read(rel: string) {
   return fs.readFileSync(path.join(ROOT, rel), 'utf8')
 }
 
-describe('public website rebuild — cinematic command constellation', () => {
-  it('public pages render from one shared website shell', () => {
+describe('public website hard reset', () => {
+  it('public routes render from one shared implementation shell', () => {
     for (const page of PUBLIC_PAGES) {
       const source = read(page)
       expect(source, page).toContain('PublicShell')
     }
   })
 
-  it('homepage is rebuilt with cinematic command constellation sections', () => {
+  it('homepage uses the new intelligence fabric architecture and required sections', () => {
     const source = read('app/page.tsx')
-    expect(source).toContain('CommandConstellationScene')
-    expect(source).toContain('Command Layer')
-    expect(source).toContain('Amarktai Assistant')
-    expect(source).toContain('Prompt')
-    expect(source).toContain('Deploy')
+    const lower = source.toLowerCase()
+    expect(source).toContain('IntelligenceFabric')
+    expect(lower).toContain('input')
+    expect(lower).toContain('routing')
+    expect(lower).toContain('agent')
+    expect(lower).toContain('memory')
+    expect(lower).toContain('artifact')
+    expect(lower).toContain('approval')
+    expect(lower).toContain('deployment')
     expect(source).toContain('Workbench')
-    expect(source).toContain('Operations')
+    expect(source).toContain('Studio')
+    expect(source).toContain('Amarktai Assistant')
   })
 
-  it('homepage does not contain old superbrain branding', () => {
-    const source = read('app/page.tsx')
-    expect(source).not.toContain('superbrain')
-    expect(source).not.toContain('Superbrain')
-    expect(source).not.toContain('Living Superbrain')
-    expect(source).not.toContain('self-learning superbrain')
-  })
+  it('public pages contain no visible login/admin/dashboard access CTAs or hints', () => {
+    const forbidden = [
+      'type login',
+      'sign in',
+      'sign up',
+      'request access',
+      'access portal',
+      'open secure login',
+      'restricted panel',
+      '/admin/login',
+      '/admin/dashboard',
+      'operator login',
+      'keyboard hint',
+      'secret command',
+    ]
 
-  it('hidden login behavior is preserved with typed login reveal', () => {
-    const source = read('components/public/PublicShell.tsx')
-    expect(source).toContain("includes('login')")
-    expect(source).toContain('/admin/login')
-    expect(source).toContain('Restricted panel')
-  })
-
-  it('public pages have no visible auth/admin/dashboard CTA', () => {
     for (const page of PUBLIC_PAGES) {
-      const source = read(page)
-      expect(source, page).not.toContain('/admin/login')
-      expect(source, page).not.toContain('/admin/dashboard')
-      expect(source, page).not.toContain('Operator Login')
+      const source = read(page).toLowerCase()
+      for (const token of forbidden) {
+        expect(source, `${page} -> ${token}`).not.toContain(token)
+      }
     }
+
+    const shell = read('components/public/PublicShell.tsx').toLowerCase()
+    expect(shell).not.toContain('open secure login')
+    expect(shell).not.toContain('restricted panel')
+    expect(shell).not.toContain('type login')
   })
 
-  it('public sources do not contain retired or internal public branding', () => {
+  it('public website source removes retired branding and rejected wording', () => {
     const files = [
       ...PUBLIC_PAGES,
       'components/public/PublicShell.tsx',
-      'components/public/CommandConstellationScene.tsx',
+      'components/public/IntelligenceFabric.tsx',
     ]
-    const retiredName = String.fromCharCode(65, 105, 118, 97) // character codes only — literal string avoided to prevent grep false positives
+    const retiredName = String.fromCharCode(65, 105, 118, 97) // "Aiva" without direct literal text
+
     for (const file of files) {
       const source = read(file)
       expect(source, file).not.toContain(retiredName)
-      expect(source, file).not.toContain('GenX')
-      expect(source, file).not.toContain('Powered by GenX')
-      expect(source, file).not.toContain('superbrain')
       expect(source, file).not.toContain('Superbrain')
+      expect(source, file).not.toContain('superbrain')
+      expect(source, file).not.toContain('GenX')
+      expect(source, file).not.toContain('AI magic')
     }
   })
 
-  it('old SuperbrainScene component is removed and CommandConstellationScene replaces it', () => {
-    expect(fs.existsSync(path.join(ROOT, 'components/public/SuperbrainScene.tsx'))).toBe(false)
-    expect(fs.existsSync(path.join(ROOT, 'components/public/CommandConstellationScene.tsx'))).toBe(true)
-    const scene = read('components/public/CommandConstellationScene.tsx')
-    expect(scene).toContain('CommandConstellationScene')
-    expect(scene).not.toContain('superbrain')
+  it('hidden login trigger behavior remains in code without public hint copy', () => {
+    const shell = read('components/public/PublicShell.tsx')
+    expect(shell).toContain("includes('login')")
+    expect(shell).toContain("router.push('/admin/login')")
   })
 
-  it('old public components and duplicate landing route are removed', () => {
+  it('old public components and stale public implementations are removed', () => {
     const removed = [
+      'components/public/CommandConstellationScene.tsx',
+      'components/public/PublicSection.tsx',
+      'components/public/SuperbrainScene.tsx',
+      'app/about-amarktai-network/page.tsx',
       'components/layout/Header.tsx',
       'components/layout/Footer.tsx',
       'components/EcosystemNetwork.tsx',
       'components/LivingCore.tsx',
       'components/visual/NetworkPulseBackground.tsx',
       'components/voice/VoiceAccessVisualizer.tsx',
-      'app/about-amarktai-network/page.tsx',
-      'components/public/SuperbrainScene.tsx',
     ]
+
     for (const rel of removed) {
       expect(fs.existsSync(path.join(ROOT, rel)), rel).toBe(false)
     }
   })
 
-  it('dashboard routes still exist and remain separate from public implementation', () => {
+  it('public implementation has one source of truth in components/public', () => {
+    const publicDir = path.join(ROOT, 'components/public')
+    const files = fs.readdirSync(publicDir).sort()
+    expect(files).toEqual(['IntelligenceFabric.tsx', 'PublicShell.tsx'])
+  })
+
+  it('dashboard files still exist and remain separate from public site', () => {
     const requiredDashboardFiles = [
       'app/admin/dashboard/page.tsx',
       'app/admin/dashboard/workbench/page.tsx',
@@ -112,11 +130,15 @@ describe('public website rebuild — cinematic command constellation', () => {
       'app/admin/dashboard/settings/page.tsx',
       'app/admin/login/page.tsx',
     ]
+
     for (const file of requiredDashboardFiles) {
       expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true)
+      const source = read(file)
+      expect(source).not.toContain('PublicShell')
+      expect(source).not.toContain('IntelligenceFabric')
     }
-    const dashboard = read('app/admin/dashboard/page.tsx')
-    expect(dashboard).toContain('export default function StudioPage')
-    expect(dashboard).not.toContain('PublicShell')
+
+    const dashboardRoot = read('app/admin/dashboard/page.tsx')
+    expect(dashboardRoot).toContain('export default function StudioPage')
   })
 })
