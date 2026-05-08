@@ -1,111 +1,44 @@
 import PublicShell from '@/components/public/PublicShell'
 
 const blueprint = [
-  {
-    section: 'System map',
-    summary: 'Network layers, route boundaries, and execution domains.',
-    detail: 'The AmarktAI Network operates across six primary layers: model routing, agent execution, memory coordination, artifact management, approval governance, and deployment control. Each layer has defined responsibilities and interface contracts.',
-    accent: '96,165,250',
-  },
-  {
-    section: 'Route policy',
-    summary: 'Model selection, provider fallback, and governance rules.',
-    detail: 'Routing decisions are governed by latency scores, provider health state, capability requirements, content policies, and operator-configured priorities. Fallback chains ensure continuity under provider failure.',
-    accent: '139,92,246',
-  },
-  {
-    section: 'Agent lifecycle',
-    summary: 'Task intake, orchestration steps, and handoff controls.',
-    detail: 'Agents receive scoped task definitions, execute within defined boundaries, pass results through validation gates, and hand off to downstream agents or approval flows. Every step is logged for audit retrieval.',
-    accent: '167,139,250',
-  },
-  {
-    section: 'Memory protocol',
-    summary: 'Context retention, retrieval scopes, and update cadence.',
-    detail: 'Memory entries are created from artifacts, job outcomes, repository decisions, and session threads. Retrieval is scoped by relevance, recency, and operator-configured retention policies.',
-    accent: '99,102,241',
-  },
-  {
-    section: 'Artifact pipeline',
-    summary: 'Generation, storage, audit metadata, and delivery channels.',
-    detail: 'Every generated output — text, code, image, video, audio — is stored with provenance metadata, linked to the originating job, and indexed in memory. Artifacts are retrievable across sessions and agent contexts.',
-    accent: '79,70,229',
-  },
-  {
-    section: 'Deployment controls',
-    summary: 'Approval sequencing, release gates, and runtime verification.',
-    detail: 'Deployment operations require policy clearance, approval gate passage, and optional multi-step verification. Release state is visible in Operations telemetry and all actions are recorded with timestamps and actor identifiers.',
-    accent: '109,40,217',
-  },
-]
-
-const caveats = [
-  'Internal runbooks and API references remain private to operating environments.',
-  'Provider integration procedures are documented in private operator guides.',
-  'System configuration and key management details are not publicly disclosed.',
+  ['01', 'Intake', 'Inputs arrive as prompts, files, repository scopes, media requests, or operational tasks.'],
+  ['02', 'Routing', 'The system evaluates provider health, capability, latency, policy, cost, and fallback options.'],
+  ['03', 'Orchestration', 'Agents receive scoped work and coordinate through a central execution layer.'],
+  ['04', 'Memory', 'Relevant context is retrieved before work begins and updated after outcomes are known.'],
+  ['05', 'Artifacts', 'Generated text, code, images, video, audio, plans, and reports are stored with provenance.'],
+  ['06', 'Approvals', 'Sensitive actions move through review gates before production state changes.'],
+  ['07', 'Operations', 'Runtime state exposes queues, provider health, storage, deployments, and policy conditions.'],
 ]
 
 export default function DocsPage() {
   return (
     <PublicShell>
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-[#04060f] pb-20 pt-24 lg:pb-24 lg:pt-32">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:linear-gradient(rgba(96,165,250,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(96,165,250,0.5)_1px,transparent_1px)] [background-size:56px_56px]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(99,102,241,0.3)] to-transparent" />
-
-        <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-[11px] uppercase tracking-[0.26em] text-[#4a5f88]">System blueprint</p>
-          <h1 className="mt-5 max-w-5xl text-4xl font-semibold leading-[1.1] tracking-[-0.04em] text-[#eef2fb] sm:text-5xl">
-            Operational architecture and system design for the AmarktAI Network operating model.
+      <section className="architecture-band pb-20 pt-24 lg:pb-28 lg:pt-32">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">System blueprint</p>
+          <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
+            A public operating manual for the AmarktAI architecture.
           </h1>
-          <p className="mt-7 max-w-2xl text-base leading-9 text-[#7a8daf]">
-            This public blueprint outlines system structure, operational intent, and product layer responsibilities. It is designed for infrastructure orientation, not implementation reference.
+          <p className="mt-7 max-w-3xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
+            This overview explains the system model: how work enters, routes, executes, persists, waits for approval, and reaches deployment.
           </p>
         </div>
       </section>
 
-      {/* Blueprint sections */}
-      <section className="bg-[#05070f] py-20 lg:py-24">
+      <section className="bg-[var(--amarkt-black)] py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="space-y-[1px] overflow-hidden border border-[#1a2038] bg-[#1a2038]">
-            {blueprint.map((item) => (
-              <article key={item.section} className="relative bg-[#070a14]">
-                <div className="grid gap-5 p-7 lg:grid-cols-[220px_1fr]">
-                  <div>
-                    <div
-                      className="mb-1 h-px w-8"
-                      style={{ background: `rgba(${item.accent},0.5)` }}
-                    />
-                    <h2 className="text-base font-semibold tracking-[-0.01em] text-[#e2e9f8]">{item.section}</h2>
-                    <p
-                      className="mt-1.5 text-xs leading-5"
-                      style={{ color: `rgba(${item.accent},0.65)` }}
-                    >
-                      {item.summary}
-                    </p>
-                  </div>
-                  <p className="text-sm leading-8 text-[#7a8daf]">{item.detail}</p>
-                </div>
+          <div className="overflow-hidden border border-white/[0.08]">
+            {blueprint.map(([step, title, body]) => (
+              <article key={step} className="grid gap-6 border-b border-white/[0.08] bg-[var(--amarkt-graphite)] p-7 last:border-0 lg:grid-cols-[140px_260px_1fr]">
+                <p className="font-mono text-sm text-[var(--amarkt-dim)]">{step}</p>
+                <h2 className="text-xl font-semibold text-white">{title}</h2>
+                <p className="text-sm leading-7 text-[var(--amarkt-muted)]">{body}</p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Scope note */}
-      <section className="bg-[#040610] py-16 lg:py-20">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="border border-[#1a2038] p-7">
-            <p className="mb-5 text-[10px] uppercase tracking-[0.22em] text-[#3d5070]">Scope of public documentation</p>
-            <div className="space-y-3">
-              {caveats.map((c) => (
-                <div key={c} className="flex items-start gap-3">
-                  <div className="mt-2.5 h-1 w-1 shrink-0 rounded-full bg-[rgba(96,165,250,0.35)]" />
-                  <p className="text-sm leading-7 text-[#5d6f8a]">{c}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+          <p className="mt-8 max-w-3xl text-sm leading-7 text-[var(--amarkt-dim)]">
+            Internal API references, credentials, provider setup, and deployment runbooks remain private to operating environments.
+          </p>
         </div>
       </section>
     </PublicShell>

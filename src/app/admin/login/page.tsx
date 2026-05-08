@@ -2,8 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react'
-import Link from 'next/link'
+import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -13,21 +12,23 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     setLoading(true)
     setError('')
+
     try {
-      const res = await fetch('/api/admin/login', {
+      const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
-      if (res.ok) {
+
+      if (response.ok) {
         router.push('/admin/dashboard')
         router.refresh()
       } else {
-        const data = await res.json()
+        const data = await response.json()
         setError(data.error || 'Invalid credentials')
       }
     } catch {
@@ -38,89 +39,65 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#04060e] px-4 text-[#e8ecf8]">
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_10%,rgba(99,102,241,0.12),transparent_50%),radial-gradient(ellipse_at_80%_90%,rgba(96,165,250,0.08),transparent_50%)]" />
-        <div className="absolute inset-0 opacity-[0.025] [background-image:linear-gradient(rgba(200,215,240,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(200,215,240,0.6)_1px,transparent_1px)] [background-size:52px_52px]" />
-      </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--amarkt-obsidian)] px-4 text-white">
+      <div className="pointer-events-none absolute inset-0 panel-grid opacity-35" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(100,167,255,0.08),transparent_34%,rgba(3,5,10,0.96))]" />
 
-      {/* Card */}
-      <section className="relative z-10 w-full max-w-[400px]">
-        {/* Top accent line */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(96,165,250,0.4)] to-transparent" />
+      <section className="relative z-10 w-full max-w-[420px] border border-white/[0.12] bg-[rgba(7,11,18,0.92)] shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="section-line h-px w-full" />
+        <div className="px-8 py-9">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">AmarktAI Network</p>
+          <h1 className="mt-6 text-3xl font-semibold leading-tight text-white">Operator authentication</h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--amarkt-muted)]">Authorized infrastructure operators only.</p>
 
-        <div className="border border-[#1c2640] bg-[#080c1a]/96 px-8 py-9 shadow-2xl shadow-black/60 backdrop-blur-xl">
-          <Link href="/" className="text-[10px] uppercase tracking-[0.22em] text-[#3d5278]">
-            AmarktAI Network
-          </Link>
-
-          <h1 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-[#e8eef8]">
-            Restricted operator entry
-          </h1>
-          <p className="mt-2 text-sm text-[#6074a0]">Authorized personnel only.</p>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.18em] text-[#4a6080]">Email</label>
+          <form onSubmit={handleSubmit} className="mt-9 space-y-5">
+            <label className="block">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Email</span>
               <div className="relative mt-2">
-                <Mail className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#3d5278]" />
+                <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--amarkt-dim)]" />
                 <input
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-[#1e2c48] bg-[#060a16] py-3 pl-10 pr-4 text-sm text-[#d8e4f5] outline-none transition focus:border-[#4a6aaa] focus:bg-[#070c1a]"
+                  onChange={(event) => setEmail(event.target.value)}
+                  className="w-full border border-white/[0.1] bg-black/20 py-3.5 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[rgba(100,167,255,0.45)]"
                 />
               </div>
-            </div>
+            </label>
 
-            {/* Password */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-[0.18em] text-[#4a6080]">Password</label>
+            <label className="block">
+              <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Password</span>
               <div className="relative mt-2">
-                <Lock className="absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#3d5278]" />
+                <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--amarkt-dim)]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full border border-[#1e2c48] bg-[#060a16] py-3 pl-10 pr-10 text-sm text-[#d8e4f5] outline-none transition focus:border-[#4a6aaa] focus:bg-[#070c1a]"
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full border border-white/[0.1] bg-black/20 py-3.5 pl-11 pr-11 text-sm text-white outline-none transition focus:border-[rgba(100,167,255,0.45)]"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#3d5278] transition hover:text-[#8aa5d0]"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--amarkt-dim)] transition hover:text-white"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </label>
 
-            {error && (
-              <div className="border border-[#4a2030] bg-[#1a0c14] px-4 py-2.5 text-xs text-[#d07a85]">
-                {error}
-              </div>
-            )}
+            {error && <div className="border border-[#5f2632] bg-[#180910] px-4 py-3 text-sm text-[#f0a0aa]">{error}</div>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full border border-[#2a3a62] bg-[#0d1428] py-3.5 text-xs uppercase tracking-[0.18em] text-[#c8d8f0] transition hover:bg-[#111c38] disabled:opacity-40"
+              className="flex w-full items-center justify-center border border-white/[0.14] bg-white/[0.07] py-3.5 font-mono text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/[0.11] disabled:opacity-45"
             >
-              {loading ? (
-                <Loader2 className="mx-auto h-4 w-4 animate-spin" />
-              ) : (
-                'Authenticate'
-              )}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Authenticate'}
             </button>
           </form>
         </div>
-
-        {/* Bottom accent line */}
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-[rgba(99,102,241,0.2)] to-transparent" />
       </section>
     </div>
   )

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
-import '@fontsource-variable/space-grotesk'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -18,9 +17,18 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'AmarktAI Network — Multi-Provider AI Operating System',
-  description: 'AmarktAI Network is a multi-provider AI orchestration platform with routing intelligence, operator controls, and production-ready capability surfaces for real applications.',
-  keywords: ['AI orchestration', 'multi-provider AI', 'AI operating system', 'AmarktAI Network', 'model routing', 'AI operator console', 'artifact workflows'],
+  title: 'AmarktAI Network | Private AI Operations Architecture',
+  description:
+    'AmarktAI Network is a private AI operations platform for model routing, agent coordination, persistent memory, artifacts, approvals, and governed deployment workflows.',
+  keywords: [
+    'AI operations architecture',
+    'AI orchestration',
+    'model routing',
+    'agent coordination',
+    'private AI infrastructure',
+    'deployment governance',
+    'AmarktAI Network',
+  ],
   authors: [{ name: 'AmarktAI Network' }],
   robots: 'index, follow',
 }
@@ -32,9 +40,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body suppressHydrationWarning>
-        {children}
-      </body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   )
 }

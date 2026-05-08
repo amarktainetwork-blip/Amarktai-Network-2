@@ -1,27 +1,29 @@
 import PublicShell from '@/components/public/PublicShell'
 
 const sections = [
-  ['Use', 'Use of AmarktAI Network services is subject to lawful and responsible operation within applicable regulations.'],
-  ['Responsibility', 'Operators are responsible for submitted instructions, integrated systems, and downstream usage of produced artifacts.'],
+  ['Use', 'Use of AmarktAI Network systems must remain lawful, responsible, and aligned with applicable agreements.'],
+  ['Responsibility', 'Operators remain responsible for submitted instructions, connected systems, and downstream use of produced artifacts.'],
   ['Controls', 'Infrastructure controls, approval flows, and policy checks may limit or block unsafe or non-compliant operations.'],
-  ['Liability', 'Service is provided on an available basis with limits as permitted by law and contract terms.'],
-  ['Contact', 'Legal inquiries: legal@amarktai.com'],
+  ['Liability', 'Service availability and liability are governed by applicable contract terms and law.'],
+  ['Contact', 'Legal inquiries may be sent to legal@amarktai.com.'],
 ]
 
 export default function TermsPage() {
   return (
     <PublicShell>
-      <section className="mx-auto max-w-7xl px-5 pb-8 pt-16 lg:px-8 lg:pt-24">
-        <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#edf1fb] sm:text-5xl">Terms of Service</h1>
-        <p className="mt-4 text-sm text-[#98a2bc]">Last updated: May 2026</p>
+      <section className="architecture-band px-5 py-24 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Legal</p>
+          <h1 className="mt-5 text-5xl font-semibold text-white">Terms of Service</h1>
+          <p className="mt-4 text-sm text-[var(--amarkt-muted)]">Last updated: May 2026</p>
+        </div>
       </section>
-
-      <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8 lg:pb-24">
-        <div className="space-y-[1px] overflow-hidden border border-[#2a3142] bg-[#2a3142]">
+      <section className="bg-[var(--amarkt-black)] px-5 pb-24 lg:px-8">
+        <div className="mx-auto max-w-7xl divide-y divide-white/[0.08] border border-white/[0.08]">
           {sections.map(([title, body]) => (
-            <article key={title} className="bg-[#0b0f19] p-6">
-              <h2 className="text-base font-semibold text-[#edf0fa]">{title}</h2>
-              <p className="mt-3 text-sm leading-7 text-[#bbc5dc]">{body}</p>
+            <article key={title} className="bg-[var(--amarkt-graphite)] p-7">
+              <h2 className="text-xl font-semibold text-white">{title}</h2>
+              <p className="mt-3 text-sm leading-7 text-[var(--amarkt-muted)]">{body}</p>
             </article>
           ))}
         </div>
