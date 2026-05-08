@@ -41,7 +41,7 @@ describe('dashboard go-live wiring', () => {
     }
   })
 
-  it('Studio uses protected real routes, video polling, previews, STT upload, and TTS audio', () => {
+  it('Studio uses protected real routes, media polling, previews, voice/model selection, and adult blockers', () => {
     const page = read('app/admin/dashboard/page.tsx')
     for (const text of [
       '/api/admin/amarktai-assistant/stream',
@@ -56,6 +56,11 @@ describe('dashboard go-live wiring', () => {
       '<audio controls src={audioPreview}',
       'type="file"',
       'Workspace memory available',
+      'Advanced route details',
+      'modelIdForExecution',
+      'MiniMax/Mimo status',
+      'Adult video and adult voice remain disabled',
+      'Open/download artifact',
     ]) expect(page).toContain(text)
     expect(read('lib/studio-route-map.ts')).toContain('Avatar / Talking Video')
     expect(read('lib/studio-route-map.ts')).toContain("status: 'missing'")
@@ -72,6 +77,9 @@ describe('dashboard go-live wiring', () => {
       'Run checks',
       'Commit and push',
       'Create PR',
+      'Next action',
+      'Retry failed step',
+      'Open PR URL',
       'Merge when allowed',
       'Deploy when allowed',
       'PR ready',
@@ -85,14 +93,31 @@ describe('dashboard go-live wiring', () => {
     const settings = read('app/admin/dashboard/settings/page.tsx')
     const truth = read('lib/platform-settings-truth.ts')
     const operations = read('app/admin/dashboard/operations/page.tsx')
-    for (const status of ['Connected', 'Configured', 'Needs key', 'Needs test route', 'Unsupported', 'Failed']) {
+    for (const status of ['Connected', 'Configured', 'Needs key', 'Needs live test', 'Needs test route', 'Unsupported', 'Failed']) {
       expect(truth).toContain(status)
     }
-    for (const text of ['Setup completion checklist', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Firecrawl', 'Webdock', 'SMTP / email']) {
+    expect(truth).not.toContain('Configured - needs live test')
+    for (const text of ['Setup completion checklist', 'Go-live service sections', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Firecrawl', 'Webdock', 'SMTP / email', 'Exact blocker', 'Last test result']) {
       expect(settings).toContain(text)
     }
-    for (const text of ['Go-live readiness', 'liveBlockers', 'Active jobs', 'Recent failed jobs', 'Workbench jobs', 'Studio jobs', 'Can go live']) {
+    for (const text of ['Go-live readiness', 'liveBlockers', 'Required blocker categories', 'broken protected API', 'build/lint/test failure', 'Active jobs', 'Recent failed jobs', 'Workbench jobs', 'Studio jobs', 'Can go live']) {
       expect(operations).toContain(text)
+    }
+  })
+
+  it('dashboard links stay within the final route set and no duplicate route implementation exists', () => {
+    const allowed = new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href))
+    const sources = walk(DASHBOARD)
+      .filter((file) => file.endsWith('page.tsx') || file.endsWith('layout.tsx'))
+      .map((file) => fs.readFileSync(file, 'utf8'))
+      .join('\n')
+    const hrefs = [...sources.matchAll(/href=(?:{`([^`]+)`}|"([^"]+)")/g)].map((match) => match[1] ?? match[2])
+    for (const href of hrefs.filter((item) => item.startsWith('/admin/dashboard'))) {
+      const normalized = href.split('?')[0]
+      expect([...allowed].some((route) => normalized === route || normalized.startsWith(`${route}?`) || normalized.startsWith(`${route}/`)), href).toBe(true)
+    }
+    for (const duplicate of ['dashboard-v2', 'frontend-v2']) {
+      expect(sources).not.toContain(duplicate)
     }
   })
 

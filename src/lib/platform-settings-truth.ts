@@ -1,19 +1,17 @@
 import { APPROVED_AI_PROVIDERS, type ApprovedProviderKey } from '@/lib/approved-ai-catalog'
 import { getProviderKeyWithSource, type CoreProvider, type ProviderKeySource } from '@/lib/provider-config'
 import { getStorageRoot } from '@/lib/storage-driver'
+import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { prisma } from '@/lib/prisma'
 
 export type SettingsTruthStatus =
   | 'Connected'
   | 'Configured'
-  | 'Configured - needs live test'
   | 'Needs key'
   | 'Needs live test'
   | 'Needs test route'
-  | 'Available backend route'
   | 'Unsupported'
   | 'Failed'
-  | 'Not implemented'
 
 export interface SettingsTruthEntry {
   key: string
@@ -25,6 +23,10 @@ export interface SettingsTruthEntry {
   source: ProviderKeySource | 'local' | 'runtime' | 'env' | 'missing'
   testRoute: string | null
   note: string
+  envVars: string[]
+  lastTestResult: string
+  blocker: string
+  unlocks: string
 }
 
 const TEST_ROUTES: Record<string, string> = {
@@ -91,12 +93,16 @@ function envEntry(input: { key: string; label: string; note: string; envName: st
     key: input.key,
     label: input.label,
     kind: 'tool',
-    status: configured ? (input.testRoute ? 'Configured' : 'Needs test route') : 'Needs key',
+    status: configured ? (input.testRoute ? 'Needs live test' : 'Needs test route') : 'Needs key',
     configured,
     connected: false,
     source: configured ? 'env' : 'missing',
     testRoute: input.testRoute ?? null,
     note: input.note,
+    envVars: [input.envName],
+    lastTestResult: configured ? 'Configured from environment; no passed live test recorded' : 'Not tested',
+    blocker: configured ? (input.testRoute ? 'Run the live test route' : 'Add a test route to validate this service') : `Set ${input.envName}`,
+    unlocks: input.note,
   }
 }
 
@@ -106,6 +112,7 @@ async function entryForKey(input: {
   kind: SettingsTruthEntry['kind']
   note: string
   envKey?: CoreProvider
+  envVars?: string[]
   testRoute?: string | null
 }): Promise<SettingsTruthEntry> {
   const testRoute = input.testRoute ?? TEST_ROUTES[input.key] ?? null
@@ -120,7 +127,7 @@ async function entryForKey(input: {
     ? testRoute
       ? lastKnownTestPassed
         ? 'Connected'
-        : 'Configured - needs live test'
+        : 'Needs live test'
       : 'Needs test route'
     : input.kind === 'tool' && testRoute
       ? 'Needs key'
@@ -136,6 +143,10 @@ async function entryForKey(input: {
     source: resolved.source,
     testRoute,
     note: input.note,
+    envVars: input.envVars ?? (input.envKey ? [String(input.envKey).toUpperCase()] : []),
+    lastTestResult: connected ? 'Passed' : configured ? 'No passed live test recorded' : 'Not tested',
+    blocker: connected ? '' : configured ? (testRoute ? `Run ${testRoute}` : 'Needs test route') : `Set ${input.envVars?.join(' or ') ?? input.envKey ?? input.key}`,
+    unlocks: input.note,
   }
 }
 
@@ -153,6 +164,7 @@ export async function getPlatformSettingsTruth(): Promise<{
       kind: 'provider',
       note: provider.notes,
       envKey: provider.key as CoreProvider,
+      envVars: [...provider.envVars],
     })),
   )
 
@@ -167,16 +179,21 @@ export async function getPlatformSettingsTruth(): Promise<{
     }).then((entry) => 'envName' in tool ? envEntry({ key: tool.key, label: tool.label, note: tool.note, envName: tool.envName }) : entry)),
   )
 
+  const storageWritable = checkWritable(LOCAL_STORE_FILES.artifacts)
   const storage: SettingsTruthEntry = {
     key: 'storage',
     label: 'VPS/local storage',
     kind: 'storage',
-    status: 'Connected',
+    status: storageWritable.writable ? 'Connected' : 'Failed',
     configured: true,
-    connected: true,
+    connected: storageWritable.writable,
     source: 'local',
     testRoute: TEST_ROUTES.storage,
     note: `Storage root: ${getStorageRoot()}`,
+    envVars: ['AMARKTAI_STORAGE_ROOT'],
+    lastTestResult: storageWritable.writable ? 'Writable check passed' : 'Writable check failed',
+    blocker: storageWritable.writable ? '' : 'Storage root is not writable',
+    unlocks: 'Artifacts, generated media, logs, and local runtime reports.',
   }
 
   const connectedCount = new Set([...providers, ...tools].filter((item) => item.connected).map((item) => item.key)).size

@@ -27,7 +27,7 @@ export default async function AppsAgentsPage() {
           Apps run from this VPS. The orchestration layer assigns model packages, agents, memory, storage, policy, and deployment profiles.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {['Registry available', 'Package store active', 'Agent dispatch wired'].map((s) => (
+          {['Registry available', 'Package store active', 'Agent dispatch wired', 'Create/edit/assignment UI pending backend route'].map((s) => (
             <span key={s} className="rounded-full border border-slate-700/50 bg-slate-800/50 px-2.5 py-1 text-[10px] font-bold text-slate-400">{s}</span>
           ))}
         </div>

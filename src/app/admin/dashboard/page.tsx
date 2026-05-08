@@ -35,6 +35,15 @@ type ArtifactSummary = {
   createdAt?: string
   metadata?: Record<string, unknown>
 }
+type StudioResultDetails = {
+  provider: string
+  model: string
+  routeReason: string
+  blocker: string
+  artifactStatus: string
+  jobStatus: string
+  nextAction: string
+}
 
 export default function StudioPage() {
   const [tab, setTab] = useState<StudioTab>('Chat')
@@ -57,6 +66,8 @@ export default function StudioPage() {
   const [executing, setExecuting] = useState(false)
   const [status, setStatus] = useState('')
   const [jobStatus, setJobStatus] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [lastResult, setLastResult] = useState<StudioResultDetails | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -88,6 +99,9 @@ export default function StudioPage() {
   }, [catalog, tab])
 
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
+  const executionProvider = selectedModel?.provider ?? provider
+  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? (voice === 'minimax' ? 'Needs MiniMax/Mimo key or live route test' : 'Provider status unknown')
 
   async function sendMessage() {
     if (!message.trim() || !tabTruth.chatEnabled) return
@@ -105,8 +119,8 @@ export default function StudioPage() {
         body: JSON.stringify({
           message,
           capability: tabCapability,
-          providerOverride: selectedModel?.provider ?? provider,
-          modelOverride: selectedModel?.modelId === 'auto' ? undefined : selectedModel?.modelId,
+          providerOverride: executionProvider,
+          modelOverride: executionModel,
           costMode,
           metadata: { appSlug, adultPolicy, dashboardContext: true, studioTab: tab },
         }),
@@ -190,6 +204,11 @@ export default function StudioPage() {
         { role: 'user', content: message },
         { role: 'assistant', content: summarizeStudioResult(data) },
       ])
+      setLastResult(extractStudioDetails(data, {
+        provider: executionProvider,
+        model: executionModel,
+        jobStatus: pollUrl ? 'processing' : '',
+      }))
       setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : pollUrl ? 'Job created, output pending' : 'Backend executed')
       await loadArtifacts().catch(() => null)
     } catch (error) {
@@ -210,8 +229,8 @@ export default function StudioPage() {
       const form = new FormData()
       form.append('file', uploadFile)
       form.append('appSlug', appSlug)
-      form.append('provider', selectedModel?.provider ?? provider)
-      if (selectedModel?.modelId && selectedModel.modelId !== 'auto') form.append('model', selectedModel.modelId)
+      form.append('provider', executionProvider)
+      if (executionModel) form.append('model', executionModel)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json().catch(() => ({}))
       if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'STT failed')
@@ -220,6 +239,11 @@ export default function StudioPage() {
         { role: 'user', content: `Transcribe: ${uploadFile.name}` },
         { role: 'assistant', content: String(data.result?.transcript ?? summarizeStudioResult(data)) },
       ])
+      setLastResult(extractStudioDetails(data, {
+        provider: executionProvider,
+        model: executionModel,
+        jobStatus: '',
+      }))
       setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
       await loadArtifacts().catch(() => null)
     } catch (error) {
@@ -338,6 +362,15 @@ export default function StudioPage() {
                 </select>
               </DarkField>
             </div>
+            <details className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3" open={detailsOpen} onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced route details</summary>
+              <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2 lg:grid-cols-4">
+                <RouteFact label="Selected provider" value={providerLabel(executionProvider)} />
+                <RouteFact label="Selected model/task" value={executionModel || 'Auto resolved by backend'} />
+                <RouteFact label="Capability filter" value={String(capabilityGroupForTab(tab))} />
+                <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
+              </div>
+            </details>
           </section>
 
           {/* Workspace panel */}
@@ -356,6 +389,31 @@ export default function StudioPage() {
             <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-xs font-semibold text-slate-500">
               {tabTruth.detail}
             </p>
+            {tab === 'Voice / TTS' && (
+              <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-xs font-semibold text-slate-500">
+                Voice route: {providerLabel(executionProvider)} / {executionModel || 'auto'} / voice {voice}. MiniMax/Mimo status: {voiceStatus}.
+              </p>
+            )}
+            {tab === 'Adult' && (
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <RouteFact label="Allowed now" value="Adult text and adult image when policy and provider capability allow" />
+                <RouteFact label="Blocked" value="Adult video and adult voice remain disabled unless backend routes are added" />
+                <RouteFact label="Policy" value={adultPolicy} />
+              </div>
+            )}
+            {lastResult && (
+              <details className="mt-3 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
+                <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Last execution truth</summary>
+                <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2 lg:grid-cols-3">
+                  <RouteFact label="Provider" value={lastResult.provider} />
+                  <RouteFact label="Model/task" value={lastResult.model} />
+                  <RouteFact label="Route reason" value={lastResult.routeReason} />
+                  <RouteFact label="Blocker" value={lastResult.blocker || 'None returned'} />
+                  <RouteFact label="Artifact" value={lastResult.artifactStatus} />
+                  <RouteFact label="Next action" value={lastResult.nextAction} />
+                </div>
+              </details>
+            )}
 
             {/* Conversation / artifact area */}
             <div className="mt-4 h-[380px] overflow-auto rounded-xl border border-slate-700/40 bg-slate-950/60 p-4">
@@ -488,6 +546,15 @@ function DarkField({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
+function RouteFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-700/40 bg-slate-800/40 p-2.5">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">{label}</p>
+      <p className="mt-1 break-words text-xs font-bold text-slate-300">{value}</p>
+    </div>
+  )
+}
+
 function capabilityForTab(tab: StudioTab) {
   if (tab === 'Coding') return 'code'
   if (tab === 'Research') return 'scrape_website'
@@ -542,6 +609,31 @@ function summarizeStudioResult(data: Record<string, unknown>) {
   return JSON.stringify(data, null, 2)
 }
 
+function modelIdForExecution(value: string | undefined) {
+  if (!value || value === 'auto' || value.startsWith('auto:')) return undefined
+  return value
+}
+
+function extractStudioDetails(data: Record<string, unknown>, fallback: { provider: string; model?: string; jobStatus?: string }): StudioResultDetails {
+  const route = data.route as Record<string, unknown> | undefined
+  const result = data.result as Record<string, unknown> | undefined
+  const artifact = data.artifact as Record<string, unknown> | undefined
+  const provider = String(result?.provider ?? route?.selectedProvider ?? fallback.provider ?? 'auto')
+  const model = String(result?.model ?? route?.selectedModel ?? fallback.model ?? 'Auto resolved by backend')
+  const blocker = String(data.error ?? result?.error ?? route?.blockedReason ?? '')
+  const artifactId = artifact && typeof artifact === 'object' ? String(artifact.id ?? '') : ''
+  const job = String(result?.status ?? fallback.jobStatus ?? '')
+  return {
+    provider,
+    model,
+    routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and model router'),
+    blocker,
+    artifactStatus: artifactId ? `Saved: ${artifactId}` : extractResultUrl(result ?? {}) ? 'Output URL returned' : 'Output pending or not applicable',
+    jobStatus: job,
+    nextAction: blocker ? 'Resolve blocker in Settings or provider configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
+  }
+}
+
 function ArtifactPreview({ artifact }: { artifact: ArtifactSummary }) {
   const url = getArtifactUrl(artifact)
   const kind = `${artifact.type ?? ''} ${artifact.subType ?? ''}`.toLowerCase()
@@ -552,7 +644,7 @@ function ArtifactPreview({ artifact }: { artifact: ArtifactSummary }) {
   }
   if (kind.includes('video')) return <video controls src={url} className="mt-3 max-h-64 w-full rounded-lg" />
   if (kind.includes('audio') || kind.includes('voice')) return <audio controls src={url} className="mt-3 w-full" />
-  return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open artifact</a>
+  return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open/download artifact</a>
 }
 
 function getArtifactUrl(artifact: ArtifactSummary) {

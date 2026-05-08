@@ -18,6 +18,17 @@ const TOOL_KEYS = [
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
 ]
 
+const SETUP_SECTIONS = [
+  { title: 'GitHub / Workbench', keys: ['github'], description: 'Repo import, branch loading, checks, commit, push, and PR creation.' },
+  { title: 'Research tools', keys: ['firecrawl', 'crawl4ai'], description: 'Research execution, scraping, and source collection.' },
+  { title: 'Storage', keys: ['storage'], description: 'Artifacts, media previews, generated reports, and logs.' },
+  { title: 'Redis / realtime', keys: ['redis'], description: 'Queues, job coordination, and realtime job state.' },
+  { title: 'Playwright', keys: ['playwright'], description: 'Browser verification and Workbench QA.' },
+  { title: 'Webdock / VPS', keys: ['webdock'], description: 'VPS health and deployment visibility.' },
+  { title: 'SMTP/email', keys: ['smtp'], description: 'Email notifications and operator alerts.' },
+  { title: 'Deployment guards', keys: ['github', 'webdock', 'storage'], description: 'Merge and deploy remain guarded by backend environment flags.' },
+] as const
+
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
   tools: SettingsTruthEntry[]
@@ -94,6 +105,24 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Go-live service sections</h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {SETUP_SECTIONS.map((section) => (
+            <div key={section.title} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4">
+              <p className="text-sm font-black text-slate-200">{section.title}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{section.description}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {section.keys.map((key) => {
+                  const truthEntry = statusFor(key, key === 'storage' ? 'storage' : 'tool')
+                  return <span key={key} className="rounded-full border border-slate-700/50 bg-slate-900/60 px-2 py-0.5 text-[10px] font-bold text-slate-400">{truthEntry?.label ?? key}: {truthEntry?.status ?? 'Needs key'}</span>
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Tools & Services */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
         <h2 className="text-sm font-black text-slate-200">Tools & system services</h2>
@@ -123,6 +152,9 @@ export default function SettingsPage() {
             <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>
           ))}
         </div>
+        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+          Adult text and image are available only when app policy and provider capability allow them. Adult video and adult voice remain blocked until real backend support exists.
+        </p>
       </section>
     </div>
   )
@@ -135,7 +167,7 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
 
   const statusColor = truth?.status === 'Connected'
     ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
-    : truth?.status === 'Configured' || truth?.status === 'Configured - needs live test' || truth?.status === 'Needs key' || truth?.status === 'Needs live test' || truth?.status === 'Needs test route'
+    : truth?.status === 'Configured' || truth?.status === 'Needs key' || truth?.status === 'Needs live test' || truth?.status === 'Needs test route'
       ? 'border-amber-500/20 bg-amber-500/8 text-amber-400'
       : truth?.status === 'Failed'
         ? 'border-red-500/20 bg-red-500/8 text-red-400'
@@ -170,6 +202,12 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
           {truth.testRoute}{truth.source && truth.source !== 'missing' ? ` · ${truth.source}` : ''}
         </p>
       )}
+      <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2">
+        <SetupFact label="Unlocks" value={truth?.unlocks ?? description} />
+        <SetupFact label="Env/key needed" value={truth?.envVars?.join(' or ') || placeholder} />
+        <SetupFact label="Last test result" value={truth?.lastTestResult ?? 'Not tested'} />
+        <SetupFact label="Exact blocker" value={truth?.blocker || 'None'} />
+      </div>
       <div className="mt-3 flex gap-2">
         <div className="relative flex-1">
           <input
@@ -195,6 +233,15 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
         </button>
       </div>
       {status && <p className="mt-1.5 text-xs font-semibold text-slate-500">{status}</p>}
+    </div>
+  )
+}
+
+function SetupFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-700/40 bg-slate-900/50 p-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">{label}</p>
+      <p className="mt-1 break-words text-xs font-bold text-slate-400">{value}</p>
     </div>
   )
 }

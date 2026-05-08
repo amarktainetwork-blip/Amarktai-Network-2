@@ -60,6 +60,8 @@ export default function WorkbenchPage() {
 
   const codingModels = useMemo(() => catalog?.grouped.coding ?? catalog?.models ?? [], [catalog])
   const selectedModel = codingModels.find((model) => model.modelId === modelId)
+  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+  const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
 
   const updateStep = (step: StepId, status: 'waiting' | 'active' | 'done' | 'needs-approval') => {
     setStepStatus((current) => ({ ...current, [step]: status }))
@@ -153,7 +155,7 @@ export default function WorkbenchPage() {
   function payload() {
     return {
       request: prompt,
-      modelId: selectedModel?.modelId,
+      modelId: executionModel,
       provider: selectedModel?.provider ?? 'auto',
       costMode,
       taskType: 'auto',
@@ -279,6 +281,15 @@ export default function WorkbenchPage() {
     setLog((current) => ({ ...current, deploy: asText(data.output ?? data) }))
   }
 
+  async function retryFailedStep() {
+    if (!error) return
+    if (stepStatus['Planning'] === 'active' || !patchId) return startWork()
+    if (stepStatus['Patch prepared'] === 'active' || stepStatus['Patch prepared'] === 'needs-approval') return approveChanges()
+    if (stepStatus['Checks running'] === 'active' || stepStatus['Checks running'] === 'needs-approval') return runChecks()
+    if (stepStatus['Commit ready'] === 'active' || stepStatus['Commit ready'] === 'needs-approval') return commitAndPush()
+    if (stepStatus['PR ready'] === 'active' || stepStatus['PR ready'] === 'needs-approval') return createPr()
+  }
+
   return (
     <div className="space-y-5">
       {/* Hero */}
@@ -357,7 +368,22 @@ export default function WorkbenchPage() {
           <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
           <WbButton onClick={createPr} disabled={!workspace || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
         </div>
-        {error && <p className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-sm font-semibold text-red-400">{error}</p>}
+        <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Next action</p>
+          <p className="mt-1 text-sm font-bold text-slate-300">{nextAction}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-600">Model route: {selectedModel ? `${providerLabel(selectedModel.provider)} / ${executionModel || 'auto resolved'}` : 'Auto best model'}</p>
+        </div>
+        {log.pr && (
+          <a href={log.pr} className="mt-3 inline-block rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-300 hover:bg-cyan-500/15">
+            Open PR URL
+          </a>
+        )}
+        {error && (
+          <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 p-3">
+            <p className="text-sm font-semibold text-red-400">{error}</p>
+            <button onClick={retryFailedStep} disabled={Boolean(loading)} className="mt-2 rounded-lg border border-red-400/30 px-2.5 py-1 text-xs font-black text-red-200 disabled:opacity-40">Retry failed step</button>
+          </div>
+        )}
       </section>
 
       {/* Timeline + logs */}
@@ -462,4 +488,29 @@ function statusForPersistedJob(job: PersistedWorkbenchJob): Record<StepId, 'wait
   if (job.patch?.status === 'committed') base['PR ready'] = 'needs-approval'
   if (job.patch?.status === 'pr_created') base['Deploy ready'] = 'needs-approval'
   return base
+}
+
+function modelIdForExecution(value: string | undefined) {
+  if (!value || value === 'auto' || value.startsWith('auto:')) return undefined
+  return value
+}
+
+function getNextAction(
+  steps: Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>,
+  hasRepo: boolean,
+  hasPrompt: boolean,
+  hasPatch: boolean,
+  checksPassed: boolean,
+  hasPr: boolean,
+) {
+  if (!hasRepo) return 'Select a repository.'
+  if (!hasPrompt) return 'Write the operator prompt.'
+  if (steps['Patch prepared'] === 'waiting') return 'Start work to generate a plan and patch.'
+  if (hasPatch && steps['Patch prepared'] === 'needs-approval') return 'Review the diff and approve changes.'
+  if (steps['Checks running'] === 'needs-approval') return 'Run checks before commit.'
+  if (!checksPassed && steps['Checks running'] !== 'waiting') return 'Wait for checks or retry failed checks.'
+  if (steps['Commit ready'] === 'needs-approval') return 'Commit and push the guarded branch.'
+  if (steps['PR ready'] === 'needs-approval') return 'Create the pull request.'
+  if (hasPr || steps['Deploy ready'] === 'needs-approval') return 'Review PR, then merge/deploy only when backend guards allow it.'
+  return 'Start work.'
 }

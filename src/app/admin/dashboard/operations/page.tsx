@@ -4,13 +4,15 @@ import { getResearchToolStatus } from '@/lib/research-tools'
 import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
+import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
 
 export default async function OperationsPage() {
-  const [costs, research, system, runtime] = await Promise.all([
+  const [costs, research, system, runtime, settingsTruth] = await Promise.all([
     getCostSummary().catch(() => null),
     getResearchToolStatus().catch(() => null),
     getSystemRuntimeStatus().catch(() => null),
     getDashboardRuntimeTruth().catch(() => null),
+    getPlatformSettingsTruth().catch(() => null),
   ])
   const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
   const approvals = listRecords(LOCAL_STORE_FILES.approvals)
@@ -27,7 +29,19 @@ export default async function OperationsPage() {
     ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
     ...(research?.firecrawl.status === 'ok' || research?.playwright.status === 'ok' ? [] : ['Research stack has no live-tested crawler/browser route']),
   ]
-  const optionalItems = ['Additional media providers', 'SMTP notifications', 'Merge/deploy automation flags']
+  const toolStatus = (key: string) => settingsTruth?.tools.find((tool) => tool.key === key)?.status ?? 'Needs key'
+  const requiredBlockerCategories = [
+    'missing required key',
+    'failed live test',
+    'broken protected API',
+    'broken storage',
+    'broken GitHub',
+    'broken Studio execution',
+    'broken Workbench PR flow',
+    'broken static assets',
+    'build/lint/test failure',
+  ]
+  const optionalItems = ['Avatar/talking video backend route', 'Automated memory promotion scheduler', 'Extra providers', 'SMTP enhancements']
   const goLiveCandidate = liveBlockers.length === 0
 
   return (
@@ -66,6 +80,15 @@ export default async function OperationsPage() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h3 className="text-base font-black text-slate-100">Required blocker categories</h3>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {requiredBlockerCategories.map((category) => (
+            <div key={category} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-bold text-slate-400">{category}</div>
+          ))}
+        </div>
+      </section>
+
       {/* Top metrics */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OpsMetric label="VPS / Webdock" value={system?.vps.status ?? 'Needs key'} status={system?.vps.status === 'ok' ? 'ok' : 'warn'} />
@@ -89,6 +112,14 @@ export default async function OperationsPage() {
           <OpsRow label="Firecrawl" value={research?.firecrawl.status ?? 'Needs key/test'} />
           <OpsRow label="Crawl4AI" value={research?.crawl4ai.status ?? 'Unavailable'} />
           <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+        </OpsPanel>
+
+        <OpsPanel title="Required services">
+          <OpsRow label="GitHub" value={toolStatus('github')} />
+          <OpsRow label="Redis" value={toolStatus('redis')} />
+          <OpsRow label="Playwright" value={toolStatus('playwright')} />
+          <OpsRow label="Webdock" value={toolStatus('webdock')} />
+          <OpsRow label="Storage" value={settingsTruth?.storage.status ?? (storage.writable ? 'Connected' : 'Failed')} />
         </OpsPanel>
 
         {/* Usage */}
