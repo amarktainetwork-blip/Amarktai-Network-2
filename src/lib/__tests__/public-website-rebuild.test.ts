@@ -77,7 +77,7 @@ describe('public website hard reset', () => {
       'components/public/PublicShell.tsx',
       'components/public/IntelligenceFabric.tsx',
     ]
-    const retiredName = String.fromCharCode(65, 105, 118, 97) // "Aiva" without direct literal text
+    const retiredName = String.fromCharCode(65, 105, 118, 97) // retired assistant name (without direct literal)
 
     for (const file of files) {
       const source = read(file)
