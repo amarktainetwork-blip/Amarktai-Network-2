@@ -7,11 +7,14 @@ import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
 const TOOL_KEYS = [
+  { key: 'genx', label: 'GenX', description: 'Primary model broker. Unlocks routed Studio execution.', placeholder: 'genx key' },
   { key: 'github', label: 'GitHub', description: 'Repository import, branches, PRs, merge, and deploy handoff.', placeholder: 'ghp_...' },
+  { key: 'redis', label: 'Redis', description: 'Queues, job coordination, and live job state.', placeholder: 'REDIS_URL' },
   { key: 'firecrawl', label: 'Firecrawl', description: 'Research and scraping tool.', placeholder: 'fc_...' },
   { key: 'crawl4ai', label: 'Crawl4AI', description: 'Research and scraping tool.', placeholder: 'crawl4ai key' },
   { key: 'playwright', label: 'Playwright', description: 'Browser automation and verification tool.', placeholder: 'local tool' },
   { key: 'webdock', label: 'Webdock', description: 'VPS and system monitoring.', placeholder: 'webdock key' },
+  { key: 'smtp', label: 'SMTP / email', description: 'Email notifications and operator alerts.', placeholder: 'SMTP_HOST' },
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
 ]
 
@@ -37,6 +40,13 @@ export default function SettingsPage() {
     if (kind === 'storage') return truth?.storage
     return truth?.tools.find((item) => item.key === key)
   }
+  const checklist = [
+    ['Providers connected', truth ? truth.providers.some((item) => item.connected) : false],
+    ['GitHub tested', statusFor('github', 'tool')?.connected ?? false],
+    ['Storage writable route present', truth?.storage.connected ?? false],
+    ['Research tool configured', ['firecrawl', 'crawl4ai', 'playwright'].some((key) => statusFor(key, 'tool')?.configured)],
+    ['Workbench unlocks available', Boolean(statusFor('github', 'tool')?.configured && truth?.storage.configured)],
+  ] as const
 
   return (
     <div className="space-y-5">
@@ -51,6 +61,18 @@ export default function SettingsPage() {
         <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
           <p className="text-xs font-bold text-slate-300">Connected keys with passed live tests: {truth?.connectedCount ?? 0}</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Setup completion checklist</h2>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          {checklist.map(([label, passed]) => (
+            <div key={label} className={['rounded-xl border p-3', passed ? 'border-emerald-500/20 bg-emerald-500/8' : 'border-amber-500/20 bg-amber-500/8'].join(' ')}>
+              <p className={['text-xs font-black', passed ? 'text-emerald-300' : 'text-amber-300'].join(' ')}>{passed ? 'Ready' : 'Blocker'}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{label}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -111,11 +133,13 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
   const [show, setShow] = useState(false)
   const [status, setStatus] = useState('')
 
-  const statusColor = truth?.status === 'Connected' || truth?.status === 'Configured'
+  const statusColor = truth?.status === 'Connected'
     ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
-    : truth?.status === 'Configured - needs live test' || truth?.status === 'Needs key' || truth?.status === 'Needs live test'
+    : truth?.status === 'Configured' || truth?.status === 'Configured - needs live test' || truth?.status === 'Needs key' || truth?.status === 'Needs live test' || truth?.status === 'Needs test route'
       ? 'border-amber-500/20 bg-amber-500/8 text-amber-400'
-      : 'border-slate-700/40 bg-slate-800/40 text-slate-500'
+      : truth?.status === 'Failed'
+        ? 'border-red-500/20 bg-red-500/8 text-red-400'
+        : 'border-slate-700/40 bg-slate-800/40 text-slate-500'
 
   async function saveKey() {
     if (!value.trim()) return

@@ -20,6 +20,15 @@ export default async function OperationsPage() {
   const providerRows = (runtime?.providers ?? [])
     .filter((provider) => approvedProviderKeys.has(provider.key as never))
     .map((provider) => ({ name: provider.displayName, status: provider.configured ? provider.status : 'Needs key' }))
+  const missingProviders = providerRows.filter((provider) => provider.status !== 'ok' && provider.status !== 'Connected')
+  const liveBlockers = [
+    ...(!storage.writable ? ['Storage is not writable'] : []),
+    ...(system?.vps.status === 'ok' ? [] : ['VPS/Webdock status needs verification']),
+    ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
+    ...(research?.firecrawl.status === 'ok' || research?.playwright.status === 'ok' ? [] : ['Research stack has no live-tested crawler/browser route']),
+  ]
+  const optionalItems = ['Additional media providers', 'SMTP notifications', 'Merge/deploy automation flags']
+  const goLiveCandidate = liveBlockers.length === 0
 
   return (
     <div className="space-y-5">
@@ -31,6 +40,30 @@ export default async function OperationsPage() {
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
           VPS health · storage · jobs · approvals · provider truth · cost tracking — unified operational view.
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">Go-live readiness</p>
+            <h3 className="mt-1 text-xl font-black text-slate-100">{goLiveCandidate ? 'Ready for live testing' : 'Blocked before go-live'}</h3>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
+              This panel reports runtime truth from storage, provider health, VPS checks, jobs, artifacts, approvals, and research services. It does not mark unknown routes green.
+            </p>
+          </div>
+          <span className={['rounded-full border px-3 py-1 text-xs font-black', goLiveCandidate ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+            Can go live: {goLiveCandidate ? 'yes' : 'no'}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <ReadinessList title="Blocking" items={liveBlockers.length ? liveBlockers : ['No runtime blockers detected by this dashboard pass.']} tone={liveBlockers.length ? 'warn' : 'ok'} />
+          <ReadinessList title="Optional" items={optionalItems} />
+          <ReadinessList title="Live-tested surfaces" items={[
+            storage.writable ? 'Storage writable' : 'Storage needs test',
+            system?.vps.status === 'ok' ? 'VPS status ok' : 'VPS status pending',
+            `${providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length} providers connected`,
+          ]} />
+        </div>
       </section>
 
       {/* Top metrics */}
@@ -65,6 +98,13 @@ export default async function OperationsPage() {
           <OpsRow label="Jobs" value={String(jobs.length)} />
           <OpsRow label="Provider usage" value={Object.keys(costs?.byProvider ?? {}).join(', ') || 'No runs yet'} />
           <OpsRow label="App usage" value={Object.keys(costs?.byApp ?? {}).join(', ') || 'No runs yet'} />
+        </OpsPanel>
+        <OpsPanel title="Jobs & approvals">
+          <OpsRow label="Active jobs" value={String(jobs.filter((job) => ['pending', 'processing', 'running'].includes(String((job as { status?: unknown }).status))).length)} />
+          <OpsRow label="Recent failed jobs" value={String(jobs.filter((job) => String((job as { status?: unknown }).status).includes('fail')).slice(-10).length)} />
+          <OpsRow label="Recent artifacts" value={String(artifacts.slice(-10).length)} />
+          <OpsRow label="Workbench jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('workbench')).length)} />
+          <OpsRow label="Studio jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('studio')).length)} />
         </OpsPanel>
       </section>
 
@@ -129,6 +169,20 @@ function OpsRow({ label, value, mono = false }: { label: string; value: string; 
     <div className="flex items-start justify-between gap-3 border-b border-slate-800/60 pb-2.5 last:border-0 last:pb-0">
       <span className="text-xs font-bold text-slate-500">{label}</span>
       <span className={['max-w-[58%] break-words text-right text-xs font-bold text-slate-300', mono ? 'font-mono' : ''].join(' ')}>{value}</span>
+    </div>
+  )
+}
+
+function ReadinessList({ title, items, tone = 'neutral' }: { title: string; items: string[]; tone?: 'neutral' | 'warn' | 'ok' }) {
+  const color = tone === 'ok' ? 'text-emerald-300' : tone === 'warn' ? 'text-amber-300' : 'text-slate-300'
+  return (
+    <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+      <p className={['text-xs font-black', color].join(' ')}>{title}</p>
+      <div className="mt-2 space-y-1.5">
+        {items.map((item) => (
+          <p key={item} className="text-xs font-semibold leading-5 text-slate-500">{item}</p>
+        ))}
+      </div>
     </div>
   )
 }

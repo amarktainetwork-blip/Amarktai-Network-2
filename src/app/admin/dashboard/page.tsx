@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Brain, DatabaseZap, FolderInput, Loader2, Play, Save, Send, Sparkles } from 'lucide-react'
 import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
 import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
@@ -22,7 +22,19 @@ type AssistantContext = {
   voice?: Array<{ provider: string; label: string; status: string }>
   modelCatalog?: unknown[]
 }
-type ArtifactSummary = { id: string; title?: string; type?: string; subType?: string; provider?: string; model?: string; storageUrl?: string; createdAt?: string }
+type ArtifactSummary = {
+  id: string
+  title?: string
+  type?: string
+  subType?: string
+  provider?: string
+  model?: string
+  storageUrl?: string
+  contentUrl?: string
+  url?: string
+  createdAt?: string
+  metadata?: Record<string, unknown>
+}
 
 export default function StudioPage() {
   const [tab, setTab] = useState<StudioTab>('Chat')
@@ -32,7 +44,7 @@ export default function StudioPage() {
   const [provider, setProvider] = useState('auto')
   const [costMode, setCostMode] = useState<CostMode>('balanced')
   const [voice, setVoice] = useState('minimax')
-  const [appSlug] = useState('superbrain')
+  const [appSlug] = useState('amarktai')
   const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -44,6 +56,7 @@ export default function StudioPage() {
   const [streaming, setStreaming] = useState(false)
   const [executing, setExecuting] = useState(false)
   const [status, setStatus] = useState('')
+  const [jobStatus, setJobStatus] = useState('')
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -56,9 +69,15 @@ export default function StudioPage() {
     })
   }, [])
 
+  const loadArtifacts = useCallback(async () => {
+    const response = await fetch(`/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}&limit=30`)
+    const data = await response.json().catch(() => ({}))
+    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
+  }, [appSlug])
+
   useEffect(() => {
     if (tab === 'Artifacts') loadArtifacts().catch(() => null)
-  }, [tab])
+  }, [tab, loadArtifacts])
 
   const tabCapability = useMemo(() => capabilityForTab(tab), [tab])
   const tabTruth = STUDIO_TAB_TRUTH[tab]
@@ -69,12 +88,6 @@ export default function StudioPage() {
   }, [catalog, tab])
 
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
-
-  async function loadArtifacts() {
-    const response = await fetch('/api/admin/artifacts?appSlug=superbrain&limit=30')
-    const data = await response.json().catch(() => ({}))
-    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
-  }
 
   async function sendMessage() {
     if (!message.trim() || !tabTruth.chatEnabled) return
@@ -142,6 +155,7 @@ export default function StudioPage() {
 
     setExecuting(true)
     setAudioPreview('')
+    setJobStatus('')
     setStatus('Running real backend route')
     try {
       const endpoint = tab === 'Coding' ? '/api/admin/studio/workbench-handoff' : '/api/admin/studio/execute'
@@ -164,12 +178,19 @@ export default function StudioPage() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Studio execution failed')
       if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
+      const pollUrl = typeof data.result?.pollUrl === 'string' ? data.result.pollUrl : ''
+      if (pollUrl) {
+        setJobStatus(String(data.result?.status ?? 'pending'))
+        const finalJob = await pollStudioJob(pollUrl)
+        if (finalJob?.status) setJobStatus(String(finalJob.status))
+        if (finalJob && !extractResultUrl(finalJob) && String(finalJob.status) !== 'failed') setStatus('Job created, output pending')
+      }
       setConversation((current) => [
         ...current,
         { role: 'user', content: message },
         { role: 'assistant', content: summarizeStudioResult(data) },
       ])
-      setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : 'Backend executed')
+      setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : pollUrl ? 'Job created, output pending' : 'Backend executed')
       await loadArtifacts().catch(() => null)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Studio request failed')
@@ -219,6 +240,19 @@ export default function StudioPage() {
     setStatus('Memory saved')
   }
 
+  async function pollStudioJob(pollUrl: string) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await fetch(pollUrl).catch(() => null)
+      const data = await response?.json().catch(() => null)
+      const statusText = String(data?.status ?? data?.job?.status ?? 'processing')
+      setJobStatus(statusText)
+      if (['completed', 'succeeded', 'failed'].includes(statusText)) return data as Record<string, unknown>
+      await new Promise((resolve) => window.setTimeout(resolve, 2000))
+    }
+    setJobStatus('processing')
+    return null
+  }
+
   return (
     <div className="space-y-5">
       {/* Hero */}
@@ -227,9 +261,9 @@ export default function StudioPage() {
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Studio</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">The Superbrain Workspace</h2>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Operator studio.</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Chat · Code · Research · Image · Video · Audio · Voice · Artifacts — all wired to the real model router.
+              Chat, code handoff, research, image, video, audio, voice, transcription, and artifacts are wired to protected backend routes.
             </p>
           </div>
           <div className="flex shrink-0 gap-3">
@@ -263,7 +297,7 @@ export default function StudioPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Context</p>
             <div className="mt-2 space-y-1.5 text-xs text-slate-500">
               <p className="flex items-center gap-2"><Brain className="h-3.5 w-3.5 text-cyan-500" /> Dashboard-aware context loaded</p>
-              <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Memory and emotion state available</p>
+              <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Workspace memory available</p>
               <p className="flex items-center gap-2"><FolderInput className="h-3.5 w-3.5 text-cyan-500" /> Workbench handoff enabled</p>
             </div>
           </div>
@@ -315,7 +349,7 @@ export default function StudioPage() {
               </div>
               {(status || tabTruth.status) && (
                 <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-slate-400">
-                  {status || tabTruth.status}
+                  {jobStatus ? `${status || tabTruth.status} / ${jobStatus}` : status || tabTruth.status}
                 </span>
               )}
             </div>
@@ -330,6 +364,7 @@ export default function StudioPage() {
                   {artifacts.map((artifact) => (
                     <div key={artifact.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 p-3">
                       <p className="text-sm font-black text-slate-200">{artifact.title || artifact.id}</p>
+                      <ArtifactPreview artifact={artifact} />
                       <p className="mt-1 text-xs font-semibold text-slate-500">{artifact.type} / {artifact.subType || 'artifact'} — {artifact.provider || 'stored'}</p>
                       {artifact.storageUrl && <a href={artifact.storageUrl} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open artifact ↗</a>}
                     </div>
@@ -482,7 +517,7 @@ function placeholderForTab(tab: StudioTab) {
   if (tab === 'Coding') return 'Describe the repo change to plan and send to Workbench.'
   if (tab === 'Adult') return 'Adult-capable requests are routed only when the app policy allows the requested content type.'
   if (tab === 'Artifacts') return 'Ask to summarize, link, or retrieve generated artifacts and job outputs.'
-  return 'Ask the Superbrain to help with this app, another connected app, or an operator task.'
+  return 'Ask the operator studio to help with this app, another connected app, or an operational task.'
 }
 
 function actionLabelForTab(tab: StudioTab) {
@@ -505,4 +540,36 @@ function summarizeStudioResult(data: Record<string, unknown>) {
     return `Artifact saved: ${String((data.artifact as { id?: unknown }).id)}`
   }
   return JSON.stringify(data, null, 2)
+}
+
+function ArtifactPreview({ artifact }: { artifact: ArtifactSummary }) {
+  const url = getArtifactUrl(artifact)
+  const kind = `${artifact.type ?? ''} ${artifact.subType ?? ''}`.toLowerCase()
+  if (!url) return <p className="mt-2 text-xs font-semibold text-amber-300/80">Job created, output pending.</p>
+  if (kind.includes('image')) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt={artifact.title ?? artifact.id} className="mt-3 max-h-64 w-full rounded-lg object-contain" />
+  }
+  if (kind.includes('video')) return <video controls src={url} className="mt-3 max-h-64 w-full rounded-lg" />
+  if (kind.includes('audio') || kind.includes('voice')) return <audio controls src={url} className="mt-3 w-full" />
+  return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open artifact</a>
+}
+
+function getArtifactUrl(artifact: ArtifactSummary) {
+  return artifact.storageUrl
+    ?? artifact.contentUrl
+    ?? artifact.url
+    ?? stringMeta(artifact.metadata, 'storageUrl')
+    ?? stringMeta(artifact.metadata, 'resultUrl')
+    ?? stringMeta(artifact.metadata, 'imageUrl')
+    ?? ''
+}
+
+function extractResultUrl(job: Record<string, unknown>) {
+  return stringMeta(job, 'resultUrl') ?? stringMeta(job, 'storageUrl') ?? stringMeta(job, 'artifactUrl') ?? ''
+}
+
+function stringMeta(source: Record<string, unknown> | undefined, key: string) {
+  const value = source?.[key]
+  return typeof value === 'string' ? value : undefined
 }

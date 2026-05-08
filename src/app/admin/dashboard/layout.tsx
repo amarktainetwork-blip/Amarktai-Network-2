@@ -3,7 +3,7 @@
 import '@fontsource-variable/inter'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, ChevronRight, LogOut, Menu, Shield, X, Zap } from 'lucide-react'
+import { Activity, ChevronRight, LogOut, Menu, Network, Shield, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 
@@ -62,8 +62,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="px-5 py-6">
         <Link href="/admin/dashboard" className="group block">
           <div className="flex items-center gap-3">
-            <div className="relative grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 via-sky-500 to-indigo-600 shadow-[0_0_32px_rgba(34,211,238,0.35)]">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-700 bg-slate-900 shadow-[0_0_28px_rgba(14,165,233,0.18)]">
+              <Network className="h-5 w-5 text-sky-300" />
               <span
                 className="absolute inset-0 rounded-xl ring-1 ring-cyan-400/40 transition-all duration-700"
                 style={{ boxShadow: pulse ? '0 0 16px 2px rgba(34,211,238,0.25)' : 'none' }}
@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <p className="text-sm font-black tracking-tight text-slate-100">AmarktAI Network</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/70">Superbrain Console</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/70">Operations Console</p>
             </div>
           </div>
         </Link>
@@ -136,7 +136,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className="flex min-h-screen bg-[#030712] text-slate-100"
       style={{ fontFamily: "'Inter Variable','Inter',system-ui,-apple-system,sans-serif" }}
     >
-      {/* Neural background glow */}
+      {/* Runtime background field */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-cyan-950/20 blur-[120px]" />
         <div className="absolute -right-64 top-1/3 h-[500px] w-[500px] rounded-full bg-indigo-950/25 blur-[120px]" />

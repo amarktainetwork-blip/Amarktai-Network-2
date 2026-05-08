@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'audio file is required' }, { status: 400 })
   }
 
-  const appSlug = String(incoming.get('appSlug') || 'superbrain')
+  const appSlug = String(incoming.get('appSlug') || 'amarktai')
   const provider = String(incoming.get('provider') || 'auto')
   const model = String(incoming.get('model') || '')
   const language = String(incoming.get('language') || '')

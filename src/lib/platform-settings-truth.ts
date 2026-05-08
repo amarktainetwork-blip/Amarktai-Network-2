@@ -11,6 +11,8 @@ export type SettingsTruthStatus =
   | 'Needs live test'
   | 'Needs test route'
   | 'Available backend route'
+  | 'Unsupported'
+  | 'Failed'
   | 'Not implemented'
 
 export interface SettingsTruthEntry {
@@ -20,7 +22,7 @@ export interface SettingsTruthEntry {
   status: SettingsTruthStatus
   configured: boolean
   connected: boolean
-  source: ProviderKeySource | 'local' | 'runtime' | 'missing'
+  source: ProviderKeySource | 'local' | 'runtime' | 'env' | 'missing'
   testRoute: string | null
   note: string
 }
@@ -73,12 +75,30 @@ async function getLastKnownTestPassed(key: string): Promise<boolean> {
 }
 
 const TOOL_ENTRIES = [
+  { key: 'genx', label: 'GenX', note: 'Primary broker for model routing and Studio execution.', envKey: 'genx' },
   { key: 'github', label: 'GitHub', note: 'Repository list, branch list, push, PR, merge, and deploy handoff.' },
+  { key: 'redis', label: 'Redis', note: 'Queues, job coordination, and live job state.', envName: 'REDIS_URL' },
   { key: 'firecrawl', label: 'Firecrawl', note: 'Research and scraping service. Status route lives in the research stack.' },
   { key: 'crawl4ai', label: 'Crawl4AI', note: 'Local research fallback. Availability is checked by research status, not by provider keys.' },
   { key: 'playwright', label: 'Playwright', note: 'Browser preview and verification tool. Availability is checked at runtime.' },
   { key: 'webdock', label: 'Webdock', note: 'VPS and system monitoring service.' },
+  { key: 'smtp', label: 'SMTP / email', note: 'Email delivery, notifications, and operator alerts.', envName: 'SMTP_HOST' },
 ] as const
+
+function envEntry(input: { key: string; label: string; note: string; envName: string; testRoute?: string | null }): SettingsTruthEntry {
+  const configured = Boolean(process.env[input.envName])
+  return {
+    key: input.key,
+    label: input.label,
+    kind: 'tool',
+    status: configured ? (input.testRoute ? 'Configured' : 'Needs test route') : 'Needs key',
+    configured,
+    connected: false,
+    source: configured ? 'env' : 'missing',
+    testRoute: input.testRoute ?? null,
+    note: input.note,
+  }
+}
 
 async function entryForKey(input: {
   key: string
@@ -142,16 +162,16 @@ export async function getPlatformSettingsTruth(): Promise<{
       label: tool.label,
       kind: 'tool',
       note: tool.note,
-      envKey: tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : tool.key as CoreProvider,
+      envKey: 'envName' in tool ? undefined : tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (('envKey' in tool ? tool.envKey : tool.key) as CoreProvider),
       testRoute: tool.key === 'firecrawl' ? '/api/admin/research/status' : TEST_ROUTES[tool.key] ?? null,
-    })),
+    }).then((entry) => 'envName' in tool ? envEntry({ key: tool.key, label: tool.label, note: tool.note, envName: tool.envName }) : entry)),
   )
 
   const storage: SettingsTruthEntry = {
     key: 'storage',
     label: 'VPS/local storage',
     kind: 'storage',
-    status: 'Available backend route',
+    status: 'Connected',
     configured: true,
     connected: true,
     source: 'local',
@@ -159,7 +179,7 @@ export async function getPlatformSettingsTruth(): Promise<{
     note: `Storage root: ${getStorageRoot()}`,
   }
 
-  const connectedCount = [...providers, ...tools].filter((item) => item.connected).length
+  const connectedCount = new Set([...providers, ...tools].filter((item) => item.connected).map((item) => item.key)).size
 
   return {
     providers,

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   let artifact: unknown = null
   try {
     artifact = await createArtifact({
-      appSlug: body.appSlug || 'superbrain',
+      appSlug: body.appSlug || 'amarktai',
       type: 'code',
       subType: 'workbench_handoff',
       title: `Workbench task: ${prompt.slice(0, 80)}`,

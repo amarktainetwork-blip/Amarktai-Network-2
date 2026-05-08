@@ -13,7 +13,7 @@ const appTypes = ['companion/chat', 'marketing', 'coding/dev', 'research', 'medi
 export default async function AppsAgentsPage() {
   const [packages, agents] = await Promise.all([
     listAppAiPackages().catch(() => []),
-    Promise.resolve(listOperatorAgents('superbrain')),
+    Promise.resolve(listOperatorAgents('amarktai')),
   ])
 
   return (
@@ -24,7 +24,7 @@ export default async function AppsAgentsPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Apps & Agents</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Connected app orchestration.</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Apps run from this VPS. The Superbrain assigns model packages, agents, memory, storage, adult policy, and deployment profiles.
+          Apps run from this VPS. The orchestration layer assigns model packages, agents, memory, storage, policy, and deployment profiles.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
           {['Registry available', 'Package store active', 'Agent dispatch wired'].map((s) => (
@@ -97,7 +97,7 @@ export default async function AppsAgentsPage() {
                 </div>
                 <span className={[
                   'rounded-full border px-2 py-0.5 text-[10px] font-bold',
-                  agent.status === 'active' ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400' : 'border-slate-700/40 bg-slate-800/40 text-slate-500',
+                  agent.status === 'available' ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400' : 'border-amber-500/20 bg-amber-500/8 text-amber-400',
                 ].join(' ')}>{agent.status}</span>
               </div>
               <p className="mt-2 text-[10px] font-semibold text-slate-600">Capabilities: {agent.allowedCapabilities.join(', ')}</p>

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   const [tools, route] = await Promise.all([
     getResearchToolStatus(),
-    Promise.resolve(routeLiveModel({ capability: 'research', appSlug: body.appSlug ?? 'superbrain', costMode: 'balanced' })),
+    Promise.resolve(routeLiveModel({ capability: 'research', appSlug: body.appSlug ?? 'amarktai', costMode: 'balanced' })),
   ])
 
   return NextResponse.json({
