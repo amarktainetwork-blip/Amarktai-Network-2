@@ -5,33 +5,40 @@ import PublicShell from '@/components/public/PublicShell'
 
 export default function ContactPage() {
   const [loading, setLoading] = useState(false)
-  const [ok, setOk] = useState(false)
+  const [sent, setSent] = useState(false)
   const [error, setError] = useState(false)
   const [form, setForm] = useState({
     name: '',
     email: '',
-    operation: '',
-    scope: '',
+    organization: '',
+    environment: '',
     message: '',
   })
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault()
     setLoading(true)
     setError(false)
+
     try {
-      const res = await fetch('/api/contact', {
+      const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name,
           email: form.email,
-          companyOrProject: form.operation,
-          message: `[OPERATIONAL INQUIRY]\nOperating environment: ${form.operation}\nCurrent scope: ${form.scope}\nNotes: ${form.message}`,
+          companyOrProject: form.organization,
+          message: [
+            '[PRIVATE INFRASTRUCTURE INQUIRY]',
+            `Organization: ${form.organization}`,
+            `Operating environment: ${form.environment}`,
+            `Notes: ${form.message}`,
+          ].join('\n'),
         }),
       })
-      if (!res.ok) throw new Error('request failed')
-      setOk(true)
+
+      if (!response.ok) throw new Error('submission failed')
+      setSent(true)
     } catch {
       setError(true)
     } finally {
@@ -41,105 +48,88 @@ export default function ContactPage() {
 
   return (
     <PublicShell>
-      {/* Hero */}
-      <section className="relative overflow-hidden bg-[#04060f] pb-20 pt-24 lg:pb-24 lg:pt-32">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03] [background-image:linear-gradient(rgba(96,165,250,0.5)_1px,transparent_1px),linear-gradient(90deg,rgba(96,165,250,0.5)_1px,transparent_1px)] [background-size:56px_56px]" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(99,102,241,0.3)] to-transparent" />
-
-        <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-[11px] uppercase tracking-[0.26em] text-[#4a5f88]">Contact</p>
-          <h1 className="mt-5 max-w-4xl text-4xl font-semibold leading-[1.1] tracking-[-0.04em] text-[#eef2fb] sm:text-5xl">
-            Institutional inquiry channel for private AI infrastructure discussions.
+      <section className="architecture-band pb-20 pt-24 lg:pb-28 lg:pt-32">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Contact</p>
+          <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
+            A private inquiry channel for serious AI infrastructure conversations.
           </h1>
+          <p className="mt-7 max-w-2xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
+            Share the operating environment, workflow scope, and governance constraints that matter. The response path is handled by a human operator.
+          </p>
         </div>
       </section>
 
-      {/* Inquiry form */}
-      <section className="bg-[#05070f] py-20 lg:py-24">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
-            {/* Sidebar */}
-            <aside className="space-y-6">
-              <div className="border border-[#1a2038] bg-[#070a14] p-7">
-                <p className="mb-5 text-[10px] uppercase tracking-[0.22em] text-[#3d5070]">Inquiry profile</p>
-                <div className="space-y-4">
-                  {[
-                    'Private infrastructure scope and operating environment',
-                    'Model routing and agent orchestration requirements',
-                    'Deployment governance constraints',
-                    'Operational timeline and security considerations',
-                  ].map((item) => (
-                    <div key={item} className="flex items-start gap-3">
-                      <div className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[rgba(96,165,250,0.45)]" />
-                      <p className="text-sm leading-7 text-[#7a8daf]">{item}</p>
-                    </div>
-                  ))}
+      <section className="bg-[var(--amarkt-black)] py-24 lg:py-32">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:px-8">
+          <aside className="premium-panel p-7">
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Inquiry profile</p>
+            <div className="mt-8 space-y-6">
+              {[
+                'Private AI operations strategy',
+                'Model routing and provider architecture',
+                'Agent workflow design',
+                'Memory, artifact, and deployment governance',
+              ].map((item) => (
+                <div key={item} className="flex gap-4">
+                  <div className="mt-2 h-1.5 w-1.5 shrink-0 bg-[var(--amarkt-blue)]" />
+                  <p className="text-sm leading-7 text-[var(--amarkt-soft)]">{item}</p>
                 </div>
-              </div>
+              ))}
+            </div>
+          </aside>
 
-              <div className="border border-[#1a2038] bg-[#070a14] p-7">
-                <p className="mb-3 text-[10px] uppercase tracking-[0.22em] text-[#3d5070]">Response protocol</p>
-                <p className="text-sm leading-7 text-[#6a7da0]">
-                  Inquiries are reviewed by a human operator. Responses are directed to the submitted contact address within the relevant operational timeframe.
+          <div className="premium-panel">
+            {sent ? (
+              <div className="p-8 lg:p-10">
+                <div className="section-line h-px w-16" />
+                <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--amarkt-blue)]">Inquiry received</p>
+                <p className="mt-5 max-w-xl text-base leading-8 text-[var(--amarkt-soft)]">
+                  The message has been recorded. A response will be directed to the submitted contact address.
                 </p>
               </div>
-            </aside>
-
-            {/* Form panel */}
-            <div className="border border-[#1a2038] bg-[#070a14]">
-              {ok ? (
-                <div className="flex h-full flex-col items-start justify-center p-10">
-                  <div className="mb-4 h-1 w-10 bg-[rgba(96,165,250,0.5)]" />
-                  <p className="text-[10px] uppercase tracking-[0.22em] text-[#4a6a9a]">Inquiry received</p>
-                  <p className="mt-5 max-w-md text-base leading-8 text-[#8a9dbe]">
-                    Your operational inquiry has been recorded. A response will be directed to your provided contact address.
-                  </p>
-                </div>
-              ) : (
-                <form className="space-y-0 divide-y divide-[#1a2038]" onSubmit={onSubmit}>
-                  {[
-                    { id: 'name', label: 'Full name', type: 'text', required: true, key: 'name' as const },
-                    { id: 'email', label: 'Email address', type: 'email', required: true, key: 'email' as const },
-                    { id: 'operation', label: 'Operating environment', type: 'text', required: true, key: 'operation' as const },
-                    { id: 'scope', label: 'Current operational scope', type: 'text', required: false, key: 'scope' as const },
-                  ].map((field) => (
-                    <label key={field.id} className="block">
-                      <span className="block px-7 pt-5 text-[10px] uppercase tracking-[0.2em] text-[#4a6080]">{field.label}</span>
-                      <input
-                        type={field.type}
-                        required={field.required}
-                        value={form[field.key]}
-                        onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                        className="w-full bg-transparent px-7 pb-5 pt-2 text-sm text-[#d8e4f5] outline-none placeholder:text-[#2d3d5a] focus:bg-[#060912]"
-                      />
-                    </label>
-                  ))}
-
-                  <label className="block">
-                    <span className="block px-7 pt-5 text-[10px] uppercase tracking-[0.2em] text-[#4a6080]">Notes</span>
-                    <textarea
-                      rows={5}
-                      value={form.message}
-                      onChange={(e) => setForm({ ...form, message: e.target.value })}
-                      className="w-full resize-none bg-transparent px-7 pb-5 pt-2 text-sm text-[#d8e4f5] outline-none placeholder:text-[#2d3d5a] focus:bg-[#060912]"
+            ) : (
+              <form className="divide-y divide-white/[0.08]" onSubmit={onSubmit}>
+                {[
+                  ['name', 'Full name', 'text', true],
+                  ['email', 'Email address', 'email', true],
+                  ['organization', 'Organization or project', 'text', true],
+                  ['environment', 'Operating environment', 'text', false],
+                ].map(([key, label, type, required]) => (
+                  <label key={key as string} className="block px-7 py-5">
+                    <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">{label}</span>
+                    <input
+                      type={type as string}
+                      required={Boolean(required)}
+                      value={form[key as keyof typeof form]}
+                      onChange={(event) => setForm({ ...form, [key as string]: event.target.value })}
+                      className="mt-3 w-full border-0 bg-transparent text-base text-white outline-none placeholder:text-[var(--amarkt-dim)]"
                     />
                   </label>
+                ))}
 
-                  <div className="px-7 py-5">
-                    {error && (
-                      <p className="mb-4 text-xs text-[#d07a85]">Unable to submit at this time. Please retry.</p>
-                    )}
-                    <button
-                      disabled={loading}
-                      type="submit"
-                      className="border border-[#2a3a62] bg-[#0d1428] px-8 py-3.5 text-xs uppercase tracking-[0.18em] text-[#c8d8f0] transition hover:bg-[#111c38] disabled:opacity-40"
-                    >
-                      {loading ? 'Submitting…' : 'Submit inquiry'}
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
+                <label className="block px-7 py-5">
+                  <span className="block font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Operational notes</span>
+                  <textarea
+                    rows={6}
+                    value={form.message}
+                    onChange={(event) => setForm({ ...form, message: event.target.value })}
+                    className="mt-3 w-full resize-none border-0 bg-transparent text-base leading-8 text-white outline-none placeholder:text-[var(--amarkt-dim)]"
+                  />
+                </label>
+
+                <div className="px-7 py-6">
+                  {error && <p className="mb-4 text-sm text-[#f0a0aa]">The message could not be submitted. Please retry.</p>}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="border border-white/[0.14] bg-white/[0.06] px-7 py-3.5 font-mono text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/[0.1] disabled:opacity-45"
+                  >
+                    {loading ? 'Submitting' : 'Submit inquiry'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </section>
