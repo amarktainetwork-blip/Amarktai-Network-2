@@ -6,6 +6,13 @@ import {
   type CostMode,
 } from '@/lib/approved-ai-catalog'
 import { STATIC_PROVIDER_MODELS, type ProviderModelOption } from '@/lib/ai-model-catalog'
+import {
+  getModelsForCapability,
+  normalizeGovernedCapability,
+  validateCapabilitySelection,
+  type GovernedCapability,
+  type GovernedModel,
+} from '@/lib/provider-capability-governance'
 import { adultPolicyAllows, normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
 
 export type AiCapability =
@@ -14,15 +21,35 @@ export type AiCapability =
   | 'coding'
   | 'research'
   | 'image'
+  | 'image_generation'
+  | 'image_editing'
+  | 'image_to_video'
   | 'video'
+  | 'video_generation'
+  | 'music_generation'
+  | 'song_generation'
+  | 'lyrics_generation'
+  | 'instrumental_music'
   | 'voice_tts'
   | 'voice_stt'
+  | 'tts'
+  | 'stt'
+  | 'voice_selection'
+  | 'voice_cloning'
   | 'avatar_video'
   | 'moderation'
+  | 'embeddings'
+  | 'rag'
   | 'adult_text'
   | 'adult_image'
   | 'adult_video'
   | 'adult_voice'
+  | 'repo_audit'
+  | 'crawling'
+  | 'browser_qa'
+  | 'app_memory'
+  | 'artifacts'
+  | 'operations'
 
 export type ModelStrategy = CostMode | 'custom'
 
@@ -56,15 +83,35 @@ const CAPABILITY_TO_ROLE: Record<AiCapability, string[]> = {
   coding: ['coding', 'reasoning'],
   research: ['chat', 'reasoning'],
   image: ['vision'],
+  image_generation: ['vision'],
+  image_editing: ['vision'],
+  image_to_video: ['vision'],
   video: ['vision'],
+  video_generation: ['vision'],
+  music_generation: ['chat'],
+  song_generation: ['chat'],
+  lyrics_generation: ['chat'],
+  instrumental_music: ['chat'],
   voice_tts: ['chat'],
   voice_stt: ['chat'],
+  tts: ['chat'],
+  stt: ['chat'],
+  voice_selection: ['chat'],
+  voice_cloning: ['chat'],
   avatar_video: ['vision'],
   moderation: ['chat'],
+  embeddings: ['chat'],
+  rag: ['chat'],
   adult_text: ['chat'],
   adult_image: ['vision'],
   adult_video: ['vision'],
   adult_voice: ['chat'],
+  repo_audit: ['coding', 'reasoning'],
+  crawling: ['chat', 'reasoning'],
+  browser_qa: ['chat', 'reasoning'],
+  app_memory: ['chat', 'reasoning'],
+  artifacts: ['chat', 'reasoning'],
+  operations: ['chat', 'reasoning'],
 }
 
 const COST_ESTIMATE: Record<CostMode, number> = {
@@ -85,23 +132,56 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
   'coding',
   'research',
   'image',
+  'image_generation',
+  'image_editing',
+  'image_to_video',
   'video',
+  'video_generation',
+  'music_generation',
+  'song_generation',
+  'lyrics_generation',
+  'instrumental_music',
   'voice_tts',
   'voice_stt',
+  'tts',
+  'stt',
+  'voice_selection',
+  'voice_cloning',
   'avatar_video',
   'moderation',
+  'embeddings',
+  'rag',
   'adult_text',
   'adult_image',
   'adult_video',
   'adult_voice',
+  'repo_audit',
+  'crawling',
+  'browser_qa',
+  'app_memory',
+  'artifacts',
+  'operations',
 ] as const
 
 export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const costMode = input.costMode ?? 'balanced'
   const appSlug = input.appSlug ?? 'dashboard'
+  const governedCapability = normalizeGovernedCapability(input.capability)
+  if (!governedCapability) return blocked(input, costMode, `Unknown capability: ${input.capability}`)
   const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
   if (input.capability.startsWith('adult_') && !adultPolicyAllows(adultPolicy, input.capability)) {
     return blocked(input, costMode, 'Adult capability needs an app policy that allows this content type.')
+  }
+  const governanceValidation = validateCapabilitySelection({
+    appSlug,
+    capability: governedCapability,
+    provider: input.selectedProvider,
+    modelId: input.selectedModel,
+    adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
+    budgetAllows: typeof input.budgetRemainingUsd !== 'number' || input.budgetRemainingUsd >= COST_ESTIMATE[costMode],
+  })
+  if (!governanceValidation.allowed && (input.selectedProvider || ['adult_video', 'adult_voice'].includes(governedCapability))) {
+    return blocked(input, costMode, governanceValidation.reason)
   }
 
   if (typeof input.budgetRemainingUsd === 'number' && input.budgetRemainingUsd < COST_ESTIMATE[costMode]) {
@@ -134,14 +214,22 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
 
 function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   if (!input.selectedProvider || input.selectedProvider === 'auto') return null
-  if (!isApprovedAIProvider(input.selectedProvider)) {
-    return blocked(input, input.costMode ?? 'balanced', 'Selected provider is not approved.')
-  }
+  const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
+  const validation = validateCapabilitySelection({
+    appSlug: input.appSlug,
+    capability: input.capability,
+    provider: input.selectedProvider,
+    modelId: input.selectedModel,
+    adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
+  })
+  if (!validation.allowed) return blocked(input, input.costMode ?? 'balanced', validation.reason)
 
   const providerModels = STATIC_PROVIDER_MODELS[input.selectedProvider] ?? []
-  const selectedModel = input.selectedModel || providerModels[0]?.modelId || null
+  const governedModels = getModelsForCapability(input.capability, { provider: input.selectedProvider })
+  const selectedModel = input.selectedModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
   const selected = providerModels.find((model) => model.modelId === selectedModel)
-  if (!selected && input.selectedProvider !== 'huggingface') {
+  const governedSelected = governedModels.find((model) => model.modelId === selectedModel)
+  if (!selected && !governedSelected && input.selectedProvider !== 'huggingface') {
     return blocked(input, input.costMode ?? 'balanced', 'Selected model is not in the approved catalog.')
   }
 
@@ -150,7 +238,7 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
     : null
 
   return {
-    selectedProvider: input.selectedProvider,
+    selectedProvider: input.selectedProvider as ApprovedProviderKey,
     selectedModel: selectedModel ?? task,
     selectedTask: task,
     fallbackChain: modelCandidates(input.capability, input.costMode ?? 'balanced', input.requiresMedia)
@@ -166,6 +254,14 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
 }
 
 function modelCandidates(capability: AiCapability, costMode: CostMode, requiresMedia = false): ProviderModelOption[] {
+  const governed = governedCandidates(capability)
+  if (governed.length > 0) {
+    return governed.sort((a, b) => {
+      const costRank = COST_ORDER[costMode].indexOf(a.costTier) - COST_ORDER[costMode].indexOf(b.costTier)
+      if (costRank !== 0) return costRank
+      return providerRank(a.provider) - providerRank(b.provider)
+    })
+  }
   const roles = CAPABILITY_TO_ROLE[capability]
   const entries = Object.values(STATIC_PROVIDER_MODELS)
     .flat()
@@ -175,12 +271,12 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
       if (capability === 'adult_text') return ['genx', 'together', 'huggingface', 'openai'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
       if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
-      if (capability === 'adult_video') return ['genx', 'huggingface'].includes(model.provider) && (model.modalities.includes('video') || model.modalities.includes('multimodal'))
-      if (capability === 'adult_voice') return ['genx', 'minimax', 'openai'].includes(model.provider) && (model.modalities.includes('voice_tts') || model.roles.includes('chat'))
-      if (capability === 'voice_tts') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
-      if (capability === 'voice_stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
-      if (capability === 'image') return model.modalities.includes('image') || model.modalities.includes('multimodal')
-      if (capability === 'video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
+      if (capability === 'adult_video' || capability === 'adult_voice') return false
+      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
+      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
+      if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false
+      if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing') return model.modalities.includes('image') || model.modalities.includes('multimodal')
+      if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
       return model.roles.some((role) => roles.includes(role))
     })
 
@@ -189,6 +285,45 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
     if (costRank !== 0) return costRank
     return providerRank(a.provider) - providerRank(b.provider)
   })
+}
+
+function governedCandidates(capability: AiCapability): ProviderModelOption[] {
+  const normalized = normalizeGovernedCapability(capability) as GovernedCapability | null
+  if (!normalized) return []
+  return getModelsForCapability(normalized).map(governedModelToProviderOption)
+}
+
+function governedModelToProviderOption(model: GovernedModel): ProviderModelOption {
+  const modality = model.capabilities.includes('image_generation') || model.capabilities.includes('image_editing')
+    ? 'image'
+    : model.capabilities.includes('video_generation') || model.capabilities.includes('image_to_video')
+      ? 'video'
+      : model.capabilities.includes('tts')
+        ? 'voice_tts'
+        : model.capabilities.includes('stt')
+          ? 'voice_stt'
+          : model.capabilities.includes('music_generation')
+            ? 'music'
+            : 'text'
+  const role = model.capabilities.includes('coding')
+    ? 'coding'
+    : model.capabilities.includes('reasoning')
+      ? 'reasoning'
+      : model.capabilities.includes('image_generation') || model.capabilities.includes('video_generation')
+        ? 'vision'
+        : 'chat'
+  return {
+    provider: model.provider,
+    modelId: model.modelId,
+    displayName: model.label,
+    family: model.providerLabel,
+    modalities: [modality as ProviderModelOption['modalities'][number]],
+    roles: [role as ProviderModelOption['roles'][number]],
+    costTier: model.provider === 'genx' ? 'medium' : 'unknown',
+    source: 'custom_supported',
+    enabled: model.status !== 'available_not_wired' && model.status !== 'blocked',
+    notes: model.notes,
+  }
 }
 
 function blocked(input: LiveRouteInput, costMode: CostMode, blockedReason: string): LiveRouteResult {

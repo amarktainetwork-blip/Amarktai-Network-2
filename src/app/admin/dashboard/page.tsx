@@ -53,7 +53,7 @@ export default function StudioPage() {
   const [provider, setProvider] = useState('auto')
   const [costMode, setCostMode] = useState<CostMode>('balanced')
   const [voice, setVoice] = useState('minimax')
-  const [appSlug] = useState('amarktai')
+  const [appSlug] = useState('amarktai-network')
   const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -287,7 +287,8 @@ export default function StudioPage() {
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Studio</p>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Operator studio.</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              Chat, code handoff, research, image, video, audio, voice, transcription, and artifacts are wired to protected backend routes.
+              This is the root AmarktAI Network workspace. It has full access to configured providers and tools.
+              Chat, Workbench handoff, research, image, video, Lyria music, voice, transcription, and artifacts are governed by protected backend routes.
             </p>
           </div>
           <div className="flex shrink-0 gap-3">
