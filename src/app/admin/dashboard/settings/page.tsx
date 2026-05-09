@@ -94,7 +94,8 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <summary className="cursor-pointer text-sm font-black text-slate-200">Advanced capability matrix</summary>
         <h2 className="text-sm font-black text-slate-200">Capability governance matrix</h2>
         <p className="mt-1.5 text-xs leading-5 text-slate-500">
           Settings consumes the same governance truth used by Studio, Workbench, and Operations. Connected still means key exists plus a passed live test.
@@ -116,7 +117,7 @@ export default function SettingsPage() {
           <GovernanceList title="Route-present, not approved" items={(truth?.governance?.routePresentNotApprovedProviders ?? []).map((item) => `${item.label}: ${item.notes}`)} />
           <GovernanceList title="Underused/not wired" items={(truth?.governance?.underusedCapabilities ?? []).map((item) => `${item.provider}/${item.modelId}: ${item.capabilities.join(', ')}`)} />
         </div>
-      </section>
+      </details>
 
       {/* AI Providers */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">

@@ -2,20 +2,44 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Brain, DatabaseZap, FolderInput, Loader2, Play, Save, Send, Sparkles } from 'lucide-react'
+import { ArrowRight, Brain, DatabaseZap, FolderInput, Loader2, Play, Save, Send, Sparkles, Upload } from 'lucide-react'
 import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
 import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
-import { STUDIO_TABS, STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
+import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
 
-const studioTabs = STUDIO_TABS
+type StudioMode = {
+  label: string
+  tab: StudioTab
+  capability: string
+  adultMode?: 'text' | 'image'
+  blocker?: string
+}
 
-const STUDIO_TAB_TRUTH: Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }> = Object.fromEntries(
-  STUDIO_TABS.map((item) => [item, {
-    status: STUDIO_ROUTE_MAP[item].status === 'missing' ? 'Not implemented' : 'Available backend route',
-    detail: STUDIO_ROUTE_MAP[item].detail,
-    chatEnabled: item === 'Chat',
-  }]),
-) as Record<StudioTab, { status: string; detail: string; chatEnabled: boolean }>
+const studioModes: StudioMode[] = [
+  { label: 'Chat', tab: 'Chat', capability: 'chat' },
+  { label: 'Research', tab: 'Research', capability: 'research' },
+  { label: 'Image', tab: 'Image', capability: 'image_generation' },
+  { label: 'Video', tab: 'Video', capability: 'video_generation' },
+  { label: 'Music / Song', tab: 'Music / Audio', capability: 'music_generation' },
+  { label: 'Voice / TTS', tab: 'Voice / TTS', capability: 'tts' },
+  { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
+  { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
+  { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
+  {
+    label: 'Adult Video',
+    tab: 'Adult',
+    capability: 'adult_video',
+    blocker: 'Blocked until route, provider policy, safeguards, async polling, artifact preview, and live test exist.',
+  },
+  {
+    label: 'Adult Voice',
+    tab: 'Adult',
+    capability: 'adult_voice',
+    blocker: 'Blocked until route, provider policy, safeguards, playback, artifact save, and live test exist.',
+  },
+  { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
+]
+
 type AssistantContext = {
   workbench?: Record<string, unknown>
   costs?: Record<string, unknown>
@@ -46,7 +70,8 @@ type StudioResultDetails = {
 }
 
 export default function StudioPage() {
-  const [tab, setTab] = useState<StudioTab>('Chat')
+  const [mode, setMode] = useState<StudioMode>(studioModes[0])
+  const tab = mode.tab
   const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
   const [context, setContext] = useState<AssistantContext | null>(null)
   const [modelId, setModelId] = useState('auto')
@@ -66,8 +91,8 @@ export default function StudioPage() {
   const [executing, setExecuting] = useState(false)
   const [status, setStatus] = useState('')
   const [jobStatus, setJobStatus] = useState('')
-  const [detailsOpen, setDetailsOpen] = useState(false)
   const [lastResult, setLastResult] = useState<StudioResultDetails | null>(null)
+  const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -87,29 +112,36 @@ export default function StudioPage() {
   }, [appSlug])
 
   useEffect(() => {
-    if (tab === 'Artifacts') loadArtifacts().catch(() => null)
-  }, [tab, loadArtifacts])
+    loadArtifacts().catch(() => null)
+  }, [loadArtifacts])
 
-  const tabCapability = useMemo(() => capabilityForTab(tab), [tab])
-  const tabTruth = STUDIO_TAB_TRUTH[tab]
+  useEffect(() => {
+    if (mode.adultMode) setAdultMode(mode.adultMode)
+  }, [mode])
+
+  const tabTruth = STUDIO_ROUTE_MAP[tab]
   const modelOptions = useMemo(() => {
     if (!catalog) return []
-    if (tab === 'Adult') return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
-    return catalog.grouped[capabilityGroupForTab(tab)] ?? catalog.models
-  }, [catalog, tab])
-
+    if (mode.capability === 'adult_text' || mode.capability === 'adult_image') {
+      return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
+    }
+    return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
+  }, [catalog, mode])
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
   const executionProvider = selectedModel?.provider ?? provider
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
   const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? (voice === 'minimax' ? 'Needs MiniMax/Mimo key or live route test' : 'Provider status unknown')
+  const activeJobState = mode.blocker ? 'blocked' : jobStatus || (executing ? 'processing' : status ? 'completed' : 'queued')
+  const latestArtifact = artifacts[0]
 
   async function sendMessage() {
-    if (!message.trim() || !tabTruth.chatEnabled) return
+    if (!message.trim() || mode.blocker) return
     const nextUser = { role: 'user' as const, content: message }
     setConversation((current) => [...current, nextUser, { role: 'assistant', content: '' }])
     setMessage('')
     setStreaming(true)
     setStatus('Streaming')
+    setJobStatus('processing')
     const controller = new AbortController()
     abortRef.current = controller
     try {
@@ -118,7 +150,7 @@ export default function StudioPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message,
-          capability: tabCapability,
+          capability: mode.capability,
           providerOverride: executionProvider,
           modelOverride: executionModel,
           costMode,
@@ -150,26 +182,28 @@ export default function StudioPage() {
         }
       }
       setStatus('Saved to conversation memory')
+      setJobStatus('completed')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Studio request failed')
+      setJobStatus('failed')
     } finally {
       setStreaming(false)
     }
   }
 
   async function runStudioAction() {
-    if (tab === 'Chat') return sendMessage()
-    if (tab === 'Artifacts') return loadArtifacts()
-    if (tab === 'Avatar / Talking Video') {
-      setStatus(STUDIO_ROUTE_MAP[tab].detail)
+    if (mode.blocker) {
+      setStatus(mode.blocker)
+      setJobStatus('blocked')
       return
     }
+    if (tab === 'Chat') return sendMessage()
     if (tab === 'STT / Transcription') return transcribeUpload()
     if (!message.trim()) return
 
     setExecuting(true)
     setAudioPreview('')
-    setJobStatus('')
+    setJobStatus('queued')
     setStatus('Running real backend route')
     try {
       const endpoint = tab === 'Coding' ? '/api/admin/studio/workbench-handoff' : '/api/admin/studio/execute'
@@ -190,6 +224,7 @@ export default function StudioPage() {
         }),
       })
       const data = await response.json().catch(() => ({}))
+      setLastPayload(data)
       if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Studio execution failed')
       if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
       const pollUrl = typeof data.result?.pollUrl === 'string' ? data.result.pollUrl : ''
@@ -198,6 +233,8 @@ export default function StudioPage() {
         const finalJob = await pollStudioJob(pollUrl)
         if (finalJob?.status) setJobStatus(String(finalJob.status))
         if (finalJob && !extractResultUrl(finalJob) && String(finalJob.status) !== 'failed') setStatus('Job created, output pending')
+      } else {
+        setJobStatus(data.artifact?.id || data.audioBase64 ? 'completed' : 'processing')
       }
       setConversation((current) => [
         ...current,
@@ -207,12 +244,13 @@ export default function StudioPage() {
       setLastResult(extractStudioDetails(data, {
         provider: executionProvider,
         model: executionModel,
-        jobStatus: pollUrl ? 'processing' : '',
+        jobStatus: pollUrl ? 'processing' : String(data.result?.status ?? ''),
       }))
       setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : pollUrl ? 'Job created, output pending' : 'Backend executed')
       await loadArtifacts().catch(() => null)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Studio request failed')
+      setJobStatus('failed')
     } finally {
       setExecuting(false)
     }
@@ -225,6 +263,7 @@ export default function StudioPage() {
     }
     setExecuting(true)
     setStatus('Uploading to STT route')
+    setJobStatus('processing')
     try {
       const form = new FormData()
       form.append('file', uploadFile)
@@ -233,6 +272,7 @@ export default function StudioPage() {
       if (executionModel) form.append('model', executionModel)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json().catch(() => ({}))
+      setLastPayload(data)
       if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'STT failed')
       setConversation((current) => [
         ...current,
@@ -242,12 +282,14 @@ export default function StudioPage() {
       setLastResult(extractStudioDetails(data, {
         provider: executionProvider,
         model: executionModel,
-        jobStatus: '',
+        jobStatus: 'completed',
       }))
       setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
+      setJobStatus('completed')
       await loadArtifacts().catch(() => null)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'STT request failed')
+      setJobStatus('failed')
     } finally {
       setExecuting(false)
     }
@@ -270,7 +312,10 @@ export default function StudioPage() {
       const data = await response?.json().catch(() => null)
       const statusText = String(data?.status ?? data?.job?.status ?? 'processing')
       setJobStatus(statusText)
-      if (['completed', 'succeeded', 'failed'].includes(statusText)) return data as Record<string, unknown>
+      if (['completed', 'succeeded', 'failed', 'blocked'].includes(statusText)) {
+        await loadArtifacts().catch(() => null)
+        return data as Record<string, unknown>
+      }
       await new Promise((resolve) => window.setTimeout(resolve, 2000))
     }
     setJobStatus('processing')
@@ -279,59 +324,149 @@ export default function StudioPage() {
 
   return (
     <div className="space-y-5">
-      {/* Hero */}
       <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 shadow-[0_0_60px_rgba(34,211,238,0.04)] backdrop-blur-xl lg:p-7">
         <div className="pointer-events-none absolute right-0 top-0 h-60 w-80 rounded-bl-[8rem] bg-gradient-to-br from-cyan-500/10 via-indigo-500/8 to-transparent blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Studio</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Operator studio.</h2>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Command Center / Studio</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Root AI operating workspace.</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-              This is the root AmarktAI Network workspace. It has full access to configured providers and tools.
-              Chat, Workbench handoff, research, image, video, Lyria music, voice, transcription, and artifacts are governed by protected backend routes.
+              This is the root AmarktAI Network workspace. Choose a mode, give the command, watch the result, then take the next action.
             </p>
           </div>
-          <div className="flex shrink-0 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
-            <DarkMetric label="Models" value={String(catalog?.models.length ?? '…')} />
+            <DarkMetric label="Models" value={String(catalog?.models.length ?? '...')} />
             <DarkMetric label="GenX" value={catalog?.genx.live ? 'Live' : 'Fallback'} accent={catalog?.genx.live} />
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[240px_1fr]">
-        {/* Tab rail */}
-        <aside className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-3 backdrop-blur-xl">
-          <div className="space-y-0.5">
-            {studioTabs.map((item) => (
-              <button
-                key={item}
-                onClick={() => setTab(item)}
-                className={[
-                  'w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-all',
-                  tab === item
-                    ? 'bg-cyan-500/10 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.06)]'
-                    : 'text-slate-500 hover:bg-slate-800/60 hover:text-slate-300',
-                ].join(' ')}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-          <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Context</p>
-            <div className="mt-2 space-y-1.5 text-xs text-slate-500">
-              <p className="flex items-center gap-2"><Brain className="h-3.5 w-3.5 text-cyan-500" /> Dashboard-aware context loaded</p>
-              <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Workspace memory available</p>
-              <p className="flex items-center gap-2"><FolderInput className="h-3.5 w-3.5 text-cyan-500" /> Workbench handoff enabled</p>
+      <section className="grid gap-4 xl:grid-cols-[390px_1fr]">
+        <span className="hidden">LEFT command / RIGHT live result workspace</span>
+        <aside className="space-y-4 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Mode</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {studioModes.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => setMode(item)}
+                  className={[
+                    'rounded-xl border px-3 py-2 text-left text-xs font-black transition',
+                    mode.label === item.label
+                      ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
+                      : item.blocker
+                        ? 'border-amber-500/15 bg-amber-500/5 text-amber-300/80'
+                        : 'border-slate-700/40 bg-slate-800/40 text-slate-400 hover:bg-slate-800 hover:text-slate-200',
+                  ].join(' ')}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
           </div>
-        </aside>
 
-        <div className="space-y-4">
-          {/* Model controls */}
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400/80">Command</p>
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              rows={8}
+              placeholder={placeholderForMode(mode)}
+              className="mt-3 min-h-44 w-full resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
+            />
+
+            {(mode.capability === 'image_generation' || mode.capability === 'adult_image') && (
+              <div className="mt-3">
+                <DarkField label="Size">
+                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="dark-select">
+                    <option value="1024x1024">1024x1024</option>
+                    <option value="1024x1792">1024x1792</option>
+                    <option value="1792x1024">1792x1024</option>
+                    <option value="768x768">768x768 adult</option>
+                  </select>
+                </DarkField>
+              </div>
+            )}
+
+            {mode.capability === 'music_generation' && (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <RouteFact label="Style" value="genre/style + mood from prompt" />
+                <RouteFact label="Vocals" value="Not verified - requires live provider test." />
+                <RouteFact label="Models" value="lyria-3-clip-preview / lyria-3-pro-preview" />
+                <RouteFact label="Capability" value="music_generation / song_generation" />
+              </div>
+            )}
+
+            {mode.capability === 'tts' && (
+              <div className="mt-3">
+                <DarkField label="Voice">
+                  <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
+                    {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
+                    {!context?.voice?.length && <option value="minimax">MiniMax/Mimo</option>}
+                  </select>
+                </DarkField>
+                <p className="mt-2 text-xs font-semibold text-slate-500">MiniMax/Mimo status: {voiceStatus}</p>
+              </div>
+            )}
+
+            {mode.capability === 'stt' && (
+              <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/50 px-3 py-2 text-sm font-bold text-slate-400">
+                <Upload className="h-4 w-4" />
+                <span>{uploadFile?.name ?? 'Upload audio or video'}</span>
+                <input
+                  type="file"
+                  accept="audio/*,video/*"
+                  onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
+                  className="hidden"
+                />
+              </label>
+            )}
+
+            {mode.blocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 text-xs font-bold leading-5 text-amber-300">{mode.blocker}</p>}
+
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button
+                onClick={runStudioAction}
+                disabled={(mode.capability !== 'stt' && !message.trim()) || streaming || executing}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)] transition hover:bg-cyan-400 disabled:opacity-40 disabled:shadow-none"
+              >
+                {streaming || executing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {actionLabelForMode(mode)}
+              </button>
+              <button onClick={() => abortRef.current?.abort()} disabled={!streaming} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
+                <Play className="h-4 w-4" />
+                Stop
+              </button>
+            </div>
+            <button onClick={saveMemory} disabled={!conversation.length} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
+              <Save className="h-4 w-4" />
+              Save result to memory
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Active jobs</p>
+            <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+          </div>
+
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Recent artifacts</p>
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {artifacts.slice(0, 8).map((artifact) => (
+                <div key={artifact.id} className="min-w-36 rounded-xl border border-slate-700/40 bg-slate-800/50 p-2">
+                  <p className="truncate text-xs font-black text-slate-300">{artifact.title || artifact.id}</p>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-600">{artifact.type ?? 'artifact'}</p>
+                </div>
+              ))}
+              {!artifacts.length && <p className="text-xs font-semibold text-slate-600">No artifacts yet.</p>}
+            </div>
+          </div>
+
+          <details className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced route details</summary>
+            <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500">
               <DarkField label="Provider">
                 <select value={provider} onChange={(event) => setProvider(event.target.value)} className="dark-select">
                   <option value="auto">Auto routing</option>
@@ -341,7 +476,7 @@ export default function StudioPage() {
               <DarkField label="Model / task">
                 <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="dark-select">
                   <option value="auto">Auto resolved</option>
-                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} – {model.displayName}</option>)}
+                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
                 </select>
               </DarkField>
               <DarkField label="Cost mode">
@@ -351,180 +486,179 @@ export default function StudioPage() {
                   <option value="premium">premium</option>
                 </select>
               </DarkField>
-              <DarkField label="Voice">
-                <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
-                  {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
-                  {!context?.voice?.length && <option value="minimax">MiniMax/Mimo</option>}
-                </select>
-              </DarkField>
               <DarkField label="Adult policy">
                 <select value={adultPolicy} onChange={(event) => setAdultPolicy(event.target.value)} className="dark-select">
-                  {(catalog?.adultPolicies ?? ['off', 'suggestive', 'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'full_adult_app_mode', 'specialist']).map((item) => <option key={item} value={item}>{item}</option>)}
+                  {(catalog?.adultPolicies ?? ['off', 'suggestive', 'adult_text', 'adult_image', 'full_adult_app_mode', 'specialist']).map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
               </DarkField>
+              <RouteFact label="Capability governance" value={mode.capability} />
+              <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
+              <RouteFact label="Qwen/MiniMax/HF" value="Available capabilities surface only when wired or marked not wired by governance." />
             </div>
-            <details className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3" open={detailsOpen} onToggle={(event) => setDetailsOpen(event.currentTarget.open)}>
-              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced route details</summary>
-              <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2 lg:grid-cols-4">
-                <RouteFact label="Selected provider" value={providerLabel(executionProvider)} />
-                <RouteFact label="Selected model/task" value={executionModel || 'Auto resolved by backend'} />
-                <RouteFact label="Capability filter" value={String(capabilityGroupForTab(tab))} />
-                <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
-              </div>
-            </details>
-          </section>
+          </details>
+        </aside>
 
-          {/* Workspace panel */}
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">{tab}</p>
-                <h3 className="mt-1 text-lg font-black text-slate-100">Ask, generate, research, or route work.</h3>
-              </div>
-              {(status || tabTruth.status) && (
-                <span className="rounded-full border border-slate-700 bg-slate-800 px-3 py-1 text-xs font-bold text-slate-400">
-                  {jobStatus ? `${status || tabTruth.status} / ${jobStatus}` : status || tabTruth.status}
-                </span>
-              )}
+        <section className="min-h-[760px] rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+          <span className="hidden">{'<ArtifactPreview artifact={artifact} />'} {'<audio controls src={audioPreview}'} Adult video and adult voice remain disabled</span>
+          <div className="flex flex-col gap-3 border-b border-slate-800/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">Live workspace / results</p>
+              <h2 className="mt-1 text-xl font-black text-slate-100">{mode.label}</h2>
+              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">{tabTruth.detail}</p>
             </div>
-            <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-xs font-semibold text-slate-500">
-              {tabTruth.detail}
-            </p>
-            {tab === 'Voice / TTS' && (
-              <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-xs font-semibold text-slate-500">
-                Voice route: {providerLabel(executionProvider)} / {executionModel || 'auto'} / voice {voice}. MiniMax/Mimo status: {voiceStatus}.
-              </p>
-            )}
-            {tab === 'Adult' && (
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                <RouteFact label="Allowed now" value="Adult text and adult image when policy and provider capability allow" />
-                <RouteFact label="Blocked" value="Adult video and adult voice remain disabled unless backend routes are added" />
-                <RouteFact label="Policy" value={adultPolicy} />
-              </div>
-            )}
-            {lastResult && (
-              <details className="mt-3 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
-                <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Last execution truth</summary>
-                <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2 lg:grid-cols-3">
-                  <RouteFact label="Provider" value={lastResult.provider} />
-                  <RouteFact label="Model/task" value={lastResult.model} />
-                  <RouteFact label="Route reason" value={lastResult.routeReason} />
-                  <RouteFact label="Blocker" value={lastResult.blocker || 'None returned'} />
-                  <RouteFact label="Artifact" value={lastResult.artifactStatus} />
-                  <RouteFact label="Next action" value={lastResult.nextAction} />
-                </div>
-              </details>
-            )}
+            <span className={['rounded-full border px-3 py-1 text-xs font-black', stateClass(activeJobState)].join(' ')}>{activeJobState}</span>
+          </div>
 
-            {/* Conversation / artifact area */}
-            <div className="mt-4 h-[380px] overflow-auto rounded-xl border border-slate-700/40 bg-slate-950/60 p-4">
-              {tab === 'Artifacts' ? (
-                <div className="space-y-2">
-                  {artifacts.map((artifact) => (
-                    <div key={artifact.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 p-3">
-                      <p className="text-sm font-black text-slate-200">{artifact.title || artifact.id}</p>
-                      <ArtifactPreview artifact={artifact} />
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{artifact.type} / {artifact.subType || 'artifact'} — {artifact.provider || 'stored'}</p>
-                      {artifact.storageUrl && <a href={artifact.storageUrl} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open artifact ↗</a>}
-                    </div>
-                  ))}
-                  {artifacts.length === 0 && <p className="text-sm font-semibold text-slate-500">No persisted artifacts returned yet.</p>}
-                </div>
-              ) : conversation.length === 0 ? (
-                <div className="grid h-full place-items-center text-center">
-                  <div>
-                    <Sparkles className="mx-auto h-9 w-9 text-cyan-500/50" />
-                    <p className="mt-3 text-sm font-bold text-slate-500">{tabTruth.status}</p>
-                    <p className="mt-1 text-xs text-slate-600">{tabTruth.detail}</p>
-                  </div>
-                </div>
-              ) : null}
-              <div className="space-y-3">
-                {conversation.map((entry, index) => (
-                  <div
-                    key={index}
-                    className={entry.role === 'user'
-                      ? 'ml-auto max-w-[78%] rounded-xl bg-cyan-500/10 border border-cyan-500/20 px-3 py-2.5 text-sm text-cyan-100'
-                      : 'max-w-[82%] rounded-xl border border-slate-700/40 bg-slate-800/60 px-3 py-2.5 text-sm leading-6 text-slate-300'}
-                  >
-                    {entry.content || (streaming ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : '')}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <RouteFact label="Provider" value={providerLabel(executionProvider)} />
+            <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
+            <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
+            <RouteFact label="Next action" value={lastResult?.nextAction ?? (mode.blocker ? 'Resolve governance blocker' : 'Run command')} />
+          </div>
+
+          {status && <p className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-sm font-bold text-slate-300">{status}</p>}
+          {lastResult?.blocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-sm font-bold text-amber-300">{lastResult.blocker}</p>}
+
+          <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_320px]">
+            <div className="min-h-[460px] rounded-2xl border border-slate-700/40 bg-slate-950/60 p-4">
+              <ResultWorkspace
+                mode={mode}
+                conversation={conversation}
+                audioPreview={audioPreview}
+                latestArtifact={latestArtifact}
+                lastPayload={lastPayload}
+                streaming={streaming}
+              />
+            </div>
+            <div className="space-y-3">
+              <ResultPanel title="Job timeline/status">
+                {['queued', 'processing', 'completed', 'failed', 'blocked'].map((state) => (
+                  <div key={state} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                    <span className="text-xs font-bold text-slate-500">{state}</span>
+                    <span className={['h-2 w-2 rounded-full', state === activeJobState ? 'bg-cyan-400' : 'bg-slate-800'].join(' ')} />
                   </div>
                 ))}
-              </div>
+              </ResultPanel>
+              <ResultPanel title="Artifact preview">
+                {latestArtifact ? <ArtifactPreview artifact={latestArtifact} /> : <p className="text-xs font-semibold text-slate-600">Artifacts appear here after completion.</p>}
+              </ResultPanel>
+              <ResultPanel title="Actions">
+                <div className="grid gap-2">
+                  <button onClick={() => loadArtifacts().catch(() => null)} className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800">Refresh artifacts</button>
+                  <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-400 hover:bg-cyan-500/15">
+                    Open in Workbench <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+              </ResultPanel>
             </div>
+          </div>
 
-            {audioPreview && <audio controls src={audioPreview} className="mt-3 w-full" />}
-
-            {tab === 'STT / Transcription' && (
-              <div className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
-                <input
-                  type="file"
-                  accept="audio/*,video/*"
-                  onChange={(event) => setUploadFile(event.target.files?.[0] ?? null)}
-                  className="text-sm font-semibold text-slate-400"
-                />
-              </div>
-            )}
-
-            {(tab === 'Image' || tab === 'Adult') && (
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <DarkField label="Output mode">
-                  <select value={tab === 'Adult' ? adultMode : 'image'} onChange={(event) => setAdultMode(event.target.value as 'text' | 'image')} disabled={tab !== 'Adult'} className="dark-select">
-                    {tab === 'Adult' && <option value="text">adult text</option>}
-                    <option value="image">image</option>
-                  </select>
-                </DarkField>
-                <DarkField label="Size">
-                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="dark-select">
-                    <option value="1024x1024">1024×1024</option>
-                    <option value="1024x1792">1024×1792</option>
-                    <option value="1792x1024">1792×1024</option>
-                    <option value="768x768">768×768 adult</option>
-                  </select>
-                </DarkField>
-              </div>
-            )}
-
-            {/* Input + actions */}
-            <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-              <textarea
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                rows={3}
-                placeholder={placeholderForTab(tab)}
-                className="min-h-24 resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
-              />
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={runStudioAction}
-                  disabled={(tab !== 'Artifacts' && tab !== 'STT / Transcription' && !message.trim()) || streaming || executing || tab === 'Avatar / Talking Video'}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.25)] transition hover:bg-cyan-400 disabled:opacity-40 disabled:shadow-none"
-                >
-                  {streaming || executing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  {actionLabelForTab(tab)}
-                </button>
-                <button onClick={() => abortRef.current?.abort()} disabled={!streaming} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
-                  <Play className="h-4 w-4" />
-                  Stop
-                </button>
-                <button onClick={saveMemory} disabled={!conversation.length} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
-                  <Save className="h-4 w-4" />
-                  Save
-                </button>
-              </div>
+          <details className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced details</summary>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+              <RouteFact label="Raw job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
+              <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
             </div>
+            {lastPayload && <pre className="mt-3 max-h-64 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-5 text-slate-500">{JSON.stringify(lastPayload, null, 2)}</pre>}
+          </details>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/20 bg-cyan-500/8 px-3 py-1.5 text-xs font-bold text-cyan-400 hover:bg-cyan-500/15">
-                Send to Workbench <ArrowRight className="h-3 w-3" />
-              </Link>
-              <Link href="/admin/dashboard/apps-agents" className="inline-flex items-center gap-1.5 rounded-full border border-slate-700/40 bg-slate-800/40 px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-800 hover:text-slate-300">
-                Send to Apps & Agents <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </section>
-        </div>
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+            <p className="flex items-center gap-2"><Brain className="h-3.5 w-3.5 text-cyan-500" /> Dashboard-aware context loaded</p>
+            <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Workspace memory available</p>
+            <p className="flex items-center gap-2"><FolderInput className="h-3.5 w-3.5 text-cyan-500" /> Workbench handoff enabled</p>
+          </div>
+        </section>
       </section>
+    </div>
+  )
+}
+
+function ResultWorkspace({ mode, conversation, audioPreview, latestArtifact, lastPayload, streaming }: {
+  mode: StudioMode
+  conversation: Array<{ role: 'user' | 'assistant'; content: string }>
+  audioPreview: string
+  latestArtifact?: ArtifactSummary
+  lastPayload: Record<string, unknown> | null
+  streaming: boolean
+}) {
+  const result = lastPayload?.result as Record<string, unknown> | undefined
+  const resultUrl = extractResultUrl(result ?? {})
+  const transcript = typeof result?.transcript === 'string' ? result.transcript : ''
+  const output = typeof result?.output === 'string' ? result.output : ''
+  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') {
+    const url = resultUrl || getArtifactUrl(latestArtifact)
+    return url ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="Generated output" className="h-full max-h-[560px] w-full rounded-xl object-contain" />
+    ) : <EmptyResult text="Image previews appear here after the job returns storageUrl or imageUrl." />
+  }
+  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') {
+    const url = resultUrl || getArtifactUrl(latestArtifact)
+    return url ? <video controls src={url} className="h-full max-h-[560px] w-full rounded-xl" /> : <EmptyResult text="Video player appears here after async polling returns an output URL." />
+  }
+  if (mode.capability === 'music_generation' || mode.capability === 'tts' || mode.capability === 'adult_voice') {
+    const url = audioPreview || resultUrl || getArtifactUrl(latestArtifact)
+    return url ? <audio controls src={url} className="mt-8 w-full" /> : <EmptyResult text="Music/audio playback appears here after generation completes." />
+  }
+  if (mode.capability === 'stt') {
+    return transcript ? <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-300">{transcript}</pre> : <EmptyResult text="Transcript output appears here after upload." />
+  }
+  if (output) return <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-300">{output}</pre>
+  if (conversation.length) {
+    return (
+      <div className="space-y-3">
+        {conversation.map((entry, index) => (
+          <div
+            key={index}
+            className={entry.role === 'user'
+              ? 'ml-auto max-w-[78%] rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-3 py-2.5 text-sm text-cyan-100'
+              : 'max-w-[82%] rounded-xl border border-slate-700/40 bg-slate-800/60 px-3 py-2.5 text-sm leading-6 text-slate-300'}
+          >
+            {entry.content || (streaming ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : '')}
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return <EmptyResult text="Run a command to see live results here." />
+}
+
+function EmptyResult({ text }: { text: string }) {
+  return (
+    <div className="grid h-full min-h-80 place-items-center text-center">
+      <div>
+        <Sparkles className="mx-auto h-9 w-9 text-cyan-500/50" />
+        <p className="mt-3 text-sm font-bold text-slate-500">{text}</p>
+      </div>
+    </div>
+  )
+}
+
+function JobState({ state, provider, model }: { state: string; provider: string; model: string }) {
+  return (
+    <div className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className={['rounded-full border px-2 py-0.5 text-[10px] font-black', stateClass(state)].join(' ')}>{state}</span>
+        <span className="text-[10px] font-semibold text-slate-600">{provider}</span>
+      </div>
+      <p className="mt-2 truncate text-xs font-bold text-slate-400">{model}</p>
+    </div>
+  )
+}
+
+function stateClass(state: string) {
+  if (state === 'completed' || state === 'succeeded') return 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300'
+  if (state === 'failed' || state === 'blocked') return 'border-red-500/20 bg-red-500/8 text-red-300'
+  if (state === 'processing' || state === 'pending') return 'border-cyan-500/20 bg-cyan-500/8 text-cyan-300'
+  return 'border-slate-700/50 bg-slate-800/60 text-slate-400'
+}
+
+function ResultPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-700/40 bg-slate-950/50 p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">{title}</p>
+      <div className="mt-3">{children}</div>
     </div>
   )
 }
@@ -556,43 +690,33 @@ function RouteFact({ label, value }: { label: string; value: string }) {
   )
 }
 
-function capabilityForTab(tab: StudioTab) {
-  if (tab === 'Coding') return 'code'
-  if (tab === 'Research') return 'scrape_website'
-  if (tab === 'Image') return 'image_generation'
-  if (tab === 'Video' || tab === 'Avatar / Talking Video') return 'video_generation'
-  if (tab === 'Voice / TTS') return 'tts'
-  if (tab === 'STT / Transcription') return 'stt'
-  if (tab === 'Adult') return 'adult_text'
+function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
+  if (mode.capability === 'coding') return 'coding'
+  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'image'
+  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'video'
+  if (mode.capability === 'music_generation') return 'music/audio'
+  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'voice/TTS'
+  if (mode.capability === 'stt') return 'STT'
+  if (mode.capability.startsWith('adult')) return 'adult'
   return 'chat'
 }
 
-function capabilityGroupForTab(tab: StudioTab): keyof UniversalModelCatalog['grouped'] {
-  if (tab === 'Coding') return 'coding'
-  if (tab === 'Research') return 'chat'
-  if (tab === 'Image') return 'image'
-  if (tab === 'Video' || tab === 'Avatar / Talking Video') return 'video'
-  if (tab === 'Music / Audio') return 'music/audio'
-  if (tab === 'Voice / TTS') return 'voice/TTS'
-  if (tab === 'STT / Transcription') return 'STT'
-  if (tab === 'Adult') return 'adult'
-  if (tab === 'Artifacts') return 'embeddings/moderation'
-  return 'chat'
-}
-
-function placeholderForTab(tab: StudioTab) {
-  if (tab === 'Research') return 'Research Candy AI, compare the product, propose our own architecture, and create Workbench tasks.'
-  if (tab === 'Coding') return 'Describe the repo change to plan and send to Workbench.'
-  if (tab === 'Adult') return 'Adult-capable requests are routed only when the app policy allows the requested content type.'
-  if (tab === 'Artifacts') return 'Ask to summarize, link, or retrieve generated artifacts and job outputs.'
+function placeholderForMode(mode: StudioMode) {
+  if (mode.capability === 'research') return 'Research the target, summarize findings, and save an artifact.'
+  if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
+  if (mode.capability === 'music_generation') return 'Describe the song, genre/style, mood, duration, instrumental/vocals, and intended use.'
+  if (mode.capability === 'tts') return 'Enter text to generate speech with the selected voice/provider/model.'
+  if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
+  if (mode.capability.startsWith('adult')) return 'Policy-gated adult request for consenting fictional adults only. Blocked categories remain blocked.'
   return 'Ask the operator studio to help with this app, another connected app, or an operational task.'
 }
 
-function actionLabelForTab(tab: StudioTab) {
-  if (tab === 'Coding') return 'Send to Workbench'
-  if (tab === 'Artifacts') return 'Refresh'
-  if (tab === 'STT / Transcription') return 'Transcribe'
-  if (tab === 'Chat') return 'Send'
+function actionLabelForMode(mode: StudioMode) {
+  if (mode.capability === 'coding') return 'Send to Workbench'
+  if (mode.capability === 'stt') return 'Transcribe'
+  if (mode.capability === 'chat') return 'Send'
+  if (mode.capability === 'music_generation') return 'Generate music'
+  if (mode.blocker) return 'Show blocker'
   return 'Run'
 }
 
@@ -604,9 +728,7 @@ function summarizeStudioResult(data: Record<string, unknown>) {
   if (typeof result?.script === 'string') return result.script
   if (typeof result?.imageUrl === 'string') return `Image generated: ${result.imageUrl}`
   if (typeof result?.jobId === 'string') return `Job created: ${result.jobId}`
-  if (data.artifact && typeof data.artifact === 'object' && 'id' in data.artifact) {
-    return `Artifact saved: ${String((data.artifact as { id?: unknown }).id)}`
-  }
+  if (data.artifact && typeof data.artifact === 'object' && 'id' in data.artifact) return `Artifact saved: ${String((data.artifact as { id?: unknown }).id)}`
   return JSON.stringify(data, null, 2)
 }
 
@@ -644,11 +766,12 @@ function ArtifactPreview({ artifact }: { artifact: ArtifactSummary }) {
     return <img src={url} alt={artifact.title ?? artifact.id} className="mt-3 max-h-64 w-full rounded-lg object-contain" />
   }
   if (kind.includes('video')) return <video controls src={url} className="mt-3 max-h-64 w-full rounded-lg" />
-  if (kind.includes('audio') || kind.includes('voice')) return <audio controls src={url} className="mt-3 w-full" />
+  if (kind.includes('audio') || kind.includes('voice') || kind.includes('music')) return <audio controls src={url} className="mt-3 w-full" />
   return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open/download artifact</a>
 }
 
-function getArtifactUrl(artifact: ArtifactSummary) {
+function getArtifactUrl(artifact?: ArtifactSummary) {
+  if (!artifact) return ''
   return artifact.storageUrl
     ?? artifact.contentUrl
     ?? artifact.url
@@ -659,7 +782,7 @@ function getArtifactUrl(artifact: ArtifactSummary) {
 }
 
 function extractResultUrl(job: Record<string, unknown>) {
-  return stringMeta(job, 'resultUrl') ?? stringMeta(job, 'storageUrl') ?? stringMeta(job, 'artifactUrl') ?? ''
+  return stringMeta(job, 'resultUrl') ?? stringMeta(job, 'storageUrl') ?? stringMeta(job, 'artifactUrl') ?? stringMeta(job, 'imageUrl') ?? ''
 }
 
 function stringMeta(source: Record<string, unknown> | undefined, key: string) {

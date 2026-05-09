@@ -68,7 +68,7 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
   },
   'Music / Audio': {
     tab: 'Music / Audio',
-    capability: 'music_audio',
+    capability: 'music_generation',
     route: '/api/admin/studio/execute',
     status: 'execute',
     artifactType: 'music',
@@ -76,7 +76,7 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
   },
   'Voice / TTS': {
     tab: 'Voice / TTS',
-    capability: 'voice_tts',
+    capability: 'tts',
     route: '/api/admin/studio/execute',
     status: 'execute',
     artifactType: 'audio',
@@ -84,7 +84,7 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
   },
   'STT / Transcription': {
     tab: 'STT / Transcription',
-    capability: 'voice_stt',
+    capability: 'stt',
     route: '/api/admin/studio/stt',
     status: 'upload',
     artifactType: 'transcript',
@@ -104,7 +104,7 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
     route: '/api/admin/studio/execute',
     status: 'execute',
     artifactType: 'document',
-    detail: 'Adult text and adult image use app-level policy gates and approved provider keys; video/voice are not exposed as working.',
+    detail: 'Adult text and adult image use policy gates and approved provider keys; video/voice are not exposed as working until production route, policy, safeguards, polling/playback, artifacts, and live tests exist.',
   },
   Artifacts: {
     tab: 'Artifacts',
