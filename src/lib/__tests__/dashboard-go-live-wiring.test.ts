@@ -72,7 +72,8 @@ describe('dashboard go-live wiring', () => {
       'Load repos',
       'loadBranches',
       'rehydrateJob',
-      'Start work',
+      'Start task',
+      'Generate patch',
       'Approve changes',
       'Run checks',
       'Commit and push',
@@ -97,10 +98,10 @@ describe('dashboard go-live wiring', () => {
       expect(truth).toContain(status)
     }
     expect(truth).not.toContain('Configured - needs live test')
-    for (const text of ['Setup completion checklist', 'Go-live service sections', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Firecrawl', 'Webdock', 'SMTP / email', 'Exact blocker', 'Last test result']) {
+    for (const text of ['Setup completion checklist', 'Unified setup list', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Firecrawl', 'Webdock', 'SMTP / email', 'Exact blocker', 'Last test result']) {
       expect(settings).toContain(text)
     }
-    for (const text of ['Go-live readiness', 'liveBlockers', 'Required blocker categories', 'broken protected API', 'build/lint/test failure', 'Active jobs', 'Recent failed jobs', 'Workbench jobs', 'Studio jobs', 'Can go live']) {
+    for (const text of ['Go-live readiness', 'liveBlockers', 'Advanced governance/debug', 'broken protected API', 'build/lint/test failure', 'Active jobs', 'Recent failed jobs', 'Workbench jobs', 'Studio jobs', 'Can go live']) {
       expect(operations).toContain(text)
     }
   })
@@ -124,7 +125,7 @@ describe('dashboard go-live wiring', () => {
   it('Apps/Agents and Memory/Learning are truthful about registry, packages, memory, artifacts, and pending automation', () => {
     const apps = read('app/admin/dashboard/apps-agents/page.tsx')
     const memory = read('app/admin/dashboard/memory-learning/page.tsx')
-    for (const text of ['Agent registry', 'Package store active', 'assigned agents', 'memory namespace', 'storage namespace']) {
+    for (const text of ['Agent registry', 'Package store available', 'assigned agents', 'memory namespace', 'storage namespace']) {
       expect(apps).toContain(text)
     }
     for (const text of ['Recent memory writes', 'Artifacts and jobs that can feed memory', 'Learning automation truth', 'Scheduled learning remains pending']) {

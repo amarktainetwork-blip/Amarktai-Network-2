@@ -6,28 +6,31 @@ import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
 import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
-const TOOL_KEYS = [
-  { key: 'genx', label: 'GenX', description: 'Primary model broker. Unlocks routed Studio execution.', placeholder: 'genx key' },
+const SERVICE_ITEMS = [
   { key: 'github', label: 'GitHub', description: 'Repository import, branches, PRs, merge, and deploy handoff.', placeholder: 'ghp_...' },
   { key: 'redis', label: 'Redis', description: 'Queues, job coordination, and live job state.', placeholder: 'REDIS_URL' },
   { key: 'firecrawl', label: 'Firecrawl', description: 'Research and scraping tool.', placeholder: 'fc_...' },
-  { key: 'crawl4ai', label: 'Crawl4AI', description: 'Research and scraping tool.', placeholder: 'crawl4ai key' },
   { key: 'playwright', label: 'Playwright', description: 'Browser automation and verification tool.', placeholder: 'local tool' },
   { key: 'webdock', label: 'Webdock', description: 'VPS and system monitoring.', placeholder: 'webdock key' },
   { key: 'smtp', label: 'SMTP / email', description: 'Email notifications and operator alerts.', placeholder: 'SMTP_HOST' },
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
+] as const
+
+const SETUP_ITEMS = [
+  ...APPROVED_AI_PROVIDERS.map((provider) => ({
+    key: provider.key,
+    kind: 'provider' as const,
+    label: provider.settingsLabel,
+    description: provider.notes,
+    placeholder: provider.envVars[0],
+  })),
+  ...SERVICE_ITEMS.map((service) => ({
+    ...service,
+    kind: service.key === 'storage' ? 'storage' as const : 'tool' as const,
+  })),
 ]
 
-const SETUP_SECTIONS = [
-  { title: 'GitHub / Workbench', keys: ['github'], description: 'Repo import, branch loading, checks, commit, push, and PR creation.' },
-  { title: 'Research tools', keys: ['firecrawl', 'crawl4ai'], description: 'Research execution, scraping, and source collection.' },
-  { title: 'Storage', keys: ['storage'], description: 'Artifacts, media previews, generated reports, and logs.' },
-  { title: 'Redis / realtime', keys: ['redis'], description: 'Queues, job coordination, and realtime job state.' },
-  { title: 'Playwright', keys: ['playwright'], description: 'Browser verification and Workbench QA.' },
-  { title: 'Webdock / VPS', keys: ['webdock'], description: 'VPS health and deployment visibility.' },
-  { title: 'SMTP/email', keys: ['smtp'], description: 'Email notifications and operator alerts.' },
-  { title: 'Deployment guards', keys: ['github', 'webdock', 'storage'], description: 'Merge and deploy remain guarded by backend environment flags.' },
-] as const
+const NORMAL_ADULT_POLICY_VALUES = ADULT_POLICY_VALUES.filter((policy) => policy !== 'adult_video' && policy !== 'adult_voice')
 
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
@@ -119,55 +122,24 @@ export default function SettingsPage() {
         </div>
       </details>
 
-      {/* AI Providers */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-        <h2 className="text-sm font-black text-slate-200">AI providers</h2>
+        <h2 className="text-sm font-black text-slate-200">Unified setup list</h2>
+        <p className="mt-1.5 text-xs leading-5 text-slate-500">
+          Each provider or service appears once. Status, save, test route, unlocks, and blockers all come from the same settings truth.
+        </p>
+        <p className="mt-1.5 text-xs leading-5 text-slate-600">
+          Covers GenX, GitHub, OpenAI, Groq, Together AI, Hugging Face, Qwen/DashScope, MiniMax/Mimo, Firecrawl, Redis, Playwright, Storage, Webdock, and SMTP / email.
+        </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {APPROVED_AI_PROVIDERS.map((provider) => (
+          {SETUP_ITEMS.map((item) => (
             <KeyForm
-              key={provider.key}
-              keyId={provider.key}
-              type="provider"
-              label={provider.settingsLabel}
-              description={provider.notes}
-              placeholder={provider.envVars[0]}
-              truth={statusFor(provider.key, 'provider')}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-        <h2 className="text-sm font-black text-slate-200">Go-live service sections</h2>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {SETUP_SECTIONS.map((section) => (
-            <div key={section.title} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4">
-              <p className="text-sm font-black text-slate-200">{section.title}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{section.description}</p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {section.keys.map((key) => {
-                  const truthEntry = statusFor(key, key === 'storage' ? 'storage' : 'tool')
-                  return <span key={key} className="rounded-full border border-slate-700/50 bg-slate-900/60 px-2 py-0.5 text-[10px] font-bold text-slate-400">{truthEntry?.label ?? key}: {truthEntry?.status ?? 'Needs key'}</span>
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Tools & Services */}
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-        <h2 className="text-sm font-black text-slate-200">Tools & system services</h2>
-        <div className="mt-4 grid gap-3 lg:grid-cols-2">
-          {TOOL_KEYS.map((tool) => (
-            <KeyForm
-              key={tool.key}
-              keyId={tool.key}
-              type="tool"
-              label={tool.label}
-              description={tool.description}
-              placeholder={tool.placeholder}
-              truth={statusFor(tool.key, tool.key === 'storage' ? 'storage' : 'tool')}
+              key={item.key}
+              keyId={item.key}
+              type={item.kind === 'provider' ? 'provider' : 'tool'}
+              label={item.label}
+              description={item.description}
+              placeholder={item.placeholder}
+              truth={statusFor(item.key, item.kind)}
             />
           ))}
         </div>
@@ -180,7 +152,7 @@ export default function SettingsPage() {
           Adult capability is app-policy gated and uses approved providers — it does not require a separate adult key.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {ADULT_POLICY_VALUES.map((policy) => (
+          {NORMAL_ADULT_POLICY_VALUES.map((policy) => (
             <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>
           ))}
         </div>
