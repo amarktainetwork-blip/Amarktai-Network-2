@@ -7,13 +7,27 @@ import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
 const TOOL_KEYS = [
+  { key: 'genx', label: 'GenX', description: 'Primary model broker. Unlocks routed Studio execution.', placeholder: 'genx key' },
   { key: 'github', label: 'GitHub', description: 'Repository import, branches, PRs, merge, and deploy handoff.', placeholder: 'ghp_...' },
+  { key: 'redis', label: 'Redis', description: 'Queues, job coordination, and live job state.', placeholder: 'REDIS_URL' },
   { key: 'firecrawl', label: 'Firecrawl', description: 'Research and scraping tool.', placeholder: 'fc_...' },
   { key: 'crawl4ai', label: 'Crawl4AI', description: 'Research and scraping tool.', placeholder: 'crawl4ai key' },
   { key: 'playwright', label: 'Playwright', description: 'Browser automation and verification tool.', placeholder: 'local tool' },
   { key: 'webdock', label: 'Webdock', description: 'VPS and system monitoring.', placeholder: 'webdock key' },
+  { key: 'smtp', label: 'SMTP / email', description: 'Email notifications and operator alerts.', placeholder: 'SMTP_HOST' },
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
 ]
+
+const SETUP_SECTIONS = [
+  { title: 'GitHub / Workbench', keys: ['github'], description: 'Repo import, branch loading, checks, commit, push, and PR creation.' },
+  { title: 'Research tools', keys: ['firecrawl', 'crawl4ai'], description: 'Research execution, scraping, and source collection.' },
+  { title: 'Storage', keys: ['storage'], description: 'Artifacts, media previews, generated reports, and logs.' },
+  { title: 'Redis / realtime', keys: ['redis'], description: 'Queues, job coordination, and realtime job state.' },
+  { title: 'Playwright', keys: ['playwright'], description: 'Browser verification and Workbench QA.' },
+  { title: 'Webdock / VPS', keys: ['webdock'], description: 'VPS health and deployment visibility.' },
+  { title: 'SMTP/email', keys: ['smtp'], description: 'Email notifications and operator alerts.' },
+  { title: 'Deployment guards', keys: ['github', 'webdock', 'storage'], description: 'Merge and deploy remain guarded by backend environment flags.' },
+] as const
 
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
@@ -37,6 +51,13 @@ export default function SettingsPage() {
     if (kind === 'storage') return truth?.storage
     return truth?.tools.find((item) => item.key === key)
   }
+  const checklist = [
+    ['Providers connected', truth ? truth.providers.some((item) => item.connected) : false],
+    ['GitHub tested', statusFor('github', 'tool')?.connected ?? false],
+    ['Storage writable route present', truth?.storage.connected ?? false],
+    ['Research tool configured', ['firecrawl', 'crawl4ai', 'playwright'].some((key) => statusFor(key, 'tool')?.configured)],
+    ['Workbench unlocks available', Boolean(statusFor('github', 'tool')?.configured && truth?.storage.configured)],
+  ] as const
 
   return (
     <div className="space-y-5">
@@ -54,6 +75,18 @@ export default function SettingsPage() {
         </div>
       </section>
 
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Setup completion checklist</h2>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          {checklist.map(([label, passed]) => (
+            <div key={label} className={['rounded-xl border p-3', passed ? 'border-emerald-500/20 bg-emerald-500/8' : 'border-amber-500/20 bg-amber-500/8'].join(' ')}>
+              <p className={['text-xs font-black', passed ? 'text-emerald-300' : 'text-amber-300'].join(' ')}>{passed ? 'Ready' : 'Blocker'}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* AI Providers */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
         <h2 className="text-sm font-black text-slate-200">AI providers</h2>
@@ -68,6 +101,24 @@ export default function SettingsPage() {
               placeholder={provider.envVars[0]}
               truth={statusFor(provider.key, 'provider')}
             />
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Go-live service sections</h2>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {SETUP_SECTIONS.map((section) => (
+            <div key={section.title} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4">
+              <p className="text-sm font-black text-slate-200">{section.title}</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{section.description}</p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {section.keys.map((key) => {
+                  const truthEntry = statusFor(key, key === 'storage' ? 'storage' : 'tool')
+                  return <span key={key} className="rounded-full border border-slate-700/50 bg-slate-900/60 px-2 py-0.5 text-[10px] font-bold text-slate-400">{truthEntry?.label ?? key}: {truthEntry?.status ?? 'Needs key'}</span>
+                })}
+              </div>
+            </div>
           ))}
         </div>
       </section>
@@ -101,6 +152,9 @@ export default function SettingsPage() {
             <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>
           ))}
         </div>
+        <p className="mt-3 text-xs font-semibold leading-5 text-slate-500">
+          Adult text and image are available only when app policy and provider capability allow them. Adult video and adult voice remain blocked until real backend support exists.
+        </p>
       </section>
     </div>
   )
@@ -111,11 +165,13 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
   const [show, setShow] = useState(false)
   const [status, setStatus] = useState('')
 
-  const statusColor = truth?.status === 'Connected' || truth?.status === 'Configured'
+  const statusColor = truth?.status === 'Connected'
     ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-400'
-    : truth?.status === 'Configured - needs live test' || truth?.status === 'Needs key' || truth?.status === 'Needs live test'
+    : truth?.status === 'Configured' || truth?.status === 'Needs key' || truth?.status === 'Needs live test' || truth?.status === 'Needs test route'
       ? 'border-amber-500/20 bg-amber-500/8 text-amber-400'
-      : 'border-slate-700/40 bg-slate-800/40 text-slate-500'
+      : truth?.status === 'Failed'
+        ? 'border-red-500/20 bg-red-500/8 text-red-400'
+        : 'border-slate-700/40 bg-slate-800/40 text-slate-500'
 
   async function saveKey() {
     if (!value.trim()) return
@@ -146,6 +202,12 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
           {truth.testRoute}{truth.source && truth.source !== 'missing' ? ` · ${truth.source}` : ''}
         </p>
       )}
+      <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500 sm:grid-cols-2">
+        <SetupFact label="Unlocks" value={truth?.unlocks ?? description} />
+        <SetupFact label="Env/key needed" value={truth?.envVars?.join(' or ') || placeholder} />
+        <SetupFact label="Last test result" value={truth?.lastTestResult ?? 'Not tested'} />
+        <SetupFact label="Exact blocker" value={truth?.blocker || 'None'} />
+      </div>
       <div className="mt-3 flex gap-2">
         <div className="relative flex-1">
           <input
@@ -171,6 +233,15 @@ function KeyForm({ keyId, type, label, description, placeholder, truth }: { keyI
         </button>
       </div>
       {status && <p className="mt-1.5 text-xs font-semibold text-slate-500">{status}</p>}
+    </div>
+  )
+}
+
+function SetupFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-700/40 bg-slate-900/50 p-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">{label}</p>
+      <p className="mt-1 break-words text-xs font-bold text-slate-400">{value}</p>
     </div>
   )
 }

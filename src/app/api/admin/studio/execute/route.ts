@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as ExecuteBody
   const tab = body.tab
   const prompt = body.prompt?.trim() ?? ''
-  const appSlug = body.appSlug?.trim() || 'superbrain'
+  const appSlug = body.appSlug?.trim() || 'amarktai'
   if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
   if (!prompt) return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
 

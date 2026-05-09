@@ -29,7 +29,7 @@ export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
     id: 'studio',
     href: '/admin/dashboard',
     label: 'Studio',
-    description: 'Main Superbrain AI workspace for chat, coding, research, media, voice, adult policy, and artifacts.',
+    description: 'Operator workspace for chat, coding handoff, research, media, voice, policy, and artifacts.',
     icon: Sparkles,
   },
   {
@@ -50,7 +50,7 @@ export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
     id: 'memory-learning',
     href: '/admin/dashboard/memory-learning',
     label: 'Memory & Learning',
-    description: 'Shared Superbrain memory, emotional context, app memory, learning logs, and knowledge links.',
+    description: 'Persistent context, app memory, learning logs, artifact links, and workflow history.',
     icon: GraduationCap,
   },
   {

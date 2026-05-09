@@ -52,7 +52,7 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const truth = await getPlatformSettingsTruth()
     expect(truth.connectedCount).toBe(0)
-    expect(truth.providers.find((provider) => provider.key === 'genx')?.status).toBe('Configured - needs live test')
+    expect(truth.providers.find((provider) => provider.key === 'genx')?.status).toBe('Needs live test')
   })
 
   it('maps every Studio tab to the protected route that owns its real execution state', () => {
@@ -94,7 +94,7 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     expect(stt).toContain('createArtifact')
     expect(page).toContain('/api/admin/studio/execute')
     expect(page).toContain('/api/admin/studio/stt')
-    expect(page).toContain('/api/admin/artifacts?appSlug=superbrain')
+    expect(page).toContain('/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}')
   })
 
   it('Adult Studio exposes only real text/image execution and keeps video/voice unavailable for Phase 3', () => {

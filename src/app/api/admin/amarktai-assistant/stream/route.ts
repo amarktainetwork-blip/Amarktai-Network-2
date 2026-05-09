@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           await streamGenXChat({
             model: selectedModel,
             messages: [
-              { role: 'system', content: 'You are AmarktAI Network Superbrain Console. Use dashboard, app, memory, emotion, and Workbench context when helpful. Follow safety policy.' },
+              { role: 'system', content: 'You are the AmarktAI Network operations assistant. Use dashboard, app, memory, artifact, and Workbench context when helpful. Follow safety policy.' },
               { role: 'user', content: body.message! },
             ],
             stream: true,

@@ -1,17 +1,17 @@
 import { APPROVED_AI_PROVIDERS, type ApprovedProviderKey } from '@/lib/approved-ai-catalog'
 import { getProviderKeyWithSource, type CoreProvider, type ProviderKeySource } from '@/lib/provider-config'
 import { getStorageRoot } from '@/lib/storage-driver'
+import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { prisma } from '@/lib/prisma'
 
 export type SettingsTruthStatus =
   | 'Connected'
   | 'Configured'
-  | 'Configured - needs live test'
   | 'Needs key'
   | 'Needs live test'
   | 'Needs test route'
-  | 'Available backend route'
-  | 'Not implemented'
+  | 'Unsupported'
+  | 'Failed'
 
 export interface SettingsTruthEntry {
   key: string
@@ -20,9 +20,13 @@ export interface SettingsTruthEntry {
   status: SettingsTruthStatus
   configured: boolean
   connected: boolean
-  source: ProviderKeySource | 'local' | 'runtime' | 'missing'
+  source: ProviderKeySource | 'local' | 'runtime' | 'env' | 'missing'
   testRoute: string | null
   note: string
+  envVars: string[]
+  lastTestResult: string
+  blocker: string
+  unlocks: string
 }
 
 const TEST_ROUTES: Record<string, string> = {
@@ -73,12 +77,34 @@ async function getLastKnownTestPassed(key: string): Promise<boolean> {
 }
 
 const TOOL_ENTRIES = [
+  { key: 'genx', label: 'GenX', note: 'Primary broker for model routing and Studio execution.', envKey: 'genx' },
   { key: 'github', label: 'GitHub', note: 'Repository list, branch list, push, PR, merge, and deploy handoff.' },
+  { key: 'redis', label: 'Redis', note: 'Queues, job coordination, and live job state.', envName: 'REDIS_URL' },
   { key: 'firecrawl', label: 'Firecrawl', note: 'Research and scraping service. Status route lives in the research stack.' },
   { key: 'crawl4ai', label: 'Crawl4AI', note: 'Local research fallback. Availability is checked by research status, not by provider keys.' },
   { key: 'playwright', label: 'Playwright', note: 'Browser preview and verification tool. Availability is checked at runtime.' },
   { key: 'webdock', label: 'Webdock', note: 'VPS and system monitoring service.' },
+  { key: 'smtp', label: 'SMTP / email', note: 'Email delivery, notifications, and operator alerts.', envName: 'SMTP_HOST' },
 ] as const
+
+function envEntry(input: { key: string; label: string; note: string; envName: string; testRoute?: string | null }): SettingsTruthEntry {
+  const configured = Boolean(process.env[input.envName])
+  return {
+    key: input.key,
+    label: input.label,
+    kind: 'tool',
+    status: configured ? (input.testRoute ? 'Needs live test' : 'Needs test route') : 'Needs key',
+    configured,
+    connected: false,
+    source: configured ? 'env' : 'missing',
+    testRoute: input.testRoute ?? null,
+    note: input.note,
+    envVars: [input.envName],
+    lastTestResult: configured ? 'Configured from environment; no passed live test recorded' : 'Not tested',
+    blocker: configured ? (input.testRoute ? 'Run the live test route' : 'Add a test route to validate this service') : `Set ${input.envName}`,
+    unlocks: input.note,
+  }
+}
 
 async function entryForKey(input: {
   key: string
@@ -86,6 +112,7 @@ async function entryForKey(input: {
   kind: SettingsTruthEntry['kind']
   note: string
   envKey?: CoreProvider
+  envVars?: string[]
   testRoute?: string | null
 }): Promise<SettingsTruthEntry> {
   const testRoute = input.testRoute ?? TEST_ROUTES[input.key] ?? null
@@ -100,7 +127,7 @@ async function entryForKey(input: {
     ? testRoute
       ? lastKnownTestPassed
         ? 'Connected'
-        : 'Configured - needs live test'
+        : 'Needs live test'
       : 'Needs test route'
     : input.kind === 'tool' && testRoute
       ? 'Needs key'
@@ -116,6 +143,10 @@ async function entryForKey(input: {
     source: resolved.source,
     testRoute,
     note: input.note,
+    envVars: input.envVars ?? (input.envKey ? [String(input.envKey).toUpperCase()] : []),
+    lastTestResult: connected ? 'Passed' : configured ? 'No passed live test recorded' : 'Not tested',
+    blocker: connected ? '' : configured ? (testRoute ? `Run ${testRoute}` : 'Needs test route') : `Set ${input.envVars?.join(' or ') ?? input.envKey ?? input.key}`,
+    unlocks: input.note,
   }
 }
 
@@ -133,6 +164,7 @@ export async function getPlatformSettingsTruth(): Promise<{
       kind: 'provider',
       note: provider.notes,
       envKey: provider.key as CoreProvider,
+      envVars: [...provider.envVars],
     })),
   )
 
@@ -142,24 +174,29 @@ export async function getPlatformSettingsTruth(): Promise<{
       label: tool.label,
       kind: 'tool',
       note: tool.note,
-      envKey: tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : tool.key as CoreProvider,
+      envKey: 'envName' in tool ? undefined : tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (('envKey' in tool ? tool.envKey : tool.key) as CoreProvider),
       testRoute: tool.key === 'firecrawl' ? '/api/admin/research/status' : TEST_ROUTES[tool.key] ?? null,
-    })),
+    }).then((entry) => 'envName' in tool ? envEntry({ key: tool.key, label: tool.label, note: tool.note, envName: tool.envName }) : entry)),
   )
 
+  const storageWritable = checkWritable(LOCAL_STORE_FILES.artifacts)
   const storage: SettingsTruthEntry = {
     key: 'storage',
     label: 'VPS/local storage',
     kind: 'storage',
-    status: 'Available backend route',
+    status: storageWritable.writable ? 'Connected' : 'Failed',
     configured: true,
-    connected: true,
+    connected: storageWritable.writable,
     source: 'local',
     testRoute: TEST_ROUTES.storage,
     note: `Storage root: ${getStorageRoot()}`,
+    envVars: ['AMARKTAI_STORAGE_ROOT'],
+    lastTestResult: storageWritable.writable ? 'Writable check passed' : 'Writable check failed',
+    blocker: storageWritable.writable ? '' : 'Storage root is not writable',
+    unlocks: 'Artifacts, generated media, logs, and local runtime reports.',
   }
 
-  const connectedCount = [...providers, ...tools].filter((item) => item.connected).length
+  const connectedCount = new Set([...providers, ...tools].filter((item) => item.connected).map((item) => item.key)).size
 
   return {
     providers,
