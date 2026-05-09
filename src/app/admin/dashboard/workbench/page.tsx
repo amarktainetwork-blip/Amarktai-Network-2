@@ -48,7 +48,7 @@ export default function WorkbenchPage() {
   const [checksPassed, setChecksPassed] = useState(false)
   const [loading, setLoading] = useState('')
   const [error, setError] = useState('')
-  const [advancedOpen, setAdvancedOpen] = useState(true)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [stepStatus, setStepStatus] = useState<Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>>({
     Planning: 'waiting',
     'Files selected': 'waiting',
@@ -67,6 +67,7 @@ export default function WorkbenchPage() {
   const selectedModel = codingModels.find((model) => model.modelId === modelId)
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
   const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
+  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
 
   const updateStep = (step: StepId, status: 'waiting' | 'active' | 'done' | 'needs-approval') => {
     setStepStatus((current) => ({ ...current, [step]: status }))
@@ -303,6 +304,14 @@ export default function WorkbenchPage() {
     if (stepStatus['PR ready'] === 'active' || stepStatus['PR ready'] === 'needs-approval') return createPr()
   }
 
+  async function runPrimaryAction() {
+    if (primaryAction.id === 'start') return startWork()
+    if (primaryAction.id === 'approve') return approveChanges()
+    if (primaryAction.id === 'checks') return runChecks()
+    if (primaryAction.id === 'commit') return commitAndPush()
+    if (primaryAction.id === 'pr') return createPr()
+  }
+
   return (
     <div className="space-y-5">
       {/* Hero */}
@@ -325,6 +334,7 @@ export default function WorkbenchPage() {
 
       {/* Prompt + controls */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Left command / center workspace / right checks and PR state</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <WbField label="Repo">
             <select
@@ -374,12 +384,33 @@ export default function WorkbenchPage() {
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          <WbButton onClick={startWork} disabled={!repoFullName || !prompt || Boolean(loading)} loading={loading === 'Start work' || loading === 'Prepare patch'} label="Start work" icon={<Play className="h-3.5 w-3.5" />} primary />
-          <WbButton onClick={approveChanges} disabled={!workspace || !patchId || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
-          <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] === 'waiting' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
-          <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
-          <WbButton onClick={createPr} disabled={!workspace || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_320px]">
+          <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Readable plan</p>
+            <PlanSections value={log.plan} />
+          </div>
+          <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Primary next action</p>
+            <p className="mt-1 text-sm font-bold text-slate-300">{nextAction}</p>
+            <button
+              onClick={runPrimaryAction}
+              disabled={primaryAction.disabled || Boolean(loading)}
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-black text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.2)] transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            >
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : primaryAction.icon}
+              {primaryAction.label}
+            </button>
+            <details className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/30 p-3">
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Step actions</summary>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <WbButton onClick={startWork} disabled={!repoFullName || !prompt || Boolean(loading)} loading={loading === 'Start work' || loading === 'Prepare patch'} label="Start work" icon={<Play className="h-3.5 w-3.5" />} />
+                <WbButton onClick={approveChanges} disabled={!workspace || !patchId || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
+                <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] === 'waiting' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+                <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+                <WbButton onClick={createPr} disabled={!workspace || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+              </div>
+            </details>
+          </div>
         </div>
         <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Next action</p>
@@ -399,13 +430,28 @@ export default function WorkbenchPage() {
         )}
       </section>
 
+      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_320px]">
+        <WorkbenchPanel title="Diff viewer">
+          {log.diff ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.diff}</pre> : <p className="text-sm font-semibold text-slate-500">Generated patch diff appears after Start task.</p>}
+        </WorkbenchPanel>
+        <WorkbenchPanel title="Files and findings">
+          {log.files ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.files}</pre> : <p className="text-sm font-semibold text-slate-500">File list appears with the generated patch.</p>}
+        </WorkbenchPanel>
+        <WorkbenchPanel title="Checks, PR, deploy">
+          <StatusLine label="Checks" value={checksPassed ? 'passed' : stepStatus['Checks running']} />
+          <StatusLine label="PR" value={prNumber ? `#${prNumber}` : stepStatus['PR ready']} />
+          <StatusLine label="Deploy" value={stepStatus['Deploy ready']} />
+          {log.pr && <a href={log.pr} className="mt-3 inline-block rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-300 hover:bg-cyan-500/15">Open PR URL</a>}
+        </WorkbenchPanel>
+      </section>
+
       {/* Timeline + logs */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 backdrop-blur-xl">
         <button
           onClick={() => setAdvancedOpen((v) => !v)}
           className="flex w-full items-center justify-between px-5 py-4 text-left text-sm font-black text-slate-300"
         >
-          Progress timeline & logs
+          Advanced details
           <ChevronDown className={['h-4 w-4 text-slate-500 transition-transform', advancedOpen ? 'rotate-180' : ''].join(' ')} />
         </button>
         {advancedOpen && (
@@ -469,6 +515,71 @@ function WbField({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
+function WorkbenchPanel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/70">{title}</p>
+      <div className="mt-3">{children}</div>
+    </div>
+  )
+}
+
+function StatusLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-slate-800/70 py-2 last:border-0">
+      <span className="text-xs font-bold text-slate-500">{label}</span>
+      <span className="text-xs font-black text-slate-300">{value}</span>
+    </div>
+  )
+}
+
+function PlanSections({ value }: { value?: string }) {
+  const parsed = parsePlanSections(value ?? '')
+  if (!value) return <p className="text-sm font-semibold text-slate-500">Start task to generate Summary, Findings, Files, Risks, Fixes, and Verification.</p>
+  return (
+    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+      {(['Summary', 'Findings', 'Files', 'Risks', 'Fixes', 'Verification'] as const).map((key) => (
+        <div key={key} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{key}</p>
+          <p className="mt-2 whitespace-pre-wrap text-xs font-semibold leading-5 text-slate-400">{parsed[key] || 'No entry returned yet.'}</p>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function parsePlanSections(value: string): Record<'Summary' | 'Findings' | 'Files' | 'Risks' | 'Fixes' | 'Verification', string> {
+  const fallback = {
+    Summary: value.slice(0, 700),
+    Findings: '',
+    Files: '',
+    Risks: '',
+    Fixes: '',
+    Verification: '',
+  }
+  if (!value) return fallback
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>
+    return {
+      Summary: stringifyPlanField(parsed.summary ?? parsed.overview ?? parsed.reasoning ?? parsed.plan ?? value),
+      Findings: stringifyPlanField(parsed.findings ?? parsed.analysis ?? parsed.notes),
+      Files: stringifyPlanField(parsed.files ?? parsed.filesAffected ?? parsed.changedFiles),
+      Risks: stringifyPlanField(parsed.risks ?? parsed.blockers),
+      Fixes: stringifyPlanField(parsed.fixes ?? parsed.steps ?? parsed.tasks),
+      Verification: stringifyPlanField(parsed.verification ?? parsed.checks ?? parsed.testPlan),
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function stringifyPlanField(value: unknown) {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map((item) => typeof item === 'string' ? item : JSON.stringify(item)).join('\n')
+  return JSON.stringify(value, null, 2)
+}
+
 function WbButton({ label, onClick, disabled, loading, icon, primary = false }: { label: string; onClick: () => void; disabled: boolean; loading: boolean; icon?: React.ReactNode; primary?: boolean }) {
   return (
     <button
@@ -501,6 +612,23 @@ function statusForPersistedJob(job: PersistedWorkbenchJob): Record<StepId, 'wait
   if (job.patch?.status === 'committed') base['PR ready'] = 'needs-approval'
   if (job.patch?.status === 'pr_created') base['Deploy ready'] = 'needs-approval'
   return base
+}
+
+function getPrimaryWorkbenchAction(
+  steps: Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>,
+  hasRepo: boolean,
+  hasPrompt: boolean,
+  hasPatch: boolean,
+  checksPassed: boolean,
+  hasPr: boolean,
+) {
+  if (!hasRepo || !hasPrompt) return { id: 'start', label: 'Start task', disabled: true, icon: <Play className="h-3.5 w-3.5" /> }
+  if (steps['Patch prepared'] === 'waiting') return { id: 'start', label: 'Start task', disabled: false, icon: <Play className="h-3.5 w-3.5" /> }
+  if (hasPatch && steps['Patch prepared'] === 'needs-approval') return { id: 'approve', label: 'Approve changes', disabled: false, icon: <ShieldCheck className="h-3.5 w-3.5" /> }
+  if (steps['Checks running'] === 'needs-approval') return { id: 'checks', label: 'Run checks', disabled: false, icon: <CheckCircle2 className="h-3.5 w-3.5" /> }
+  if (steps['Commit ready'] === 'needs-approval' && checksPassed) return { id: 'commit', label: 'Commit and push', disabled: false, icon: <GitPullRequest className="h-3.5 w-3.5" /> }
+  if (steps['PR ready'] === 'needs-approval') return { id: 'pr', label: 'Create PR', disabled: false, icon: <GitPullRequest className="h-3.5 w-3.5" /> }
+  return { id: 'done', label: hasPr ? 'Review PR' : 'Waiting', disabled: true, icon: <CheckCircle2 className="h-3.5 w-3.5" /> }
 }
 
 function modelIdForExecution(value: string | undefined) {

@@ -83,7 +83,8 @@ export default async function OperationsPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <summary className="cursor-pointer text-sm font-black text-slate-200">Advanced governance/debug</summary>
         <h3 className="text-base font-black text-slate-100">Governance blockers and route truth</h3>
         <p className="mt-1.5 text-xs leading-5 text-slate-500">
           {ROOT_WORKSPACE.message} Route-present providers that are not approved are visible, but not executable by default.
@@ -93,7 +94,7 @@ export default async function OperationsPage() {
           <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
           <ReadinessList title="Available, not wired" items={governance.underusedCapabilities.map((model) => `${model.provider}/${model.modelId}: ${model.capabilities.join(', ')}`).slice(0, 8)} />
         </div>
-      </section>
+      </details>
 
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
         <h3 className="text-base font-black text-slate-100">Required blocker categories</h3>

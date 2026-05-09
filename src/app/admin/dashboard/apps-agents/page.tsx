@@ -36,7 +36,8 @@ export default async function AppsAgentsPage() {
 
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         {/* App schema */}
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+          <summary className="cursor-pointer text-sm font-black text-slate-200">Add external managed app</summary>
           <h3 className="text-sm font-black text-slate-200">External managed app package schema</h3>
           <p className="mt-2 text-xs leading-5 text-slate-500">Use this only for future apps managed by AmarktAI Network. The root workspace does not need onboarding.</p>
           <div className="mt-4 grid gap-1.5 sm:grid-cols-2">
@@ -52,7 +53,7 @@ export default async function AppsAgentsPage() {
           <div className="mt-2 flex flex-wrap gap-1.5">
             {ADULT_POLICY_VALUES.map((policy) => <span key={policy} className="rounded-full border border-slate-700/40 bg-slate-800/40 px-2.5 py-1 text-xs font-bold text-slate-400">{policy}</span>)}
           </div>
-        </div>
+        </details>
 
         {/* App packages */}
         <div className="space-y-3">
@@ -87,7 +88,12 @@ export default async function AppsAgentsPage() {
       {/* Agent registry */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
         <h3 className="text-sm font-black text-slate-200">Agent registry</h3>
-        <p className="mt-1.5 text-xs text-slate-500">{OPERATOR_AGENTS.length} canonical agents with purpose, capabilities, providers, routing strategy, and status.</p>
+        <p className="mt-1.5 text-xs text-slate-500">Root workspace active. {OPERATOR_AGENTS.length} internal agents grouped by Build & Code, Research, Creative Media, Operations, Safety, and Memory.</p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-6">
+          {['Build & Code', 'Research', 'Creative Media', 'Operations', 'Safety', 'Memory'].map((group) => (
+            <div key={group} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-black text-slate-300">{group}</div>
+          ))}
+        </div>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {agents.map((agent) => (
             <article key={agent.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 p-3.5">
