@@ -183,7 +183,7 @@ export const GENX_VIDEO_MODELS = [
   'kling-v2.5-turbo', 'kling-v2.5-turbo-i2v',
   'kling-v2.6-pro', 'kling-v2.6-pro-i2v',
   'seedance-v1-fast', 'seedance-v1-fast-i2v',
-  'seedance-2.0', 'seedance-2.0-i2v',
+  'seedance-2', 'seedance-2-i2v', 'seedance-2-r2v',
   'pixverse-v5.5', 'pixverse-v5.5-i2v',
   'pixverse-v6', 'pixverse-v6-i2v',
 ] as const
@@ -195,8 +195,8 @@ export const GENX_AUDIO_MODELS = [
 
 /** Known GenX image-to-video models */
 export const GENX_I2V_MODELS = [
-  'kling-v2.5-turbo-i2v', 'kling-v2.6-pro-i2v',
-  'seedance-v1-fast-i2v', 'pixverse-v5.5-i2v', 'pixverse-v6-i2v',
+  'kling-v3-pro-i2v', 'kling-v2.5-turbo-i2v', 'kling-v2.6-pro-i2v',
+  'seedance-v1-fast-i2v', 'seedance-2-i2v', 'pixverse-v5.5-i2v', 'pixverse-v6-i2v',
 ] as const
 
 /** Known GenX TTS / voice models */

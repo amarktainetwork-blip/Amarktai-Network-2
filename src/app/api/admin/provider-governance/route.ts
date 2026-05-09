@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { AI_PROVIDER_GOVERNANCE, PROPOSED_PROVIDER_BACKLOG, getPrimarySetupProviders } from '@/lib/ai-provider-governance'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+import { getCapabilityGovernanceMatrix } from '@/lib/provider-capability-governance'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ export async function GET() {
 
   return NextResponse.json({
     success: true,
+    capabilityGovernance: getCapabilityGovernanceMatrix(),
     counts,
     primarySetup: getPrimarySetupProviders().map((provider) => provider.key),
     providers,

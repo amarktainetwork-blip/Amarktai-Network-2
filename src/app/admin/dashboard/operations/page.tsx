@@ -5,6 +5,7 @@ import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
 import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+import { getCapabilityGovernanceMatrix, ROOT_WORKSPACE } from '@/lib/provider-capability-governance'
 
 export default async function OperationsPage() {
   const [costs, research, system, runtime, settingsTruth] = await Promise.all([
@@ -43,6 +44,8 @@ export default async function OperationsPage() {
   ]
   const optionalItems = ['Avatar/talking video backend route', 'Automated memory promotion scheduler', 'Extra providers', 'SMTP enhancements']
   const goLiveCandidate = liveBlockers.length === 0
+  const governance = getCapabilityGovernanceMatrix()
+  const governanceBlockers = governance.blockedCapabilities.map((capability) => `${capability.label}: ${capability.blocker ?? capability.notes}`)
 
   return (
     <div className="space-y-5">
@@ -77,6 +80,18 @@ export default async function OperationsPage() {
             system?.vps.status === 'ok' ? 'VPS status ok' : 'VPS status pending',
             `${providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length} providers connected`,
           ]} />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h3 className="text-base font-black text-slate-100">Governance blockers and route truth</h3>
+        <p className="mt-1.5 text-xs leading-5 text-slate-500">
+          {ROOT_WORKSPACE.message} Route-present providers that are not approved are visible, but not executable by default.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <ReadinessList title="Blocked by governance" items={governanceBlockers.length ? governanceBlockers : ['No governance blockers reported.']} tone={governanceBlockers.length ? 'warn' : 'ok'} />
+          <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
+          <ReadinessList title="Available, not wired" items={governance.underusedCapabilities.map((model) => `${model.provider}/${model.modelId}: ${model.capabilities.join(', ')}`).slice(0, 8)} />
         </div>
       </section>
 

@@ -3,6 +3,7 @@ import { getProviderKeyWithSource, type CoreProvider, type ProviderKeySource } f
 import { getStorageRoot } from '@/lib/storage-driver'
 import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { prisma } from '@/lib/prisma'
+import { getCapabilityGovernanceMatrix } from '@/lib/provider-capability-governance'
 
 export type SettingsTruthStatus =
   | 'Connected'
@@ -156,6 +157,7 @@ export async function getPlatformSettingsTruth(): Promise<{
   storage: SettingsTruthEntry
   connectedCount: number
   approvedProviderKeys: ApprovedProviderKey[]
+  governance: ReturnType<typeof getCapabilityGovernanceMatrix>
 }> {
   const providers = await Promise.all(
     APPROVED_AI_PROVIDERS.map((provider) => entryForKey({
@@ -204,5 +206,6 @@ export async function getPlatformSettingsTruth(): Promise<{
     storage,
     connectedCount,
     approvedProviderKeys: APPROVED_AI_PROVIDERS.map((provider) => provider.key),
+    governance: getCapabilityGovernanceMatrix(),
   }
 }

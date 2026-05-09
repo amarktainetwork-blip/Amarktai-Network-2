@@ -34,6 +34,13 @@ type SettingsTruth = {
   tools: SettingsTruthEntry[]
   storage: SettingsTruthEntry
   connectedCount: number
+  governance?: {
+    capabilities?: Array<{ capability: string; label: string; status: string; primaryProvider: string | null; route: string | null; routeExists: boolean; blocker?: string; notes: string }>
+    providers?: Array<{ provider: string; label: string; approved: boolean; routePresent: boolean; liveTestStatus: string; unlocks: string }>
+    blockedCapabilities?: Array<{ capability: string; blocker?: string; notes: string }>
+    routePresentNotApprovedProviders?: Array<{ provider: string; label: string; notes: string }>
+    underusedCapabilities?: Array<{ provider: string; modelId: string; capabilities: string[]; notes: string }>
+  }
 }
 
 export default function SettingsPage() {
@@ -84,6 +91,30 @@ export default function SettingsPage() {
               <p className="mt-1 text-xs font-semibold leading-5 text-slate-400">{label}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h2 className="text-sm font-black text-slate-200">Capability governance matrix</h2>
+        <p className="mt-1.5 text-xs leading-5 text-slate-500">
+          Settings consumes the same governance truth used by Studio, Workbench, and Operations. Connected still means key exists plus a passed live test.
+        </p>
+        <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {(truth?.governance?.capabilities ?? []).slice(0, 18).map((capability) => (
+            <div key={capability.capability} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-black text-slate-200">{capability.label}</p>
+                <span className="rounded-full border border-slate-700/50 bg-slate-950/50 px-2 py-0.5 text-[10px] font-bold text-slate-400">{capability.status}</span>
+              </div>
+              <p className="mt-1 text-[11px] font-semibold leading-4 text-slate-500">Owner: {capability.primaryProvider ?? 'blocked'} / Route: {capability.route ?? 'none'}</p>
+              {capability.blocker && <p className="mt-1 text-[11px] font-semibold leading-4 text-amber-300">{capability.blocker}</p>}
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <GovernanceList title="Blocked capabilities" items={(truth?.governance?.blockedCapabilities ?? []).map((item) => `${item.capability}: ${item.blocker ?? item.notes}`)} />
+          <GovernanceList title="Route-present, not approved" items={(truth?.governance?.routePresentNotApprovedProviders ?? []).map((item) => `${item.label}: ${item.notes}`)} />
+          <GovernanceList title="Underused/not wired" items={(truth?.governance?.underusedCapabilities ?? []).map((item) => `${item.provider}/${item.modelId}: ${item.capabilities.join(', ')}`)} />
         </div>
       </section>
 
@@ -242,6 +273,19 @@ function SetupFact({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-slate-700/40 bg-slate-900/50 p-2">
       <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">{label}</p>
       <p className="mt-1 break-words text-xs font-bold text-slate-400">{value}</p>
+    </div>
+  )
+}
+
+function GovernanceList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
+      <p className="text-xs font-black text-slate-200">{title}</p>
+      <div className="mt-2 space-y-1.5">
+        {items.length ? items.slice(0, 6).map((item) => (
+          <p key={item} className="text-[11px] font-semibold leading-4 text-slate-500">{item}</p>
+        )) : <p className="text-[11px] font-semibold text-slate-600">No entries reported.</p>}
+      </div>
     </div>
   )
 }

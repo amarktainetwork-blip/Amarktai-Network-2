@@ -4,6 +4,7 @@ import { getSession } from '@/lib/session'
 import { deleteAppAiPackage, getAppAiPackage, listAppAiPackages, saveAppAiPackage } from '@/lib/app-ai-package-store'
 import { isApprovedAIProvider } from '@/lib/approved-ai-catalog'
 import { confirmAppAiPackage, type AppAiPackage } from '@/lib/app-ai-package'
+import { ROOT_WORKSPACE, validateCapabilitySelection } from '@/lib/provider-capability-governance'
 
 const selectionSchema = z.object({
   capabilityId: z.string(),
@@ -82,6 +83,19 @@ export async function POST(request: NextRequest) {
   const invalidSelection = parsed.data.selections.find((selection) => selection.provider && !isApprovedAIProvider(selection.provider))
   if (invalidSelection) {
     return NextResponse.json({ success: false, error: `Provider is not approved: ${invalidSelection.provider}` }, { status: 422 })
+  }
+  if (parsed.data.appSlug === ROOT_WORKSPACE.appSlug || parsed.data.appSlug === 'amarktai') {
+    return NextResponse.json({
+      success: false,
+      error: 'AmarktAI Network is the root admin workspace and does not need to be added as an external app.',
+      rootWorkspace: ROOT_WORKSPACE,
+    }, { status: 422 })
+  }
+  const adultValidation = parsed.data.adultPolicy
+    ? validateCapabilitySelection({ capability: parsed.data.adultPolicy, adultPolicyAllows: true })
+    : null
+  if (adultValidation && !adultValidation.allowed && adultValidation.blockers.some((blocker) => blocker === 'adult_video' || blocker === 'adult_voice' || blocker === 'missing_route')) {
+    return NextResponse.json({ success: false, error: adultValidation.reason, blockers: adultValidation.blockers }, { status: 422 })
   }
 
   const pkg = parsed.data as AppAiPackage

@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, ChevronDown, GitPullRequest, Loader2, Play, ShieldCheck } from 'lucide-react'
 import { type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
-import type { UniversalModelCatalog, UniversalModelRoute } from '@/lib/universal-model-catalog'
+import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
 
 type Repo = { full_name: string; default_branch: string; private?: boolean }
 type Branch = { name: string; sha: string; isDefault?: boolean }
+type WorkbenchModel = { provider: string; modelId: string; displayName: string }
 type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
 type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
 type PersistedWorkbenchJob = {
@@ -34,6 +35,7 @@ export default function WorkbenchPage() {
   const [repos, setRepos] = useState<Repo[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
+  const [governedWorkbenchModels, setGovernedWorkbenchModels] = useState<WorkbenchModel[]>([])
   const [repoFullName, setRepoFullName] = useState('')
   const [branch, setBranch] = useState('auto')
   const [modelId, setModelId] = useState('auto')
@@ -58,7 +60,10 @@ export default function WorkbenchPage() {
   })
   const [log, setLog] = useState<Record<string, string>>({})
 
-  const codingModels = useMemo(() => catalog?.grouped.coding ?? catalog?.models ?? [], [catalog])
+  const codingModels = useMemo<WorkbenchModel[]>(() => {
+    if (governedWorkbenchModels.length) return governedWorkbenchModels
+    return catalog?.grouped.coding ?? catalog?.models ?? []
+  }, [catalog, governedWorkbenchModels])
   const selectedModel = codingModels.find((model) => model.modelId === modelId)
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
   const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
@@ -135,6 +140,14 @@ export default function WorkbenchPage() {
         loadBranches(nextRepos[0].full_name).catch(() => null)
       }
       setCatalog(modelData?.universal ?? null)
+      const governed = Array.isArray(modelData?.governance?.workbenchModels)
+        ? modelData.governance.workbenchModels.map((model: { provider: string; modelId: string; label?: string; displayName?: string }) => ({
+          provider: model.provider,
+          modelId: model.modelId,
+          displayName: model.displayName ?? model.label ?? model.modelId,
+        }))
+        : []
+      setGovernedWorkbenchModels(governed)
     })
   }, [call, loadBranches, rehydrateJob])
 
@@ -336,7 +349,7 @@ export default function WorkbenchPage() {
           <WbField label="AI / model">
             <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="wb-select">
               <option value="auto">Auto best model</option>
-              {codingModels.map((model: UniversalModelRoute) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} – {model.displayName}</option>)}
+              {codingModels.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
             </select>
           </WbField>
           <WbField label="Cost mode">
@@ -371,7 +384,7 @@ export default function WorkbenchPage() {
         <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Next action</p>
           <p className="mt-1 text-sm font-bold text-slate-300">{nextAction}</p>
-          <p className="mt-1 text-xs font-semibold text-slate-600">Model route: {selectedModel ? `${providerLabel(selectedModel.provider)} / ${executionModel || 'auto resolved'}` : 'Auto best model'}</p>
+          <p className="mt-1 text-xs font-semibold text-slate-600">Model route: {selectedModel ? `${providerLabel(selectedModel.provider)} / ${executionModel || 'auto resolved'}` : 'Auto coding/reasoning model from governance'}</p>
         </div>
         {log.pr && (
           <a href={log.pr} className="mt-3 inline-block rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-300 hover:bg-cyan-500/15">

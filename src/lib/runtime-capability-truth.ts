@@ -16,6 +16,7 @@ import {
   getWiredProviderKeys,
   type ProviderGovernanceStatus,
 } from '@/lib/ai-provider-governance'
+import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
@@ -134,7 +135,7 @@ export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
     'translation', 'moderation', 'avatars',
   ]
 
-  let modelCount = 57
+  let modelCount = LIVE_GENX_MODEL_COUNT
   let available = true
   try {
     const key = await getServiceKey('genx', 'GENX_API_KEY')
@@ -252,8 +253,8 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
     enabled: globalEnabled,
     selectedProvider,
     selectedModel: savedModel || null,
-    allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
-    blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content', 'exploitation_abuse', 'self_harm_exploitation'],
+    allowedCategories: ['legal_adult_text', 'legal_adult_image'],
+    blockedCategories: ['adult_video', 'adult_voice', 'minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'genitals', 'explicit_sex_acts', 'coercion_exploitation_violence_degradation', 'illegal_content', 'safety_bypassing'],
     lastTestStatus: lastTestStatus || null,
     lastError: lastError || null,
     configuredProviders,
@@ -414,10 +415,10 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     },
     {
       name: 'Music Generation',
-      status: 'not_implemented',
-      blocker: 'Music generation is post-launch. Music providers (Suno, Udio) require API and legal approval before being enabled.',
-      models: [],
-      nextAction: 'Approve and configure a music provider before enabling music generation',
+      status: genxConfigured ? 'available' : 'blocked',
+      blocker: genxConfigured ? null : 'Configure GenX before enabling Lyria music generation.',
+      models: genxConfigured ? ['lyria-3-clip-preview', 'lyria-3-pro-preview'] : [],
+      nextAction: genxConfigured ? 'Run a live GenX music job test' : 'Add and test GENX_API_KEY',
     },
     {
       name: 'Embeddings',

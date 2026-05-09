@@ -1,6 +1,7 @@
 import { OPERATOR_AGENTS, listOperatorAgents } from '@/lib/agent-registry'
 import { listAppAiPackages } from '@/lib/app-ai-package-store'
 import { ADULT_POLICY_VALUES } from '@/lib/universal-model-catalog'
+import { EXTERNAL_APP_ONBOARDING_LABEL, ROOT_WORKSPACE } from '@/lib/provider-capability-governance'
 
 const appFields = [
   'name', 'slug', 'domain/subdomain', 'repo', 'VPS path', 'service name',
@@ -13,7 +14,7 @@ const appTypes = ['companion/chat', 'marketing', 'coding/dev', 'research', 'medi
 export default async function AppsAgentsPage() {
   const [packages, agents] = await Promise.all([
     listAppAiPackages().catch(() => []),
-    Promise.resolve(listOperatorAgents('amarktai')),
+    Promise.resolve(listOperatorAgents(ROOT_WORKSPACE.appSlug)),
   ])
 
   return (
@@ -24,10 +25,10 @@ export default async function AppsAgentsPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Apps & Agents</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Connected app orchestration.</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Apps run from this VPS. The orchestration layer assigns model packages, agents, memory, storage, policy, and deployment profiles.
+          {ROOT_WORKSPACE.message} Add App is only for future external managed apps; the root admin app is already installed.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          {['Registry available', 'Package store active', 'Agent dispatch wired', 'Create/edit/assignment UI pending backend route'].map((s) => (
+          {['Root workspace active', EXTERNAL_APP_ONBOARDING_LABEL, 'Registry available', 'Package store active', 'Create/edit/assignment UI pending backend route'].map((s) => (
             <span key={s} className="rounded-full border border-slate-700/50 bg-slate-800/50 px-2.5 py-1 text-[10px] font-bold text-slate-400">{s}</span>
           ))}
         </div>
@@ -36,8 +37,8 @@ export default async function AppsAgentsPage() {
       <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
         {/* App schema */}
         <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-          <h3 className="text-sm font-black text-slate-200">App package schema</h3>
-          <p className="mt-2 text-xs leading-5 text-slate-500">One VPS-aware structure per app. No implied separate infrastructure.</p>
+          <h3 className="text-sm font-black text-slate-200">External managed app package schema</h3>
+          <p className="mt-2 text-xs leading-5 text-slate-500">Use this only for future apps managed by AmarktAI Network. The root workspace does not need onboarding.</p>
           <div className="mt-4 grid gap-1.5 sm:grid-cols-2">
             {appFields.map((field) => (
               <div key={field} className="rounded-lg border border-slate-700/40 bg-slate-800/40 px-2.5 py-1.5 text-xs font-semibold text-slate-400">{field}</div>
@@ -76,7 +77,7 @@ export default async function AppsAgentsPage() {
           ))}
           {!packages.length && (
             <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-              <p className="font-black text-slate-300">No app packages saved yet.</p>
+              <p className="font-black text-slate-300">No external managed app packages saved yet.</p>
               <p className="mt-1.5 text-sm text-slate-500">Package store available. Assignment UI wiring pending — no placeholder data shown.</p>
             </div>
           )}

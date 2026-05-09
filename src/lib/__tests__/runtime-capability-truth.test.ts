@@ -224,8 +224,8 @@ describe('TTS/STT available without GenX', () => {
 
 // ── Music is always post-launch ───────────────────────────────────────────────
 
-describe('Music generation is always not_implemented (post-launch)', () => {
-  it('music is not_implemented even when MiniMax is configured', async () => {
+describe('Music generation follows GenX Lyria governance', () => {
+  it('music is blocked until GenX Lyria is configured even when MiniMax is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
     }))
@@ -235,10 +235,11 @@ describe('Music generation is always not_implemented (post-launch)', () => {
     const truth = await getDashboardRuntimeTruth()
 
     const music = truth.capabilities.find(c => c.name === 'Music Generation')
-    expect(music?.status).toBe('not_implemented')
+    expect(music?.status).toBe('blocked')
+    expect(music?.blocker).toContain('Configure GenX')
   })
 
-  it('music is not_implemented even with GenX configured', async () => {
+  it('music is available for live testing with GenX configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({ genx: { apiKey: 'gnxk_q1234567890abcdef12345678' } }),
     }))
@@ -249,7 +250,8 @@ describe('Music generation is always not_implemented (post-launch)', () => {
     const truth = await getDashboardRuntimeTruth()
 
     const music = truth.capabilities.find(c => c.name === 'Music Generation')
-    expect(music?.status).toBe('not_implemented')
+    expect(music?.status).toBe('available')
+    expect(music?.models).toEqual(expect.arrayContaining(['lyria-3-clip-preview', 'lyria-3-pro-preview']))
   })
 })
 
