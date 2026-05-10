@@ -55,7 +55,7 @@ export default async function OperationsPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Operations</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Runtime command center.</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          VPS health · storage · jobs · approvals · provider truth · cost tracking — unified operational view.
+          Provider tests, Studio readiness, Workbench readiness, jobs, artifacts, and cost tracking in one go-live view.
         </p>
       </section>
 
@@ -94,16 +94,12 @@ export default async function OperationsPage() {
           <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
           <ReadinessList title="Available, not wired" items={governance.underusedCapabilities.map((model) => `${model.provider}/${model.modelId}: ${model.capabilities.join(', ')}`).slice(0, 8)} />
         </div>
-      </details>
-
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-        <h3 className="text-base font-black text-slate-100">Required blocker categories</h3>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {requiredBlockerCategories.map((category) => (
             <div key={category} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-bold text-slate-400">{category}</div>
           ))}
         </div>
-      </section>
+      </details>
 
       {/* Top metrics */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -114,12 +110,18 @@ export default async function OperationsPage() {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-3">
-        {/* VPS & Services */}
-        <OpsPanel title="VPS & services">
+        <OpsPanel title="Storage / artifacts">
           <OpsRow label="Webdock" value={system?.vps.status ?? 'Needs key/test'} />
-          <OpsRow label="Storage root" value={getStorageRoot()} mono />
-          <OpsRow label="Artifacts path" value={LOCAL_STORE_FILES.artifacts} mono />
-          <OpsRow label="Job logs" value="logs/*.log" mono />
+          <OpsRow label="Storage" value={storage.writable ? 'Writable' : 'Needs test'} />
+          <OpsRow label="Artifacts" value={String(artifacts.length)} />
+          <details className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Advanced file paths</summary>
+            <div className="mt-3 space-y-2">
+              <OpsRow label="Storage root" value={getStorageRoot()} mono />
+              <OpsRow label="Artifacts path" value={LOCAL_STORE_FILES.artifacts} mono />
+              <OpsRow label="Job logs" value="logs/*.log" mono />
+            </div>
+          </details>
           {(system?.services ?? []).map((service) => <OpsRow key={service.name} label={service.name} value={service.status} />)}
         </OpsPanel>
 
@@ -139,14 +141,14 @@ export default async function OperationsPage() {
         </OpsPanel>
 
         {/* Usage */}
-        <OpsPanel title="Usage">
+        <OpsPanel title="Costs / usage">
           <OpsRow label="Today spend" value={`$${(costs?.todaySpendUsd ?? 0).toFixed(2)}`} />
           <OpsRow label="Artifacts" value={String(artifacts.length)} />
           <OpsRow label="Jobs" value={String(jobs.length)} />
           <OpsRow label="Provider usage" value={Object.keys(costs?.byProvider ?? {}).join(', ') || 'No runs yet'} />
           <OpsRow label="App usage" value={Object.keys(costs?.byApp ?? {}).join(', ') || 'No runs yet'} />
         </OpsPanel>
-        <OpsPanel title="Jobs & approvals">
+        <OpsPanel title="Redis / jobs">
           <OpsRow label="Active jobs" value={String(jobs.filter((job) => ['pending', 'processing', 'running'].includes(String((job as { status?: unknown }).status))).length)} />
           <OpsRow label="Recent failed jobs" value={String(jobs.filter((job) => String((job as { status?: unknown }).status).includes('fail')).slice(-10).length)} />
           <OpsRow label="Recent artifacts" value={String(artifacts.slice(-10).length)} />

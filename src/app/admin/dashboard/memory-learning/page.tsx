@@ -29,8 +29,19 @@ export default function MemoryLearningPage() {
         <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Memory & Learning</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Operational memory and learning.</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          User memory, app context, agent notes, learning logs, and artifact links are stored locally first. Automation is shown only where routes exist.
+          Memory keeps useful Studio results, Workbench summaries, artifact notes, and app context available for later work. Nothing is invented when no memory has been written.
         </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h3 className="text-sm font-black text-slate-200">How memory is created</h3>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+          Save a Studio result, save a Workbench summary, or run an agent workflow that writes through the protected memory route. Empty memory means no saved context yet, not a failure.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <MemoryAction title="Save current Studio result" available={memory.length > 0 || artifacts.length > 0} />
+          <MemoryAction title="Save Workbench summary" available={learningLogs.length > 0} />
+        </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -64,7 +75,10 @@ export default function MemoryLearningPage() {
               </article>
             ))}
             {memory.length === 0 && (
-              <p className="text-sm font-semibold text-slate-500">Memory entries appear here after Studio, Workbench, or agent runs save context.</p>
+              <div className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-4">
+                <p className="font-black text-slate-300">No memory yet.</p>
+                <p className="mt-1.5 text-sm font-semibold leading-6 text-slate-500">Studio and Workbench create memory when tasks are saved.</p>
+              </div>
             )}
           </div>
         </div>
@@ -105,6 +119,15 @@ function MemMetric({ label, value, mono = false, accent = false }: { label: stri
     <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
       <p className={['mt-2 truncate text-sm font-black', mono ? 'font-mono text-slate-400' : accent ? 'text-emerald-400' : 'text-slate-200'].join(' ')}>{value}</p>
+    </div>
+  )
+}
+
+function MemoryAction({ title, available }: { title: string; available: boolean }) {
+  return (
+    <div className={['rounded-xl border p-3', available ? 'border-cyan-500/20 bg-cyan-500/8' : 'border-slate-700/40 bg-slate-800/40'].join(' ')}>
+      <p className="text-xs font-black text-slate-300">{title}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500">{available ? 'Available when a current result is present.' : 'Waiting for a saved result or route context.'}</p>
     </div>
   )
 }

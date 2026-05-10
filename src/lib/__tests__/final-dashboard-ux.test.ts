@@ -69,7 +69,7 @@ describe('final go-live dashboard UX', () => {
   it('Apps & Agents treats root workspace as active and external onboarding as secondary', () => {
     const apps = read('app/admin/dashboard/apps-agents/page.tsx')
     expect(apps).toContain('Root workspace active')
-    expect(apps).toContain('Add external managed app')
+    expect(apps).toContain('EXTERNAL_APP_ONBOARDING_LABEL')
     expect(apps).toContain('Build & Code')
     expect(apps).toContain('Creative Media')
     expect(apps).toContain('Safety')
@@ -83,4 +83,3 @@ describe('final go-live dashboard UX', () => {
     }
   })
 })
-

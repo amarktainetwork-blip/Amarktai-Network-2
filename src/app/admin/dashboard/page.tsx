@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Brain, DatabaseZap, FolderInput, Loader2, Play, Save, Send, Sparkles, Upload } from 'lucide-react'
+import { ArrowRight, Loader2, Play, Save, Send, Sparkles, Upload } from 'lucide-react'
 import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
 import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
 import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
@@ -25,19 +25,20 @@ const studioModes: StudioMode[] = [
   { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
   { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
   { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
+  { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
+]
+
+const unavailableAdultModes = [
   {
     label: 'Adult Video',
-    tab: 'Adult',
     capability: 'adult_video',
     blocker: 'Blocked until route, provider policy, safeguards, async polling, artifact preview, and live test exist.',
   },
   {
     label: 'Adult Voice',
-    tab: 'Adult',
     capability: 'adult_voice',
     blocker: 'Blocked until route, provider policy, safeguards, playback, artifact save, and live test exist.',
   },
-  { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
 ]
 
 type AssistantContext = {
@@ -131,7 +132,12 @@ export default function StudioPage() {
   const executionProvider = selectedModel?.provider ?? provider
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
   const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? (voice === 'minimax' ? 'Needs MiniMax/Mimo key or live route test' : 'Provider status unknown')
-  const activeJobState = mode.blocker ? 'blocked' : jobStatus || (executing ? 'processing' : status ? 'completed' : 'queued')
+  const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)
+  const activeJobState = hasRealJob
+    ? mode.blocker
+      ? 'blocked'
+      : jobStatus || (executing || streaming ? 'processing' : lastResult?.blocker ? 'blocked' : 'completed')
+    : ''
   const latestArtifact = artifacts[0]
 
   async function sendMessage() {
@@ -448,7 +454,11 @@ export default function StudioPage() {
 
           <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Active jobs</p>
-            <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+            {hasRealJob ? (
+              <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+            ) : (
+              <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-semibold text-slate-600">No active jobs yet.</p>
+            )}
           </div>
 
           <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
@@ -494,6 +504,15 @@ export default function StudioPage() {
               <RouteFact label="Capability governance" value={mode.capability} />
               <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
               <RouteFact label="Qwen/MiniMax/HF" value="Available capabilities surface only when wired or marked not wired by governance." />
+              <RouteFact label="Route details" value={tabTruth.detail} />
+              <RouteFact label="Dashboard context" value="Assistant context, memory, and Workbench handoff are available to protected routes." />
+            </div>
+            <div className="mt-3 grid gap-2">
+              {unavailableAdultModes.map((item) => (
+                <p key={item.capability} className="rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs font-bold leading-5 text-amber-300">
+                  {item.label}: {item.blocker}
+                </p>
+              ))}
             </div>
           </details>
         </aside>
@@ -504,17 +523,19 @@ export default function StudioPage() {
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">Live workspace / results</p>
               <h2 className="mt-1 text-xl font-black text-slate-100">{mode.label}</h2>
-              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">{tabTruth.detail}</p>
+              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">{resultIntroForMode(mode)}</p>
             </div>
-            <span className={['rounded-full border px-3 py-1 text-xs font-black', stateClass(activeJobState)].join(' ')}>{activeJobState}</span>
+            {hasRealJob && <span className={['rounded-full border px-3 py-1 text-xs font-black', stateClass(activeJobState)].join(' ')}>{activeJobState}</span>}
           </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <RouteFact label="Provider" value={providerLabel(executionProvider)} />
-            <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
-            <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
-            <RouteFact label="Next action" value={lastResult?.nextAction ?? (mode.blocker ? 'Resolve governance blocker' : 'Run command')} />
-          </div>
+          {hasRealJob && (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <RouteFact label="Provider" value={providerLabel(executionProvider)} />
+              <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
+              <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
+              <RouteFact label="Next action" value={lastResult?.nextAction ?? (mode.blocker ? 'Resolve governance blocker' : 'Run command')} />
+            </div>
+          )}
 
           {status && <p className="mt-4 rounded-xl border border-slate-700/40 bg-slate-800/40 px-3 py-2 text-sm font-bold text-slate-300">{status}</p>}
           {lastResult?.blocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-sm font-bold text-amber-300">{lastResult.blocker}</p>}
@@ -531,14 +552,14 @@ export default function StudioPage() {
               />
             </div>
             <div className="space-y-3">
-              <ResultPanel title="Job timeline/status">
-                {['queued', 'processing', 'completed', 'failed', 'blocked'].map((state) => (
-                  <div key={state} className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
-                    <span className="text-xs font-bold text-slate-500">{state}</span>
-                    <span className={['h-2 w-2 rounded-full', state === activeJobState ? 'bg-cyan-400' : 'bg-slate-800'].join(' ')} />
+              {hasRealJob && (
+                <ResultPanel title="Job timeline/status">
+                  <div className="rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                    <span className="text-xs font-bold text-slate-500">Current state</span>
+                    <p className="mt-1 text-sm font-black text-slate-300">{activeJobState || 'running'}</p>
                   </div>
-                ))}
-              </ResultPanel>
+                </ResultPanel>
+              )}
               <ResultPanel title="Artifact preview">
                 {latestArtifact ? <ArtifactPreview artifact={latestArtifact} /> : <p className="text-xs font-semibold text-slate-600">Artifacts appear here after completion.</p>}
               </ResultPanel>
@@ -556,18 +577,13 @@ export default function StudioPage() {
           <details className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced details</summary>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
-              <RouteFact label="Raw job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
-              <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
-            </div>
-            {lastPayload && <pre className="mt-3 max-h-64 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-5 text-slate-500">{JSON.stringify(lastPayload, null, 2)}</pre>}
-          </details>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
-            <p className="flex items-center gap-2"><Brain className="h-3.5 w-3.5 text-cyan-500" /> Dashboard-aware context loaded</p>
-            <p className="flex items-center gap-2"><DatabaseZap className="h-3.5 w-3.5 text-cyan-500" /> Workspace memory available</p>
-            <p className="flex items-center gap-2"><FolderInput className="h-3.5 w-3.5 text-cyan-500" /> Workbench handoff enabled</p>
+            <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+            <RouteFact label="Raw job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
+            <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
+            <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
           </div>
+          {lastPayload && <pre className="mt-3 max-h-64 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-5 text-slate-500">{JSON.stringify(lastPayload, null, 2)}</pre>}
+        </details>
         </section>
       </section>
     </div>
@@ -593,11 +609,11 @@ function ResultWorkspace({ mode, conversation, audioPreview, latestArtifact, las
       <img src={url} alt="Generated output" className="h-full max-h-[560px] w-full rounded-xl object-contain" />
     ) : <EmptyResult text="Image previews appear here after the job returns storageUrl or imageUrl." />
   }
-  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') {
+  if (mode.capability === 'video_generation') {
     const url = resultUrl || getArtifactUrl(latestArtifact)
     return url ? <video controls src={url} className="h-full max-h-[560px] w-full rounded-xl" /> : <EmptyResult text="Video player appears here after async polling returns an output URL." />
   }
-  if (mode.capability === 'music_generation' || mode.capability === 'tts' || mode.capability === 'adult_voice') {
+  if (mode.capability === 'music_generation' || mode.capability === 'tts') {
     const url = audioPreview || resultUrl || getArtifactUrl(latestArtifact)
     return url ? <audio controls src={url} className="mt-8 w-full" /> : <EmptyResult text="Music/audio playback appears here after generation completes." />
   }
@@ -693,9 +709,9 @@ function RouteFact({ label, value }: { label: string; value: string }) {
 function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
   if (mode.capability === 'coding') return 'coding'
   if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'image'
-  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'video'
+  if (mode.capability === 'video_generation') return 'video'
   if (mode.capability === 'music_generation') return 'music/audio'
-  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'voice/TTS'
+  if (mode.capability === 'tts') return 'voice/TTS'
   if (mode.capability === 'stt') return 'STT'
   if (mode.capability.startsWith('adult')) return 'adult'
   return 'chat'
@@ -709,6 +725,19 @@ function placeholderForMode(mode: StudioMode) {
   if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
   if (mode.capability.startsWith('adult')) return 'Policy-gated adult request for consenting fictional adults only. Blocked categories remain blocked.'
   return 'Ask the operator studio to help with this app, another connected app, or an operational task.'
+}
+
+function resultIntroForMode(mode: StudioMode) {
+  if (mode.capability === 'chat') return 'Conversation output appears here as the Assistant responds.'
+  if (mode.capability === 'research') return 'Research reports, sources, and follow-up actions appear here after the run.'
+  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'Generated images and saved artifact previews appear here when the provider returns output.'
+  if (mode.capability === 'video_generation') return 'Video progress and the final player appear here after async polling returns a usable output.'
+  if (mode.capability === 'music_generation') return 'Music job progress, audio playback, and artifact status appear here.'
+  if (mode.capability === 'tts') return 'Generated speech plays here when the selected voice route returns audio.'
+  if (mode.capability === 'stt') return 'Transcripts appear here after the upload finishes.'
+  if (mode.capability === 'adult_text') return 'Policy-gated adult text output appears here when safeguards allow the request.'
+  if (mode.capability === 'coding') return 'Workbench handoff status appears here, with the next repo action available after saving.'
+  return 'Run a command to see results here.'
 }
 
 function actionLabelForMode(mode: StudioMode) {

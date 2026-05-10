@@ -42,6 +42,7 @@ export default function WorkbenchPage() {
   const [costMode, setCostMode] = useState<CostMode>('balanced')
   const [prompt, setPrompt] = useState('')
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const [taskId, setTaskId] = useState('')
   const [currentJobId, setCurrentJobId] = useState('')
   const [patchId, setPatchId] = useState('')
   const [prNumber, setPrNumber] = useState<number | null>(null)
@@ -66,8 +67,9 @@ export default function WorkbenchPage() {
   }, [catalog, governedWorkbenchModels])
   const selectedModel = codingModels.find((model) => model.modelId === modelId)
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
-  const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
-  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), Boolean(patchId), checksPassed, Boolean(prNumber))
+  const hasPlan = Boolean(taskId || log.plan)
+  const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
 
   const updateStep = (step: StepId, status: 'waiting' | 'active' | 'done' | 'needs-approval') => {
     setStepStatus((current) => ({ ...current, [step]: status }))
@@ -101,6 +103,7 @@ export default function WorkbenchPage() {
     if (!job?.workspace) return
     const fullName = `${job.workspace.owner}/${job.workspace.repo}`
     setCurrentJobId(job.id)
+    setTaskId(job.id)
     setWorkspace(job.workspace)
     setRepoFullName(fullName)
     setBranch(job.workspace.branch || 'auto')
@@ -181,21 +184,29 @@ export default function WorkbenchPage() {
     if (!prompt.trim() || !repoFullName) return
     updateStep('Planning', 'active')
     const activeWorkspace = await ensureWorkspace()
-    const plan = await call('Start work', `/api/admin/repo-workbench/${activeWorkspace.id}/plan`, {
+    const plan = await call('Generate plan', `/api/admin/repo-workbench/${activeWorkspace.id}/plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload()),
     })
     const task = plan.task as { id?: string } | undefined
-    setCurrentJobId(String(task?.id ?? plan.taskId ?? ''))
+    const nextTaskId = String(task?.id ?? plan.taskId ?? '')
+    setTaskId(nextTaskId)
+    setCurrentJobId(nextTaskId)
     setLog((current) => ({ ...current, plan: asText(plan.plan ?? plan.planJson ?? plan.task ?? plan) }))
     updateStep('Planning', 'done')
     updateStep('Files selected', 'done')
+    updateStep('Patch prepared', 'waiting')
+  }
+
+  async function generatePatch() {
+    if (!prompt.trim() || !repoFullName) return
+    const activeWorkspace = await ensureWorkspace()
     updateStep('Patch prepared', 'active')
-    const patch = await call('Prepare patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
+    const patch = await call('Generate patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload(), taskId: String(task?.id ?? plan.taskId ?? '') || undefined }),
+      body: JSON.stringify({ ...payload(), taskId: taskId || currentJobId || undefined }),
     })
     const proposed = patch.patch as { id?: string; diffText?: string; filesAffected?: string[] } | undefined
     setPatchId(String(proposed?.id ?? patch.patchId ?? ''))
@@ -297,7 +308,8 @@ export default function WorkbenchPage() {
 
   async function retryFailedStep() {
     if (!error) return
-    if (stepStatus['Planning'] === 'active' || !patchId) return startWork()
+    if (hasPlan && !patchId) return generatePatch()
+    if (stepStatus['Planning'] === 'active' || !hasPlan) return startWork()
     if (stepStatus['Patch prepared'] === 'active' || stepStatus['Patch prepared'] === 'needs-approval') return approveChanges()
     if (stepStatus['Checks running'] === 'active' || stepStatus['Checks running'] === 'needs-approval') return runChecks()
     if (stepStatus['Commit ready'] === 'active' || stepStatus['Commit ready'] === 'needs-approval') return commitAndPush()
@@ -306,6 +318,7 @@ export default function WorkbenchPage() {
 
   async function runPrimaryAction() {
     if (primaryAction.id === 'start') return startWork()
+    if (primaryAction.id === 'patch') return generatePatch()
     if (primaryAction.id === 'approve') return approveChanges()
     if (primaryAction.id === 'checks') return runChecks()
     if (primaryAction.id === 'commit') return commitAndPush()
@@ -401,13 +414,14 @@ export default function WorkbenchPage() {
               {primaryAction.label}
             </button>
             <details className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/30 p-3">
-              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Step actions</summary>
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Manual controls</summary>
               <div className="mt-3 flex flex-wrap gap-2">
-                <WbButton onClick={startWork} disabled={!repoFullName || !prompt || Boolean(loading)} loading={loading === 'Start work' || loading === 'Prepare patch'} label="Start work" icon={<Play className="h-3.5 w-3.5" />} />
-                <WbButton onClick={approveChanges} disabled={!workspace || !patchId || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
-                <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] === 'waiting' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
-                <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
-                <WbButton onClick={createPr} disabled={!workspace || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+                <WbButton onClick={startWork} disabled={!repoFullName || !prompt || hasPlan || Boolean(loading)} loading={loading === 'Generate plan'} label="Generate plan" icon={<Play className="h-3.5 w-3.5" />} />
+                <WbButton onClick={generatePatch} disabled={!workspace || !hasPlan || Boolean(patchId) || Boolean(loading)} loading={loading === 'Generate patch'} label="Generate patch" icon={<Play className="h-3.5 w-3.5" />} />
+                <WbButton onClick={approveChanges} disabled={!workspace || !patchId || stepStatus['Patch prepared'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
+                <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] !== 'needs-approval' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+                <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || stepStatus['Commit ready'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+                <WbButton onClick={createPr} disabled={!workspace || stepStatus['PR ready'] !== 'needs-approval' || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
               </div>
             </details>
           </div>
@@ -432,7 +446,7 @@ export default function WorkbenchPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1fr_1fr_320px]">
         <WorkbenchPanel title="Diff viewer">
-          {log.diff ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.diff}</pre> : <p className="text-sm font-semibold text-slate-500">Generated patch diff appears after Start task.</p>}
+          {log.diff ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.diff}</pre> : <p className="text-sm font-semibold text-slate-500">Generated patch diff appears after Generate patch.</p>}
         </WorkbenchPanel>
         <WorkbenchPanel title="Files and findings">
           {log.files ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.files}</pre> : <p className="text-sm font-semibold text-slate-500">File list appears with the generated patch.</p>}
@@ -573,11 +587,44 @@ function parsePlanSections(value: string): Record<'Summary' | 'Findings' | 'File
   }
 }
 
-function stringifyPlanField(value: unknown) {
+function stringifyPlanField(value: unknown): string {
   if (!value) return ''
   if (typeof value === 'string') return value
-  if (Array.isArray(value)) return value.map((item) => typeof item === 'string' ? item : JSON.stringify(item)).join('\n')
-  return JSON.stringify(value, null, 2)
+  if (Array.isArray(value)) return value.map(formatPlanItem).join('\n')
+  return formatPlanItem(value)
+}
+
+function formatPlanItem(value: unknown): string {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  if (typeof value !== 'object') return String(value)
+  const record = value as Record<string, unknown>
+  const severity = firstString(record.severity, record.priority, record.level)
+  const location = firstString(record.file, record.route, record.path, record.component)
+  const issue = firstString(record.issue, record.title, record.summary, record.description)
+  const fix = firstString(record.fix, record.recommendation, record.action, record.resolution)
+  const parts = [
+    severity ? `Severity: ${severity}` : '',
+    location ? `Location: ${location}` : '',
+    issue ? `Issue: ${issue}` : '',
+    fix ? `Fix: ${fix}` : '',
+  ].filter(Boolean)
+  if (parts.length) return parts.join('\n')
+  return Object.entries(record)
+    .map(([key, item]) => `${humanizePlanKey(key)}: ${Array.isArray(item) ? item.map(formatPlanItem).join('; ') : typeof item === 'object' && item ? formatPlanItem(item) : String(item ?? '')}`)
+    .join('\n')
+}
+
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value
+    if (typeof value === 'number') return String(value)
+  }
+  return ''
+}
+
+function humanizePlanKey(value: string): string {
+  return value.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]/g, ' ')
 }
 
 function WbButton({ label, onClick, disabled, loading, icon, primary = false }: { label: string; onClick: () => void; disabled: boolean; loading: boolean; icon?: React.ReactNode; primary?: boolean }) {
@@ -618,12 +665,14 @@ function getPrimaryWorkbenchAction(
   steps: Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>,
   hasRepo: boolean,
   hasPrompt: boolean,
+  hasPlan: boolean,
   hasPatch: boolean,
   checksPassed: boolean,
   hasPr: boolean,
 ) {
   if (!hasRepo || !hasPrompt) return { id: 'start', label: 'Start task', disabled: true, icon: <Play className="h-3.5 w-3.5" /> }
-  if (steps['Patch prepared'] === 'waiting') return { id: 'start', label: 'Start task', disabled: false, icon: <Play className="h-3.5 w-3.5" /> }
+  if (!hasPlan) return { id: 'start', label: 'Start task', disabled: false, icon: <Play className="h-3.5 w-3.5" /> }
+  if (!hasPatch && steps['Patch prepared'] === 'waiting') return { id: 'patch', label: 'Generate patch', disabled: false, icon: <Play className="h-3.5 w-3.5" /> }
   if (hasPatch && steps['Patch prepared'] === 'needs-approval') return { id: 'approve', label: 'Approve changes', disabled: false, icon: <ShieldCheck className="h-3.5 w-3.5" /> }
   if (steps['Checks running'] === 'needs-approval') return { id: 'checks', label: 'Run checks', disabled: false, icon: <CheckCircle2 className="h-3.5 w-3.5" /> }
   if (steps['Commit ready'] === 'needs-approval' && checksPassed) return { id: 'commit', label: 'Commit and push', disabled: false, icon: <GitPullRequest className="h-3.5 w-3.5" /> }
@@ -640,13 +689,15 @@ function getNextAction(
   steps: Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>,
   hasRepo: boolean,
   hasPrompt: boolean,
+  hasPlan: boolean,
   hasPatch: boolean,
   checksPassed: boolean,
   hasPr: boolean,
 ) {
   if (!hasRepo) return 'Select a repository.'
   if (!hasPrompt) return 'Write the operator prompt.'
-  if (steps['Patch prepared'] === 'waiting') return 'Start work to generate a plan and patch.'
+  if (!hasPlan) return 'Start task to generate a readable plan.'
+  if (!hasPatch && steps['Patch prepared'] === 'waiting') return 'Generate patch from the approved plan.'
   if (hasPatch && steps['Patch prepared'] === 'needs-approval') return 'Review the diff and approve changes.'
   if (steps['Checks running'] === 'needs-approval') return 'Run checks before commit.'
   if (!checksPassed && steps['Checks running'] !== 'waiting') return 'Wait for checks or retry failed checks.'
