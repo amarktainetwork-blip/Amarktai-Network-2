@@ -10,7 +10,7 @@ function read(relPath: string) {
 
 describe('dashboard emergency productization fix', () => {
   it('Studio starts empty and does not render fake job states before a real run', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('app/admin/dashboard/studio/page.tsx')
     const modesBlock = page.slice(page.indexOf('const studioModes'), page.indexOf('const unavailableAdultModes'))
     expect(modesBlock).not.toContain("capability: 'adult_video'")
     expect(modesBlock).not.toContain("capability: 'adult_voice'")
@@ -21,7 +21,7 @@ describe('dashboard emergency productization fix', () => {
   })
 
   it('Studio keeps route and context details behind Advanced details', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('app/admin/dashboard/studio/page.tsx')
     expect(page).toContain('Advanced route details')
     expect(page).toContain('<RouteFact label="Route details" value={tabTruth.detail} />')
     expect(page).toContain('<RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />')

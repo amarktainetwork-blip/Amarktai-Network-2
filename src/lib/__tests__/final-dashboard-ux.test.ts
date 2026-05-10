@@ -10,7 +10,7 @@ function read(relPath: string) {
 
 describe('final go-live dashboard UX', () => {
   it('Studio uses the left command / right live result workspace pattern', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('app/admin/dashboard/studio/page.tsx')
     for (const text of [
       'LEFT command / RIGHT live result workspace',
       'Command Center / Studio',
@@ -29,7 +29,7 @@ describe('final go-live dashboard UX', () => {
   })
 
   it('Studio media lifecycle and capability copy stays explicit', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('app/admin/dashboard/studio/page.tsx')
     expect(page).toContain('pollStudioJob')
     expect(page).toContain('loadArtifacts().catch')
     expect(page).toContain('music_generation / song_generation')

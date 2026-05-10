@@ -30,10 +30,10 @@ describe('dashboard go-live wiring', () => {
   it('keeps exactly the final dashboard routes and one nav system', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
       '/admin/dashboard',
+      '/admin/dashboard/studio',
       '/admin/dashboard/workbench',
       '/admin/dashboard/apps-agents',
       '/admin/dashboard/memory-learning',
-      '/admin/dashboard/operations',
       '/admin/dashboard/settings',
     ])
     for (const route of ['apps', 'agents', 'ai-models', 'assistant', 'playground', 'creative-studio', 'costs', 'actions', 'system', 'dashboard-v2']) {
@@ -42,7 +42,7 @@ describe('dashboard go-live wiring', () => {
   })
 
   it('Studio uses protected real routes, media polling, previews, voice/model selection, and adult blockers', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('app/admin/dashboard/studio/page.tsx')
     for (const text of [
       '/api/admin/amarktai-assistant/stream',
       '/api/admin/studio/execute',

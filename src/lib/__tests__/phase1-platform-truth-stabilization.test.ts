@@ -24,19 +24,19 @@ describe('Phase 1 platform truth stabilization', () => {
 
   it('keeps the dashboard to exactly the six final sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
+      'Overview',
       'Studio',
       'Workbench',
       'Apps & Agents',
       'Memory & Learning',
-      'Operations',
       'Settings',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
       '/admin/dashboard',
+      '/admin/dashboard/studio',
       '/admin/dashboard/workbench',
       '/admin/dashboard/apps-agents',
       '/admin/dashboard/memory-learning',
-      '/admin/dashboard/operations',
       '/admin/dashboard/settings',
     ])
   })
@@ -133,7 +133,7 @@ describe('Phase 1 platform truth stabilization', () => {
   })
 
   it('makes Studio media tabs truthful instead of claiming complete wiring', () => {
-    const studio = read('app/admin/dashboard/page.tsx')
+    const studio = read('app/admin/dashboard/studio/page.tsx')
     const routeMap = read('lib/studio-route-map.ts')
     const streamRoute = read('app/api/admin/amarktai-assistant/stream/route.ts')
     expect(studio).toContain('/api/admin/studio/execute')

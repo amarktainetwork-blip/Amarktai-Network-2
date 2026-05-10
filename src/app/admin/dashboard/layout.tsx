@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <p className="text-sm font-black tracking-tight text-slate-100">AmarktAI Network</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/70">Operations Console</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/70">AI Operating System</p>
             </div>
           </div>
         </Link>
