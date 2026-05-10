@@ -37,14 +37,8 @@ export async function POST() {
 
   const start = Date.now()
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const nodemailer = require('nodemailer') as typeof import('nodemailer')
-    const transporter = nodemailer.createTransport(config)
-    await transporter.verify()
-    return NextResponse.json({ success: true, host: smtpHost, port: config.port, latencyMs: Date.now() - start })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'SMTP verify failed'
-    if (message.includes('Cannot find module')) {
+    const nodemailerMod = await import('nodemailer').catch(() => null)
+    if (!nodemailerMod) {
       return NextResponse.json({
         success: true,
         note: 'nodemailer not installed — SMTP env vars are set but not deep-tested',
@@ -53,6 +47,11 @@ export async function POST() {
         latencyMs: Date.now() - start,
       })
     }
+    const transporter = nodemailerMod.createTransport(config)
+    await transporter.verify()
+    return NextResponse.json({ success: true, host: smtpHost, port: config.port, latencyMs: Date.now() - start })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'SMTP verify failed'
     return NextResponse.json({
       success: false,
       error: message,

@@ -181,14 +181,14 @@ export async function getPlatformSettingsTruth(): Promise<{
 
   const tools = await Promise.all(
     TOOL_ENTRIES.map((tool) => {
-      const toolAny = tool as { key: string; label: string; note: string; envName?: string; envKey?: string; testRoute?: string | null }
-      if (toolAny.envName) {
+      const toolEntry = tool as { key: string; label: string; note: string; envName?: string; envKey?: string; testRoute?: string | null }
+      if (toolEntry.envName) {
         return Promise.resolve(envEntry({
-          key: toolAny.key,
-          label: toolAny.label,
-          note: toolAny.note,
-          envName: toolAny.envName,
-          testRoute: toolAny.testRoute ?? TEST_ROUTES[toolAny.key] ?? null,
+          key: toolEntry.key,
+          label: toolEntry.label,
+          note: toolEntry.note,
+          envName: toolEntry.envName,
+          testRoute: toolEntry.testRoute ?? TEST_ROUTES[toolEntry.key] ?? null,
         }))
       }
       return entryForKey({
@@ -196,7 +196,7 @@ export async function getPlatformSettingsTruth(): Promise<{
         label: tool.label,
         kind: 'tool',
         note: tool.note,
-        envKey: tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (toolAny.envKey ?? tool.key) as CoreProvider,
+        envKey: tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (toolEntry.envKey ?? tool.key) as CoreProvider,
         testRoute: tool.key === 'firecrawl' ? '/api/admin/research/status' : TEST_ROUTES[tool.key] ?? null,
       })
     }),
