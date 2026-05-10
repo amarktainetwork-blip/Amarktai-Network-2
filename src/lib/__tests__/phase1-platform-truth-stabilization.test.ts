@@ -80,6 +80,13 @@ describe('Phase 1 platform truth stabilization', () => {
         source: key === 'genx' || key === 'github' ? 'vault' : 'missing',
       })),
     }))
+    vi.doMock('@/lib/local-json-store', async () => {
+      const actual = await vi.importActual<typeof import('@/lib/local-json-store')>('@/lib/local-json-store')
+      return {
+        ...actual,
+        checkWritable: vi.fn(() => ({ writable: true, root: '/tmp/test-storage', file: 'artifacts/artifacts.json' })),
+      }
+    })
 
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const truth = await getPlatformSettingsTruth()

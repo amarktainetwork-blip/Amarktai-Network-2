@@ -31,6 +31,17 @@ export default async function OperationsPage() {
     ...(research?.firecrawl.status === 'ok' || research?.playwright.status === 'ok' ? [] : ['Research stack has no live-tested crawler/browser route']),
   ]
   const toolStatus = (key: string) => settingsTruth?.tools.find((tool) => tool.key === key)?.status ?? 'Needs key'
+  const providerCount = providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length
+  const studioReady = storage.writable && providerCount > 0
+  const workbenchReady = storage.writable && (toolStatus('github') === 'Connected' || settingsTruth?.tools.find((t) => t.key === 'github')?.configured)
+  const studioBlockers = [
+    ...(!storage.writable ? ['Storage not writable'] : []),
+    ...(providerCount === 0 ? ['No AI provider connected'] : []),
+  ]
+  const workbenchBlockers = [
+    ...(!storage.writable ? ['Storage not writable'] : []),
+    ...(toolStatus('github') !== 'Connected' ? ['GitHub not connected'] : []),
+  ]
   const requiredBlockerCategories = [
     'missing required key',
     'failed live test',
@@ -107,6 +118,52 @@ export default async function OperationsPage() {
         <OpsMetric label="Storage" value={storage.writable ? 'Writable' : 'Needs test'} status={storage.writable ? 'ok' : 'warn'} />
         <OpsMetric label="Month spend" value={`$${(costs?.monthSpendUsd ?? 0).toFixed(2)}`} />
         <OpsMetric label="Pending Approvals" value={String(approvals.length)} status={approvals.length > 0 ? 'warn' : 'ok'} />
+      </section>
+
+      {/* Studio + Workbench readiness */}
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className={['rounded-2xl border p-5 backdrop-blur-xl', studioReady ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5'].join(' ')}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Studio</p>
+              <h3 className="mt-1 text-base font-black text-slate-100">{studioReady ? 'Studio ready' : 'Studio blocked'}</h3>
+            </div>
+            <span className={['rounded-full border px-2.5 py-1 text-xs font-black', studioReady ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+              {studioReady ? 'Ready' : 'Blocked'}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            {providerCount} provider{providerCount !== 1 ? 's' : ''} connected · Storage {storage.writable ? 'writable' : 'not writable'}
+          </p>
+          {studioBlockers.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {studioBlockers.map((blocker) => (
+                <p key={blocker} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-1.5 text-xs font-semibold text-amber-300">{blocker}</p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className={['rounded-2xl border p-5 backdrop-blur-xl', workbenchReady ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5'].join(' ')}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Workbench</p>
+              <h3 className="mt-1 text-base font-black text-slate-100">{workbenchReady ? 'Workbench ready' : 'Workbench blocked'}</h3>
+            </div>
+            <span className={['rounded-full border px-2.5 py-1 text-xs font-black', workbenchReady ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+              {workbenchReady ? 'Ready' : 'Blocked'}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            GitHub {toolStatus('github')} · Storage {storage.writable ? 'writable' : 'not writable'}
+          </p>
+          {workbenchBlockers.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {workbenchBlockers.map((blocker) => (
+                <p key={blocker} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-1.5 text-xs font-semibold text-amber-300">{blocker}</p>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <section className="grid gap-4 xl:grid-cols-3">
