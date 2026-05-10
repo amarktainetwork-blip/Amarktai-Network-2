@@ -136,6 +136,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className="flex min-h-screen bg-[#030712] text-slate-100"
       style={{ fontFamily: "'Inter Variable','Inter',system-ui,-apple-system,sans-serif" }}
     >
+      {/* Desktop workspace required — shown below 1280px */}
+      <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#030712] min-[1280px]:hidden">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-cyan-950/20 blur-[100px]" />
+          <div className="absolute -right-40 bottom-0 h-[400px] w-[400px] rounded-full bg-indigo-950/25 blur-[100px]" />
+        </div>
+        <div className="relative text-center px-6">
+          <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl border border-slate-700/60 bg-slate-900/80 shadow-[0_0_40px_rgba(34,211,238,0.12)]">
+            <Network className="h-7 w-7 text-cyan-400" />
+          </div>
+          <p className="text-xl font-black tracking-tight text-slate-100">Desktop workspace required.</p>
+          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
+            AmarktAI Network is a premium desktop AI OS.<br />
+            Minimum supported width: 1280px.
+          </p>
+          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-500/60">AmarktAI Network · AI Operating System</p>
+        </div>
+      </div>
+
       {/* Runtime background field */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-cyan-950/20 blur-[120px]" />
