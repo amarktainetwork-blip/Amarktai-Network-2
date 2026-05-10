@@ -577,13 +577,14 @@ export default function StudioPage() {
           <details className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced details</summary>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
-            <RouteFact label="Raw job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
-            <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
-            <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
-          </div>
-          {lastPayload && <pre className="mt-3 max-h-64 overflow-auto rounded-xl border border-slate-800 bg-slate-950 p-3 text-xs leading-5 text-slate-500">{JSON.stringify(lastPayload, null, 2)}</pre>}
-        </details>
+              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+              <RouteFact label="Job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
+              <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
+              <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
+              {lastResult?.provider && <RouteFact label="Resolved provider" value={lastResult.provider} />}
+              {lastResult?.model && <RouteFact label="Resolved model" value={lastResult.model} />}
+            </div>
+          </details>
         </section>
       </section>
     </div>

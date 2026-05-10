@@ -345,10 +345,11 @@ export default function WorkbenchPage() {
         </div>
       </section>
 
-      {/* Prompt + controls */}
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-        <p className="mb-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Left command / center workspace / right checks and PR state</p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* 3-column workspace: left command | center plan+diff | right checks+PR+action */}
+      <div className="grid gap-4 xl:grid-cols-[320px_1fr_260px]">
+
+        {/* LEFT: repo / branch / model / prompt */}
+        <aside className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
           <WbField label="Repo">
             <select
               value={repoFullName}
@@ -382,28 +383,49 @@ export default function WorkbenchPage() {
               <option value="premium">premium</option>
             </select>
           </WbField>
-        </div>
-
-        <div className="mt-4">
           <label className="block">
             <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Prompt</span>
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
-              rows={5}
-              placeholder="Describe the change. The Workbench will audit context, choose the right agent/model, plan, prepare a patch, and wait for your approval."
-              className="mt-1.5 min-h-32 w-full resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20"
+              rows={7}
+              placeholder="Describe the change. The Workbench will plan, prepare a patch, and wait for your approval."
+              className="mt-1.5 min-h-36 w-full resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20"
             />
           </label>
-        </div>
+          {error && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/8 p-3">
+              <p className="text-sm font-semibold text-red-400">{error}</p>
+              <button onClick={retryFailedStep} disabled={Boolean(loading)} className="mt-2 rounded-lg border border-red-400/30 px-2.5 py-1 text-xs font-black text-red-200 disabled:opacity-40">Retry failed step</button>
+            </div>
+          )}
+        </aside>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_320px]">
-          <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-4">
+        {/* CENTER: readable plan, diff, files */}
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Readable plan</p>
             <PlanSections value={log.plan} />
           </div>
-          <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-4">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Diff viewer</p>
+            <div className="mt-3">
+              {log.diff ? <pre className="max-h-80 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.diff}</pre> : <p className="text-sm font-semibold text-slate-500">Generated patch diff appears after Generate patch.</p>}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Files changed</p>
+            <div className="mt-3">
+              {log.files ? <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.files}</pre> : <p className="text-sm font-semibold text-slate-500">File list appears with the generated patch.</p>}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT: next action + checks + PR status */}
+        <aside className="space-y-3">
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Primary next action</p>
+            <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">Next action</p>
             <p className="mt-1 text-sm font-bold text-slate-300">{nextAction}</p>
             <button
               onClick={runPrimaryAction}
@@ -413,51 +435,36 @@ export default function WorkbenchPage() {
               {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : primaryAction.icon}
               {primaryAction.label}
             </button>
-            <details className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/30 p-3">
-              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Manual controls</summary>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <WbButton onClick={startWork} disabled={!repoFullName || !prompt || hasPlan || Boolean(loading)} loading={loading === 'Generate plan'} label="Generate plan" icon={<Play className="h-3.5 w-3.5" />} />
-                <WbButton onClick={generatePatch} disabled={!workspace || !hasPlan || Boolean(patchId) || Boolean(loading)} loading={loading === 'Generate patch'} label="Generate patch" icon={<Play className="h-3.5 w-3.5" />} />
-                <WbButton onClick={approveChanges} disabled={!workspace || !patchId || stepStatus['Patch prepared'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
-                <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] !== 'needs-approval' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
-                <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || stepStatus['Commit ready'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
-                <WbButton onClick={createPr} disabled={!workspace || stepStatus['PR ready'] !== 'needs-approval' || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
-              </div>
-            </details>
+            <p className="mt-2 text-[10px] font-semibold text-slate-600">
+              {selectedModel ? `${providerLabel(selectedModel.provider)} / ${executionModel || 'auto'}` : 'Auto coding model'}
+            </p>
           </div>
-        </div>
-        <div className="mt-4 rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Next action</p>
-          <p className="mt-1 text-sm font-bold text-slate-300">{nextAction}</p>
-          <p className="mt-1 text-xs font-semibold text-slate-600">Model route: {selectedModel ? `${providerLabel(selectedModel.provider)} / ${executionModel || 'auto resolved'}` : 'Auto coding/reasoning model from governance'}</p>
-        </div>
-        {log.pr && (
-          <a href={log.pr} className="mt-3 inline-block rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-300 hover:bg-cyan-500/15">
-            Open PR URL
-          </a>
-        )}
-        {error && (
-          <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 p-3">
-            <p className="text-sm font-semibold text-red-400">{error}</p>
-            <button onClick={retryFailedStep} disabled={Boolean(loading)} className="mt-2 rounded-lg border border-red-400/30 px-2.5 py-1 text-xs font-black text-red-200 disabled:opacity-40">Retry failed step</button>
+          <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-400/70">Checks, PR, deploy</p>
+            <div className="mt-3 space-y-0">
+              <StatusLine label="Checks" value={checksPassed ? 'passed' : stepStatus['Checks running']} />
+              <StatusLine label="PR" value={prNumber ? `#${prNumber}` : stepStatus['PR ready']} />
+              <StatusLine label="Deploy" value={stepStatus['Deploy ready']} />
+            </div>
+            {log.pr && (
+              <a href={log.pr} className="mt-3 inline-block w-full rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-center text-xs font-black text-cyan-300 hover:bg-cyan-500/15">
+                Open PR URL
+              </a>
+            )}
           </div>
-        )}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[1fr_1fr_320px]">
-        <WorkbenchPanel title="Diff viewer">
-          {log.diff ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.diff}</pre> : <p className="text-sm font-semibold text-slate-500">Generated patch diff appears after Generate patch.</p>}
-        </WorkbenchPanel>
-        <WorkbenchPanel title="Files and findings">
-          {log.files ? <pre className="max-h-96 overflow-auto whitespace-pre-wrap text-xs leading-5 text-slate-400">{log.files}</pre> : <p className="text-sm font-semibold text-slate-500">File list appears with the generated patch.</p>}
-        </WorkbenchPanel>
-        <WorkbenchPanel title="Checks, PR, deploy">
-          <StatusLine label="Checks" value={checksPassed ? 'passed' : stepStatus['Checks running']} />
-          <StatusLine label="PR" value={prNumber ? `#${prNumber}` : stepStatus['PR ready']} />
-          <StatusLine label="Deploy" value={stepStatus['Deploy ready']} />
-          {log.pr && <a href={log.pr} className="mt-3 inline-block rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-300 hover:bg-cyan-500/15">Open PR URL</a>}
-        </WorkbenchPanel>
-      </section>
+          <details className="rounded-2xl border border-slate-700/40 bg-slate-900/60 p-4 backdrop-blur-xl">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Manual controls</summary>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <WbButton onClick={startWork} disabled={!repoFullName || !prompt || hasPlan || Boolean(loading)} loading={loading === 'Generate plan'} label="Generate plan" icon={<Play className="h-3.5 w-3.5" />} />
+              <WbButton onClick={generatePatch} disabled={!workspace || !hasPlan || Boolean(patchId) || Boolean(loading)} loading={loading === 'Generate patch'} label="Generate patch" icon={<Play className="h-3.5 w-3.5" />} />
+              <WbButton onClick={approveChanges} disabled={!workspace || !patchId || stepStatus['Patch prepared'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('approved')} label="Approve changes" icon={<ShieldCheck className="h-3.5 w-3.5" />} />
+              <WbButton onClick={runChecks} disabled={!workspace || stepStatus['Checks running'] !== 'needs-approval' || Boolean(loading)} loading={loading.startsWith('Run ') || loading === 'Detect checks'} label="Run checks" icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+              <WbButton onClick={commitAndPush} disabled={!workspace || !patchId || !checksPassed || stepStatus['Commit ready'] !== 'needs-approval' || Boolean(loading)} loading={loading.includes('Commit') || loading.includes('Push')} label="Commit and push" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+              <WbButton onClick={createPr} disabled={!workspace || stepStatus['PR ready'] !== 'needs-approval' || Boolean(loading)} loading={loading === 'Create PR'} label="Create PR" icon={<GitPullRequest className="h-3.5 w-3.5" />} />
+            </div>
+          </details>
+        </aside>
+      </div>
 
       {/* Timeline + logs */}
       <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 backdrop-blur-xl">
@@ -529,14 +536,6 @@ function WbField({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
-function WorkbenchPanel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 backdrop-blur-xl">
-      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/70">{title}</p>
-      <div className="mt-3">{children}</div>
-    </div>
-  )
-}
 
 function StatusLine({ label, value }: { label: string; value: string }) {
   return (
