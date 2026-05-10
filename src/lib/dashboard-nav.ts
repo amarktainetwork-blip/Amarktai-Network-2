@@ -2,18 +2,18 @@ import {
   BrainCircuit,
   GitBranch,
   GraduationCap,
-  MonitorCog,
+  LayoutDashboard,
   Settings2,
   Sparkles,
 } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 export type DashboardSectionId =
+  | 'overview'
   | 'studio'
   | 'workbench'
   | 'apps-agents'
   | 'memory-learning'
-  | 'operations'
   | 'settings'
 
 export type DashboardNavItem = {
@@ -26,8 +26,15 @@ export type DashboardNavItem = {
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
   {
-    id: 'studio',
+    id: 'overview',
     href: '/admin/dashboard',
+    label: 'Overview',
+    description: 'System health, provider status, VPS, storage, jobs, costs, and platform readiness.',
+    icon: LayoutDashboard,
+  },
+  {
+    id: 'studio',
+    href: '/admin/dashboard/studio',
     label: 'Studio',
     description: 'Operator workspace for chat, coding handoff, research, media, voice, policy, and artifacts.',
     icon: Sparkles,
@@ -52,13 +59,6 @@ export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
     label: 'Memory & Learning',
     description: 'Persistent context, app memory, learning logs, artifact links, and workflow history.',
     icon: GraduationCap,
-  },
-  {
-    id: 'operations',
-    href: '/admin/dashboard/operations',
-    label: 'Operations',
-    description: 'VPS, storage, jobs, artifacts, approvals, queues, logs, costs, provider usage, and alerts.',
-    icon: MonitorCog,
   },
   {
     id: 'settings',

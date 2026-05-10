@@ -18,11 +18,11 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
 
   it('keeps the dashboard to the six final sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
+      'Overview',
       'Studio',
       'Workbench',
       'Apps & Agents',
       'Memory & Learning',
-      'Operations',
       'Settings',
     ])
   })
@@ -81,9 +81,7 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
   it('Studio execution wrappers call real backend routes and persist artifacts', () => {
     const execute = read('app/api/admin/studio/execute/route.ts')
     const stt = read('app/api/admin/studio/stt/route.ts')
-    const page = read('app/admin/dashboard/page.tsx')
-
-    expect(execute).toContain("from '@/app/api/admin/research/assist/route'")
+    const page = read('app/admin/dashboard/studio/page.tsx')
     expect(execute).toContain("from '@/app/api/brain/image/route'")
     expect(execute).toContain("from '@/app/api/brain/video-generate/route'")
     expect(execute).toContain("from '@/app/api/brain/tts/route'")
