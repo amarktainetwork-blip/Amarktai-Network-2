@@ -16,7 +16,7 @@ export default async function OverviewPage() {
   ])
 
   const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
-  const jobs = listRecords('jobs/jobs.json')
+  const jobs = listRecords<{ id: string; status?: string }>(LOCAL_STORE_FILES.jobs)
   const storage = checkWritable(LOCAL_STORE_FILES.artifacts)
 
   const approvedKeys = new Set(APPROVED_AI_PROVIDERS.map((p) => p.key))
@@ -30,7 +30,7 @@ export default async function OverviewPage() {
   const agentCount = runtime?.localCore.agents.count ?? 0
   const storageRoot = getStorageRoot()
 
-  const activeJobs = (jobs as Array<{ status?: string }>).filter((j) =>
+  const activeJobs = jobs.filter((j) =>
     ['pending', 'processing', 'running'].includes(String(j.status ?? '')),
   ).length
 

@@ -17,7 +17,7 @@ export default async function OperationsPage() {
   ])
   const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
   const approvals = listRecords(LOCAL_STORE_FILES.approvals)
-  const jobs = listRecords('jobs/jobs.json')
+  const jobs = listRecords(LOCAL_STORE_FILES.jobs)
   const storage = checkWritable(LOCAL_STORE_FILES.artifacts)
   const approvedProviderKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
   const providerRows = (runtime?.providers ?? [])
