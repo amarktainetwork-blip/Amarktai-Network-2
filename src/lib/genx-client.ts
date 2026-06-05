@@ -163,20 +163,25 @@ export interface GenXStatus {
 
 // ── Known GenX model catalog (static fallback when live catalog unavailable) ──
 
-/** Known GenX text / code / reasoning models */
+/** Known GenX text / code / reasoning models (static fallback — 21 models aligned with 58-model catalog) */
 export const GENX_TEXT_MODELS = [
-  'gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex', 'gpt-5', 'gpt-5-mini',
-  'claude-sonnet-4-6', 'gemini-3.1-pro', 'grok-4.2', 'grok-4.2-reasoning',
+  'gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-pro', 'gpt-5.3-codex',
+  'gpt-5', 'gpt-5-mini', 'gpt-5-nano',
+  'claude-sonnet-4-6', 'claude-haiku-4-5', 'claude-opus-4-6', 'claude-opus-4-7',
+  'gemini-3.1-pro', 'gemini-3.1-flash-lite', 'gemini-3-flash',
+  'grok-4.2', 'grok-4.2-reasoning', 'grok-4.2-multi-agent', 'grok-4.3',
+  'grok-4-fast', 'grok-4.1-fast-reasoning',
 ] as const
 
-/** Known GenX image generation models */
+/** Known GenX image generation models (static fallback — 12 models aligned with 58-model catalog) */
 export const GENX_IMAGE_MODELS = [
   'gpt-image-2', 'nano-banana-2', 'nano-banana-pro',
-  'grok-imagine', 'grok-imagine-pro', 'recraft-v4',
+  'grok-imagine', 'grok-imagine-pro',
+  'recraft-v4', 'recraft-v4-pro', 'recraft-v4-pro-vector', 'recraft-v4-vector',
   'genxlm-pro-v1-img', 'genxlm-pro-v1-img-fast',
 ] as const
 
-/** Known GenX video generation models */
+/** Known GenX video generation models (static fallback — 19 models aligned with 58-model catalog) */
 export const GENX_VIDEO_MODELS = [
   'veo-3.1', 'veo-3.1-fast', 'grok-imagine-video',
   'kling-v3-pro', 'kling-v3-pro-i2v',
@@ -204,7 +209,7 @@ export const GENX_TTS_MODELS = [
   'grok-tts', 'aura-2', 'genxlm-voice-v1',
 ] as const
 
-/** Known GenX STT / transcription models */
+/** Known GenX STT / transcription models (genxlm-pro-v1-tl is translation, not STT) */
 export const GENX_STT_MODELS = [
   'genxlm-pro-v1-tr',
 ] as const

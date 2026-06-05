@@ -35,6 +35,14 @@ const TEST_ROUTES: Record<string, string> = {
   github: '/api/admin/settings/test-github',
   webdock: '/api/admin/settings/test-webdock',
   storage: '/api/admin/settings/test-storage',
+  groq: '/api/admin/settings/test-groq',
+  qwen: '/api/admin/settings/test-qwen',
+  minimax: '/api/admin/settings/test-minimax',
+  together: '/api/admin/settings/test-together',
+  huggingface: '/api/admin/settings/test-huggingface',
+  openai: '/api/admin/settings/test-openai',
+  redis: '/api/admin/settings/test-redis',
+  smtp: '/api/admin/settings/test-smtp',
 }
 
 function parseNotes(raw: string | null | undefined): Record<string, unknown> {
@@ -80,29 +88,30 @@ async function getLastKnownTestPassed(key: string): Promise<boolean> {
 const TOOL_ENTRIES = [
   { key: 'genx', label: 'GenX', note: 'Primary broker for model routing and Studio execution.', envKey: 'genx' },
   { key: 'github', label: 'GitHub', note: 'Repository list, branch list, push, PR, merge, and deploy handoff.' },
-  { key: 'redis', label: 'Redis', note: 'Queues, job coordination, and live job state.', envName: 'REDIS_URL' },
+  { key: 'redis', label: 'Redis', note: 'Queues, job coordination, and live job state.', envName: 'REDIS_URL', testRoute: TEST_ROUTES.redis },
   { key: 'firecrawl', label: 'Firecrawl', note: 'Research and scraping service. Status route lives in the research stack.' },
   { key: 'crawl4ai', label: 'Crawl4AI', note: 'Local research fallback. Availability is checked by research status, not by provider keys.' },
   { key: 'playwright', label: 'Playwright', note: 'Browser preview and verification tool. Availability is checked at runtime.' },
   { key: 'webdock', label: 'Webdock', note: 'VPS and system monitoring service.' },
-  { key: 'smtp', label: 'SMTP / email', note: 'Email delivery, notifications, and operator alerts.', envName: 'SMTP_HOST' },
+  { key: 'smtp', label: 'SMTP / email', note: 'Email delivery, notifications, and operator alerts.', envName: 'SMTP_HOST', testRoute: TEST_ROUTES.smtp },
 ] as const
 
 function envEntry(input: { key: string; label: string; note: string; envName: string; testRoute?: string | null }): SettingsTruthEntry {
   const configured = Boolean(process.env[input.envName])
+  const testRoute = input.testRoute ?? null
   return {
     key: input.key,
     label: input.label,
     kind: 'tool',
-    status: configured ? (input.testRoute ? 'Needs live test' : 'Needs test route') : 'Needs key',
+    status: configured ? (testRoute ? 'Needs live test' : 'Needs test route') : 'Needs key',
     configured,
     connected: false,
     source: configured ? 'env' : 'missing',
-    testRoute: input.testRoute ?? null,
+    testRoute,
     note: input.note,
     envVars: [input.envName],
     lastTestResult: configured ? 'Configured from environment; no passed live test recorded' : 'Not tested',
-    blocker: configured ? (input.testRoute ? 'Run the live test route' : 'Add a test route to validate this service') : `Set ${input.envName}`,
+    blocker: configured ? (testRoute ? `Run ${testRoute}` : 'Add a test route to validate this service') : `Set ${input.envName}`,
     unlocks: input.note,
   }
 }
@@ -171,14 +180,26 @@ export async function getPlatformSettingsTruth(): Promise<{
   )
 
   const tools = await Promise.all(
-    TOOL_ENTRIES.map((tool) => entryForKey({
-      key: tool.key,
-      label: tool.label,
-      kind: 'tool',
-      note: tool.note,
-      envKey: 'envName' in tool ? undefined : tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (('envKey' in tool ? tool.envKey : tool.key) as CoreProvider),
-      testRoute: tool.key === 'firecrawl' ? '/api/admin/research/status' : TEST_ROUTES[tool.key] ?? null,
-    }).then((entry) => 'envName' in tool ? envEntry({ key: tool.key, label: tool.label, note: tool.note, envName: tool.envName }) : entry)),
+    TOOL_ENTRIES.map((tool) => {
+      const toolEntry = tool as { key: string; label: string; note: string; envName?: string; envKey?: string; testRoute?: string | null }
+      if (toolEntry.envName) {
+        return Promise.resolve(envEntry({
+          key: toolEntry.key,
+          label: toolEntry.label,
+          note: toolEntry.note,
+          envName: toolEntry.envName,
+          testRoute: toolEntry.testRoute ?? TEST_ROUTES[toolEntry.key] ?? null,
+        }))
+      }
+      return entryForKey({
+        key: tool.key,
+        label: tool.label,
+        kind: 'tool',
+        note: tool.note,
+        envKey: tool.key === 'crawl4ai' || tool.key === 'playwright' ? undefined : (toolEntry.envKey ?? tool.key) as CoreProvider,
+        testRoute: tool.key === 'firecrawl' ? '/api/admin/research/status' : TEST_ROUTES[tool.key] ?? null,
+      })
+    }),
   )
 
   const storageWritable = checkWritable(LOCAL_STORE_FILES.artifacts)
