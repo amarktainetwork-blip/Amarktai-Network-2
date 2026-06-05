@@ -2,54 +2,60 @@ import { execFile } from 'child_process'
 import { access } from 'fs/promises'
 import path from 'path'
 import { promisify } from 'util'
-import { getProviderKey } from '@/lib/provider-config'
 
 const execFileAsync = promisify(execFile)
 
 export interface ResearchToolStatus {
-  firecrawl: { configured: boolean; tested: boolean; status: string }
-  crawl4ai: { available: boolean; status: string }
   playwright: { available: boolean; status: string }
+  scrapy: { available: boolean; status: string }
+  trafilatura: { available: boolean; status: string }
+  localCrawler: { available: boolean; status: string }
+  qdrant: { configured: boolean; status: string }
   order: string[]
 }
 
 export async function getResearchToolStatus(): Promise<ResearchToolStatus> {
-  const [firecrawlKey, crawl4ai, playwright] = await Promise.all([
-    getProviderKey('firecrawl').catch(() => null),
-    commandAvailable('crawl4ai'),
+  const [playwright, scrapy, trafilatura, crawlerScript] = await Promise.all([
     packageAvailable('playwright'),
+    pythonModuleAvailable('scrapy'),
+    pythonModuleAvailable('trafilatura'),
+    fileAvailable(path.join(process.cwd(), 'services', 'crawler', 'crawl.py')),
   ])
-
+  const localCrawler = crawlerScript && (trafilatura || playwright)
   return {
-    firecrawl: {
-      configured: Boolean(firecrawlKey || process.env.FIRECRAWL_API_KEY),
-      tested: Boolean(firecrawlKey || process.env.FIRECRAWL_API_KEY),
-      status: firecrawlKey || process.env.FIRECRAWL_API_KEY ? 'Configured' : 'Needs key/test',
-    },
-    crawl4ai: {
-      available: crawl4ai,
-      status: crawl4ai ? 'Available locally' : 'Unavailable locally',
-    },
-    playwright: {
-      available: playwright,
-      status: playwright ? 'Available locally' : 'Unavailable locally',
-    },
-    order: ['Firecrawl', 'Crawl4AI', 'Playwright'],
+    playwright: { available: playwright, status: playwright ? 'Available locally' : 'Install package and browsers' },
+    scrapy: { available: scrapy, status: scrapy ? 'Available in Python environment' : 'Install in crawler venv' },
+    trafilatura: { available: trafilatura, status: trafilatura ? 'Available in Python environment' : 'Install in crawler venv' },
+    localCrawler: { available: localCrawler, status: localCrawler ? 'Ready for local crawling' : 'Crawler dependencies need setup' },
+    qdrant: { configured: Boolean(process.env.QDRANT_URL), status: process.env.QDRANT_URL ? 'Configured' : 'Set QDRANT_URL' },
+    order: ['Playwright', 'Trafilatura', 'Scrapy', 'Qdrant'],
   }
 }
 
-async function commandAvailable(command: string) {
+async function pythonModuleAvailable(moduleName: string) {
+  for (const command of ['python', 'python3']) {
+    try {
+      await execFileAsync(command, ['-c', `import ${moduleName}`], { timeout: 5_000, windowsHide: true })
+      return true
+    } catch {
+      // Try the next Python command.
+    }
+  }
+  return false
+}
+
+async function packageAvailable(packageName: string) {
   try {
-    await execFileAsync(command, ['--help'], { timeout: 5_000, windowsHide: true })
+    await access(path.join(process.cwd(), 'node_modules', packageName, 'package.json'))
     return true
   } catch {
     return false
   }
 }
 
-async function packageAvailable(packageName: string) {
+async function fileAvailable(filePath: string) {
   try {
-    await access(path.join(process.cwd(), 'node_modules', packageName, 'package.json'))
+    await access(filePath)
     return true
   } catch {
     return false

@@ -96,10 +96,10 @@ describe('Research route files exist (Phase H)', () => {
     expect(src).toMatch(/export.*async.*POST/)
   })
 
-  it('research/url uses firecrawl with fallback', () => {
+  it('research/url uses the local crawler with fetch fallback', () => {
     const src = fs.readFileSync(path.join(API_ROOT, 'research/url/route.ts'), 'utf-8')
-    expect(src).toContain('firecrawl')
-    expect(src).toContain('manual')
+    expect(src).toContain("services', 'crawler', 'crawl.py")
+    expect(src).toContain('local-fetch-fallback')
   })
 
   it('research/url saves to artifact store', () => {

@@ -8,8 +8,8 @@ const REPO = path.resolve(ROOT, '../')
 const PUBLIC_PAGES = [
   'app/page.tsx',
   'app/about/page.tsx',
-  'app/apps/page.tsx',
-  'app/docs/page.tsx',
+  'app/platform/page.tsx',
+  'app/network-apps/page.tsx',
   'app/contact/page.tsx',
   'app/privacy/page.tsx',
   'app/terms/page.tsx',
@@ -44,19 +44,18 @@ describe('premium public website reset', () => {
 
     for (const token of [
       'intelligencefabric',
-      'what the platform does',
-      'studio',
-      'workbench',
-      'apps and agents',
-      'memory and learning',
-      'operations',
-      'amarktai assistant',
-      'private infrastructure',
+      'what amarktai network is',
+      'one command window',
+      'connected apps',
+      'create media, apps, and workflows',
+      'work on repos and prs',
+      'runtime truth',
+      'private access',
     ]) {
       expect(lower, token).toContain(token)
     }
 
-    for (const stage of ['prompt', 'plan', 'patch', 'checks', 'pull request', 'deploy']) {
+    for (const stage of ['plan', 'build', 'launch', 'monitor', 'improve']) {
       expect(lower, stage).toContain(stage)
     }
   })
@@ -65,16 +64,12 @@ describe('premium public website reset', () => {
     const source = readFromSrc('components/public/IntelligenceFabric.tsx').toLowerCase()
 
     for (const token of [
-      'input',
-      'routing engine',
-      'amarktai orchestration',
-      'memory layer',
-      'agent',
-      'artifact',
-      'approval gates',
-      'runtime checks',
-      'deployment',
-      'telemetry',
+      'apps',
+      'media',
+      'core os',
+      'agents',
+      'memory',
+      'runtime truth',
       'stream',
       'resizeobserver',
       'prefers-reduced-motion',
@@ -90,7 +85,7 @@ describe('premium public website reset', () => {
     }
   })
 
-  it('public pages contain no visible access hints or dashboard links', () => {
+  it('public pages expose only the requested login entry', () => {
     const forbidden = [
       'type login',
       'sign in',
@@ -99,7 +94,6 @@ describe('premium public website reset', () => {
       'access portal',
       'open secure login',
       'restricted panel',
-      '/admin/login',
       '/admin/dashboard',
       'operator login',
       'keyboard hint',
@@ -116,12 +110,11 @@ describe('premium public website reset', () => {
     }
   })
 
-  it('hidden login trigger remains in code only', () => {
+  it('login is an explicit real route without a hidden keyboard trigger', () => {
     const shell = readFromSrc('components/public/PublicShell.tsx')
-    expect(shell).toContain("includes('login')")
-    expect(shell).toContain("router.push('/admin/login')")
-    expect(shell.toLowerCase()).not.toContain('type login')
-    expect(shell.toLowerCase()).not.toContain('secret command')
+    expect(shell).toContain("{ href: '/admin/login', label: 'Login' }")
+    expect(shell).not.toContain("includes('login')")
+    expect(shell).not.toContain('useRouter')
   })
 
   it('retired public branding and rejected visual language are absent', () => {
@@ -138,7 +131,7 @@ describe('premium public website reset', () => {
       'childish particles',
     ]
 
-    for (const file of PUBLIC_FILES) {
+    for (const file of PUBLIC_FILES.filter((file) => fs.existsSync(path.join(ROOT, file)))) {
       const source = readFromSrc(file)
       for (const token of forbidden) {
         expect(source, `${file} -> ${token}`).not.toContain(token)

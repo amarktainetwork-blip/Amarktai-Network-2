@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react'
 type NodeSpec = {
   label: string
   detail: string
-  lane: 'input' | 'core' | 'output' | 'gate'
+  lane: 'input' | 'core' | 'output'
   x: number
   y: number
   accent: string
@@ -20,31 +20,19 @@ type Stream = {
 }
 
 const NODES: NodeSpec[] = [
-  { label: 'Prompts', detail: 'operator intent', lane: 'input', x: 0.12, y: 0.28, accent: '96,165,250' },
-  { label: 'Files', detail: 'repos and media', lane: 'input', x: 0.1, y: 0.45, accent: '94,234,212' },
-  { label: 'Tasks', detail: 'work orders', lane: 'input', x: 0.13, y: 0.62, accent: '191,219,254' },
-  { label: 'Routing Engine', detail: 'provider selection', lane: 'core', x: 0.42, y: 0.3, accent: '96,165,250' },
-  { label: 'AmarktAI Orchestration', detail: 'agent coordination', lane: 'core', x: 0.5, y: 0.46, accent: '167,139,250' },
-  { label: 'Memory Layer', detail: 'persistent context', lane: 'core', x: 0.42, y: 0.62, accent: '94,234,212' },
-  { label: 'Model Mesh', detail: 'capability routes', lane: 'core', x: 0.58, y: 0.3, accent: '125,211,252' },
-  { label: 'Artifact Bus', detail: 'generated outputs', lane: 'core', x: 0.58, y: 0.62, accent: '216,180,254' },
-  { label: 'Artifacts', detail: 'text code media', lane: 'output', x: 0.88, y: 0.28, accent: '216,180,254' },
-  { label: 'Pull Requests', detail: 'reviewable patches', lane: 'output', x: 0.9, y: 0.45, accent: '96,165,250' },
-  { label: 'Deployments', detail: 'validated release', lane: 'output', x: 0.87, y: 0.62, accent: '251,191,36' },
-  { label: 'Approval Gates', detail: 'human clearance', lane: 'gate', x: 0.35, y: 0.82, accent: '251,191,36' },
-  { label: 'Runtime Checks', detail: 'tests and policy', lane: 'gate', x: 0.5, y: 0.82, accent: '94,234,212' },
-  { label: 'Deploy Validate', detail: 'release guard', lane: 'gate', x: 0.65, y: 0.82, accent: '96,165,250' },
+  { label: 'Apps', detail: 'connected modules', lane: 'input', x: 0.56, y: 0.3, accent: '96,165,250' },
+  { label: 'Media', detail: 'creative work', lane: 'input', x: 0.56, y: 0.62, accent: '94,234,212' },
+  { label: 'Core OS', detail: 'one command layer', lane: 'core', x: 0.7, y: 0.39, accent: '96,165,250' },
+  { label: 'Agents', detail: 'coordinated work', lane: 'core', x: 0.7, y: 0.65, accent: '167,139,250' },
+  { label: 'Memory', detail: 'shared context', lane: 'output', x: 0.87, y: 0.31, accent: '94,234,212' },
+  { label: 'Runtime Truth', detail: 'verified status', lane: 'output', x: 0.87, y: 0.62, accent: '125,211,252' },
 ]
 
 const EDGES = [
-  [0, 3], [1, 4], [2, 5],
-  [3, 4], [4, 5], [3, 6], [5, 7], [6, 7],
-  [6, 8], [7, 8], [4, 9], [7, 10],
-  [4, 11], [11, 12], [12, 13], [13, 10],
+  [0, 2], [1, 2], [2, 3], [2, 4], [3, 4], [3, 5], [4, 5],
 ]
 
-const TELEMETRY = ['input', 'routing', 'agent', 'memory', 'artifact', 'approval', 'deployment']
-const CORE_LABELS = ['orchestration', 'routing', 'memory', 'agents', 'providers', 'artifacts']
+const TELEMETRY = ['plan', 'build', 'launch', 'monitor', 'improve']
 
 function project(x: number, y: number, depth: number) {
   const scale = 1 + depth * 0.035
@@ -73,7 +61,6 @@ function nodePosition(node: NodeSpec, width: number, height: number, compact: bo
 
   if (node.lane === 'input') return { x: width * 0.16, y }
   if (node.lane === 'output') return { x: width * 0.84, y }
-  if (node.lane === 'gate') return { x: width * (0.25 + (node.x - 0.35) * 1.7), y: height * 0.78 }
   return { x: width * (0.38 + (node.x - 0.42) * 0.85), y }
 }
 
@@ -101,13 +88,13 @@ function drawNode(
   ctx.fillStyle = `rgba(${node.accent}, 0.76)`
   ctx.fillRect(boxX + 12, boxY + 10, compact ? 22 : 28, 1)
 
-  ctx.fillStyle = node.lane === 'core' ? 'rgba(245,248,255,0.9)' : 'rgba(217,226,242,0.82)'
+  ctx.fillStyle = node.lane === 'core' ? 'rgba(248,252,255,1)' : 'rgba(235,244,255,0.96)'
   ctx.font = `600 ${compact ? 9 : 11}px Inter, system-ui, sans-serif`
   ctx.textAlign = 'left'
   ctx.fillText(node.label, boxX + 12, boxY + (compact ? 27 : 32))
 
   if (!compact) {
-    ctx.fillStyle = `rgba(${node.accent}, 0.52)`
+    ctx.fillStyle = `rgba(${node.accent}, 0.82)`
     ctx.font = '400 9px Inter, system-ui, sans-serif'
     ctx.fillText(node.detail, boxX + 12, boxY + 46)
   }
@@ -201,15 +188,15 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
       })
 
       ctx.fillStyle = 'rgba(7, 13, 25, 0.72)'
-      roundedRect(ctx, width * 0.32, height * 0.2, width * 0.36, height * 0.52, 10)
+      roundedRect(ctx, isMobile ? width * 0.3 : width * 0.5, height * 0.22, isMobile ? width * 0.4 : width * 0.42, height * 0.48, 10)
       ctx.fill()
       ctx.strokeStyle = 'rgba(144, 168, 214, 0.16)'
       ctx.stroke()
 
-      ctx.fillStyle = 'rgba(170,190,225,0.42)'
+      ctx.fillStyle = 'rgba(210,228,255,0.82)'
       ctx.font = '600 9px ui-monospace, SFMono-Regular, Consolas, monospace'
       ctx.textAlign = 'center'
-      ctx.fillText('AMARKTAI ORCHESTRATION LAYER', width * 0.5, height * 0.22)
+      ctx.fillText('AMARKTAI NETWORK', width * (isMobile ? 0.5 : 0.71), height * 0.24)
 
       for (const [from, to] of EDGES) {
         const a = positions[from]
@@ -236,13 +223,15 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
         ctx.fill()
       }
 
-      NODES.forEach((node, index) => {
-        const pos = positions[index]
-        drawNode(ctx, node, pos.x, pos.y, elapsed, isMobile)
-      })
+      if (!isMobile) {
+        NODES.forEach((node, index) => {
+          const pos = positions[index]
+          drawNode(ctx, node, pos.x, pos.y, elapsed, false)
+        })
+      }
 
-      const coreX = width * 0.5
-      const coreY = height * 0.46
+      const coreX = width * (isMobile ? 0.5 : 0.7)
+      const coreY = height * 0.48
       ctx.beginPath()
       ctx.arc(coreX, coreY, isMobile ? 26 : 34, 0, Math.PI * 2)
       ctx.strokeStyle = `rgba(196, 181, 253, ${0.34 + 0.12 * Math.sin(elapsed * 1.4)})`
@@ -253,27 +242,15 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
       ctx.fillStyle = 'rgba(220,230,255,0.86)'
       ctx.fill()
 
-      if (!isMobile) {
-        CORE_LABELS.forEach((label, index) => {
-          const angle = (index / CORE_LABELS.length) * Math.PI * 2 + elapsed * 0.08
-          const x = coreX + Math.cos(angle) * 74
-          const y = coreY + Math.sin(angle) * 74
-          ctx.fillStyle = 'rgba(145,165,205,0.36)'
-          ctx.font = '500 8px ui-monospace, SFMono-Regular, Consolas, monospace'
-          ctx.textAlign = 'center'
-          ctx.fillText(label.toUpperCase(), x, y)
-        })
-      }
-
       const bandY = isMobile ? 22 : 30
       const step = width / TELEMETRY.length
       TELEMETRY.forEach((label, index) => {
         const active = Math.floor(elapsed * 1.1) % TELEMETRY.length === index
-        ctx.fillStyle = active ? 'rgba(96,165,250,0.15)' : 'rgba(255,255,255,0.035)'
+        ctx.fillStyle = active ? 'rgba(96,165,250,0.22)' : 'rgba(255,255,255,0.09)'
         roundedRect(ctx, index * step + 5, bandY - 13, step - 10, 24, 5)
         ctx.fill()
-        ctx.fillStyle = active ? 'rgba(198,222,255,0.86)' : 'rgba(145,165,205,0.46)'
-        ctx.font = `${isMobile ? 7 : 9}px ui-monospace, SFMono-Regular, Consolas, monospace`
+        ctx.fillStyle = active ? 'rgba(225,246,255,1)' : 'rgba(214,230,250,0.9)'
+        ctx.font = `600 ${isMobile ? 8 : 10}px ui-monospace, SFMono-Regular, Consolas, monospace`
         ctx.textAlign = 'center'
         ctx.fillText(label.toUpperCase(), index * step + step / 2, bandY + 3)
       })
@@ -307,7 +284,7 @@ export default function IntelligenceFabric({ className = '' }: { className?: str
       ref={canvasRef}
       className={`h-full w-full ${className}`}
       role="img"
-      aria-label="Product architecture animation showing inputs, routing, orchestration, memory, agents, artifacts, approval gates, runtime checks, and deployments moving through the AmarktAI Network."
+      aria-label="Amarktai Network operating system animation showing Core OS, apps, agents, media, memory, and runtime truth."
     />
   )
 }

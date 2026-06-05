@@ -173,15 +173,13 @@ describe('SSML / Affective Voice Output', () => {
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
-describe('Realtime Voice WebSocket Container', () => {
+describe('Self-hosted runtime containers', () => {
   const repoRoot = join(__dirname, '..', '..', '..')
 
-  it('has docker-compose.yml with realtime service', () => {
+  it('has Postgres, Redis, Qdrant, and app services', () => {
     const compose = readFileSync(join(repoRoot, 'docker-compose.yml'), 'utf-8')
-    expect(compose).toContain('realtime:')
-    expect(compose).toContain('8765:8765')
-    expect(compose).toContain('OPENAI_API_KEY')
-    expect(compose).toContain('services/realtime/Dockerfile')
+    for (const service of ['postgres:', 'redis:', 'qdrant:', 'app:']) expect(compose).toContain(service)
+    expect(compose).not.toContain('OPENAI_API_KEY')
   })
 
   it('has realtime service Dockerfile', () => {
@@ -204,14 +202,17 @@ describe('Realtime Voice WebSocket Container', () => {
     expect(server).toContain('SESSION_TIMEOUT_MS')
   })
 
-  it('realtime service listed in docker-compose header', () => {
+  it('local crawler dependencies are documented', () => {
     const compose = readFileSync(join(repoRoot, 'docker-compose.yml'), 'utf-8')
-    expect(compose).toContain('realtime  : WebSocket bridge for realtime voice')
+    expect(compose).toContain('QDRANT_URL')
+    expect(existsSync(join(repoRoot, 'services', 'crawler', 'requirements.txt'))).toBe(true)
   })
 
-  it('app service has REALTIME_SERVICE_URL env var', () => {
+  it('app service has database, queue, and vector-store env vars', () => {
     const compose = readFileSync(join(repoRoot, 'docker-compose.yml'), 'utf-8')
-    expect(compose).toContain('REALTIME_SERVICE_URL: http://realtime:8765')
+    expect(compose).toContain('DATABASE_URL:')
+    expect(compose).toContain('REDIS_URL:')
+    expect(compose).toContain('QDRANT_URL:')
   })
 })
 

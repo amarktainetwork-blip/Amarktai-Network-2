@@ -1,23 +1,11 @@
-# ─── AmarktAI Network — Docker Compose for VPS ──────────────────────────────
-# Run: docker compose up -d
-# All services are local to the VPS. No external managed services required.
-#
-# Services:
-#   - app       : Next.js application (port 3000)
-#   - postgres  : PostgreSQL database (port 5432)
-#   - redis     : Redis for caching, rate limits, emotion memory (port 6379)
-#   - qdrant    : Qdrant vector DB for semantic/emotion memory (port 6333)
-#   - realtime  : WebSocket bridge for realtime voice (port 8765)
-
 services:
-  # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_DB: amarktai
       POSTGRES_USER: amarktai
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-amarktai_secure_pass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_before_production}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -28,7 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Redis ────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -43,7 +30,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Qdrant Vector Database ──────────────────────────────────────────────────
   qdrant:
     image: qdrant/qdrant:latest
     restart: unless-stopped
@@ -58,7 +44,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── AmarktAI Network Application ────────────────────────────────────────────
   app:
     build:
       context: .
@@ -66,14 +51,13 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://amarktai:${POSTGRES_PASSWORD:-amarktai_secure_pass}@postgres:5432/amarktai
+      DATABASE_URL: postgresql://amarktai:${POSTGRES_PASSWORD:-replace_before_production}@postgres:5432/amarktai
       REDIS_URL: redis://redis:6379
       QDRANT_URL: http://qdrant:6333
-      SESSION_SECRET: ${SESSION_SECRET}
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
-      REALTIME_SERVICE_URL: http://realtime:8765
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,29 +71,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # ── Realtime Voice WebSocket Service ──────────────────────────────────────
-  realtime:
-    build:
-      context: .
-      dockerfile: services/realtime/Dockerfile
-    restart: unless-stopped
-    ports:
-      - "8765:8765"
-    environment:
-      PORT: "8765"
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
-      SESSION_HMAC_SECRET: ${SESSION_HMAC_SECRET:-}
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8765/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
 volumes:
   postgres_data:
-    driver: local
   redis_data:
-    driver: local
   qdrant_data:
-    driver: local

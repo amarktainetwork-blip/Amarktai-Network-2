@@ -9,34 +9,24 @@ function read(relPath: string) {
 }
 
 describe('final go-live dashboard UX', () => {
-  it('Studio uses the left command / right live result workspace pattern', () => {
-    const page = read('app/admin/dashboard/page.tsx')
+  it('Command uses the unified command / result workspace pattern', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
     for (const text of [
-      'LEFT command / RIGHT live result workspace',
-      'Command Center / Studio',
-      'Live workspace / results',
-      'Music / Song',
-      'Adult Video',
-      'Adult Voice',
-      'Advanced route details',
-      'queued',
-      'processing',
-      'completed',
-      'failed',
-      'blocked',
-      'Artifact preview',
+      'Unified Command',
+      'Say what you want done.',
+      'Creative options',
+      'Progress',
+      'Expected outputs',
+      'Open attached workspace',
     ]) expect(page).toContain(text)
   })
 
-  it('Studio media lifecycle and capability copy stays explicit', () => {
-    const page = read('app/admin/dashboard/page.tsx')
-    expect(page).toContain('pollStudioJob')
-    expect(page).toContain('loadArtifacts().catch')
-    expect(page).toContain('music_generation / song_generation')
-    expect(page).toContain('lyria-3-clip-preview / lyria-3-pro-preview')
-    expect(page).toContain('Not verified - requires live provider test.')
-    expect(page).toContain('MiniMax/Mimo status')
-    expect(page).toContain('Qwen/MiniMax/HF')
+  it('Command media controls stay task-oriented and provider-light', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
+    expect(page).toContain('Duration')
+    expect(page).toContain('Combine selected genres')
+    expect(page).toContain('Genres')
+    expect(page).toContain('Provider overrides')
   })
 
   it('Workbench exposes one primary next action and readable plan sections', () => {
@@ -78,8 +68,11 @@ describe('final go-live dashboard UX', () => {
 
   it('final dashboard route tree remains singular', () => {
     const dashboardRoot = path.join(ROOT, 'app/admin/dashboard')
-    for (const route of ['dashboard-v2', 'frontend-v2', 'apps', 'agents', 'ai-models']) {
+    for (const route of ['dashboard-v2', 'frontend-v2', 'apps', 'ai-models']) {
       expect(fs.existsSync(path.join(dashboardRoot, route)), route).toBe(false)
+    }
+    for (const route of ['command', 'network-apps', 'outputs', 'agents', 'memory', 'system']) {
+      expect(fs.existsSync(path.join(dashboardRoot, route)), route).toBe(true)
     }
   })
 })

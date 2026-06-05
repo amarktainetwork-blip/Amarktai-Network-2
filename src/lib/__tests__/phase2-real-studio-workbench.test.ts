@@ -16,14 +16,16 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps the dashboard to the six final sections only', () => {
+  it('keeps the dashboard to the eight final sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Studio',
-      'Workbench',
-      'Apps & Agents',
-      'Memory & Learning',
-      'Operations',
+      'Overview',
+      'Command',
+      'Network Apps',
+      'Outputs',
+      'Agents',
+      'Memory',
       'Settings',
+      'System',
     ])
   })
 
@@ -78,10 +80,11 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     expect(STUDIO_ROUTE_MAP['Avatar / Talking Video'].status).toBe('missing')
   })
 
-  it('Studio execution wrappers call real backend routes and persist artifacts', () => {
+  it('Command routes into real Studio surfaces and persists command jobs', () => {
     const execute = read('app/api/admin/studio/execute/route.ts')
     const stt = read('app/api/admin/studio/stt/route.ts')
-    const page = read('app/admin/dashboard/page.tsx')
+    const page = read('components/dashboard/CommandCenter.tsx')
+    const command = read('app/api/admin/command/route.ts')
 
     expect(execute).toContain("from '@/app/api/admin/research/assist/route'")
     expect(execute).toContain("from '@/app/api/brain/image/route'")
@@ -92,9 +95,9 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     expect(execute).toContain('createArtifact')
     expect(stt).toContain("from '@/app/api/brain/stt/route'")
     expect(stt).toContain('createArtifact')
-    expect(page).toContain('/api/admin/studio/execute')
-    expect(page).toContain('/api/admin/studio/stt')
-    expect(page).toContain('/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}')
+    expect(page).toContain('/api/admin/command')
+    expect(command).toContain("jobs/command-jobs.json")
+    expect(command).toContain('routeCommand')
   })
 
   it('Adult Studio exposes only real text/image execution and keeps video/voice unavailable for Phase 3', () => {

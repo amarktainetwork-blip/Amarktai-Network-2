@@ -18,21 +18,15 @@ describe('public product architecture animation', () => {
     expect(source).toContain('aria-label')
   })
 
-  it('maps inputs, core orchestration, outputs, gates, and telemetry', () => {
+  it('maps the six readable hero concepts and telemetry', () => {
     const source = read('components/public/IntelligenceFabric.tsx').toLowerCase()
     for (const token of [
-      'prompts',
-      'files',
-      'tasks',
-      'routing engine',
-      'model mesh',
-      'memory layer',
-      'artifact bus',
-      'pull requests',
-      'deployments',
-      'approval gates',
-      'runtime checks',
-      'telemetry',
+      'apps',
+      'media',
+      'core os',
+      'agents',
+      'memory',
+      'runtime truth',
     ]) {
       expect(source, token).toContain(token)
     }
@@ -50,9 +44,10 @@ describe('public product architecture animation', () => {
     expect(source).toContain('ro.disconnect()')
   })
 
-  it('home page has no public calls to obtain account access', () => {
+  it('home page exposes login without signup or access-request flows', () => {
     const source = read('app/page.tsx').toLowerCase()
-    for (const forbidden of ['sign up', 'sign in', 'request access', 'get access', 'get started', '/admin/login']) {
+    expect(source).toContain('/admin/login')
+    for (const forbidden of ['sign up', 'request access', 'get access', 'get started']) {
       expect(source).not.toContain(forbidden)
     }
   })

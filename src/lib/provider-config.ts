@@ -21,6 +21,7 @@ export type CoreProvider =
   | 'openrouter'
   | 'minimax'
   | 'mimo'
+  | 'local-crawler'
   | 'mistral'
   | 'cohere'
   | 'firecrawl'
@@ -43,7 +44,7 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   gemini: ['GEMINI_API_KEY'],
   replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
   suno: ['SUNO_API_KEY'],
-  github: ['GITHUB_TOKEN'],
+  github: ['GITHUB_PAT', 'GITHUB_TOKEN'],
   together: ['TOGETHER_API_KEY'],
   qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
   dashscope: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
@@ -52,8 +53,9 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   xai: ['XAI_API_KEY', 'GROK_API_KEY'],
   grok: ['GROK_API_KEY', 'XAI_API_KEY'],
   openrouter: ['OPENROUTER_API_KEY'],
-  minimax: ['MINIMAX_API_KEY', 'MIMO_API_KEY'],
-  mimo: ['MIMO_API_KEY', 'MINIMAX_API_KEY'],
+  minimax: ['MINIMAX_API_KEY'],
+  mimo: ['MIMO_API_KEY'],
+  'local-crawler': [],
   mistral: ['MISTRAL_API_KEY'],
   cohere: ['COHERE_API_KEY'],
   firecrawl: ['FIRECRAWL_API_KEY'],
@@ -87,7 +89,8 @@ const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
   grok: 'xai',
   openrouter: 'openrouter',
   minimax: 'minimax',
-  mimo: 'minimax',
+  mimo: 'mimo',
+  'local-crawler': 'local-crawler',
   mistral: 'mistral',
   cohere: 'cohere',
   firecrawl: 'firecrawl',
@@ -108,7 +111,6 @@ export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env
 function normalizeProviderKey(provider: CoreProvider): CoreProvider {
   if (provider === 'dashscope') return 'qwen'
   if (provider === 'grok') return 'xai'
-  if (provider === 'mimo') return 'minimax'
   if (provider === 'hf') return 'huggingface'
   return provider
 }
@@ -124,7 +126,6 @@ export function getEnvKeyForProvider(provider: CoreProvider): string | null {
   const aliases = new Set<string>([normalized])
   if (normalized === 'xai') aliases.add('grok')
   if (normalized === 'qwen') aliases.add('dashscope')
-  if (normalized === 'minimax') aliases.add('mimo')
   if (normalized === 'huggingface') aliases.add('hf')
 
   for (const alias of aliases) {
@@ -142,7 +143,6 @@ async function getAiProviderKey(provider: CoreProvider): Promise<string | null> 
   const aliases = new Set<string>([normalized])
   if (normalized === 'xai') aliases.add('grok')
   if (normalized === 'qwen') aliases.add('dashscope')
-  if (normalized === 'minimax') aliases.add('mimo')
   if (normalized === 'huggingface') aliases.add('hf')
 
   try {
@@ -179,8 +179,8 @@ export async function getProviderKeyWithSource(provider: CoreProvider): Promise<
 }> {
   const normalized = normalizeProviderKey(provider)
 
-  for (const envVar of PROVIDER_ENV[provider]) {
-    const key = await getServiceKey(PROVIDER_INTEGRATION_KEY[provider], envVar)
+  for (const envVar of PROVIDER_ENV[provider] ?? []) {
+    const key = await getServiceKey(PROVIDER_INTEGRATION_KEY[provider] ?? provider, envVar)
     if (key) {
       const envValue = process.env[envVar]
       return { key, source: envValue && key === envValue.trim() ? 'env' : 'vault' }
