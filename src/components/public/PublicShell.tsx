@@ -5,14 +5,7 @@ import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 import BrandName from '@/components/BrandName'
-
-const links = [
-  { href: '/', label: 'Home' },
-  { href: '/platform', label: 'Platform' },
-  { href: '/network-apps', label: 'Network Apps' },
-  { href: '/contact', label: 'Contact' },
-  { href: '/admin/login', label: 'Login' },
-]
+import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
 
 export default function PublicShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -29,7 +22,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
             <BrandName />
           </Link>
           <nav className="hidden items-center gap-1 md:flex" aria-label="Public navigation">
-            {links.map((item) => {
+            {PUBLIC_NAV_ITEMS.map((item) => {
               const active = item.href === '/' ? pathname === '/' : pathname === item.href
               return (
                 <Link key={item.href} href={item.href} className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition ${active ? 'bg-cyan-300/12 text-cyan-100 ring-1 ring-cyan-300/25' : 'text-slate-200 hover:bg-white/5 hover:text-white'}`}>
@@ -44,7 +37,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
         </div>
         {menu && (
           <nav id="mobile-public-navigation" className="border-t border-white/10 bg-slate-950/95 px-5 py-4 md:hidden" aria-label="Mobile public navigation">
-            <div className="grid gap-1">{links.map((item) => <Link key={item.href} href={item.href} className="rounded-lg px-3 py-3 text-sm font-bold text-slate-100 hover:bg-white/5">{item.label}</Link>)}</div>
+            <div className="grid gap-1">{PUBLIC_NAV_ITEMS.map((item) => <Link key={item.href} href={item.href} className="rounded-lg px-3 py-3 text-sm font-bold text-slate-100 hover:bg-white/5">{item.label}</Link>)}</div>
           </nav>
         )}
       </header>

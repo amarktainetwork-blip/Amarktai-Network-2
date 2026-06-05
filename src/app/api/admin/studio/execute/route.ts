@@ -11,7 +11,6 @@ import { POST as ttsPost } from '@/app/api/brain/tts/route'
 import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
-import { POST as minimaxTtsPost } from '@/app/api/admin/specialist/minimax-tts/route'
 
 type ExecuteBody = {
   tab?: StudioTab
@@ -219,34 +218,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Voice / TTS') {
-      if (route.selectedProvider === 'minimax') {
-        const response = await minimaxTtsPost(jsonRequest('/api/admin/specialist/minimax-tts', {
-          text: prompt,
-          model: route.selectedModel,
-          voiceId: body.voiceId,
-          appSlug,
-          saveArtifact: true,
-        }))
-        const contentType = response.headers.get('content-type') ?? ''
-        if (!response.ok || contentType.includes('application/json')) {
-          const data = await readJson(response)
-          return NextResponse.json({ success: false, executed: false, result: data, error: String(data.error ?? 'MiniMax/Mimo TTS unavailable'), route }, { status: response.status })
-        }
-        const audio = Buffer.from(await response.arrayBuffer())
-        const artifact = await persistArtifact({
-          appSlug,
-          type: 'audio',
-          subType: 'studio_tts',
-          title: `MiniMax/Mimo TTS: ${prompt.slice(0, 80)}`,
-          provider: response.headers.get('x-provider') ?? 'minimax',
-          model: response.headers.get('x-model') ?? String(route.selectedModel ?? ''),
-          content: audio,
-          mimeType: contentType || 'audio/mpeg',
-          metadata: { tab, route },
-        })
-        return NextResponse.json({ success: true, executed: true, artifact, audioBase64: `data:${contentType || 'audio/mpeg'};base64,${audio.toString('base64')}`, route })
-      }
-      const provider = ['genx', 'groq', 'openai', 'huggingface', 'minimax'].includes(String(route.selectedProvider))
+      const provider = ['genx', 'groq', 'huggingface'].includes(String(route.selectedProvider))
         ? route.selectedProvider
         : 'auto'
       const response = await ttsPost(jsonRequest('/api/brain/tts', {

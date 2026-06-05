@@ -9,6 +9,7 @@ export type CoreProvider =
   | 'groq'
   | 'gemini'
   | 'replicate'
+  | 'fal'
   | 'suno'
   | 'github'
   | 'together'
@@ -43,6 +44,7 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   groq: ['GROQ_API_KEY'],
   gemini: ['GEMINI_API_KEY'],
   replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
+  fal: ['FAL_KEY', 'FAL_API_KEY'],
   suno: ['SUNO_API_KEY'],
   github: ['GITHUB_PAT', 'GITHUB_TOKEN'],
   together: ['TOGETHER_API_KEY'],
@@ -54,7 +56,7 @@ const PROVIDER_ENV: Record<CoreProvider, string[]> = {
   grok: ['GROK_API_KEY', 'XAI_API_KEY'],
   openrouter: ['OPENROUTER_API_KEY'],
   minimax: ['MINIMAX_API_KEY'],
-  mimo: ['MIMO_API_KEY'],
+  mimo: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
   'local-crawler': [],
   mistral: ['MISTRAL_API_KEY'],
   cohere: ['COHERE_API_KEY'],
@@ -78,6 +80,7 @@ const PROVIDER_INTEGRATION_KEY: Record<CoreProvider, string> = {
   groq: 'groq',
   gemini: 'gemini',
   replicate: 'replicate',
+  fal: 'fal',
   suno: 'suno',
   github: 'github',
   together: 'together',

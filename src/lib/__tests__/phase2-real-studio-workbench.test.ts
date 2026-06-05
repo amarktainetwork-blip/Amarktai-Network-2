@@ -16,13 +16,12 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps the dashboard to the eight final sections only', () => {
+  it('keeps the dashboard to the seven final sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Overview',
       'Command',
       'Network Apps',
       'Outputs',
-      'Agents',
       'Memory',
       'Settings',
       'System',
@@ -30,25 +29,9 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
   })
 
   it('Settings connected count requires a passed live test, not only a saved key', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: {
-        integrationConfig: {
-          findUnique: vi.fn(async ({ where }: { where: { key: string } }) => (
-            where.key === 'genx'
-              ? { notes: JSON.stringify({ lastTestStatus: 'needs_live_test' }) }
-              : null
-          )),
-        },
-        gitHubConfig: {
-          findFirst: vi.fn(async () => null),
-        },
-      },
-    }))
-    vi.doMock('@/lib/provider-config', () => ({
-      getProviderKeyWithSource: vi.fn(async (key: string) => ({
-        key: key === 'genx' ? 'configured_genx_key' : null,
-        source: key === 'genx' ? 'vault' : 'missing',
-      })),
+    vi.doMock('@/lib/provider-mesh-status', () => ({
+      getMeshCredential: vi.fn(async (key: string) => key === 'genx' ? 'configured_genx_key' : null),
+      getMeshTestNotes: vi.fn(async (key: string) => key === 'genx' ? { lastTestStatus: 'needs_live_test' } : {}),
     }))
 
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')

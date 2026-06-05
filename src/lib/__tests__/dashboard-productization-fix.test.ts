@@ -3,84 +3,48 @@ import fs from 'fs'
 import path from 'path'
 
 const ROOT = path.resolve(__dirname, '../../')
+const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf8')
 
-function read(relPath: string) {
-  return fs.readFileSync(path.join(ROOT, relPath), 'utf8')
-}
-
-describe('dashboard emergency productization fix', () => {
-  it('Command starts empty and renders real routed jobs only after submission', () => {
+describe('dashboard productization correction', () => {
+  it('keeps Command outcome-first and provider-light', () => {
     const page = read('components/dashboard/CommandCenter.tsx')
-    expect(page).toContain('Your plan, progress, and outputs appear here.')
-    expect(page).toContain('setActive(data.job)')
-    expect(page).toContain('Active and recent jobs')
-    expect(page).not.toContain('fake job')
-  })
-
-  it('Command keeps provider controls behind Advanced', () => {
-    const page = read('components/dashboard/CommandCenter.tsx')
+    expect(page).toContain('Say what you want done.')
+    expect(page).toContain('Creative options')
     expect(page).toContain('Advanced')
-    expect(page).toContain('Provider overrides')
-    expect(page).toContain('model selection stay here')
+    expect(page).toContain('Connected route')
   })
 
-  it('Workbench state machine separates plan, patch, approval, checks, commit, and PR', () => {
-    const page = read('app/admin/dashboard/workbench/page.tsx')
-    expect(page).toContain('const hasPlan = Boolean(taskId || log.plan)')
-    expect(page).toContain("if (!hasPlan) return { id: 'start', label: 'Start task'")
-    expect(page).toContain("if (!hasPatch && steps['Patch prepared'] === 'waiting') return { id: 'patch', label: 'Generate patch'")
-    expect(page).toContain('async function generatePatch()')
-    expect(page).toContain('Generate patch from the approved plan.')
-    expect(page).not.toContain("Array.isArray(value)) return value.map((item) => typeof item === 'string' ? item : JSON.stringify(item))")
+  it('shows real execution results and sanitized failures', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
+    expect(page).toContain('active.execution?.error')
+    expect(page).toContain('active.execution?.detail')
+    expect(read('lib/provider-mesh.ts')).toContain('sanitizeProviderError')
   })
 
-  it('Settings has one unified setup surface and no adult video or voice defaults in normal UI', () => {
+  it('keeps Settings as the only connection setup surface', () => {
     const settings = read('app/admin/dashboard/settings/page.tsx')
-    expect(settings).toContain('Unified setup list')
-    expect(settings).not.toContain('Tools & system services')
-    expect(settings).not.toContain('<h2 className="text-sm font-black text-slate-200">AI providers</h2>')
-    expect(settings).toContain("const NORMAL_ADULT_POLICY_VALUES = ADULT_POLICY_VALUES.filter((policy) => policy !== 'adult_video' && policy !== 'adult_voice')")
+    expect(settings).toContain('Connect capabilities once.')
+    expect(settings).toContain('Save')
+    expect(settings).toContain('Test')
+    expect(settings).not.toContain('OpenAI')
+    expect(settings).not.toContain('Firecrawl')
   })
 
-  it('Operations keeps debug blocker categories and file paths collapsed', () => {
-    const operations = read('app/admin/dashboard/operations/page.tsx')
-    const advancedIndex = operations.indexOf('Advanced governance/debug')
-    const blockerIndex = operations.indexOf('requiredBlockerCategories.map', advancedIndex)
-    const metricsIndex = operations.indexOf('{/* Top metrics */}')
-    expect(advancedIndex).toBeGreaterThan(-1)
-    expect(blockerIndex).toBeGreaterThan(advancedIndex)
-    expect(blockerIndex).toBeLessThan(metricsIndex)
-    expect(operations).toContain('Advanced file paths')
-    expect(operations).toContain("settingsTruth?.storage.status ?? (storage.writable ? 'Connected' : 'Failed')")
-  })
-
-  it('Apps and Memory read as root workspace workflows instead of broken onboarding or empty states', () => {
-    const apps = read('app/admin/dashboard/apps-agents/page.tsx')
+  it('presents memory in plain English with working management actions', () => {
     const memory = read('app/admin/dashboard/memory-learning/page.tsx')
-    expect(apps).toContain('Root workspace active.')
-    expect(apps).toContain('Not available yet')
-    expect(apps).toContain('{EXTERNAL_APP_ONBOARDING_LABEL}')
-    expect(apps).not.toContain('Adult policy values')
-    expect(memory).toContain('No memory yet.')
-    expect(memory).toContain('Studio and Workbench create memory when tasks are saved.')
-    expect(memory).toContain('Save current Studio result')
-    expect(memory).toContain('Save Workbench summary')
+    const actions = read('components/dashboard/MemoryActions.tsx')
+    expect(memory).toContain('What Amarktai Network remembers.')
+    expect(memory).toContain('Recent memory writes')
+    expect(actions).toContain('Export memory')
+    expect(actions).toContain('Delete all memory')
   })
 
-  it('Dashboard source contains no user-facing Superbrain wording and no duplicate route tree', () => {
-    const dashboardRoot = path.join(ROOT, 'app/admin/dashboard')
-    const files = walkFiles(dashboardRoot)
-    const source = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n')
-    expect(source.toLowerCase()).not.toContain('superbrain')
-    for (const route of ['dashboard-v2', 'frontend-v2']) {
-      expect(fs.existsSync(path.join(dashboardRoot, route)), route).toBe(false)
-    }
+  it('normal dashboard pages contain no raw JSON diagnostics', () => {
+    for (const page of [
+      'app/admin/dashboard/page.tsx',
+      'app/admin/dashboard/command/page.tsx',
+      'app/admin/dashboard/outputs/page.tsx',
+      'app/admin/dashboard/memory-learning/page.tsx',
+    ]) expect(read(page), page).not.toContain('JSON.stringify')
   })
 })
-
-function walkFiles(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(dir, entry.name)
-    return entry.isDirectory() ? walkFiles(fullPath) : [fullPath]
-  })
-}

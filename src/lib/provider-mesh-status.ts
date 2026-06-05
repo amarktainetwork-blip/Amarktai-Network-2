@@ -1,0 +1,92 @@
+import { decryptVaultKey } from '@/lib/crypto-vault'
+import { prisma } from '@/lib/prisma'
+import { getProviderMeshNode, sanitizeProviderError, type ProviderMeshId } from '@/lib/provider-mesh'
+
+export type MeshTestNotes = {
+  lastTestStatus?: 'passed' | 'failed' | 'needs_live_test'
+  lastTestPassed?: boolean
+  lastTestedAt?: string
+  capabilities?: string[]
+  lastError?: string
+  detail?: string
+  [key: string]: unknown
+}
+function parseNotes(raw?: string | null): MeshTestNotes {
+  try {
+    const parsed = JSON.parse(raw || '{}') as unknown
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as MeshTestNotes : {}
+  } catch {
+    return {}
+  }
+}
+
+export async function getMeshCredential(id: ProviderMeshId): Promise<string | null> {
+  const node = getProviderMeshNode(id)
+  const row = await prisma.integrationConfig.findUnique({
+    where: { key: id },
+    select: { apiKey: true },
+  }).catch(() => null)
+
+  if (row?.apiKey) {
+    const decrypted = decryptVaultKey(row.apiKey)
+    if (decrypted?.trim()) return decrypted.trim()
+  }
+
+  for (const envName of node?.envAliases ?? []) {
+    const value = process.env[envName]?.trim()
+    if (value) return value
+  }
+  return null
+}
+
+export async function getMeshTestNotes(id: ProviderMeshId): Promise<MeshTestNotes> {
+  const row = await prisma.integrationConfig.findUnique({
+    where: { key: id },
+    select: { notes: true },
+  }).catch(() => null)
+  return parseNotes(row?.notes)
+}
+
+export async function recordMeshTestResult(input: {
+  id: ProviderMeshId
+  success: boolean
+  capabilities: readonly string[]
+  detail?: string
+  error?: unknown
+  metadata?: Record<string, unknown>
+}) {
+  const node = getProviderMeshNode(input.id)
+  if (!node) return
+  const current = await prisma.integrationConfig.findUnique({
+    where: { key: input.id },
+    select: { notes: true },
+  }).catch(() => null)
+  const previous = parseNotes(current?.notes)
+  const lastError = input.success ? '' : sanitizeProviderError(input.error)
+  const notes: MeshTestNotes = {
+    ...previous,
+    ...input.metadata,
+    lastTestStatus: input.success ? 'passed' : 'failed',
+    lastTestPassed: input.success,
+    lastTestedAt: new Date().toISOString(),
+    capabilities: input.success ? [...input.capabilities] : [],
+    lastError,
+    detail: input.detail?.slice(0, 280) ?? '',
+  }
+
+  await prisma.integrationConfig.upsert({
+    where: { key: input.id },
+    create: {
+      key: input.id,
+      displayName: node.displayName,
+      apiKey: '',
+      enabled: true,
+      notes: JSON.stringify(notes),
+    },
+    update: {
+      displayName: node.displayName,
+      enabled: true,
+      notes: JSON.stringify(notes),
+    },
+  }).catch(() => null)
+}

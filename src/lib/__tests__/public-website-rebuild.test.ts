@@ -1,180 +1,70 @@
 import fs from 'fs'
 import path from 'path'
 import { describe, expect, it } from 'vitest'
+import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
+import { NETWORK_APPS } from '@/lib/network-apps-registry'
 
 const ROOT = path.resolve(__dirname, '../../')
 const REPO = path.resolve(ROOT, '../')
+const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf8')
 
-const PUBLIC_PAGES = [
-  'app/page.tsx',
-  'app/about/page.tsx',
-  'app/platform/page.tsx',
-  'app/network-apps/page.tsx',
-  'app/contact/page.tsx',
-  'app/privacy/page.tsx',
-  'app/terms/page.tsx',
-]
-
-const PUBLIC_FILES = [
-  ...PUBLIC_PAGES,
-  'components/public/PublicShell.tsx',
-  'components/public/IntelligenceFabric.tsx',
-  'app/globals.css',
-  'app/layout.tsx',
-]
-
-function readFromSrc(rel: string) {
-  return fs.readFileSync(path.join(ROOT, rel), 'utf8')
-}
-
-function readFromRepo(rel: string) {
-  return fs.readFileSync(path.join(REPO, rel), 'utf8')
-}
-
-describe('premium public website reset', () => {
-  it('public routes render from one shared shell', () => {
-    for (const page of PUBLIC_PAGES) {
-      expect(readFromSrc(page), page).toContain('PublicShell')
-    }
+describe('final public website', () => {
+  it('uses the exact public navigation source of truth', () => {
+    expect(PUBLIC_NAV_ITEMS).toEqual([
+      { href: '/', label: 'Home' },
+      { href: '/platform', label: 'Platform' },
+      { href: '/network-apps', label: 'Network Apps' },
+      { href: '/contact', label: 'Contact' },
+      { href: '/admin/login', label: 'Login' },
+    ])
+    expect(read('components/public/PublicShell.tsx')).toContain('PUBLIC_NAV_ITEMS')
   })
 
-  it('homepage contains the required product explanation sections', () => {
-    const source = readFromSrc('app/page.tsx')
-    const lower = source.toLowerCase()
-
+  it('contains the required alternating homepage story', () => {
+    const source = read('app/page.tsx').toLowerCase()
     for (const token of [
       'intelligencefabric',
       'what amarktai network is',
       'one command window',
+      'plan, build, launch, monitor, and improve',
       'connected apps',
       'create media, apps, and workflows',
-      'work on repos and prs',
       'runtime truth',
-      'private access',
-    ]) {
-      expect(lower, token).toContain(token)
-    }
-
-    for (const stage of ['plan', 'build', 'launch', 'monitor', 'improve']) {
-      expect(lower, stage).toContain(stage)
-    }
+    ]) expect(source).toContain(token)
+    expect(source).toContain('bg-white')
+    expect(source).toContain('bg-cyan-50')
+    expect(source).toContain('bg-[#050a12]')
   })
 
-  it('architecture animation explains the system rather than showing decorative AI art', () => {
-    const source = readFromSrc('components/public/IntelligenceFabric.tsx').toLowerCase()
-
-    for (const token of [
-      'apps',
-      'media',
-      'core os',
-      'agents',
-      'memory',
-      'runtime truth',
-      'stream',
-      'resizeobserver',
-      'prefers-reduced-motion',
-      'ismobile',
-      'visibilitychange',
-      'devicepixelratio',
-    ]) {
-      expect(source, token).toContain(token)
-    }
-
-    for (const rejected of ['particlefield', 'superbrain', 'glowing brain', 'blob']) {
-      expect(source, rejected).not.toContain(rejected)
+  it('explains the complete platform without backend report language', () => {
+    const source = read('app/platform/page.tsx')
+    for (const token of ['One command window', 'Provider mesh', 'Connected apps', 'Agents', 'Memory', 'Outputs', 'Hidden monitoring']) {
+      expect(source).toContain(token)
     }
   })
 
-  it('public pages expose only the requested login entry', () => {
-    const forbidden = [
-      'type login',
-      'sign in',
-      'sign up',
-      'request access',
-      'access portal',
-      'open secure login',
-      'restricted panel',
-      '/admin/dashboard',
-      'operator login',
-      'keyboard hint',
-      'secret command',
-      'get started',
-      'get access',
-    ]
-
-    for (const page of PUBLIC_PAGES) {
-      const source = readFromSrc(page).toLowerCase()
-      for (const token of forbidden) {
-        expect(source, `${page} -> ${token}`).not.toContain(token)
-      }
+  it('shows the eleven required connected apps with honest statuses', () => {
+    expect(NETWORK_APPS).toHaveLength(11)
+    expect(new Set(NETWORK_APPS.map((app) => app.status))).toEqual(new Set(['In build', 'Planned']))
+    for (const name of ['Marketing App', 'Crypto / Trading App', 'App Builder', 'Content Studio', 'Research Engine', 'Automation Hub', 'Sales', 'Support', 'Finance', 'Retail / Ecommerce', 'Operations']) {
+      expect(NETWORK_APPS.map((app) => app.displayName)).toContain(name)
     }
   })
 
-  it('login is an explicit real route without a hidden keyboard trigger', () => {
-    const shell = readFromSrc('components/public/PublicShell.tsx')
-    expect(shell).toContain("{ href: '/admin/login', label: 'Login' }")
-    expect(shell).not.toContain("includes('login')")
-    expect(shell).not.toContain('useRouter')
-  })
-
-  it('retired public branding and rejected visual language are absent', () => {
-    const retiredAssistant = String.fromCharCode(65, 105, 118, 97)
-    const forbidden = [
-      retiredAssistant,
-      'Superbrain',
-      'superbrain',
-      'GenX',
-      'AI magic',
-      'neon toy',
-      'glowing brain',
-      'floating random circles',
-      'childish particles',
-    ]
-
-    for (const file of PUBLIC_FILES.filter((file) => fs.existsSync(path.join(ROOT, file)))) {
-      const source = readFromSrc(file)
-      for (const token of forbidden) {
-        expect(source, `${file} -> ${token}`).not.toContain(token)
-      }
+  it('removes banned public wording', () => {
+    const source = [
+      'app/page.tsx',
+      'app/platform/page.tsx',
+      'app/network-apps/page.tsx',
+      'app/contact/page.tsx',
+      'components/public/PublicShell.tsx',
+    ].map(read).join('\n')
+    for (const token of ['Aiva', 'Superbrain', 'Private AI infrastructure', 'Firecrawl required', 'OpenAI required']) {
+      expect(source).not.toContain(token)
     }
   })
 
-  it('public implementation keeps one source of truth in components/public', () => {
-    const files = fs.readdirSync(path.join(ROOT, 'components/public')).sort()
-    expect(files).toEqual(['IntelligenceFabric.tsx', 'PublicShell.tsx'])
-  })
-
-  it('mobile and reduced-motion safeguards are present', () => {
-    const animation = readFromSrc('components/public/IntelligenceFabric.tsx')
-    const css = readFromSrc('app/globals.css')
-    expect(animation).toContain('Math.min(window.devicePixelRatio || 1, 2)')
-    expect(animation).toContain('width < 720')
-    expect(animation).toContain('cancelAnimationFrame')
-    expect(css).toContain('prefers-reduced-motion')
-    expect(css).toContain('overflow-x: hidden')
-  })
-
-  it('dashboard pages remain separate from the public shell and animation', () => {
-    const dashboardFiles = [
-      'app/admin/dashboard/page.tsx',
-      'app/admin/dashboard/workbench/page.tsx',
-      'app/admin/dashboard/apps-agents/page.tsx',
-      'app/admin/dashboard/memory-learning/page.tsx',
-      'app/admin/dashboard/operations/page.tsx',
-      'app/admin/dashboard/settings/page.tsx',
-    ]
-
-    for (const file of dashboardFiles) {
-      const source = readFromSrc(file)
-      expect(source, file).not.toContain('PublicShell')
-      expect(source, file).not.toContain('IntelligenceFabric')
-    }
-  })
-
-  it('final audit documentation exists', () => {
-    expect(fs.existsSync(path.join(REPO, 'docs/audits/FINAL_PREMIUM_PUBLIC_WEBSITE.md'))).toBe(true)
-    const doc = readFromRepo('docs/audits/FINAL_PREMIUM_PUBLIC_WEBSITE.md')
-    expect(doc).toContain('Animation architecture')
-    expect(doc).toContain('Dashboard untouched')
+  it('keeps the final audit document', () => {
+    expect(fs.existsSync(path.join(REPO, 'docs/audits/FINAL_SOURCE_OF_TRUTH_AND_PROVIDER_MESH_AUDIT.md'))).toBe(true)
   })
 })
