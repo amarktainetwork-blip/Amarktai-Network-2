@@ -30,40 +30,33 @@ describe('dashboard go-live wiring', () => {
   it('keeps exactly the final dashboard routes and one nav system', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
       '/admin/dashboard',
-      '/admin/dashboard/studio',
-      '/admin/dashboard/workbench',
-      '/admin/dashboard/apps-agents',
-      '/admin/dashboard/memory-learning',
+      '/admin/dashboard/command',
+      '/admin/dashboard/network-apps',
+      '/admin/dashboard/outputs',
+      '/admin/dashboard/agents',
+      '/admin/dashboard/memory',
       '/admin/dashboard/settings',
+      '/admin/dashboard/system',
     ])
-    for (const route of ['apps', 'agents', 'ai-models', 'assistant', 'playground', 'creative-studio', 'costs', 'actions', 'system', 'dashboard-v2']) {
+    for (const route of ['apps', 'ai-models', 'assistant', 'playground', 'creative-studio', 'costs', 'actions', 'dashboard-v2']) {
       expect(fs.existsSync(path.join(DASHBOARD, route)), route).toBe(false)
     }
   })
 
-  it('Studio uses protected real routes, media polling, previews, voice/model selection, and adult blockers', () => {
-    const page = read('app/admin/dashboard/studio/page.tsx')
+  it('Command uses one protected intent router with jobs, agents, outputs, and next actions', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
+    const route = read('app/api/admin/command/route.ts')
     for (const text of [
-      '/api/admin/amarktai-assistant/stream',
-      '/api/admin/studio/execute',
-      '/api/admin/studio/stt',
-      '/api/admin/studio/workbench-handoff',
-      '/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}',
-      'pollStudioJob',
-      'pollUrl',
-      'Job created, output pending',
-      '<ArtifactPreview artifact={artifact} />',
-      '<audio controls src={audioPreview}',
-      'type="file"',
-      'Workspace memory available',
-      'Advanced route details',
-      'modelIdForExecution',
-      'MiniMax/Mimo status',
-      'Adult video and adult voice remain disabled',
-      'Open/download artifact',
+      '/api/admin/command',
+      'Say what you want done.',
+      'Progress',
+      'Expected outputs',
+      'Open attached workspace',
+      'Active and recent jobs',
     ]) expect(page).toContain(text)
-    expect(read('lib/studio-route-map.ts')).toContain('Avatar / Talking Video')
-    expect(read('lib/studio-route-map.ts')).toContain("status: 'missing'")
+    expect(route).toContain('routeCommand')
+    expect(route).toContain('job_created')
+    expect(route).toContain('plan_created')
   })
 
   it('Workbench exposes repo to deploy flow with latest job rehydration and guarded steps', () => {
@@ -98,7 +91,7 @@ describe('dashboard go-live wiring', () => {
       expect(truth).toContain(status)
     }
     expect(truth).not.toContain('Configured - needs live test')
-    for (const text of ['Setup completion checklist', 'Unified setup list', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Firecrawl', 'Webdock', 'SMTP / email', 'Exact blocker', 'Last test result']) {
+    for (const text of ['Setup completion checklist', 'Unified setup list', 'GenX', 'GitHub', 'Storage', 'Redis', 'Playwright', 'Qdrant', 'Webdock', 'SMTP / email', 'Exact blocker', 'Last test result']) {
       expect(settings).toContain(text)
     }
     for (const text of ['Go-live readiness', 'liveBlockers', 'Advanced governance/debug', 'broken protected API', 'build/lint/test failure', 'Active jobs', 'Recent failed jobs', 'Workbench jobs', 'Studio jobs', 'Can go live']) {

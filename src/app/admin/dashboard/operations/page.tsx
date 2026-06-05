@@ -28,7 +28,7 @@ export default async function OperationsPage() {
     ...(!storage.writable ? ['Storage is not writable'] : []),
     ...(system?.vps.status === 'ok' ? [] : ['VPS/Webdock status needs verification']),
     ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
-    ...(research?.firecrawl.status === 'ok' || research?.playwright.status === 'ok' ? [] : ['Research stack has no live-tested crawler/browser route']),
+    ...(research?.localCrawler.available ? [] : ['Local crawler stack needs Playwright/Trafilatura setup']),
   ]
   const toolStatus = (key: string) => settingsTruth?.tools.find((tool) => tool.key === key)?.status ?? 'Needs key'
   const providerCount = providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length
@@ -184,9 +184,10 @@ export default async function OperationsPage() {
 
         {/* Research stack */}
         <OpsPanel title="Research stack">
-          <OpsRow label="Firecrawl" value={research?.firecrawl.status ?? 'Needs key/test'} />
-          <OpsRow label="Crawl4AI" value={research?.crawl4ai.status ?? 'Unavailable'} />
           <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+          <OpsRow label="Scrapy" value={research?.scrapy.status ?? 'Unavailable'} />
+          <OpsRow label="Trafilatura" value={research?.trafilatura.status ?? 'Unavailable'} />
+          <OpsRow label="Qdrant" value={research?.qdrant.status ?? 'Needs setup'} />
         </OpsPanel>
 
         <OpsPanel title="Required services">

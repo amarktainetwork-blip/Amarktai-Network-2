@@ -20,7 +20,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Product philosophy</p>
           <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
-            Private AI infrastructure is a control problem before it is an interface problem.
+            Connected digital work needs clear control before it needs more complexity.
           </h1>
           <p className="mt-7 max-w-3xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
             AmarktAI Network is an infrastructure company building the operating architecture for AI systems that route, remember, generate, review, and deploy.

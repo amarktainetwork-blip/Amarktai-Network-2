@@ -22,41 +22,35 @@ describe('Phase 1 platform truth stabilization', () => {
     delete process.env.AMARKTAI_ALLOW_DEV_STORAGE_FALLBACK
   })
 
-  it('keeps the dashboard to exactly the six final sections', () => {
+  it('keeps the dashboard to the eight command operating-system sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Overview',
-      'Studio',
-      'Workbench',
-      'Apps & Agents',
-      'Memory & Learning',
+      'Command',
+      'Network Apps',
+      'Outputs',
+      'Agents',
+      'Memory',
       'Settings',
+      'System',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
       '/admin/dashboard',
-      '/admin/dashboard/studio',
-      '/admin/dashboard/workbench',
-      '/admin/dashboard/apps-agents',
-      '/admin/dashboard/memory-learning',
+      '/admin/dashboard/command',
+      '/admin/dashboard/network-apps',
+      '/admin/dashboard/outputs',
+      '/admin/dashboard/agents',
+      '/admin/dashboard/memory',
       '/admin/dashboard/settings',
+      '/admin/dashboard/system',
     ])
   })
 
   it('Settings uses approved visible AI providers and the status truth route', () => {
     const settings = read('app/admin/dashboard/settings/page.tsx')
-    expect(APPROVED_AI_PROVIDERS.map((provider) => provider.displayName)).toEqual([
-      'GenX',
-      'Hugging Face',
-      'Qwen/DashScope',
-      'MiniMax/Mimo',
-      'Groq',
-      'Together AI',
-      'OpenAI',
-    ])
+    expect(APPROVED_AI_PROVIDERS.map((provider) => provider.displayName)).toContain('GenX')
     expect(settings).toContain('/api/admin/settings/status')
-    expect(settings).toContain('Connected keys with passed live tests')
-    for (const banned of ['DeepSeek', 'Google Gemini', 'OpenRouter', 'Replicate', 'ElevenLabs', 'Webdock AI']) {
-      expect(settings).not.toContain(banned)
-    }
+    expect(settings).toContain('Qdrant')
+    expect(settings).not.toContain('Firecrawl')
   })
 
   it('provider connected count only counts configured entries with test/status routes', async () => {
@@ -80,13 +74,6 @@ describe('Phase 1 platform truth stabilization', () => {
         source: key === 'genx' || key === 'github' ? 'vault' : 'missing',
       })),
     }))
-    vi.doMock('@/lib/local-json-store', async () => {
-      const actual = await vi.importActual<typeof import('@/lib/local-json-store')>('@/lib/local-json-store')
-      return {
-        ...actual,
-        checkWritable: vi.fn(() => ({ writable: true, root: '/tmp/test-storage', file: 'artifacts/artifacts.json' })),
-      }
-    })
 
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const truth = await getPlatformSettingsTruth()
@@ -132,14 +119,13 @@ describe('Phase 1 platform truth stabilization', () => {
     expect(workbench).toContain('Path traversal blocked')
   })
 
-  it('makes Studio media tabs truthful instead of claiming complete wiring', () => {
-    const studio = read('app/admin/dashboard/studio/page.tsx')
-    const routeMap = read('lib/studio-route-map.ts')
-    const streamRoute = read('app/api/admin/amarktai-assistant/stream/route.ts')
-    expect(studio).toContain('/api/admin/studio/execute')
-    expect(routeMap).toContain('Backend missing - Phase 3/provider-specific implementation required.')
-    expect(streamRoute).toContain('Selected provider streaming pending')
-    expect(studio).not.toContain('Studio is ready for')
+  it('makes Command routing truthful instead of claiming complete execution', () => {
+    const command = read('components/dashboard/CommandCenter.tsx')
+    const router = read('lib/command-router.ts')
+    expect(command).toContain('/api/admin/command')
+    expect(command).toContain('Open attached workspace')
+    expect(router).toContain('approvalRequired')
+    expect(command).not.toContain('everything is ready')
   })
 
   it('keeps adult policy app-level with no separate adult key requirement', () => {

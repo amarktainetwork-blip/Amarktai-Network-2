@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
+import BrandName from '@/components/BrandName'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -25,7 +26,7 @@ export default function AdminLoginPage() {
       })
 
       if (response.ok) {
-        router.push('/admin/dashboard')
+        router.push('/admin/dashboard/command')
         router.refresh()
       } else {
         const data = await response.json()
@@ -46,7 +47,7 @@ export default function AdminLoginPage() {
       <section className="relative z-10 w-full max-w-[420px] border border-white/[0.12] bg-[rgba(7,11,18,0.92)] shadow-2xl shadow-black/60 backdrop-blur-2xl">
         <div className="section-line h-px w-full" />
         <div className="px-8 py-9">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">AmarktAI Network</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]"><BrandName /></p>
           <h1 className="mt-6 text-3xl font-semibold leading-tight text-white">Operator authentication</h1>
           <p className="mt-3 text-sm leading-6 text-[var(--amarkt-muted)]">Authorized infrastructure operators only.</p>
 
@@ -57,6 +58,7 @@ export default function AdminLoginPage() {
                 <Mail className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--amarkt-dim)]" />
                 <input
                   type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -71,6 +73,7 @@ export default function AdminLoginPage() {
                 <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--amarkt-dim)]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}

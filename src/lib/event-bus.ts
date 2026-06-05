@@ -10,6 +10,10 @@
 // ── Event Types ──────────────────────────────────────────────────────────────
 
 export type SystemEventType =
+  | 'job_created'
+  | 'agent_started'
+  | 'plan_created'
+  | 'tool_called'
   | 'job_progress'
   | 'job_completed'
   | 'job_failed'
@@ -21,6 +25,14 @@ export type SystemEventType =
   | 'manager_action'
   | 'learning_cycle'
   | 'health_update'
+  | 'waiting_for_approval'
+  | 'checks_started'
+  | 'checks_passed'
+  | 'checks_failed'
+  | 'pr_created'
+  | 'deploy_started'
+  | 'deploy_completed'
+  | 'deploy_failed'
   | 'heartbeat'
 
 export interface SystemEvent {

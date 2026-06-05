@@ -1,8 +1,10 @@
 import {
+  Bot,
+  Boxes,
   BrainCircuit,
-  GitBranch,
-  GraduationCap,
-  LayoutDashboard,
+  Command,
+  Gauge,
+  Library,
   Settings2,
   Sparkles,
 } from 'lucide-react'
@@ -10,11 +12,13 @@ import type { ComponentType, SVGProps } from 'react'
 
 export type DashboardSectionId =
   | 'overview'
-  | 'studio'
-  | 'workbench'
-  | 'apps-agents'
-  | 'memory-learning'
+  | 'command'
+  | 'network-apps'
+  | 'outputs'
+  | 'agents'
+  | 'memory'
   | 'settings'
+  | 'system'
 
 export type DashboardNavItem = {
   id: DashboardSectionId
@@ -25,46 +29,12 @@ export type DashboardNavItem = {
 }
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
-  {
-    id: 'overview',
-    href: '/admin/dashboard',
-    label: 'Overview',
-    description: 'System health, provider status, VPS, storage, jobs, costs, and platform readiness.',
-    icon: LayoutDashboard,
-  },
-  {
-    id: 'studio',
-    href: '/admin/dashboard/studio',
-    label: 'Studio',
-    description: 'Operator workspace for chat, coding handoff, research, media, voice, policy, and artifacts.',
-    icon: Sparkles,
-  },
-  {
-    id: 'workbench',
-    href: '/admin/dashboard/workbench',
-    label: 'Workbench',
-    description: 'Autonomous repo workflow: start work, approve changes, create PR.',
-    icon: GitBranch,
-  },
-  {
-    id: 'apps-agents',
-    href: '/admin/dashboard/apps-agents',
-    label: 'Apps & Agents',
-    description: 'Connected apps, app model packages, assigned agents, domains, repos, services, and policies.',
-    icon: BrainCircuit,
-  },
-  {
-    id: 'memory-learning',
-    href: '/admin/dashboard/memory-learning',
-    label: 'Memory & Learning',
-    description: 'Persistent context, app memory, learning logs, artifact links, and workflow history.',
-    icon: GraduationCap,
-  },
-  {
-    id: 'settings',
-    href: '/admin/dashboard/settings',
-    label: 'Settings',
-    description: 'Provider keys, defaults, routing, GitHub, Webdock, research tools, storage, adult policy, and deployment.',
-    icon: Settings2,
-  },
+  { id: 'overview', href: '/admin/dashboard', label: 'Overview', description: 'Jobs, apps, outputs, repo work, and readiness.', icon: Gauge },
+  { id: 'command', href: '/admin/dashboard/command', label: 'Command', description: 'One command window for every Amarktai capability.', icon: Command },
+  { id: 'network-apps', href: '/admin/dashboard/network-apps', label: 'Network Apps', description: 'Connected business modules and shared learning.', icon: Boxes },
+  { id: 'outputs', href: '/admin/dashboard/outputs', label: 'Outputs', description: 'Media, reports, app builds, diffs, PRs, and artifacts.', icon: Library },
+  { id: 'agents', href: '/admin/dashboard/agents', label: 'Agents', description: 'Agent teams and live activity in plain English.', icon: Bot },
+  { id: 'memory', href: '/admin/dashboard/memory', label: 'Memory', description: 'Shared context, outcomes, and learning by module.', icon: BrainCircuit },
+  { id: 'settings', href: '/admin/dashboard/settings', label: 'Settings', description: 'Keys, connections, storage, queues, and service setup.', icon: Settings2 },
+  { id: 'system', href: '/admin/dashboard/system', label: 'System', description: 'Admin-only VPS, services, queues, logs, and readiness.', icon: Sparkles },
 ] as const

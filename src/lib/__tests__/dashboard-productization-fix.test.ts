@@ -9,23 +9,19 @@ function read(relPath: string) {
 }
 
 describe('dashboard emergency productization fix', () => {
-  it('Studio starts empty and does not render fake job states before a real run', () => {
-    const page = read('app/admin/dashboard/studio/page.tsx')
-    const modesBlock = page.slice(page.indexOf('const studioModes'), page.indexOf('const unavailableAdultModes'))
-    expect(modesBlock).not.toContain("capability: 'adult_video'")
-    expect(modesBlock).not.toContain("capability: 'adult_voice'")
-    expect(page).toContain('const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)')
-    expect(page).toContain('No active jobs yet.')
-    expect(page).toContain('{hasRealJob && (')
-    expect(page).toContain('Run a command to see live results here.')
+  it('Command starts empty and renders real routed jobs only after submission', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
+    expect(page).toContain('Your plan, progress, and outputs appear here.')
+    expect(page).toContain('setActive(data.job)')
+    expect(page).toContain('Active and recent jobs')
+    expect(page).not.toContain('fake job')
   })
 
-  it('Studio keeps route and context details behind Advanced details', () => {
-    const page = read('app/admin/dashboard/studio/page.tsx')
-    expect(page).toContain('Advanced route details')
-    expect(page).toContain('<RouteFact label="Route details" value={tabTruth.detail} />')
-    expect(page).toContain('<RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />')
-    expect(page).not.toContain('<p className="flex items-center gap-2"><Brain')
+  it('Command keeps provider controls behind Advanced', () => {
+    const page = read('components/dashboard/CommandCenter.tsx')
+    expect(page).toContain('Advanced')
+    expect(page).toContain('Provider overrides')
+    expect(page).toContain('model selection stay here')
   })
 
   it('Workbench state machine separates plan, patch, approval, checks, commit, and PR', () => {

@@ -3,36 +3,29 @@
 import '@fontsource-variable/inter'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, ChevronRight, LogOut, Menu, Network, Shield, X } from 'lucide-react'
+import { Activity, ChevronRight, LogOut, Menu, Network, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+import BrandName from '@/components/BrandName'
 
 type HeaderStatus = {
   appStatus: string
-  activeRoute: string
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [status, setStatus] = useState<HeaderStatus>({ appStatus: 'Initializing', activeRoute: 'Auto route' })
+  const [status, setStatus] = useState<HeaderStatus>({ appStatus: 'Checking readiness' })
   const [pulse, setPulse] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    Promise.all([
-      fetch('/api/admin/system/status').then((res) => res.json()).catch(() => null),
-      fetch('/api/admin/ai-routing').then((res) => res.json()).catch(() => null),
-    ]).then(([system, routing]) => {
+    fetch('/api/admin/system/status').then((res) => res.json()).catch(() => null).then((system) => {
       if (!mounted) return
       const storage = system?.status?.storage?.status ?? 'Needs test'
-      const route = routing?.samples?.[0]
       setStatus({
-        appStatus: storage,
-        activeRoute: route?.selectedProvider && route?.selectedModel
-          ? `${route.selectedProvider}/${route.selectedModel}`
-          : 'Auto route',
+        appStatus: storage === 'Connected' || storage === 'ready' ? 'Ready' : 'Needs setup',
       })
       setPulse(true)
     })
@@ -70,8 +63,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               />
             </div>
             <div>
-              <p className="text-sm font-black tracking-tight text-slate-100">AmarktAI Network</p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/70">AI Operating System</p>
+              <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Command OS</p>
             </div>
           </div>
         </Link>
@@ -84,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)] transition-opacity duration-700"
             style={{ opacity: pulse ? 1 : 0.4 }}
           />
-          <p className="truncate text-[10px] font-bold text-slate-400">{status.activeRoute}</p>
+          <p className="truncate text-[10px] font-bold text-slate-300">{status.appStatus}</p>
         </div>
       </div>
 
@@ -136,25 +129,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       className="flex min-h-screen bg-[#030712] text-slate-100"
       style={{ fontFamily: "'Inter Variable','Inter',system-ui,-apple-system,sans-serif" }}
     >
-      {/* Desktop workspace required — shown below 1280px */}
-      <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#030712] min-[1280px]:hidden">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-cyan-950/20 blur-[100px]" />
-          <div className="absolute -right-40 bottom-0 h-[400px] w-[400px] rounded-full bg-indigo-950/25 blur-[100px]" />
-        </div>
-        <div className="relative text-center px-6">
-          <div className="mx-auto mb-6 grid h-16 w-16 place-items-center rounded-2xl border border-slate-700/60 bg-slate-900/80 shadow-[0_0_40px_rgba(34,211,238,0.12)]">
-            <Network className="h-7 w-7 text-cyan-400" />
-          </div>
-          <p className="text-xl font-black tracking-tight text-slate-100">Desktop workspace required.</p>
-          <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-            AmarktAI Network is a premium desktop AI OS.<br />
-            Minimum supported width: 1280px.
-          </p>
-          <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-500/60">AmarktAI Network · AI Operating System</p>
-        </div>
-      </div>
-
       {/* Runtime background field */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-cyan-950/20 blur-[120px]" />
@@ -180,7 +154,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-500/80">AmarktAI Network</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300"><BrandName /></p>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="truncate text-base font-black tracking-tight text-slate-100">{activeItem.label}</h1>
                 </div>
@@ -189,7 +163,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <div className="hidden items-center gap-2 lg:flex">
               <StatusChip icon={<Activity className="h-3.5 w-3.5" />} label={status.appStatus} />
-              <StatusChip icon={<Shield className="h-3.5 w-3.5" />} label={status.activeRoute} dim />
             </div>
           </div>
         </header>
@@ -213,11 +186,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 }
 
-function StatusChip({ icon, label, dim = false }: { icon: React.ReactNode; label: string; dim?: boolean }) {
+function StatusChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
-    <div className={['flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5', dim ? 'border-slate-800 bg-slate-900/50' : 'border-slate-700/60 bg-slate-800/60'].join(' ')}>
-      <span className={dim ? 'text-slate-600' : 'text-cyan-400'}>{icon}</span>
-      <p className="max-w-44 truncate text-[11px] font-bold text-slate-400">{label}</p>
+    <div className="flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 px-2.5 py-1.5">
+      <span className="text-cyan-400">{icon}</span>
+      <p className="max-w-44 truncate text-[11px] font-bold text-slate-300">{label}</p>
     </div>
   )
 }

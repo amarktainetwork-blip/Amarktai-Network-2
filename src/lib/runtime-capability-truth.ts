@@ -170,7 +170,10 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
   const governance = getRuntimeProviderGovernance()
   const results: ProviderRuntimeEntry[] = await Promise.all(
     governance.map(async (meta) => {
-      const { hasKey, source } = await resolveKey(meta.integrationKey)
+      const localRuntime = meta.key === 'local-crawler'
+      const { hasKey, source } = localRuntime
+        ? { hasKey: true, source: 'env' as const }
+        : await resolveKey(meta.integrationKey)
       const coveredByGenX = GENX_COVERED_PROVIDERS.has(meta.key)
 
       let status: ProviderStatus
@@ -302,7 +305,7 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
   const hasReplicate = isConfigured('replicate')
   const hasElevenLabs = isConfigured('elevenlabs')
   const hasDeepgram = isConfigured('deepgram')
-  const hasFirecrawl = isConfigured('firecrawl')
+  const hasLocalCrawler = isConfigured('local-crawler')
   const hasMem0 = isConfigured('mem0')
   const hasGitHub = isConfigured('github')
   const hasOpenRouter = isConfigured('openrouter')
@@ -322,8 +325,8 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
   const hasTTSProvider = genxConfigured || hasMinimax || hasElevenLabs || hasDeepgram || hasGroq || hasHF || hasOpenAI
   // STT via GenX OR Deepgram/MiniMax/HF/OpenAI
   const hasSTTProvider = genxConfigured || hasDeepgram || hasMinimax || hasHF || hasOpenAI
-  // Research via Firecrawl OR GenX/Gemini/OpenRouter
-  const hasResearchProvider = hasFirecrawl || genxConfigured || hasGemini || hasOpenRouter
+  // Research always has a local crawler; models enrich and summarize its output.
+  const hasResearchProvider = hasLocalCrawler || genxConfigured || hasGemini || hasOpenRouter
 
   const adultGate = await getAdultCapabilityGate(providers)
 
@@ -454,14 +457,14 @@ export async function getCapabilityStatus(genxConfigured: boolean, providers: Pr
     {
       name: 'Web Crawler / Research',
       status: hasResearchProvider ? 'available' : 'blocked',
-      blocker: hasResearchProvider ? null : 'Configure Firecrawl, GenX, Gemini, or OpenRouter in Settings',
+      blocker: hasResearchProvider ? null : 'Install the local crawler runtime or configure GenX, Gemini, or OpenRouter',
       models: [
-        ...(hasFirecrawl ? ['Firecrawl'] : []),
+        ...(hasLocalCrawler ? ['Playwright + Scrapy + Trafilatura'] : []),
         ...(genxConfigured ? ['GenX (Gemini/GPT-4.1 research)'] : []),
         ...(hasGemini ? ['Gemini research / search grounding'] : []),
         ...(hasOpenRouter ? ['OpenRouter research models'] : []),
       ],
-      nextAction: hasFirecrawl ? null : 'Add Firecrawl key in Settings for enhanced crawling',
+      nextAction: hasLocalCrawler ? null : 'Install Playwright, Scrapy, and Trafilatura',
     },
     {
       name: 'Memory',

@@ -9,8 +9,8 @@ import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 const SERVICE_ITEMS = [
   { key: 'github', label: 'GitHub', description: 'Repository import, branches, PRs, merge, and deploy handoff.', placeholder: 'ghp_...' },
   { key: 'redis', label: 'Redis', description: 'Queues, job coordination, and live job state.', placeholder: 'REDIS_URL' },
-  { key: 'firecrawl', label: 'Firecrawl', description: 'Research and scraping tool.', placeholder: 'fc_...' },
   { key: 'playwright', label: 'Playwright', description: 'Browser automation and verification tool.', placeholder: 'local tool' },
+  { key: 'qdrant', label: 'Qdrant', description: 'Vector memory, RAG, and research indexing.', placeholder: 'QDRANT_URL' },
   { key: 'webdock', label: 'Webdock', description: 'VPS and system monitoring.', placeholder: 'webdock key' },
   { key: 'smtp', label: 'SMTP / email', description: 'Email notifications and operator alerts.', placeholder: 'SMTP_HOST' },
   { key: 'storage', label: 'Storage', description: 'Artifacts, logs, and generated reports.', placeholder: 'storage credentials' },
@@ -65,7 +65,7 @@ export default function SettingsPage() {
     ['Providers connected', truth ? truth.providers.some((item) => item.connected) : false],
     ['GitHub tested', statusFor('github', 'tool')?.connected ?? false],
     ['Storage writable route present', truth?.storage.connected ?? false],
-    ['Research tool configured', ['firecrawl', 'crawl4ai', 'playwright'].some((key) => statusFor(key, 'tool')?.configured)],
+    ['Research tool configured', ['playwright', 'qdrant'].some((key) => statusFor(key, 'tool')?.configured)],
     ['Workbench unlocks available', Boolean(statusFor('github', 'tool')?.configured && truth?.storage.configured)],
   ] as const
 
@@ -128,7 +128,7 @@ export default function SettingsPage() {
           Each provider or service appears once. Status, save, test route, unlocks, and blockers all come from the same settings truth.
         </p>
         <p className="mt-1.5 text-xs leading-5 text-slate-600">
-          Covers GenX, GitHub, OpenAI, Groq, Together AI, Hugging Face, Qwen/DashScope, MiniMax/Mimo, Firecrawl, Redis, Playwright, Storage, Webdock, and SMTP / email.
+          Covers GenX, GitHub, Groq, Together AI, Hugging Face, Qwen/DashScope, Xiaomi MiMo, Replicate/Fal, Redis, Qdrant, Playwright, local crawling, Storage, Webdock, and SMTP / email.
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {SETUP_ITEMS.map((item) => (

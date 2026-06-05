@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     'AI orchestration',
     'model routing',
     'agent coordination',
-    'private AI infrastructure',
+    'AI operating system',
     'deployment governance',
     'AmarktAI Network',
   ],

@@ -34,11 +34,13 @@ describe('Settings provider display names', () => {
     expect(qwen?.displayName).toBe('Qwen / DashScope')
   })
 
-  it('MiniMax is labeled "MiniMax / Mimo"', () => {
+  it('MiniMax and Xiaomi MiMo are separate providers', () => {
     const primary = getPrimarySetupProviders()
     const minimax = primary.find(p => p.key === 'minimax')
+    const mimo = primary.find(p => p.key === 'mimo')
     expect(minimax).toBeDefined()
-    expect(minimax?.displayName).toBe('MiniMax / Mimo')
+    expect(minimax?.displayName).toBe('MiniMax')
+    expect(mimo?.displayName).toBe('Xiaomi MiMo')
   })
 
   it('xAI is labeled "xAI / Grok"', () => {
@@ -56,11 +58,10 @@ describe('Settings provider display names', () => {
     expect(moonshot?.displayName).toContain('Moonshot')
   })
 
-  it('OpenAI is labeled "OpenAI Direct"', () => {
-    const advanced = getAdvancedSetupProviders()
-    const openai = advanced.find(p => p.key === 'openai')
+  it('OpenAI compatibility fallback remains hidden', () => {
+    const openai = getHiddenProviders().find(p => p.key === 'openai')
     expect(openai).toBeDefined()
-    expect(openai?.displayName).toContain('OpenAI')
+    expect(openai?.displayName).toContain('compatibility fallback')
   })
 })
 
@@ -110,8 +111,8 @@ describe('deprecated and hidden providers do not appear in Settings UI', () => {
 // ── Primary provider counts ───────────────────────────────────────────────────
 
 describe('Settings shows exactly the right provider groups', () => {
-  it('has exactly 12 primary providers (genx, github, qwen, minimax, deepseek, gemini, huggingface, groq, together, firecrawl, mem0, webdock)', () => {
-    expect(getPrimarySetupProviders().length).toBe(12)
+  it('has the 13 current primary providers including MiMo and local crawler', () => {
+    expect(getPrimarySetupProviders().length).toBe(13)
   })
 
   it('has exactly 3 specialist providers (replicate, elevenlabs, deepgram)', () => {
@@ -123,11 +124,11 @@ describe('Settings shows exactly the right provider groups', () => {
     expect(keys.has('deepgram')).toBe(true)
   })
 
-  it('has exactly 5 advanced providers (openai, openrouter, xai, moonshot, zhipu)', () => {
+  it('has exactly 4 visible advanced providers', () => {
     const advanced = getAdvancedSetupProviders()
-    expect(advanced.length).toBe(5)
+    expect(advanced.length).toBe(4)
     const keys = new Set(advanced.map(p => p.key))
-    expect(keys.has('openai')).toBe(true)
+    expect(keys.has('openai')).toBe(false)
     expect(keys.has('openrouter')).toBe(true)
     expect(keys.has('xai')).toBe(true)
     expect(keys.has('moonshot')).toBe(true)
@@ -143,9 +144,11 @@ describe('Provider env var alias hints', () => {
     expect(qwen?.envVarAliases).toContain('DASHSCOPE_API_KEY')
   })
 
-  it('MiniMax lists MIMO_API_KEY as accepted env alias', () => {
+  it('Xiaomi MiMo owns MIMO_API_KEY', () => {
     const mm = getPrimarySetupProviders().find(p => p.key === 'minimax')
-    expect(mm?.envVarAliases).toContain('MIMO_API_KEY')
+    const mimo = getPrimarySetupProviders().find(p => p.key === 'mimo')
+    expect(mm?.envVarAliases).not.toContain('MIMO_API_KEY')
+    expect(mimo?.envVar).toBe('MIMO_API_KEY')
   })
 
   it('HuggingFace lists HUGGINGFACEHUB_API_TOKEN and HF_TOKEN as accepted env aliases', () => {

@@ -36,7 +36,7 @@ describe('getPrimarySetupProviders()', () => {
 
   it('includes all required primary providers', () => {
     const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    const required = ['genx', 'github', 'qwen', 'minimax', 'deepseek', 'gemini', 'huggingface', 'groq', 'together', 'firecrawl', 'mem0', 'webdock']
+    const required = ['genx', 'github', 'qwen', 'minimax', 'mimo', 'deepseek', 'gemini', 'huggingface', 'groq', 'together', 'local-crawler', 'mem0', 'webdock']
     for (const key of required) {
       expect(keys.has(key), `Primary providers should include '${key}'`).toBe(true)
     }
@@ -83,9 +83,9 @@ describe('getAdvancedSetupProviders()', () => {
     expect(advanced.every(p => p.setupGroup === 'advanced')).toBe(true)
   })
 
-  it('includes openai, openrouter, xai, moonshot, zhipu', () => {
+  it('keeps OpenAI hidden and includes advanced routing providers', () => {
     const keys = new Set(getAdvancedSetupProviders().map(p => p.key))
-    expect(keys.has('openai')).toBe(true)
+    expect(keys.has('openai')).toBe(false)
     expect(keys.has('openrouter')).toBe(true)
     expect(keys.has('xai')).toBe(true)
     expect(keys.has('moonshot')).toBe(true)
@@ -193,13 +193,13 @@ describe('Qwen / DashScope aliases', () => {
   })
 })
 
-describe('MiniMax / Mimo aliases', () => {
+describe('MiniMax and Xiaomi MiMo providers', () => {
   it('getIntegrationKey("minimax") returns "minimax"', () => {
     expect(getIntegrationKey('minimax')).toBe('minimax')
   })
 
-  it('getIntegrationKey("mimo") resolves to "minimax"', () => {
-    expect(getIntegrationKey('mimo')).toBe('minimax')
+  it('getIntegrationKey("mimo") remains independent', () => {
+    expect(getIntegrationKey('mimo')).toBe('mimo')
   })
 
   it('getEnvKeyForProvider("minimax") checks MINIMAX_API_KEY', () => {
@@ -209,7 +209,7 @@ describe('MiniMax / Mimo aliases', () => {
     delete process.env.MINIMAX_API_KEY
   })
 
-  it('getEnvKeyForProvider("mimo") resolves via MIMO_API_KEY alias', () => {
+  it('getEnvKeyForProvider("mimo") uses MIMO_API_KEY', () => {
     process.env.MIMO_API_KEY = 'test-mimo-key'
     const key = getEnvKeyForProvider('mimo')
     expect(key).toBe('test-mimo-key')
@@ -350,7 +350,7 @@ describe('AI_PROVIDER_GOVERNANCE completeness', () => {
   })
 
   it('all entries have envVarAliases defined for aliased providers', () => {
-    const aliasedProviders = ['qwen', 'minimax', 'huggingface', 'xai', 'replicate']
+    const aliasedProviders = ['qwen', 'huggingface', 'xai', 'replicate']
     for (const key of aliasedProviders) {
       const entry = AI_PROVIDER_GOVERNANCE.find(p => p.key === key)
       expect(entry?.envVarAliases, `Provider '${key}' should have envVarAliases`).toBeDefined()
@@ -363,9 +363,9 @@ describe('AI_PROVIDER_GOVERNANCE completeness', () => {
     expect(qwen?.notes ?? '').toContain('DASHSCOPE_API_KEY')
   })
 
-  it('MiniMax notes mentions MIMO_API_KEY alias', () => {
+  it('MiniMax notes keeps Xiaomi MiMo separate', () => {
     const mm = AI_PROVIDER_GOVERNANCE.find(p => p.key === 'minimax')
-    expect(mm?.notes ?? '').toContain('MIMO_API_KEY')
+    expect(mm?.notes ?? '').toContain('Xiaomi MiMo is configured separately')
   })
 
   it('HuggingFace notes mentions HUGGINGFACEHUB_API_TOKEN alias', () => {
