@@ -2,7 +2,7 @@ import { AI_PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
 
 export type ApprovedProviderKey = Extract<
   ProviderMeshId,
-  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together' | 'replicate' | 'fal'
+  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together'
 >
 
 export type CostMode = 'cheap' | 'balanced' | 'premium'
@@ -34,8 +34,6 @@ const PROVIDER_NOTES: Record<ApprovedProviderKey, string> = {
   mimo: 'Xiaomi MiMo V2.5-compatible reasoning, coding, multimodal, voice, and tool workflows.',
   groq: 'Fast text, reasoning, code triage, speech, vision, and tool execution.',
   together: 'OpenAI-compatible text, image, video, vision, embedding, rerank, and tool routes.',
-  replicate: 'Asynchronous specialist image, video, avatar, audio, and music models.',
-  fal: 'Asynchronous specialist image, video, avatar, audio, and music models.',
 }
 
 export const APPROVED_AI_PROVIDERS: readonly ApprovedProvider[] = AI_PROVIDER_MESH.map((provider, sortOrder) => ({

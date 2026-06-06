@@ -134,11 +134,11 @@ export interface AppProfile {
 // ── Shared constants ────────────────────────────────────────────────────────
 
 const ALL_PROVIDERS = [
-  'openai', 'groq', 'gemini', 'huggingface', 'together', 'openrouter', 'deepseek', 'nvidia', 'replicate', 'grok', 'anthropic', 'cohere', 'qwen', 'mistral',
+  'genx', 'groq', 'huggingface', 'together', 'qwen', 'mimo',
 ];
 
 const BACKBONE_PROVIDERS = [
-  'nvidia', 'huggingface', 'deepseek', 'groq', 'openrouter', 'together', 'qwen',
+  'genx', 'huggingface', 'groq', 'together', 'qwen', 'mimo',
 ];
 
 const BASIC_AGENT_PERMISSIONS = [

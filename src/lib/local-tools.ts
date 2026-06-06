@@ -5,7 +5,7 @@ import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 const execFileAsync = promisify(execFile)
 
 export type LocalToolResult = {
-  id: 'local-crawler' | 'ffmpeg' | 'rhubarb' | 'storage'
+  id: 'local-crawler' | 'playwright' | 'scrapy' | 'trafilatura' | 'ffmpeg' | 'rhubarb' | 'storage'
   connected: boolean
   capabilities: string[]
   detail: string
@@ -42,10 +42,25 @@ export async function testLocalTool(id: LocalToolResult['id']): Promise<LocalToo
     return { id, connected: result.ok, capabilities: ['lip_sync'], detail: result.output }
   }
 
+  const checks = {
+    playwright: () => commandAvailable(process.execPath, ['-e', 'require("playwright"); console.log("Playwright available")']),
+    scrapy: () => commandAvailable(process.env.PYTHON_PATH || 'python', ['-c', 'import scrapy; print("Scrapy available")']),
+    trafilatura: () => commandAvailable(process.env.PYTHON_PATH || 'python', ['-c', 'import trafilatura; print("Trafilatura available")']),
+  }
+  if (id === 'playwright' || id === 'scrapy' || id === 'trafilatura') {
+    const result = await checks[id]()
+    return {
+      id,
+      connected: result.ok,
+      capabilities: id === 'playwright' ? ['crawl', 'render'] : ['crawl'],
+      detail: result.output,
+    }
+  }
+
   const [playwright, scrapy, trafilatura] = await Promise.all([
-    commandAvailable(process.execPath, ['-e', 'require("playwright"); console.log("Playwright available")']),
-    commandAvailable(process.env.PYTHON_PATH || 'python', ['-c', 'import scrapy; print("Scrapy available")']),
-    commandAvailable(process.env.PYTHON_PATH || 'python', ['-c', 'import trafilatura; print("Trafilatura available")']),
+    checks.playwright(),
+    checks.scrapy(),
+    checks.trafilatura(),
   ])
   const connected = playwright.ok && scrapy.ok && trafilatura.ok
   return {

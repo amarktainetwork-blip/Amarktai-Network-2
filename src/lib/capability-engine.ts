@@ -147,8 +147,7 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
     label: 'video generation',
     // Hugging Face is NOT a valid video generation provider (no async job API).
     // Gemini Veo 2 requires Vertex AI enterprise tier — not available via standard API key.
-    // Use Replicate, Together AI, or Qwen/DashScope (Wan) for real video generation.
-    suggestedProviders: ['replicate', 'together', 'qwen'],
+    suggestedProviders: ['genx', 'together', 'qwen'],
   },
   voice_input: {
     anyCapabilityFlag: ['supports_stt', 'supports_voice_interaction'],
@@ -210,7 +209,7 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   suggestive_video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'suggestive video generation (non-explicit, prompt-guarded)',
-    suggestedProviders: ['huggingface', 'replicate'],
+    suggestedProviders: ['genx', 'qwen', 'together'],
   },
 };
 

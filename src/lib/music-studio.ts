@@ -28,14 +28,11 @@ import { callGenXMedia, GENX_AUDIO_MODELS, getGenXStatusAsync } from '@/lib/genx
 
 /** Maximum characters from generated lyrics sent to the Suno API as a prompt.
  *  The Suno API accepts prompts up to ~3000 characters. */
-const SUNO_MAX_PROMPT_LENGTH = 3_000
 
 /** Number of polling iterations when waiting for a Replicate prediction.
  *  Each iteration waits REPLICATE_POLL_INTERVAL_MS Ã¢â€ â€™ total max wait = 60 s. */
-const REPLICATE_POLL_ITERATIONS = 12
 
 /** Milliseconds to wait between Replicate prediction polling attempts. */
-const REPLICATE_POLL_INTERVAL_MS = 5_000
 const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
 
 function usableKey(raw: string | null | undefined): string | null {
@@ -527,7 +524,7 @@ export function parseLyricsOutput(
 // Ã¢â€â‚¬Ã¢â€â‚¬ Music Generation API Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /** Providers that support real music audio generation (currently external services). */
-export type MusicProvider = 'genx' | 'suno' | 'udio' | 'musicgen_replicate' | 'blueprint_only'
+export type MusicProvider = 'genx' | 'blueprint_only'
 
 /**
  * Attempt to generate audio via a configured music provider.
@@ -563,72 +560,7 @@ async function generateAudio(
     // Fall through to direct audio providers.
   }
 
-  // Suno API Ã¢â‚¬â€ resolve key from vault first, then env fallback
-  const sunoKey = usableKey((await getVaultApiKey('suno').catch(() => null)) ?? process.env.SUNO_API_KEY)
-  if (sunoKey) {
-    try {
-      const res = await fetch('https://studio-api.suno.ai/api/generate/v2/', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${sunoKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt: lyrics.lyrics.slice(0, SUNO_MAX_PROMPT_LENGTH),
-          tags: `${GENRE_DISPLAY[resolveGenre(request)].toLowerCase()} ${request.vocalStyle.replace(/_/g, ' ')}`,
-          title: lyrics.title,
-          make_instrumental: request.vocalStyle === 'instrumental_only',
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json() as { clips?: Array<{ audio_url: string }> }
-        const url = data?.clips?.[0]?.audio_url
-        if (url) return { audioUrl: url, mimeType: 'audio/mpeg', provider: 'suno' }
-      }
-    } catch { /* fall through */ }
-  }
-
-  // Replicate MusicGen Ã¢â‚¬â€ resolve key from vault first, then env fallback
-  const replicateKey = (await getVaultApiKey('replicate').catch(() => null)) ?? process.env.REPLICATE_API_TOKEN?.trim() ?? null
-  if (replicateKey) {
-    try {
-      // Fire-and-poll approach for Replicate
-      const createRes = await fetch('https://api.replicate.com/v1/predictions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Token ${replicateKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          version: 'b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6945b23e43fd3fe3fa33a2571', // MusicGen melody
-          input: {
-            prompt: `${GENRE_DISPLAY[resolveGenre(request)]} music: ${request.theme}. ${GENRE_DEFAULTS[resolveGenre(request)]?.productionStyle ?? ''}`,
-            duration: Math.min(request.durationSeconds ?? 30, 30),
-          },
-        }),
-      })
-      if (createRes.ok) {
-        const pred = await createRes.json() as { id: string; output?: string | null }
-        if (pred.id) {
           // Poll for up to REPLICATE_POLL_ITERATIONS Ãƒâ€” REPLICATE_POLL_INTERVAL_MS
-          for (let i = 0; i < REPLICATE_POLL_ITERATIONS; i++) {
-            await new Promise((r) => setTimeout(r, REPLICATE_POLL_INTERVAL_MS))
-            const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${pred.id}`, {
-              headers: { Authorization: `Token ${replicateKey}` },
-            })
-            if (pollRes.ok) {
-              const poll = await pollRes.json() as { status: string; output?: string | null }
-              if (poll.status === 'succeeded' && poll.output) {
-                return { audioUrl: String(poll.output), mimeType: 'audio/wav', provider: 'musicgen_replicate' }
-              }
-              if (poll.status === 'failed') break
-            }
-          }
-        }
-      }
-    } catch { /* fall through */ }
-  }
-
   return null
 }
 
@@ -642,35 +574,17 @@ async function generateCoverArt(
   lyrics: LyricsResult,
   request: MusicCreationRequest,
 ): Promise<{ url: string; model: string } | null> {
-  // Resolve OpenAI key: DB vault first, then environment variable fallback
-  const openAiKey = (await getVaultApiKey('openai').catch(() => null)) ?? process.env.OPENAI_API_KEY?.trim() ?? null
-  if (!openAiKey) return null
-
   try {
     const prompt =
       `Album cover art for a ${GENRE_DISPLAY[resolveGenre(request)]} song titled "${lyrics.title}". ` +
       `Theme: ${request.theme}. Style: ${GENRE_DEFAULTS[resolveGenre(request)]?.productionStyle ?? 'modern'}. ` +
       'High quality, visually compelling, no text overlays.'
-
-    const res = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openAiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt,
-        n: 1,
-        size: '1024x1024',
-        response_format: 'url',
-      }),
+    const result = await callGenXMedia({
+      model: 'genx/default-image',
+      prompt,
+      type: 'image',
     })
-    if (res.ok) {
-      const data = await res.json() as { data?: Array<{ url: string }> }
-      const url = data?.data?.[0]?.url
-      if (url) return { url, model: 'dall-e-3' }
-    }
+    if (result.success && result.url) return { url: result.url, model: result.model ?? 'genx/default-image' }
   } catch { /* fall through */ }
   return null
 }
@@ -690,31 +604,6 @@ async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
   // Try OpenAI first (vault Ã¢â€ â€™ env)
-  const openAiKey = (await getVaultApiKey('openai').catch(() => null)) ?? process.env.OPENAI_API_KEY?.trim() ?? null
-  if (openAiKey) {
-    const prompt = buildLyricsPrompt(request)
-    try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${openAiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1500,
-          temperature: 0.85,
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json() as { choices: Array<{ message: { content: string } }>; model: string }
-        const content = data?.choices?.[0]?.message?.content ?? ''
-        return { lyrics: content, model: data.model ?? 'gpt-4o' }
-      }
-    } catch { /* fall through to Groq */ }
-  }
-
   // Groq fallback (vault Ã¢â€ â€™ env) Ã¢â‚¬â€ fast and cost-effective for text generation
   const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
   if (groqKey) {
@@ -951,7 +840,7 @@ export async function createMusic(
     status: audioResult ? 'generated' : 'blueprint_only',
     message: audioResult
       ? `Music generated via ${audioResult.provider}. Audio and lyrics available.`
-      : 'Lyrics and song blueprint generated. Configure SUNO_API_KEY or REPLICATE_API_TOKEN for audio generation.',
+      : 'Lyrics and song blueprint generated. Configure and test GenX for audio generation.',
   }
 }
 
@@ -1031,29 +920,17 @@ export interface MusicStudioStatus {
 }
 
 export function getMusicStudioStatus(): MusicStudioStatus {
-  const hasChatKey = Boolean(usableKey(process.env.OPENAI_API_KEY)) ||
-    Boolean(usableKey(process.env.GROQ_API_KEY)) ||
+  const hasChatKey = Boolean(usableKey(process.env.GROQ_API_KEY)) ||
     Boolean(usableKey(process.env.TOGETHER_API_KEY))
-  const hasSuno = Boolean(usableKey(process.env.SUNO_API_KEY))
-  const hasReplicate = Boolean(usableKey(process.env.REPLICATE_API_TOKEN))
-  const hasImageKey = Boolean(usableKey(process.env.OPENAI_API_KEY))
-
-  const audioProvider: MusicProvider | null = hasSuno
-    ? 'suno'
-    : hasReplicate
-    ? 'musicgen_replicate'
-    : null
 
   return {
     lyricsGeneration: hasChatKey ? 'available' : 'needs_key',
-    audioGeneration: audioProvider ? 'available' : 'needs_key',
-    coverArtGeneration: hasImageKey ? 'available' : 'needs_key',
-    audioProvider,
+    audioGeneration: 'needs_key',
+    coverArtGeneration: 'needs_key',
+    audioProvider: null,
     message: hasChatKey
-      ? audioProvider
-        ? `Lyrics, audio (${audioProvider}), and cover art generation available.`
-        : 'Lyrics and blueprint generation available. Real audio is not configured; set SUNO_API_KEY, REPLICATE_API_TOKEN, or GenX music generation for audio.'
-      : 'Template blueprint generation is available. Configure an AI text provider for richer lyrics and Suno/Replicate/GenX for real audio.',
+      ? 'Lyrics and blueprint generation are available. Configure GenX for real audio and cover art.'
+      : 'Template blueprint generation is available. Configure an approved text provider and GenX for media.',
   }
 }
 
@@ -1063,56 +940,44 @@ export function getMusicStudioStatus(): MusicStudioStatus {
  * fallbacks. Use this from API routes where async is available.
  */
 export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & { available: boolean; audioProviderConfigured: boolean; lyricsProviderConfigured: boolean; coverArtProviderConfigured: boolean; configuredProviders: string[]; note: string }> {
-  const resolveKey = async (vaultKey: string, envVar: string): Promise<boolean> => {
+  const resolveKey = async (vaultKey: string): Promise<boolean> => {
     const vaultVal = await getVaultApiKey(vaultKey).catch(() => null)
-    return Boolean(vaultVal) || Boolean(process.env[envVar]?.trim())
+    return Boolean(vaultVal)
   }
 
-  const [hasOpenAi, hasGroq, hasTogether, hasSuno, hasReplicate, genxStatus] = await Promise.all([
-    resolveKey('openai', 'OPENAI_API_KEY'),
-    resolveKey('groq', 'GROQ_API_KEY'),
-    resolveKey('together', 'TOGETHER_API_KEY'),
-    getVaultApiKey('suno').catch(() => null).then(k => Boolean(k) || Boolean(process.env.SUNO_API_KEY?.trim())),
-    getVaultApiKey('replicate').catch(() => null).then(k => Boolean(k) || Boolean(process.env.REPLICATE_API_TOKEN?.trim())),
+  const [hasGroq, hasTogether, hasQwen, genxStatus] = await Promise.all([
+    resolveKey('groq'),
+    resolveKey('together'),
+    resolveKey('qwen'),
     getGenXStatusAsync().catch(() => ({ available: false })),
   ])
 
   const hasGenX = Boolean(genxStatus.available)
-  const hasChatKey = hasGenX || hasOpenAi || hasGroq || hasTogether
-  const hasImageKey = hasOpenAi
-
-  const audioProvider: MusicProvider | null = hasGenX
-    ? 'genx'
-    : hasSuno
-    ? 'suno'
-    : hasReplicate
-    ? 'musicgen_replicate'
-    : null
+  const hasChatKey = hasGenX || hasGroq || hasTogether || hasQwen
+  const audioProvider: MusicProvider | null = hasGenX ? 'genx' : null
 
   const configuredProviders: string[] = []
   if (hasGenX) configuredProviders.push('genx')
-  if (hasOpenAi) configuredProviders.push('openai')
   if (hasGroq) configuredProviders.push('groq')
   if (hasTogether) configuredProviders.push('together')
-  if (hasSuno) configuredProviders.push('suno')
-  if (hasReplicate) configuredProviders.push('replicate')
+  if (hasQwen) configuredProviders.push('qwen')
 
   const note = hasChatKey
     ? audioProvider
       ? `Lyrics, audio (${audioProvider}), and cover art generation available.`
-      : 'Lyrics and blueprint generation available. Real audio is not configured; configure GenX music, Suno, or Replicate for audio generation.'
-    : 'Template blueprint generation is available. Configure GenX or a text provider for richer lyrics, and GenX/Suno/Replicate for real audio.'
+      : 'Lyrics and blueprint generation are available. Configure GenX for real audio and cover art.'
+    : 'Template blueprint generation is available. Configure an approved text provider and GenX for media.'
 
   return {
     lyricsGeneration: hasChatKey ? 'available' : 'needs_key',
     audioGeneration: audioProvider ? 'available' : 'needs_key',
-    coverArtGeneration: hasImageKey ? 'available' : 'needs_key',
+    coverArtGeneration: hasGenX ? 'available' : 'needs_key',
     audioProvider,
     message: note,
     available: hasChatKey,
     audioProviderConfigured: Boolean(audioProvider),
     lyricsProviderConfigured: hasChatKey,
-    coverArtProviderConfigured: hasImageKey,
+    coverArtProviderConfigured: hasGenX,
     configuredProviders,
     note,
   }

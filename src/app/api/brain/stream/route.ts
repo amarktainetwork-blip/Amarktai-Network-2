@@ -63,10 +63,7 @@ const streamRequestSchema = z.object({
  * POST /api/brain/stream
  *
  * Server-Sent Events (SSE) streaming endpoint for real-time AI responses.
- * Supports ALL 14 providers: OpenAI, Groq, DeepSeek, OpenRouter, Together,
- * Grok, Qwen, NVIDIA, Mistral (OpenAI-compatible streaming), Gemini,
- * Anthropic, Cohere (provider-specific streaming), plus HuggingFace and
- * Replicate (non-streaming fallback via callProvider).
+ * Provider selection is constrained by the active provider mesh.
  *
  * Events emitted:
  *   - `data: {"type":"chunk","content":"..."}` — incremental response text
@@ -282,7 +279,7 @@ export async function POST(request: NextRequest) {
         // ── HuggingFace / Replicate non-streaming fallback ─────────────
         // These providers don't support SSE — call via callProvider and
         // emit the full response as a single chunk + done event.
-        if (resolvedProvider === 'huggingface' || resolvedProvider === 'replicate') {
+        if (resolvedProvider === 'huggingface') {
           const result = await callProvider(
             resolvedProvider,
             resolvedModel,
@@ -389,7 +386,7 @@ async function resolveProvider(
   requested?: string,
   costMode?: 'free_first' | 'balanced' | 'quality_first',
 ): Promise<string | null> {
-  const allSupported = [...Object.keys(STREAMING_PROVIDERS), 'anthropic', 'gemini', 'cohere', 'huggingface', 'replicate']
+  const allSupported = [...Object.keys(STREAMING_PROVIDERS), 'huggingface']
 
   if (requested && allSupported.includes(requested)) {
     return requested
@@ -400,17 +397,17 @@ async function resolveProvider(
     free_first: [
       'groq', 'deepseek', 'together', 'huggingface',
       'openrouter', 'qwen', 'nvidia',
-      'openai', 'anthropic', 'gemini', 'mistral', 'cohere', 'grok', 'replicate',
+      'groq', 'together', 'qwen', 'mimo',
     ],
     balanced: [
       'openai', 'groq', 'anthropic', 'gemini', 'mistral',
       'deepseek', 'together', 'qwen', 'grok', 'openrouter', 'nvidia', 'cohere',
-      'huggingface', 'replicate',
+      'huggingface',
     ],
     quality_first: [
       'openai', 'anthropic', 'gemini', 'grok', 'mistral',
       'groq', 'deepseek', 'together', 'openrouter', 'cohere', 'nvidia',
-      'qwen', 'huggingface', 'replicate',
+      'qwen', 'huggingface',
     ],
   }
 

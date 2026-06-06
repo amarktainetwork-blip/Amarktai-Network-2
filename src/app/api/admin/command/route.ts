@@ -111,7 +111,7 @@ async function executeImmediateCommand(
   }
 
   if (route.intent === 'create_movie') {
-    const provider = route.selectedProviders.find((item) => ['genx', 'replicate', 'together', 'qwen'].includes(item))
+    const provider = route.selectedProviders.find((item) => ['genx', 'together', 'qwen', 'huggingface'].includes(item))
     if (!provider) return { executed: false, error: 'Connected video providers are not yet supported by the video execution route.' }
     const duration = Math.min(30, Number(options?.duration || 4))
     const request = new NextRequest(originalRequest.url, {

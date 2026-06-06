@@ -32,9 +32,9 @@ export async function GET() {
     proposedBacklog: PROPOSED_PROVIDER_BACKLOG,
     recommendations: {
       keepCore: ['genx', 'github', 'qwen', 'groq', 'together', 'huggingface'],
-      keepActiveOptional: ['openrouter', 'replicate', 'elevenlabs', 'deepgram', 'firecrawl', 'mem0', 'webdock'],
+      keepActiveOptional: ['smtp'],
       advancedOnly: ['openai', 'xai'],
-      debateBeforeAdding: ['perplexity', 'tavily', 'jina', 'runpod', 'fal', 'fireworks', 'cerebras', 'suno', 'udio'],
+      debateBeforeAdding: [],
       hideFromPrimarySetup: providers.filter((provider) => !provider.showInPrimarySetup).map((provider) => provider.key),
     },
   })

@@ -13,61 +13,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getVaultApiKey } from '@/lib/brain';
+import { getGenXJobStatus } from '@/lib/genx-client';
 import { dispatchEvent } from '@/lib/webhook-manager';
 import { createArtifact } from '@/lib/artifact-store';
-
-async function pollReplicateJob(
-  predictionId: string,
-  apiKey: string,
-): Promise<{ status: string; resultUrl?: string; error?: string; meta?: string }> {
-  const res = await fetch(
-    `https://api.replicate.com/v1/predictions/${predictionId}`,
-    {
-      headers: { Authorization: `Token ${apiKey}` },
-      signal: AbortSignal.timeout(15_000),
-    },
-  );
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Replicate poll failed (${res.status}): ${errText}`);
-  }
-
-  interface ReplicatePrediction {
-    id: string;
-    status: string;
-    output?: unknown;
-    error?: string;
-    logs?: string;
-  }
-  const data = await res.json() as ReplicatePrediction;
-
-  // Replicate statuses: starting | processing | succeeded | failed | canceled
-  const normalised =
-    data.status === 'succeeded'
-      ? 'succeeded'
-      : data.status === 'failed' || data.status === 'canceled'
-        ? 'failed'
-        : 'processing';
-
-  let resultUrl: string | undefined;
-  if (data.status === 'succeeded' && data.output) {
-    // Output is typically an array of URLs or a single URL string
-    const out = data.output;
-    if (typeof out === 'string') {
-      resultUrl = out;
-    } else if (Array.isArray(out) && typeof out[0] === 'string') {
-      resultUrl = out[0] as string;
-    }
-  }
-
-  return {
-    status: normalised,
-    resultUrl,
-    error: data.error ?? undefined,
-    meta: JSON.stringify({ logs: data.logs }),
-  };
-}
 
 async function pollQwenWanJob(
   providerJobId: string,
@@ -199,10 +147,19 @@ export async function GET(
   let updated: { status: string; resultUrl?: string; error?: string; meta?: string } | null = null;
 
   try {
-    if (job.provider === 'replicate' && job.providerJobId) {
-      const apiKey = await getVaultApiKey('replicate');
-      if (apiKey) {
-        updated = await pollReplicateJob(job.providerJobId, apiKey);
+    if (job.provider === 'genx' && job.providerJobId) {
+      if (job.providerJobId.startsWith('genx-sync:')) {
+        updated = { status: 'succeeded', resultUrl: job.providerJobId.slice('genx-sync:'.length) };
+      } else {
+        const providerJobId = job.providerJobId.replace(/^genx-job:/, '');
+        const result = await getGenXJobStatus(providerJobId);
+        if (result) {
+          updated = {
+            status: result.status === 'completed' ? 'succeeded' : result.status,
+            resultUrl: result.resultUrl ?? undefined,
+            error: result.error,
+          };
+        }
       }
     } else if (job.provider === 'together' && job.providerJobId) {
       // Together AI synchronous jobs carry the result URL in the providerJobId itself.
@@ -227,7 +184,7 @@ export async function GET(
         status: 'failed',
         error:
           'Video generation via Hugging Face is not supported. ' +
-          'Re-submit your request using Replicate or Together AI.',
+          'Re-submit your request using GenX, Qwen, or Together AI.',
       };
     }
   } catch {

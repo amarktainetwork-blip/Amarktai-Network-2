@@ -225,7 +225,10 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   if (!validation.allowed) return blocked(input, input.costMode ?? 'balanced', validation.reason)
 
   const providerModels = STATIC_PROVIDER_MODELS[input.selectedProvider] ?? []
-  const governedModels = getModelsForCapability(input.capability, { provider: input.selectedProvider })
+  const governedCapability = normalizeGovernedCapability(input.capability)
+  const governedModels = governedCapability
+    ? getModelsForCapability(governedCapability, { provider: input.selectedProvider })
+    : []
   const selectedModel = input.selectedModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
   const selected = providerModels.find((model) => model.modelId === selectedModel)
   const governedSelected = governedModels.find((model) => model.modelId === selectedModel)

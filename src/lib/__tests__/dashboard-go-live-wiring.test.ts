@@ -8,23 +8,23 @@ const ROOT = path.resolve(__dirname, '../../')
 const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf8')
 
 describe('final dashboard source-of-truth wiring', () => {
-  it('keeps exactly the seven primary dashboard routes', () => {
+  it('keeps exactly the five truthful dashboard routes', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard',
-      '/admin/dashboard/command',
-      '/admin/dashboard/network-apps',
+      '/admin/dashboard/workspace',
       '/admin/dashboard/outputs',
       '/admin/dashboard/memory',
       '/admin/dashboard/settings',
       '/admin/dashboard/system',
     ])
     expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Agents')).toBe(false)
+    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Command' || item.label === 'Network Apps')).toBe(false)
   })
 
   it('uses one provider mesh with all required connections', () => {
     expect(PROVIDER_MESH.map((node) => node.id)).toEqual([
-      'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together', 'replicate', 'fal',
-      'github', 'redis', 'qdrant', 'local-crawler', 'ffmpeg', 'storage', 'smtp',
+      'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together',
+      'github', 'redis', 'qdrant', 'local-crawler', 'playwright', 'scrapy', 'trafilatura',
+      'ffmpeg', 'storage', 'smtp',
     ])
     expect(PROVIDER_MESH.every((node) => node.settingsVisible && node.systemVisible && !node.normalUserVisible)).toBe(true)
   })
@@ -39,7 +39,7 @@ describe('final dashboard source-of-truth wiring', () => {
     expect(truth).toContain('configured && notes.lastTestPassed')
   })
 
-  it('Command selects connected providers and starts real media routes', () => {
+  it('Workspace selects connected providers and starts real media routes', () => {
     const router = read('lib/command-router.ts')
     const route = read('app/api/admin/command/route.ts')
     expect(router).toContain('routeCommandWithProviderMesh')

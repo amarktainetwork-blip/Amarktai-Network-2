@@ -8,15 +8,12 @@
  */
 
 import { randomUUID } from 'crypto'
-import { callProvider, getVaultApiKey } from './brain'
+import { callProvider } from './brain'
+import { callGenXMedia } from './genx-client'
 
 // ── Limits ───────────────────────────────────────────────────────────────────
-/** Max characters sent to TTS; OpenAI tts-1 supports up to 4096. */
-const MAX_TTS_INPUT_CHARS = 4096
-/** Max characters for image generation prompts; DALL-E 3 supports up to 4000. */
+/** Max characters sent to media generation providers. */
 const MAX_IMAGE_PROMPT_CHARS = 4000
-/** Max characters for Replicate prompts. */
-const MAX_REPLICATE_PROMPT_CHARS = 2000
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -80,9 +77,9 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     name: 'Text → Image → Video',
     description: 'Generate a description, create an image from it, then animate to video',
     stages: [
-      { name: 'Enhance Prompt', inputModality: 'text', outputModality: 'text', provider: 'openai', model: 'gpt-4o-mini', config: { systemPrompt: 'Enhance this text into a detailed visual description for image generation.' } },
+      { name: 'Enhance Prompt', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-plus', config: { systemPrompt: 'Enhance this text into a detailed visual description for image generation.' } },
       { name: 'Generate Image', inputModality: 'text', outputModality: 'image', provider: 'together', model: 'black-forest-labs/FLUX.1-schnell', config: { width: 1024, height: 1024 } },
-      { name: 'Animate to Video', inputModality: 'image', outputModality: 'video', provider: 'replicate', model: 'wan-ai/wan2.1-t2v-480p', config: { duration: 4 } },
+      { name: 'Animate to Video', inputModality: 'image', outputModality: 'video', provider: 'genx', model: 'genx/default-video', config: { duration: 4 } },
     ],
   },
   text_to_code_review: {
@@ -90,14 +87,14 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     description: 'Generate code from requirements, then review it for quality',
     stages: [
       { name: 'Generate Code', inputModality: 'text', outputModality: 'code', provider: 'qwen', model: 'qwen-coder-plus', config: {} },
-      { name: 'Review Code', inputModality: 'code', outputModality: 'text', provider: 'anthropic', model: 'claude-sonnet-4', config: { systemPrompt: 'Review this code for bugs, security issues, and best practices.' } },
+      { name: 'Review Code', inputModality: 'code', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Review this code for bugs, security issues, and best practices.' } },
     ],
   },
   image_description_and_enhancement: {
     name: 'Image → Description → Enhanced Image',
     description: 'Describe an image with vision, then generate an enhanced version',
     stages: [
-      { name: 'Describe Image', inputModality: 'image', outputModality: 'text', provider: 'openai', model: 'gpt-4o', config: { systemPrompt: 'Describe this image in vivid detail.' } },
+      { name: 'Describe Image', inputModality: 'image', outputModality: 'text', provider: 'genx', model: 'genx/default-vision', config: { systemPrompt: 'Describe this image in vivid detail.' } },
       { name: 'Enhance Description', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-max', config: { systemPrompt: 'Enhance this description with more artistic and detailed elements.' } },
       { name: 'Generate Enhanced', inputModality: 'text', outputModality: 'image', provider: 'together', model: 'black-forest-labs/FLUX.1-schnell', config: {} },
     ],
@@ -106,17 +103,17 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     name: 'Text → Summary → Audio',
     description: 'Summarize text then convert to speech',
     stages: [
-      { name: 'Summarize', inputModality: 'text', outputModality: 'text', provider: 'openai', model: 'gpt-4o-mini', config: { systemPrompt: 'Create a concise, engaging summary of this text.' } },
-      { name: 'Text to Speech', inputModality: 'text', outputModality: 'audio', provider: 'openai', model: 'tts-1', config: { voice: 'nova' } },
+      { name: 'Summarize', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Create a concise, engaging summary of this text.' } },
+      { name: 'Text to Speech', inputModality: 'text', outputModality: 'audio', provider: 'genx', model: 'genx/default-tts', config: { voice: 'default' } },
     ],
   },
   research_pipeline: {
     name: 'Query → Research → Synthesize → Report',
     description: 'Multi-stage research with synthesis',
     stages: [
-      { name: 'Expand Query', inputModality: 'text', outputModality: 'text', provider: 'openai', model: 'gpt-4o', config: { systemPrompt: 'Break this research question into 3 specific sub-questions.' } },
-      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'deepseek', model: 'deepseek-reasoner', config: { systemPrompt: 'Provide thorough research and analysis.' } },
-      { name: 'Synthesize Report', inputModality: 'text', outputModality: 'text', provider: 'anthropic', model: 'claude-sonnet-4', config: { systemPrompt: 'Synthesize into a clear, well-structured research report with sections.' } },
+      { name: 'Expand Query', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-plus', config: { systemPrompt: 'Break this research question into 3 specific sub-questions.' } },
+      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'mimo', model: 'mimo-v2-pro', config: { systemPrompt: 'Provide thorough research and analysis.' } },
+      { name: 'Synthesize Report', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Synthesize into a clear, well-structured research report with sections.' } },
     ],
   },
 }
@@ -256,94 +253,57 @@ async function executeStage(stage: PipelineStage, input: unknown): Promise<unkno
 
   // text → audio — OpenAI TTS
   if (stage.inputModality === 'text' && stage.outputModality === 'audio') {
-    const apiKey = await getVaultApiKey('openai')
-    if (!apiKey) throw new Error('OpenAI API key not configured (required for TTS)')
-    const ttsRes = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: stage.model || 'tts-1',
-        input: inputStr.slice(0, MAX_TTS_INPUT_CHARS),
-        voice: (stage.config as Record<string, string> | undefined)?.voice ?? 'nova',
-        response_format: 'mp3',
-      }),
+    if (stage.provider !== 'genx') throw new Error('Audio pipeline stages require the approved GenX media provider')
+    const result = await callGenXMedia({
+      model: stage.model,
+      prompt: inputStr.slice(0, MAX_IMAGE_PROMPT_CHARS),
+      type: 'audio',
+      params: stage.config,
     })
-    if (!ttsRes.ok) {
-      const err = await ttsRes.json().catch(() => ({}))
-      throw new Error((err as { error?: { message?: string } }).error?.message ?? `TTS HTTP ${ttsRes.status}`)
-    }
-    const buf = await ttsRes.arrayBuffer()
-    const base64 = Buffer.from(buf).toString('base64')
-    return { format: 'mp3', base64, bytes: buf.byteLength }
+    if (!result.success || !result.url) throw new Error(result.error ?? 'GenX audio generation failed')
+    return { url: result.url, provider: 'genx', jobId: result.jobId ?? null }
   }
 
   // text → image — OpenAI DALL-E or Replicate
   if (stage.inputModality === 'text' && stage.outputModality === 'image') {
-    const provider = stage.provider || 'openai'
-    if (provider === 'openai') {
-      const apiKey = await getVaultApiKey('openai')
-      if (!apiKey) throw new Error('OpenAI API key not configured (required for image generation)')
-      const imgRes = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: stage.model || 'dall-e-3',
-          prompt: inputStr.slice(0, MAX_IMAGE_PROMPT_CHARS),
-          n: 1,
-          size: (stage.config as Record<string, string> | undefined)?.size ?? '1024x1024',
-          response_format: 'url',
-        }),
+    if (stage.provider === 'genx') {
+      const result = await callGenXMedia({
+        model: stage.model,
+        prompt: inputStr.slice(0, MAX_IMAGE_PROMPT_CHARS),
+        type: 'image',
+        params: stage.config,
       })
-      if (!imgRes.ok) {
-        const err = await imgRes.json().catch(() => ({}))
-        throw new Error((err as { error?: { message?: string } }).error?.message ?? `Image gen HTTP ${imgRes.status}`)
-      }
-      const imgData = await imgRes.json() as { data?: Array<{ url?: string; revised_prompt?: string }> }
-      const url = imgData.data?.[0]?.url
-      if (!url) throw new Error('No image URL returned from OpenAI')
-      return { url, revisedPrompt: imgData.data?.[0]?.revised_prompt ?? null }
+      if (!result.success || !result.url) throw new Error(result.error ?? 'GenX image generation failed')
+      return { url: result.url, provider: 'genx', jobId: result.jobId ?? null }
     }
-    // Replicate for other image models
-    const apiKey = await getVaultApiKey('replicate')
-    if (!apiKey) throw new Error('Replicate API key not configured (required for this image model)')
-    const repRes = await fetch(`https://api.replicate.com/v1/models/${stage.model}/predictions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Token ${apiKey}` },
-      body: JSON.stringify({ input: { prompt: inputStr.slice(0, MAX_REPLICATE_PROMPT_CHARS) } }),
-    })
-    if (!repRes.ok) throw new Error(`Replicate HTTP ${repRes.status}`)
-    const repData = await repRes.json() as { urls?: { get?: string }; error?: string }
-    if (repData.error) throw new Error(repData.error)
-    return { replicatePredictionUrl: repData.urls?.get ?? null }
+    const result = await callProvider(stage.provider, stage.model, inputStr.slice(0, MAX_IMAGE_PROMPT_CHARS))
+    if (!result.ok || !result.output) throw new Error(result.error ?? `${stage.provider} image generation failed`)
+    return { url: result.output, provider: stage.provider }
   }
 
   // image → text (vision) — OpenAI GPT-4V
   if (stage.inputModality === 'image' && stage.outputModality === 'text') {
-    const apiKey = await getVaultApiKey('openai')
-    if (!apiKey) throw new Error('OpenAI API key not configured (required for vision)')
     const imageUrl = typeof input === 'string' ? input : (input as { url?: string })?.url
     if (!imageUrl) throw new Error('Vision stage expects an image URL as input')
-    const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: stage.model || 'gpt-4o',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: imageUrl } },
-            { type: 'text', text: (stage.config as Record<string, string> | undefined)?.prompt ?? 'Describe this image in detail.' },
-          ],
-        }],
-        max_tokens: 1024,
-      }),
+    const prompt = `${String(stage.config.systemPrompt ?? 'Describe this image in detail.')}\nImage URL: ${imageUrl}`
+    const result = await callProvider(stage.provider, stage.model, prompt)
+    if (!result.ok) throw new Error(result.error ?? `${stage.provider} vision analysis failed`)
+    return result.output ?? ''
+  }
+
+  if (stage.inputModality === 'image' && stage.outputModality === 'video') {
+    if (stage.provider !== 'genx') throw new Error('Image-to-video pipeline stages require the approved GenX media provider')
+    const imageUrl = typeof input === 'string' ? input : (input as { url?: string })?.url
+    if (!imageUrl) throw new Error('Image-to-video stage expects an image URL as input')
+    const result = await callGenXMedia({
+      model: stage.model,
+      prompt: String(stage.config.prompt ?? 'Animate this image naturally'),
+      type: 'video',
+      duration: typeof stage.config.duration === 'number' ? stage.config.duration : undefined,
+      params: { ...stage.config, inputUrl: imageUrl },
     })
-    if (!visionRes.ok) {
-      const err = await visionRes.json().catch(() => ({}))
-      throw new Error((err as { error?: { message?: string } }).error?.message ?? `Vision HTTP ${visionRes.status}`)
-    }
-    const visionData = await visionRes.json() as { choices?: Array<{ message?: { content?: string } }> }
-    return visionData.choices?.[0]?.message?.content ?? ''
+    if (!result.success || !result.url) throw new Error(result.error ?? 'GenX video generation failed')
+    return { url: result.url, provider: 'genx', jobId: result.jobId ?? null }
   }
 
   // Unsupported transition — return structured error rather than fake output
