@@ -5,7 +5,7 @@
  * Returns real test results — never faked.
  *
  * Response fields:
- *   success          boolean  — overall success (both catalog and chat OK)
+ *   success          boolean  — overall success (catalog OK and at least one execution endpoint OK)
  *   catalogOk        boolean  — model catalog endpoint responded OK
  *   chatOk           boolean  — chat completions endpoint responded OK
  *   modelCount       number   — number of models in catalog
@@ -255,7 +255,8 @@ export async function POST(req: NextRequest) {
   invalidateEndpointProfile()
 
   const latencyMs = Date.now() - start
-  const success = catalogOk && chatOk
+  const executionOk = chatOk || generateOk
+  const success = catalogOk && executionOk
   if (!inlineKey) {
     try {
       const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
@@ -273,6 +274,7 @@ export async function POST(req: NextRequest) {
             catalogOk,
             chatOk,
             generateOk,
+            executionOk,
           }),
         },
         create: {
@@ -289,6 +291,7 @@ export async function POST(req: NextRequest) {
             catalogOk,
             chatOk,
             generateOk,
+            executionOk,
           }),
         },
       })
@@ -300,6 +303,7 @@ export async function POST(req: NextRequest) {
     catalogOk,
     chatOk,
     generateOk,
+    executionOk,
     generateNotTested,
     modelCount,
     latencyMs,
@@ -314,8 +318,8 @@ export async function POST(req: NextRequest) {
     ...(catalogError  ? { catalogError }  : {}),
     ...(chatError     ? { chatError }     : {}),
     ...(generateError ? { generateError } : {}),
-    ...(!success && !catalogError && !chatError
-      ? { error: 'GenX connection failed' }
+    ...(!success
+      ? { error: catalogError || chatError || generateError || 'GenX connection failed' }
       : {}),
   })
 }
