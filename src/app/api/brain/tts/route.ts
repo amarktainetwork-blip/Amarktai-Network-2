@@ -1,588 +1,247 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getVaultApiKey } from '@/lib/brain';
-import { buildAffectiveVoiceConfig, type TTSProvider, type AffectiveVoiceConfig } from '@/lib/ssml-voice';
-import { detectEmotions } from '@/lib/emotion-engine';
-import { recordUsage } from '@/lib/usage-meter';
-import { estimateCostUsd } from '@/lib/budget-tracker';
-import { saveMemory } from '@/lib/memory';
-import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'crypto'
+import { NextRequest, NextResponse } from 'next/server'
+import { getVaultApiKey } from '@/lib/brain'
+import { callGenXMedia, GENX_TTS_MODELS } from '@/lib/genx-client'
+import { createArtifact } from '@/lib/artifact-store'
+import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
+import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 
-/**
- * POST /api/brain/tts — Text-to-Speech endpoint
- *
- * Multi-provider support:
- *   - Groq TTS (low-cost, fast — playai-tts / playai-tts-arabic)
- *   - OpenAI TTS (premium — tts-1 / tts-1-hd)
- *   - Gemini TTS (premium multimodal — gemini-2.5-flash-preview-tts)
- *   - HuggingFace TTS (free fallback — facebook/mms-tts-eng / facebook/mms-tts-fra)
- *
- * Emotion-aware voice: When `emotionAware` is true (default: false), the
- * endpoint runs the Emotion Engine on the input text and adapts voice/speed
- * based on detected emotion. For Gemini, SSML prosody markup is generated.
- *
- * API keys are resolved from the DB vault first, then env var fallback.
- *
- * Accepts a JSON body with:
- *   - text (string, required) — the text to synthesise
- *   - voiceId (string, optional) — voice identifier (default: provider-specific)
- *   - gender (string, optional) — 'male' | 'female' — maps to a default voice for the provider
- *   - accent (string, optional) — accent hint used for model/voice selection
- *   - model (string, optional) — TTS model (default: auto-selected by provider)
- *   - speed (number, optional) — playback speed 0.25–4.0 (default: 1.0)
- *   - provider (string, optional) — 'groq' | 'openai' | 'gemini' | 'huggingface' | 'auto' (default: 'auto')
- *   - emotionAware (boolean, optional) — enable emotion-adaptive voice (default: false)
- *
- * Returns audio/mpeg stream on success.
- *
- * STRICT RULE: Never fakes success. Returns error if no provider configured.
- */
+type TtsCapability = 'tts' | 'adult_voice'
+type TtsProvider = 'auto' | 'genx' | 'groq' | 'huggingface'
 
-/** Default voice mappings per provider and gender */
-const VOICE_BY_GENDER: Record<string, { male: string; female: string; default: string }> = {
-  groq: {
-    male:    'Atlas-PlayAI',
-    female:  'Arista-PlayAI',
-    default: 'Arista-PlayAI',
-  },
-  openai: {
-    male:    'onyx',
-    female:  'nova',
-    default: 'alloy',
-  },
-  gemini: {
-    male:    'Charon',
-    female:  'Kore',
-    default: 'Kore',
-  },
-  huggingface: {
-    male:    'facebook/mms-tts-eng',
-    female:  'facebook/mms-tts-eng',
-    default: 'facebook/mms-tts-eng',
-  },
-  elevenlabs: {
-    male:    'pNInz6obpgDQGcFmaJgB', // Adam
-    female:  'EXAVITQu4vr4xnSDxMaL', // Bella
-    default: 'EXAVITQu4vr4xnSDxMaL',
-  },
-  deepgram: {
-    male:    'aura-2-zeus-en',
-    female:  'aura-2-luna-en',
-    default: 'aura-2-luna-en',
-  },
+const VOICES = {
+  groq: { male: 'Atlas-PlayAI', female: 'Arista-PlayAI', default: 'Arista-PlayAI' },
+}
+
+function result(input: {
+  success: boolean
+  capability: TtsCapability
+  provider?: string | null
+  model?: string | null
+  jobStatus: string
+  artifactId?: string | null
+  storageUrl?: string | null
+  error?: string | null
+  blocker?: string | null
+  audioBase64?: string
+  traceId: string
+  attempts?: Array<Record<string, unknown>>
+}) {
+  return {
+    success: input.success,
+    executed: input.success,
+    capability: input.capability,
+    provider: input.provider ?? null,
+    model: input.model ?? null,
+    jobStatus: input.jobStatus,
+    artifactId: input.artifactId ?? null,
+    storageUrl: input.storageUrl ?? null,
+    error: input.error ?? null,
+    blocker: input.blocker ?? input.error ?? null,
+    audioBase64: input.audioBase64,
+    traceId: input.traceId,
+    attempts: input.attempts ?? [],
+  }
 }
 
 export async function POST(request: NextRequest) {
+  const traceId = randomUUID()
   try {
-    const body = await request.json();
-    const {
-      text,
-      model: requestedModel,
-      speed: rawSpeed,
-      provider: requestedProvider = 'auto',
-      emotionAware = false,
-      // Optional appSlug: when provided, usage is metered back to that app/workspace
-      // and voice persona settings are auto-loaded from the AppAgent record.
-      appSlug: meterAppSlug,
-    } = body;
+    const body = await request.json().catch(() => ({})) as Record<string, unknown>
+    const text = typeof body.text === 'string' ? body.text.trim() : ''
+    const capability: TtsCapability = body.capability === 'adult_voice' ? 'adult_voice' : 'tts'
+    const appSlug = typeof body.appSlug === 'string' && body.appSlug ? body.appSlug : 'amarktai-network'
+    const responseFormat = body.responseFormat === 'audio' ? 'audio' : 'json'
+    if (!text) {
+      return NextResponse.json(result({ success: false, capability, traceId, jobStatus: 'blocked', error: 'text is required.' }), { status: 400 })
+    }
 
-    // ── Load voice persona from DB (Phase 1 fix) ─────────────────────────────
-    // When an appSlug is provided, load the persisted voice persona settings
-    // from the AppAgent table and use them as the baseline for this TTS call.
-    // Explicit per-call params (voiceId, gender, accent, speed) always win.
-    let personaVoiceId: string | undefined
-    let personaGender: string | undefined
-    let personaAccent: string | undefined
-    let personaSpeed: number | undefined
-    const personaApplied: Record<string, string> = {}
+    if (capability === 'adult_voice') {
+      await loadAppSafetyConfigFromDB(appSlug)
+      const safety = getAppSafetyConfig(appSlug)
+      if (safety.safeMode || !safety.adultMode) {
+        return NextResponse.json(result({
+          success: false,
+          capability,
+          traceId,
+          jobStatus: 'blocked',
+          error: 'Adult voice requires adultMode=true and safeMode=false for this app.',
+        }), { status: 403 })
+      }
+      const scan = scanContent(text, appSlug)
+      if (scan.flagged) {
+        return NextResponse.json(result({
+          success: false,
+          capability,
+          traceId,
+          jobStatus: 'blocked',
+          error: `Text blocked by policy: ${scan.categories.join(', ')}.`,
+        }), { status: 422 })
+      }
+    }
 
-    if (meterAppSlug && typeof meterAppSlug === 'string') {
-      try {
-        const agent = await prisma.appAgent.findUnique({
-          where: { appSlug: meterAppSlug },
-          select: {
-            voiceGender: true,
-            voiceAccent: true,
-            voiceSpeed: true,
-          },
-        })
-        if (agent) {
-          if (agent.voiceGender) {
-            personaGender = agent.voiceGender === 'neutral' ? undefined : agent.voiceGender
-            personaApplied.gender = agent.voiceGender
+    const requestedProvider = (typeof body.provider === 'string' ? body.provider : 'auto') as TtsProvider
+    if (!['auto', 'genx', 'groq', 'huggingface'].includes(requestedProvider)) {
+      return NextResponse.json(result({
+        success: false,
+        capability,
+        traceId,
+        jobStatus: 'blocked',
+        error: `Provider "${requestedProvider}" is not in the canonical ${capability} route.`,
+      }), { status: 400 })
+    }
+
+    const route = getMediaCapabilityRoute(capability)!
+    const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
+    const voiceId = typeof body.voiceId === 'string' && body.voiceId ? body.voiceId : null
+    const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : 'default'
+    const attempts: Array<Record<string, unknown>> = []
+
+    for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
+      const model = requestedModel ?? entry.model
+      let audio: Buffer | null = null
+      let mimeType = 'audio/mpeg'
+      let error = ''
+
+      if (entry.provider === 'genx') {
+        const genxModel = GENX_TTS_MODELS.includes(model as (typeof GENX_TTS_MODELS)[number]) ? model : GENX_TTS_MODELS[0]
+        const generated = await callGenXMedia({ model: genxModel, prompt: text, type: 'audio' }).catch((cause) => ({
+          success: false,
+          url: null,
+          error: cause instanceof Error ? cause.message : 'GenX TTS failed.',
+        }))
+        if (generated.success && generated.url) {
+          const audioResponse = await fetch(generated.url, { signal: AbortSignal.timeout(30_000) }).catch(() => null)
+          if (audioResponse?.ok) {
+            audio = Buffer.from(await audioResponse.arrayBuffer())
+            mimeType = audioResponse.headers.get('content-type') ?? mimeType
+          } else {
+            error = 'GenX returned an audio URL that could not be downloaded.'
           }
-          if (agent.voiceAccent) {
-            personaAccent = agent.voiceAccent
-            personaApplied.accent = agent.voiceAccent
-          }
-          if (agent.voiceSpeed) {
-            personaSpeed = agent.voiceSpeed === 'slow' ? 0.85
-              : agent.voiceSpeed === 'fast' ? 1.2
-              : 1.0
-            personaApplied.speed = agent.voiceSpeed
+        } else {
+          error = generated.error ?? 'GenX returned no audio.'
+        }
+      }
+
+      if (entry.provider === 'groq') {
+        const apiKey = await getVaultApiKey('groq')
+        if (!apiKey) {
+          error = 'Groq API key is missing.'
+        } else {
+          const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model,
+              input: text,
+              voice: voiceId ?? VOICES.groq[gender],
+              response_format: 'mp3',
+            }),
+            signal: AbortSignal.timeout(60_000),
+          }).catch(() => null)
+          if (response?.ok) {
+            audio = Buffer.from(await response.arrayBuffer())
+            mimeType = response.headers.get('content-type') ?? mimeType
+          } else {
+            error = response ? `Groq returned HTTP ${response.status}.` : 'Groq TTS request failed.'
           }
         }
-      } catch {
-        // DB lookup failure → proceed with call-level defaults
       }
-    }
 
-    // Resolve final values: explicit call param wins over persona, persona wins over default
-    const voiceId: string | undefined = body.voiceId ?? personaVoiceId
-    const gender: string | undefined = body.gender ?? personaGender
-    const accent: string | undefined = body.accent ?? personaAccent
-    const speed: number = rawSpeed ?? personaSpeed ?? 1.0
-
-    /**
-     * Meter this TTS call back to the given appSlug if one was provided.
-     * Called fire-and-forget (void) so it never blocks the audio response.
-     */
-    const meterCall = (provider: string, model: string, text: string, success: boolean) => {
-      if (!meterAppSlug || typeof meterAppSlug !== 'string') return;
-      const tokens = Math.max(1, Math.ceil(text.length / 4));
-      const estimated = Math.round(estimateCostUsd(model, tokens) * 100);
-      void recordUsage({
-        appSlug: meterAppSlug,
-        capability: 'tts',
-        provider,
-        model,
-        success,
-        costUsdCents: success ? Math.max(10, estimated) : 0,
-        artifactCreated: success,
-      });
-    };
-
-    if (!text || typeof text !== 'string' || text.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'text is required and must be a non-empty string', executed: false },
-        { status: 400 },
-      );
-    }
-
-    // Resolve API keys from DB vault (with env fallback)
-    const groqKey       = await getVaultApiKey('groq');
-    const openaiKey     = await getVaultApiKey('openai');
-    const geminiKey     = await getVaultApiKey('gemini');
-    const hfKey         = await getVaultApiKey('huggingface');
-    // ElevenLabs and Deepgram use the service vault (integrationConfig)
-    const { getServiceKey } = await import('@/lib/service-vault');
-    const elevenLabsKey = await getServiceKey('elevenlabs', 'ELEVENLABS_API_KEY');
-    const deepgramKey   = await getServiceKey('deepgram', 'DEEPGRAM_API_KEY');
-
-    // ── GenX TTS first attempt (before provider selection) ───────────────
-    if (requestedProvider === 'auto' || requestedProvider === 'genx') {
-      try {
-        const { callGenXMedia, GENX_TTS_MODELS } = await import('@/lib/genx-client');
-        const genxModel = requestedModel ?? GENX_TTS_MODELS[0];
-        const genxResult = await callGenXMedia({ model: genxModel, prompt: text.trim(), type: 'audio' });
-        if (genxResult.success && genxResult.url) {
-          // Fetch audio bytes from GenX and stream back
-          const audioRes = await fetch(genxResult.url, { signal: AbortSignal.timeout(30_000) });
-          if (audioRes.ok) {
-            const audioBytes = await audioRes.arrayBuffer();
-            return new NextResponse(audioBytes, {
-              status: 200,
-              headers: {
-                'Content-Type': 'audio/mpeg',
-                'X-Provider': 'genx',
-                'X-Model': genxResult.model,
-                'X-Executed': 'true',
-                'X-Capability': 'voice_output',
-              },
-            });
+      if (entry.provider === 'huggingface') {
+        const apiKey = await getVaultApiKey('huggingface')
+        if (!apiKey) {
+          error = 'Hugging Face API key is missing.'
+        } else {
+          const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inputs: text }),
+            signal: AbortSignal.timeout(60_000),
+          }).catch(() => null)
+          if (response?.ok) {
+            audio = Buffer.from(await response.arrayBuffer())
+            mimeType = response.headers.get('content-type') ?? mimeType
+          } else {
+            error = response ? `Hugging Face returned HTTP ${response.status}.` : 'Hugging Face TTS request failed.'
           }
         }
-        // GenX TTS failed — fall through to other providers
-      } catch { /* fall through */ }
-      if (requestedProvider === 'genx') {
-        return NextResponse.json(
-          { error: 'GenX TTS requested but GenX is not configured or returned no audio. Add GENX_API_URL/GENX_API_KEY.', executed: false, provider: 'genx', capability: 'voice_output' },
-          { status: 503 },
-        );
       }
-    }
 
-    // Determine provider
-    let provider: 'groq' | 'openai' | 'gemini' | 'huggingface' | 'elevenlabs' | 'deepgram';
-    if (requestedProvider === 'groq') {
-      if (!groqKey) {
-        return NextResponse.json(
-          { error: 'Groq TTS requested but no Groq API key is configured. Add it via Admin → AI Providers.', executed: false, provider: 'groq', capability: 'voice_output' },
-          { status: 503 },
-        );
+      if (!audio?.length) {
+        attempts.push({ provider: entry.provider, model, status: error.includes('missing') ? 'needs_key' : 'test_failed', error })
+        continue
       }
-      provider = 'groq';
-    } else if (requestedProvider === 'openai') {
-      if (!openaiKey) {
-        return NextResponse.json(
-          { error: 'OpenAI TTS requested but no OpenAI API key is configured. Add it via Admin → AI Providers.', executed: false, provider: 'openai', capability: 'voice_output' },
-          { status: 503 },
-        );
-      }
-      provider = 'openai';
-    } else if (requestedProvider === 'gemini') {
-      if (!geminiKey) {
-        return NextResponse.json(
-          { error: 'Gemini TTS requested but no Gemini API key is configured. Add it via Admin → AI Providers.', executed: false, provider: 'gemini', capability: 'voice_output' },
-          { status: 503 },
-        );
-      }
-      provider = 'gemini';
-    } else if (requestedProvider === 'huggingface') {
-      if (!hfKey) {
-        return NextResponse.json(
-          { error: 'HuggingFace TTS requested but no HuggingFace API key is configured. Add it via Admin → AI Providers.', executed: false, provider: 'huggingface', capability: 'voice_output' },
-          { status: 503 },
-        );
-      }
-      provider = 'huggingface';
-    } else if (requestedProvider === 'elevenlabs') {
-      if (!elevenLabsKey) {
-        return NextResponse.json(
-          { error: 'ElevenLabs TTS requested but no ElevenLabs API key is configured. Add it via Admin → Settings → Service Integrations.', executed: false, provider: 'elevenlabs', capability: 'voice_output' },
-          { status: 503 },
-        );
-      }
-      provider = 'elevenlabs';
-    } else if (requestedProvider === 'deepgram') {
-      if (!deepgramKey) {
-        return NextResponse.json(
-          { error: 'Deepgram TTS requested but no Deepgram API key is configured. Add it via Admin → Settings → Service Integrations.', executed: false, provider: 'deepgram', capability: 'voice_output' },
-          { status: 503 },
-        );
-      }
-      provider = 'deepgram';
-    } else {
-      // Auto-select: try providers in priority order: ElevenLabs → OpenAI → Groq → Deepgram → Gemini → HuggingFace
-      if (elevenLabsKey) {
-        provider = 'elevenlabs';
-      } else if (openaiKey) {
-        provider = 'openai';
-      } else if (groqKey) {
-        provider = 'groq';
-      } else if (deepgramKey) {
-        provider = 'deepgram';
-      } else if (geminiKey) {
-        provider = 'gemini';
-      } else if (hfKey) {
-        provider = 'huggingface';
-      } else {
-        return NextResponse.json(
-          {
-            error: 'No TTS provider configured. Add an API key via Admin → AI Providers (OpenAI, Groq, Gemini) or Admin → Settings → Service Integrations (ElevenLabs, Deepgram).',
-            executed: false,
-            capability: 'voice_output',
-          },
-          { status: 503 },
-        );
-      }
-    }
 
-    // Resolve the effective voice ID based on gender preference (if no explicit voiceId given)
-    const resolveVoice = (prov: string): string => {
-      if (voiceId) return voiceId;
-      const map = VOICE_BY_GENDER[prov];
-      if (!map) return '';
-      if (gender === 'male') return map.male;
-      if (gender === 'female') return map.female;
-      return map.default;
-    };
-
-    // ── Emotion-aware voice adaptation ─────────────────────────────────
-    // When enabled, detects emotion in the text and adapts voice/speed/SSML.
-    let affective: AffectiveVoiceConfig | null = null;
-    if (emotionAware) {
       try {
-        const emotionAnalysis = detectEmotions(text);
-        affective = buildAffectiveVoiceConfig(text, emotionAnalysis, provider as TTSProvider);
-      } catch {
-        // Emotion detection failed — proceed with default voice settings
-      }
-    }
-
-    if (provider === 'groq') {
-      // Groq TTS via OpenAI-compatible endpoint
-      const model = requestedModel ?? (accent === 'arabic' ? 'playai-tts-arabic' : 'playai-tts');
-      const voice = affective?.voiceOverride ?? resolveVoice('groq');
-
-      const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        const artifact = await createArtifact({
+          appSlug,
+          type: 'audio',
+          subType: capability,
+          title: `${capability === 'adult_voice' ? 'Adult voice' : 'TTS'}: ${text.slice(0, 80)}`,
+          provider: entry.provider,
           model,
-          input: text,
-          voice,
-          response_format: 'mp3',
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return NextResponse.json(
-          { error: 'Groq TTS generation failed', detail: err, executed: false, provider: 'groq', model },
-          { status: response.status },
-        );
-      }
-
-      const audioBuffer = await response.arrayBuffer();
-      meterCall('groq', model, text, true);
-      // Auto-memory: record lightweight TTS event for this app
-      if (meterAppSlug) {
-        void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via groq/${model}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-      }
-      return new NextResponse(audioBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': String(audioBuffer.byteLength),
-          'X-Provider': 'groq',
-          'X-Model': model,
-          ...(Object.keys(personaApplied).length ? { 'X-Persona-Applied': JSON.stringify(personaApplied) } : {}),
-        },
-      });
-    }
-
-    if (provider === 'gemini') {
-      // Gemini TTS via Google Generative Language API
-      // Gemini supports SSML — use affective SSML when emotion-aware is enabled
-      const model = requestedModel ?? 'gemini-2.5-flash-preview-tts';
-      const voice = affective?.voiceOverride ?? resolveVoice('gemini');
-      const inputText = affective?.ssmlSupported && affective?.ssml ? affective.ssml : text;
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: inputText }] }],
-            generationConfig: {
-              responseModalities: ['AUDIO'],
-              speechConfig: {
-                voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } },
-              },
+          traceId,
+          content: audio,
+          mimeType,
+          metadata: { capability },
+        })
+        if (responseFormat === 'audio') {
+          return new NextResponse(new Uint8Array(audio), {
+            status: 200,
+            headers: {
+              'Content-Type': mimeType,
+              'Content-Length': String(audio.length),
+              'X-Capability': capability,
+              'X-Provider': entry.provider,
+              'X-Model': model,
+              'X-Job-Status': 'completed',
+              'X-Artifact-Id': artifact.id,
+              'X-Storage-Url': artifact.storageUrl,
             },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.text();
-        return NextResponse.json(
-          { error: 'Gemini TTS generation failed', detail: err, executed: false, provider: 'gemini', model },
-          { status: response.status },
-        );
+          })
+        }
+        return NextResponse.json(result({
+          success: true,
+          capability,
+          traceId,
+          provider: entry.provider,
+          model,
+          jobStatus: 'completed',
+          artifactId: artifact.id,
+          storageUrl: artifact.storageUrl,
+          audioBase64: `data:${mimeType};base64,${audio.toString('base64')}`,
+          attempts,
+        }))
+      } catch (artifactError) {
+        return NextResponse.json(result({
+          success: false,
+          capability,
+          traceId,
+          provider: entry.provider,
+          model,
+          jobStatus: 'failed',
+          error: `Generation completed but artifact persistence failed: ${artifactError instanceof Error ? artifactError.message : 'unknown error'}`,
+          attempts,
+        }), { status: 500 })
       }
-
-      const result = await response.json();
-      const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-      if (!audioData) {
-        return NextResponse.json(
-          { error: 'Gemini TTS returned no audio data', executed: false, provider: 'gemini', model },
-          { status: 502 },
-        );
-      }
-
-      const audioBuffer = Buffer.from(audioData, 'base64');
-      meterCall('gemini', model, text, true);
-      // Auto-memory
-      if (meterAppSlug) {
-        void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via gemini/${model}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-      }
-      return new NextResponse(audioBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': String(audioBuffer.byteLength),
-          'X-Provider': 'gemini',
-          'X-Model': model,
-          ...(Object.keys(personaApplied).length ? { 'X-Persona-Applied': JSON.stringify(personaApplied) } : {}),
-          ...(affective ? {
-            'X-Emotion': affective.sourceEmotion,
-            'X-Emotion-Confidence': String(affective.confidence),
-            'X-SSML-Used': String(affective.ssmlSupported),
-          } : {}),
-        },
-      });
     }
 
-    if (provider === 'huggingface') {
-      // HuggingFace Inference API — free fallback TTS
-      const ALLOWED_HF_TTS_MODELS = ['facebook/mms-tts-eng', 'facebook/mms-tts-fra'] as const;
-      const matched = ALLOWED_HF_TTS_MODELS.find((m) => m === requestedModel);
-      const hfModel = matched ?? 'facebook/mms-tts-eng';
-
-      const response = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${hfKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ inputs: text }),
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return NextResponse.json(
-          { error: 'HuggingFace TTS generation failed', detail: err, executed: false, provider: 'huggingface', model: hfModel },
-          { status: response.status },
-        );
-      }
-
-      const audioBuffer = await response.arrayBuffer();
-      meterCall('huggingface', hfModel, text, true);
-      // Auto-memory
-      if (meterAppSlug) {
-        void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via huggingface/${hfModel}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-      }
-      return new NextResponse(audioBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': String(audioBuffer.byteLength),
-          'X-Provider': 'huggingface',
-          'X-Model': hfModel,
-        },
-      });
-    }
-
-    // ── ElevenLabs TTS ────────────────────────────────────────────────────────
-    if (provider === 'elevenlabs') {
-      const voice = resolveVoice('elevenlabs');
-      const model = requestedModel ?? 'eleven_multilingual_v2';
-
-      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voice)}`, {
-        method: 'POST',
-        headers: {
-          'xi-api-key': elevenLabsKey!,
-          'Content-Type': 'application/json',
-          Accept: 'audio/mpeg',
-        },
-        body: JSON.stringify({
-          text,
-          model_id: model,
-          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return NextResponse.json(
-          { error: 'ElevenLabs TTS generation failed', detail: err, executed: false, provider: 'elevenlabs', model },
-          { status: response.status },
-        );
-      }
-
-      const audioBuffer = await response.arrayBuffer();
-      meterCall('elevenlabs', model, text, true);
-      if (meterAppSlug) {
-        void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via elevenlabs/${model}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-      }
-      return new NextResponse(audioBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': String(audioBuffer.byteLength),
-          'X-Provider': 'elevenlabs',
-          'X-Model': model,
-          'X-Voice': voice,
-        },
-      });
-    }
-
-    // ── Deepgram TTS ──────────────────────────────────────────────────────────
-    if (provider === 'deepgram') {
-      const voice = resolveVoice('deepgram');
-      const model = requestedModel ?? voice;
-
-      const response = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Token ${deepgramKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return NextResponse.json(
-          { error: 'Deepgram TTS generation failed', detail: err, executed: false, provider: 'deepgram', model },
-          { status: response.status },
-        );
-      }
-
-      const audioBuffer = await response.arrayBuffer();
-      meterCall('deepgram', model, text, true);
-      if (meterAppSlug) {
-        void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via deepgram/${model}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-      }
-      return new NextResponse(audioBuffer, {
-        status: 200,
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Content-Length': String(audioBuffer.byteLength),
-          'X-Provider': 'deepgram',
-          'X-Model': model,
-        },
-      });
-    }
-
-    // OpenAI TTS (premium path)
-    // OpenAI does not support SSML — use voice and speed overrides from affective config
-    const model = requestedModel ?? 'tts-1';
-    const voice = affective?.voiceOverride ?? resolveVoice('openai');
-    const effectiveSpeed = affective?.speedOverride ?? speed;
-
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: text,
-        voice,
-        speed: effectiveSpeed,
-        response_format: 'mp3',
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return NextResponse.json(
-        { error: 'OpenAI TTS generation failed', detail: err, executed: false, provider: 'openai', model },
-        { status: response.status },
-      );
-    }
-
-    const audioBuffer = await response.arrayBuffer();
-    meterCall('openai', model, text, true);
-    // Auto-memory
-    if (meterAppSlug) {
-      void saveMemory({ appSlug: meterAppSlug, memoryType: 'event', key: 'tts', content: `TTS generated via openai/${model}: "${text.slice(0, 100)}"`, importance: 0.3, ttlDays: 30 });
-    }
-    return new NextResponse(audioBuffer, {
-      status: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': String(audioBuffer.byteLength),
-        'X-Provider': 'openai',
-        'X-Model': model,
-        ...(Object.keys(personaApplied).length ? { 'X-Persona-Applied': JSON.stringify(personaApplied) } : {}),
-        ...(affective ? {
-          'X-Emotion': affective.sourceEmotion,
-          'X-Emotion-Confidence': String(affective.confidence),
-        } : {}),
-      },
-    });
-  } catch (err) {
-    return NextResponse.json(
-      { error: 'Internal server error', detail: String(err), executed: false },
-      { status: 500 },
-    );
+    return NextResponse.json(result({
+      success: false,
+      capability,
+      traceId,
+      jobStatus: 'needs_setup',
+      error: `No tested ${capability} provider returned real audio.`,
+      attempts,
+    }), { status: 503 })
+  } catch (error) {
+    return NextResponse.json(result({
+      success: false,
+      capability: 'tts',
+      traceId,
+      jobStatus: 'failed',
+      error: error instanceof Error ? error.message : 'TTS generation failed.',
+    }), { status: 500 })
   }
 }

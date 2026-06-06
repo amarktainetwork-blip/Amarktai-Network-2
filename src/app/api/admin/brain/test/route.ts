@@ -313,6 +313,7 @@ export async function POST(request: NextRequest) {
         gender: body.gender,
         accent: body.accent,
         provider: body.ttsProvider ?? 'auto',
+        responseFormat: 'audio',
       })
       const ttsRes = await handleBrainTTS(ttsReq)
       const latencyMs = Date.now() - start

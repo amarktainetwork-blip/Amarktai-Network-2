@@ -1,91 +1,68 @@
-/**
- * GET /api/brain/video-generate/[jobId]
- *
- * Polls the status of an async video generation job.
- *
- * Response status field:
- *   pending     — job accepted, not yet started
- *   processing  — provider is generating
- *   succeeded   — generation complete; resultUrl contains the video URL
- *   failed      — generation failed; errorMessage explains why
- */
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getVaultApiKey } from '@/lib/brain'
+import { getGenXJobStatus } from '@/lib/genx-client'
+import { dispatchEvent } from '@/lib/webhook-manager'
+import { createArtifact } from '@/lib/artifact-store'
 
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getVaultApiKey } from '@/lib/brain';
-import { getGenXJobStatus } from '@/lib/genx-client';
-import { dispatchEvent } from '@/lib/webhook-manager';
-import { createArtifact } from '@/lib/artifact-store';
-
-async function pollQwenWanJob(
-  providerJobId: string,
-  apiKey: string,
-): Promise<{ status: string; resultUrl?: string; error?: string }> {
-  // providerJobId format: "qwen-wan:<task_id>"
-  const taskId = providerJobId.replace(/^qwen-wan:/, '');
-  if (!taskId) throw new Error('Invalid Qwen Wan providerJobId format');
-
-  const res = await fetch(
-    `https://dashscope-intl.aliyuncs.com/api/v1/tasks/${taskId}`,
-    {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(15_000),
-    },
-  );
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`Qwen Wan poll failed (${res.status}): ${errText}`);
-  }
-
-  interface QwenTaskResult {
+async function pollQwenWanJob(providerJobId: string, apiKey: string) {
+  const taskId = providerJobId.replace(/^qwen-wan:/, '')
+  if (!taskId) throw new Error('Invalid Qwen Wan provider job ID.')
+  const response = await fetch(`https://dashscope-intl.aliyuncs.com/api/v1/tasks/${taskId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(15_000),
+  })
+  if (!response.ok) throw new Error(`Qwen Wan poll returned HTTP ${response.status}.`)
+  const data = await response.json() as {
     output?: {
-      task_status?: string;
-      video_url?: string;
-      results?: Array<{ url?: string; video_url?: string }>;
-      message?: string;
-    };
+      task_status?: string
+      video_url?: string
+      results?: Array<{ url?: string; video_url?: string }>
+      message?: string
+    }
   }
-  const data = await res.json() as QwenTaskResult;
-  const taskStatus = data?.output?.task_status ?? 'RUNNING';
+  if (data.output?.task_status === 'SUCCEEDED') {
+    return {
+      status: 'succeeded',
+      resultUrl: data.output.video_url ?? data.output.results?.[0]?.video_url ?? data.output.results?.[0]?.url,
+    }
+  }
+  if (data.output?.task_status === 'FAILED') {
+    return { status: 'failed', error: data.output.message ?? 'Qwen Wan video generation failed.' }
+  }
+  return { status: 'processing' }
+}
 
-  if (taskStatus === 'SUCCEEDED') {
-    // Result may be in video_url or results[0].url/video_url
-    const resultUrl =
-      data.output?.video_url ??
-      data.output?.results?.[0]?.video_url ??
-      data.output?.results?.[0]?.url;
-    return { status: 'succeeded', resultUrl };
+function capabilityFor(resultMeta: string | null) {
+  try {
+    const parsed = JSON.parse(resultMeta ?? '{}') as { capability?: string }
+    return parsed.capability === 'adult_video' ? 'adult_video' : 'video_generation'
+  } catch {
+    return 'video_generation'
   }
-  if (taskStatus === 'FAILED') {
-    return { status: 'failed', error: data.output?.message ?? 'Qwen Wan video generation failed' };
-  }
-  // PENDING | RUNNING | SUSPENDED
-  return { status: 'processing' };
 }
 
 async function ensureVideoArtifact(job: {
-  id: string;
-  appSlug: string | null;
-  provider: string;
-  modelId: string;
-  prompt: string;
-  resultUrl: string | null;
-}): Promise<{ artifactId: string | null; artifactError: string | null }> {
-  if (!job.resultUrl) return { artifactId: null, artifactError: null };
-  const traceId = `video-job-${job.id}`;
-
+  id: string
+  appSlug: string | null
+  provider: string
+  modelId: string
+  prompt: string
+  resultUrl: string | null
+  resultMeta: string | null
+}) {
+  if (!job.resultUrl) return { artifactId: null, storageUrl: null, artifactError: null }
+  const traceId = `video-job-${job.id}`
   try {
     const existing = await prisma.artifact.findFirst({
       where: { traceId, type: 'video' },
-      select: { id: true },
-    });
-    if (existing) return { artifactId: existing.id, artifactError: null };
-
+      select: { id: true, storageUrl: true },
+    })
+    if (existing) return { artifactId: existing.id, storageUrl: existing.storageUrl, artifactError: null }
     const artifact = await createArtifact({
-      appSlug: job.appSlug ?? 'workspace',
+      appSlug: job.appSlug ?? 'amarktai-network',
       type: 'video',
-      subType: 'video_generation',
+      subType: capabilityFor(job.resultMeta),
       title: `Video generation ${job.id}`,
       description: job.prompt,
       provider: job.provider,
@@ -93,179 +70,137 @@ async function ensureVideoArtifact(job: {
       traceId,
       mimeType: 'video/mp4',
       contentUrl: job.resultUrl,
-      metadata: {
-        jobId: job.id,
-        source: 'video_generation_job',
-      },
-    });
-    return { artifactId: artifact.id, artifactError: null };
-  } catch (err) {
+      metadata: { capability: capabilityFor(job.resultMeta), jobId: job.id },
+    })
+    return { artifactId: artifact.id, storageUrl: artifact.storageUrl, artifactError: null }
+  } catch (error) {
     return {
       artifactId: null,
-      artifactError: err instanceof Error ? err.message : 'Video artifact persistence failed',
-    };
+      storageUrl: null,
+      artifactError: error instanceof Error ? error.message : 'Video artifact persistence failed.',
+    }
+  }
+}
+
+function responsePayload(
+  job: {
+    id: string
+    status: string
+    provider: string
+    modelId: string
+    prompt: string
+    resultUrl: string | null
+    resultMeta: string | null
+    errorMessage: string | null
+    createdAt: Date
+    updatedAt: Date
+  },
+  artifact = { artifactId: null as string | null, storageUrl: null as string | null, artifactError: null as string | null },
+) {
+  const error = job.errorMessage ?? artifact.artifactError
+  return {
+    success: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
+    executed: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
+    capability: capabilityFor(job.resultMeta),
+    provider: job.provider,
+    model: job.modelId,
+    jobStatus: job.status,
+    artifactId: artifact.artifactId,
+    storageUrl: artifact.storageUrl ?? job.resultUrl,
+    error: error ?? null,
+    blocker: error ?? null,
+    jobId: job.id,
+    status: job.status,
+    resultUrl: job.resultUrl,
+    prompt: job.prompt,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
   }
 }
 
 export async function GET(
-  _req: Request,
+  _request: Request,
   { params }: { params: Promise<{ jobId: string }> },
-): Promise<NextResponse> {
-  const { jobId } = await params;
-
+) {
+  const { jobId } = await params
   if (!jobId) {
-    return NextResponse.json({ error: 'jobId is required' }, { status: 400 });
-  }
-
-  const job = await prisma.videoGenerationJob.findUnique({ where: { id: jobId } });
-  if (!job) {
-    return NextResponse.json({ error: 'Job not found' }, { status: 404 });
-  }
-
-  // If job is already terminal, return stored state
-  if (job.status === 'succeeded' || job.status === 'failed') {
-    const artifact = job.status === 'succeeded'
-      ? await ensureVideoArtifact(job)
-      : { artifactId: null, artifactError: null };
     return NextResponse.json({
-      capability: 'video_generation',
-      jobId: job.id,
-      status: job.status,
-      provider: job.provider,
-      model: job.modelId,
-      prompt: job.prompt,
-      resultUrl: job.resultUrl ?? null,
-      artifactId: artifact.artifactId,
-      artifactError: artifact.artifactError,
-      errorMessage: job.errorMessage ?? null,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-    });
+      success: false, executed: false, capability: 'video_generation', provider: null, model: null,
+      jobStatus: 'blocked', artifactId: null, storageUrl: null, error: 'jobId is required', blocker: 'jobId is required',
+    }, { status: 400 })
   }
 
-  // Poll provider for live status update
-  let updated: { status: string; resultUrl?: string; error?: string; meta?: string } | null = null;
+  const job = await prisma.videoGenerationJob.findUnique({ where: { id: jobId } })
+  if (!job) {
+    return NextResponse.json({
+      success: false, executed: false, capability: 'video_generation', provider: null, model: null,
+      jobStatus: 'failed', artifactId: null, storageUrl: null, error: 'Job not found', blocker: 'Job not found',
+    }, { status: 404 })
+  }
 
+  if (job.status === 'succeeded' || job.status === 'failed') {
+    const artifact = job.status === 'succeeded' ? await ensureVideoArtifact(job) : undefined
+    return NextResponse.json(responsePayload(job, artifact))
+  }
+
+  let update: { status: string; resultUrl?: string; error?: string } | null = null
   try {
     if (job.provider === 'genx' && job.providerJobId) {
       if (job.providerJobId.startsWith('genx-sync:')) {
-        updated = { status: 'succeeded', resultUrl: job.providerJobId.slice('genx-sync:'.length) };
+        update = { status: 'succeeded', resultUrl: job.providerJobId.slice('genx-sync:'.length) }
       } else {
-        const providerJobId = job.providerJobId.replace(/^genx-job:/, '');
-        const result = await getGenXJobStatus(providerJobId);
-        if (result) {
-          updated = {
-            status: result.status === 'completed' ? 'succeeded' : result.status,
-            resultUrl: result.resultUrl ?? undefined,
-            error: result.error,
-          };
+        const providerResult = await getGenXJobStatus(job.providerJobId.replace(/^genx-job:/, ''))
+        if (providerResult) {
+          update = {
+            status: providerResult.status === 'completed' ? 'succeeded' : providerResult.status,
+            resultUrl: providerResult.resultUrl ?? undefined,
+            error: providerResult.error,
+          }
         }
       }
-    } else if (job.provider === 'together' && job.providerJobId) {
-      // Together AI synchronous jobs carry the result URL in the providerJobId itself.
-      // Format: "together-sync:<jobId>:<resultUrl>" when already complete.
-      if (job.providerJobId.startsWith('together-sync:')) {
-        const parts = job.providerJobId.split(':');
-        const resultUrl = parts.slice(2).join(':') || undefined;
-        updated = { status: 'succeeded', resultUrl };
-      } else {
-        // Async Together jobs — mark as processing (no dedicated poll API available).
-        updated = { status: 'processing' };
-      }
     } else if (job.provider === 'qwen' && job.providerJobId) {
-      const apiKey = await getVaultApiKey('qwen');
-      if (apiKey) {
-        updated = await pollQwenWanJob(job.providerJobId, apiKey);
-      }
-    } else if (job.provider === 'huggingface') {
-      // Hugging Face video generation is no longer supported. Any legacy jobs that
-      // were created via HF are marked failed with an actionable error message.
-      updated = {
-        status: 'failed',
-        error:
-          'Video generation via Hugging Face is not supported. ' +
-          'Re-submit your request using GenX, Qwen, or Together AI.',
-      };
+      const apiKey = await getVaultApiKey('qwen')
+      update = apiKey
+        ? await pollQwenWanJob(job.providerJobId, apiKey)
+        : { status: 'failed', error: 'Qwen API key is missing.' }
+    } else if (job.provider === 'together') {
+      update = { status: 'failed', error: 'Legacy Together video jobs used an image endpoint and are not valid video outputs.' }
+    } else {
+      update = { status: 'failed', error: `Provider "${job.provider}" is not in the canonical video route.` }
     }
-  } catch {
-    // Poll error — return current DB state without failing
-    return NextResponse.json({
-      capability: 'video_generation',
-      jobId: job.id,
-      status: job.status,
-      provider: job.provider,
-      model: job.modelId,
-      prompt: job.prompt,
-      resultUrl: job.resultUrl ?? null,
-      errorMessage: 'Provider polling temporarily unavailable',
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt,
-    });
+  } catch (error) {
+    return NextResponse.json(responsePayload({
+      ...job,
+      errorMessage: error instanceof Error ? error.message : 'Provider polling temporarily unavailable.',
+    }))
   }
 
-  // Update DB with latest status
-  if (updated) {
-    const dbUpdated = await prisma.videoGenerationJob.update({
-      where: { id: jobId },
-      data: {
+  if (!update) return NextResponse.json(responsePayload(job))
+
+  const updated = await prisma.videoGenerationJob.update({
+    where: { id: jobId },
+    data: {
+      status: update.status,
+      resultUrl: update.resultUrl ?? job.resultUrl,
+      errorMessage: update.error ?? job.errorMessage,
+    },
+  })
+
+  if (['succeeded', 'failed'].includes(updated.status) && updated.appSlug) {
+    dispatchEvent(
+      updated.appSlug,
+      updated.status === 'succeeded' ? 'video.generation.completed' : 'video.generation.failed',
+      {
+        jobId: updated.id,
         status: updated.status,
-        resultUrl: updated.resultUrl ?? job.resultUrl ?? null,
-        errorMessage: updated.error ?? job.errorMessage ?? null,
-        resultMeta: updated.meta ?? job.resultMeta ?? null,
+        provider: updated.provider,
+        model: updated.modelId,
+        resultUrl: updated.resultUrl,
+        errorMessage: updated.errorMessage,
       },
-    });
-
-    // Dispatch webhook notification when job reaches terminal state
-    if (
-      (dbUpdated.status === 'succeeded' || dbUpdated.status === 'failed') &&
-      job.status !== 'succeeded' && job.status !== 'failed' &&
-      dbUpdated.appSlug
-    ) {
-      const eventType = dbUpdated.status === 'succeeded'
-        ? 'video.generation.completed' as const
-        : 'video.generation.failed' as const;
-      dispatchEvent(dbUpdated.appSlug, eventType, {
-        jobId: dbUpdated.id,
-        status: dbUpdated.status,
-        provider: dbUpdated.provider,
-        model: dbUpdated.modelId,
-        resultUrl: dbUpdated.resultUrl ?? null,
-        errorMessage: dbUpdated.errorMessage ?? null,
-      }).catch(() => {
-        // Webhook dispatch is best-effort; never block the poll response
-      });
-    }
-
-    const artifact = dbUpdated.status === 'succeeded'
-      ? await ensureVideoArtifact(dbUpdated)
-      : { artifactId: null, artifactError: null };
-
-    return NextResponse.json({
-      capability: 'video_generation',
-      jobId: dbUpdated.id,
-      status: dbUpdated.status,
-      provider: dbUpdated.provider,
-      model: dbUpdated.modelId,
-      prompt: dbUpdated.prompt,
-      resultUrl: dbUpdated.resultUrl ?? null,
-      artifactId: artifact.artifactId,
-      artifactError: artifact.artifactError,
-      errorMessage: dbUpdated.errorMessage ?? null,
-      createdAt: dbUpdated.createdAt,
-      updatedAt: dbUpdated.updatedAt,
-    });
+    ).catch(() => null)
   }
 
-  return NextResponse.json({
-    capability: 'video_generation',
-    jobId: job.id,
-    status: job.status,
-    provider: job.provider,
-    model: job.modelId,
-    prompt: job.prompt,
-    resultUrl: job.resultUrl ?? null,
-    errorMessage: job.errorMessage ?? null,
-    createdAt: job.createdAt,
-    updatedAt: job.updatedAt,
-  });
+  const artifact = updated.status === 'succeeded' ? await ensureVideoArtifact(updated) : undefined
+  return NextResponse.json(responsePayload(updated, artifact))
 }

@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       gender: choice.gender,
       appSlug: 'amarktai-network',
       emotionAware: parsed.data.emotionAware,
+      responseFormat: 'audio',
     }),
   })
 

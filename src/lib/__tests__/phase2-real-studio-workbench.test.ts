@@ -83,15 +83,15 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     expect(command).toContain('routeCommand')
   })
 
-  it('Adult Studio exposes only real text/image execution and keeps video/voice unavailable for Phase 3', () => {
+  it('Adult Studio routes text, image, video, and voice through real capability routes', () => {
     const execute = read('app/api/admin/studio/execute/route.ts')
     const routeMap = read('lib/studio-route-map.ts')
     expect(execute).toContain("body.mode === 'image'")
     expect(execute).toContain('adultTextPost')
     expect(execute).toContain('adultImagePost')
-    expect(execute).not.toContain('adult-video')
-    expect(execute).not.toContain('adult_voice')
-    expect(routeMap).toContain('video/voice are not exposed as working')
+    expect(execute).toContain("capability === 'adult_video'")
+    expect(execute).toContain("capability === 'adult_voice'")
+    expect(routeMap).toContain('Adult text, image, video, and voice')
   })
 
   it('non-GenX streaming still returns an honest pending status instead of fake output', () => {

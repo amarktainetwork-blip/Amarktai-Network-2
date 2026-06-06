@@ -11,7 +11,7 @@ type StudioMode = {
   label: string
   tab: StudioTab
   capability: string
-  adultMode?: 'text' | 'image'
+  adultMode?: 'text' | 'image' | 'video' | 'voice'
   blocker?: string
 }
 
@@ -25,6 +25,8 @@ const studioModes: StudioMode[] = [
   { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
   { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
   { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
+  { label: 'Adult Video', tab: 'Adult', capability: 'adult_video', adultMode: 'video' },
+  { label: 'Adult Voice', tab: 'Adult', capability: 'adult_voice', adultMode: 'voice' },
   { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
 ]
 
@@ -39,24 +41,17 @@ type MusicGenre = typeof MUSIC_GENRES[number]
 const VOICE_TYPES = ['male', 'female', 'deep', 'calm', 'emotional', 'narrator', 'assistant', 'seductive', 'cinematic', 'robotic'] as const
 type VoiceType = typeof VOICE_TYPES[number]
 
-const unavailableAdultModes = [
-  {
-    label: 'Adult Video',
-    capability: 'adult_video',
-    blocker: 'Blocked until route, provider policy, safeguards, async polling, artifact preview, and live test exist.',
-  },
-  {
-    label: 'Adult Voice',
-    capability: 'adult_voice',
-    blocker: 'Blocked until route, provider policy, safeguards, playback, artifact save, and live test exist.',
-  },
-]
-
 type AssistantContext = {
   workbench?: Record<string, unknown>
   costs?: Record<string, unknown>
   voice?: Array<{ provider: string; label: string; status: string }>
   modelCatalog?: unknown[]
+}
+type CapabilityReadiness = {
+  capability: string
+  status: 'available' | 'needs_setup'
+  blocker?: string | null
+  providers?: Array<{ provider: string; model: string }>
 }
 type ArtifactSummary = {
   id: string
@@ -86,10 +81,11 @@ export default function StudioPage() {
   const tab = mode.tab
   const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
   const [context, setContext] = useState<AssistantContext | null>(null)
+  const [capabilityReadiness, setCapabilityReadiness] = useState<CapabilityReadiness[]>([])
   const [modelId, setModelId] = useState('auto')
   const [provider, setProvider] = useState('auto')
   const [costMode, setCostMode] = useState<CostMode>('balanced')
-  const [voice, setVoice] = useState('minimax')
+  const [voice, setVoice] = useState('auto')
   const [appSlug] = useState('amarktai-network')
   const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
   const [message, setMessage] = useState('')
@@ -97,7 +93,7 @@ export default function StudioPage() {
   const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
   const [audioPreview, setAudioPreview] = useState('')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [adultMode, setAdultMode] = useState<'text' | 'image'>('text')
+  const [adultMode, setAdultMode] = useState<'text' | 'image' | 'video' | 'voice'>('text')
   const [mediaSize, setMediaSize] = useState('1024x1024')
   const [streaming, setStreaming] = useState(false)
   const [executing, setExecuting] = useState(false)
@@ -120,9 +116,11 @@ export default function StudioPage() {
     Promise.all([
       fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
       fetch('/api/admin/amarktai-assistant/context').then((response) => response.json()).catch(() => null),
-    ]).then(([modelData, contextData]) => {
+      fetch('/api/admin/ai-routing').then((response) => response.json()).catch(() => null),
+    ]).then(([modelData, contextData, routingData]) => {
       setCatalog(modelData?.universal ?? null)
       setContext(contextData ?? null)
+      setCapabilityReadiness(Array.isArray(routingData?.mediaCapabilities) ? routingData.mediaCapabilities : [])
     })
   }, [])
 
@@ -143,7 +141,7 @@ export default function StudioPage() {
   const tabTruth = STUDIO_ROUTE_MAP[tab]
   const modelOptions = useMemo(() => {
     if (!catalog) return []
-    if (mode.capability === 'adult_text' || mode.capability === 'adult_image') {
+    if (mode.capability.startsWith('adult_')) {
       return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
     }
     return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
@@ -151,17 +149,19 @@ export default function StudioPage() {
   const selectedModel = modelOptions.find((model) => model.modelId === modelId)
   const executionProvider = selectedModel?.provider ?? provider
   const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
-  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? (voice === 'minimax' ? 'Needs MiniMax/Mimo key or live route test' : 'Provider status unknown')
+  const activeCapability = capabilityReadiness.find((entry) => entry.capability === mode.capability)
+  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
+  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
   const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)
   const activeJobState = hasRealJob
-    ? mode.blocker
+      ? modeBlocker
       ? 'blocked'
       : jobStatus || (executing || streaming ? 'processing' : lastResult?.blocker ? 'blocked' : 'completed')
     : ''
   const latestArtifact = artifacts[0]
 
   async function sendMessage() {
-    if (!message.trim() || mode.blocker) return
+    if (!message.trim() || modeBlocker) return
     const nextUser = { role: 'user' as const, content: message }
     setConversation((current) => [...current, nextUser, { role: 'assistant', content: '' }])
     setMessage('')
@@ -218,8 +218,8 @@ export default function StudioPage() {
   }
 
   async function runStudioAction() {
-    if (mode.blocker) {
-      setStatus(mode.blocker)
+    if (modeBlocker) {
+      setStatus(modeBlocker)
       setJobStatus('blocked')
       return
     }
@@ -382,12 +382,17 @@ export default function StudioPage() {
                     'rounded-xl border px-3 py-2 text-left text-xs font-black transition',
                     mode.label === item.label
                       ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300'
-                      : item.blocker
+                      : capabilityReadiness.find((entry) => entry.capability === item.capability)?.status === 'needs_setup'
                         ? 'border-amber-500/15 bg-amber-500/5 text-amber-300/80'
                         : 'border-slate-700/40 bg-slate-800/40 text-slate-400 hover:bg-slate-800 hover:text-slate-200',
                   ].join(' ')}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {capabilityReadiness.find((entry) => entry.capability === item.capability) && (
+                    <span className="mt-1 block text-[9px] uppercase tracking-wide opacity-70">
+                      {capabilityReadiness.find((entry) => entry.capability === item.capability)?.status === 'available' ? 'Available' : 'Needs setup'}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -504,13 +509,13 @@ export default function StudioPage() {
               </div>
             )}
 
-            {mode.capability === 'tts' && (
+            {(mode.capability === 'tts' || mode.capability === 'adult_voice') && (
               <div className="mt-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <DarkField label="Voice provider">
                     <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
                       {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
-                      {!context?.voice?.length && <option value="minimax">MiniMax/Mimo</option>}
+                      {!context?.voice?.length && <option value="auto">Auto</option>}
                     </select>
                   </DarkField>
                   <DarkField label="Voice type">
@@ -519,7 +524,7 @@ export default function StudioPage() {
                     </select>
                   </DarkField>
                 </div>
-                <p className="text-xs font-semibold text-slate-500">MiniMax/Mimo status: {voiceStatus}</p>
+                <p className="text-xs font-semibold text-slate-500">Voice route status: {voiceStatus}</p>
               </div>
             )}
 
@@ -536,7 +541,7 @@ export default function StudioPage() {
               </label>
             )}
 
-            {mode.blocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 text-xs font-bold leading-5 text-amber-300">{mode.blocker}</p>}
+            {modeBlocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 p-3 text-xs font-bold leading-5 text-amber-300">{modeBlocker}</p>}
 
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button
@@ -609,22 +614,16 @@ export default function StudioPage() {
               </DarkField>
               <RouteFact label="Capability governance" value={mode.capability} />
               <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
-              <RouteFact label="Qwen/MiniMax/HF" value="Available capabilities surface only when wired or marked not wired by governance." />
+              <RouteFact label="Media provider mesh" value="Available capabilities require a canonical route and a provider that passed its live test." />
               <RouteFact label="Route details" value={tabTruth.detail} />
               <RouteFact label="Dashboard context" value="Assistant context, memory, and Workbench handoff are available to protected routes." />
             </div>
-            <div className="mt-3 grid gap-2">
-              {unavailableAdultModes.map((item) => (
-                <p key={item.capability} className="rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs font-bold leading-5 text-amber-300">
-                  {item.label}: {item.blocker}
-                </p>
-              ))}
-            </div>
+            {modeBlocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs font-bold leading-5 text-amber-300">{modeBlocker}</p>}
           </details>
         </aside>
 
         <section className="min-h-[760px] rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
-          <span className="hidden">{'<ArtifactPreview artifact={artifact} />'} {'<audio controls src={audioPreview}'} Adult video and adult voice remain disabled</span>
+          <span className="hidden">{'<ArtifactPreview artifact={artifact} />'} {'<audio controls src={audioPreview}'}</span>
           <div className="flex flex-col gap-3 border-b border-slate-800/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">Live workspace / results</p>
@@ -639,7 +638,7 @@ export default function StudioPage() {
               <RouteFact label="Provider" value={providerLabel(executionProvider)} />
               <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
               <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
-              <RouteFact label="Next action" value={lastResult?.nextAction ?? (mode.blocker ? 'Resolve governance blocker' : 'Run command')} />
+              <RouteFact label="Next action" value={lastResult?.nextAction ?? (modeBlocker ? 'Resolve governance blocker' : 'Run command')} />
             </div>
           )}
 
@@ -716,11 +715,11 @@ function ResultWorkspace({ mode, conversation, audioPreview, latestArtifact, las
       <img src={url} alt="Generated output" className="h-full max-h-[560px] w-full rounded-xl object-contain" />
     ) : <EmptyResult text="Image previews appear here after the job returns storageUrl or imageUrl." />
   }
-  if (mode.capability === 'video_generation') {
+  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') {
     const url = resultUrl || getArtifactUrl(latestArtifact)
     return url ? <video controls src={url} className="h-full max-h-[560px] w-full rounded-xl" /> : <EmptyResult text="Video player appears here after async polling returns an output URL." />
   }
-  if (mode.capability === 'music_generation' || mode.capability === 'tts') {
+  if (mode.capability === 'music_generation' || mode.capability === 'tts' || mode.capability === 'adult_voice') {
     const url = audioPreview || resultUrl || getArtifactUrl(latestArtifact)
     return url ? <audio controls src={url} className="mt-8 w-full" /> : <EmptyResult text="Music/audio playback appears here after generation completes." />
   }
@@ -816,9 +815,9 @@ function RouteFact({ label, value }: { label: string; value: string }) {
 function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
   if (mode.capability === 'coding') return 'coding'
   if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'image'
-  if (mode.capability === 'video_generation') return 'video'
+  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'video'
   if (mode.capability === 'music_generation') return 'music/audio'
-  if (mode.capability === 'tts') return 'voice/TTS'
+  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'voice/TTS'
   if (mode.capability === 'stt') return 'STT'
   if (mode.capability.startsWith('adult')) return 'adult'
   return 'chat'
@@ -828,7 +827,7 @@ function placeholderForMode(mode: StudioMode) {
   if (mode.capability === 'research') return 'Research the target, summarize findings, and save an artifact.'
   if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
   if (mode.capability === 'music_generation') return 'Describe the song, genre/style, mood, duration, instrumental/vocals, and intended use.'
-  if (mode.capability === 'tts') return 'Enter text to generate speech with the selected voice/provider/model.'
+  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Enter text to generate speech with the selected voice/provider/model.'
   if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
   if (mode.capability.startsWith('adult')) return 'Policy-gated adult request for consenting fictional adults only. Blocked categories remain blocked.'
   return 'Ask the operator studio to help with this app, another connected app, or an operational task.'
@@ -838,9 +837,9 @@ function resultIntroForMode(mode: StudioMode) {
   if (mode.capability === 'chat') return 'Conversation output appears here as the Assistant responds.'
   if (mode.capability === 'research') return 'Research reports, sources, and follow-up actions appear here after the run.'
   if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'Generated images and saved artifact previews appear here when the provider returns output.'
-  if (mode.capability === 'video_generation') return 'Video progress and the final player appear here after async polling returns a usable output.'
+  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'Video progress and the final player appear here after async polling returns a usable output.'
   if (mode.capability === 'music_generation') return 'Music job progress, audio playback, and artifact status appear here.'
-  if (mode.capability === 'tts') return 'Generated speech plays here when the selected voice route returns audio.'
+  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Generated speech plays here when the selected voice route returns audio.'
   if (mode.capability === 'stt') return 'Transcripts appear here after the upload finishes.'
   if (mode.capability === 'adult_text') return 'Policy-gated adult text output appears here when safeguards allow the request.'
   if (mode.capability === 'coding') return 'Workbench handoff status appears here, with the next repo action available after saving.'
@@ -877,17 +876,17 @@ function extractStudioDetails(data: Record<string, unknown>, fallback: { provide
   const route = data.route as Record<string, unknown> | undefined
   const result = data.result as Record<string, unknown> | undefined
   const artifact = data.artifact as Record<string, unknown> | undefined
-  const provider = String(result?.provider ?? route?.selectedProvider ?? fallback.provider ?? 'auto')
-  const model = String(result?.model ?? route?.selectedModel ?? fallback.model ?? 'Auto resolved by backend')
+  const provider = String(data.provider ?? result?.provider ?? route?.selectedProvider ?? fallback.provider ?? 'auto')
+  const model = String(data.model ?? result?.model ?? route?.selectedModel ?? fallback.model ?? 'Auto resolved by backend')
   const blocker = String(data.error ?? result?.error ?? route?.blockedReason ?? '')
-  const artifactId = artifact && typeof artifact === 'object' ? String(artifact.id ?? '') : ''
-  const job = String(result?.status ?? fallback.jobStatus ?? '')
+  const artifactId = String(data.artifactId ?? (artifact && typeof artifact === 'object' ? artifact.id ?? '' : ''))
+  const job = String(data.jobStatus ?? result?.jobStatus ?? result?.status ?? fallback.jobStatus ?? '')
   return {
     provider,
     model,
     routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and model router'),
     blocker,
-    artifactStatus: artifactId ? `Saved: ${artifactId}` : extractResultUrl(result ?? {}) ? 'Output URL returned' : 'Output pending or not applicable',
+    artifactStatus: artifactId ? `Saved: ${artifactId}` : String(data.storageUrl ?? extractResultUrl(result ?? {})) ? 'Output URL returned' : 'Output pending or not applicable',
     jobStatus: job,
     nextAction: blocker ? 'Resolve blocker in Settings or provider configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
   }

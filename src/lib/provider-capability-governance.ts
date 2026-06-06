@@ -1,5 +1,6 @@
 import { STATIC_PROVIDER_MODELS } from '@/lib/ai-model-catalog'
 import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 
 export type RootWorkspaceIdentity = {
   appSlug: 'amarktai-network'
@@ -64,6 +65,7 @@ export type GovernedCapability =
   | 'adult_image'
   | 'adult_video'
   | 'adult_voice'
+  | 'audio'
   | 'app_memory'
   | 'artifacts'
   | 'operations'
@@ -171,7 +173,7 @@ function roleCapabilities(roles: readonly string[], modalities: readonly string[
   return [...capabilities]
 }
 
-export const GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_MODELS).flatMap(
+const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_MODELS).flatMap(
   ([provider, models]) => models.map((model) => {
     const node = PROVIDER_MESH.find((entry) => entry.id === provider)!
     return {
@@ -193,6 +195,44 @@ export const GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_M
   }),
 )
 
+const MEDIA_GOVERNED_MODELS: GovernedModel[] = Object.values(MEDIA_CAPABILITY_ROUTES).flatMap((route) =>
+  route.providers.map((entry) => {
+    const node = PROVIDER_MESH.find((provider) => provider.id === entry.provider)!
+    return {
+      provider: entry.provider,
+      providerLabel: node.displayName,
+      modelId: entry.model,
+      label: entry.model,
+      capabilities: [route.capability],
+      status: 'production_ready' as const,
+      route: route.route,
+      requiredEnv: [...node.envAliases],
+      execution: route.execution === 'upload' ? 'sync' as const : route.execution,
+      polling: route.execution === 'async_job',
+      artifacts: true,
+      approved: true,
+      routePresent: true,
+      notes: `Canonical ${route.capability} execution route.`,
+    }
+  }),
+)
+
+export const GOVERNED_MODELS: GovernedModel[] = [...STATIC_GOVERNED_MODELS]
+for (const mediaModel of MEDIA_GOVERNED_MODELS) {
+  const existing = GOVERNED_MODELS.find((model) =>
+    model.provider === mediaModel.provider && model.modelId === mediaModel.modelId,
+  )
+  if (existing) {
+    existing.capabilities = [...new Set([...existing.capabilities, ...mediaModel.capabilities])]
+    existing.route = mediaModel.route
+    existing.execution = mediaModel.execution
+    existing.polling = mediaModel.polling
+    existing.artifacts = true
+  } else {
+    GOVERNED_MODELS.push(mediaModel)
+  }
+}
+
 const CAPABILITY_ALIASES: Record<string, GovernedCapability> = {
   image: 'image_generation',
   video: 'video_generation',
@@ -212,6 +252,7 @@ export function normalizeGovernedCapability(capability: string): GovernedCapabil
     'music_generation', 'song_generation', 'lyrics_generation', 'instrumental_music',
     'tts', 'stt', 'voice_selection', 'voice_cloning', 'embeddings', 'rag', 'moderation',
     'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'app_memory', 'artifacts', 'operations',
+    'audio',
   ])
   return known.has(candidate as GovernedCapability) ? candidate as GovernedCapability : null
 }

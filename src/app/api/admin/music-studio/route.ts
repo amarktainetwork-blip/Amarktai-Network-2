@@ -139,21 +139,47 @@ export async function POST(request: NextRequest) {
   try {
     if (action === 'lyrics_only') {
       const lyrics = await generateLyrics(musicRequest)
-      return NextResponse.json({ lyrics })
+      return NextResponse.json({
+        success: true, capability: 'music_generation', provider: null, model: null,
+        jobStatus: 'completed', artifactId: null, storageUrl: null, error: null, blocker: null, lyrics,
+      })
     }
 
     if (action === 'create_async') {
       const job = await createMusicJob(musicRequest)
-      return NextResponse.json({ job }, { status: 202 })
+      return NextResponse.json({
+        success: true,
+        capability: 'music_generation',
+        provider: job.provider ?? null,
+        model: job.model ?? null,
+        jobStatus: job.status,
+        artifactId: job.artifactId ?? null,
+        storageUrl: null,
+        error: null,
+        blocker: null,
+        job,
+      }, { status: 202 })
     }
 
     // action === 'create' (default — synchronous)
     const result = await createMusic(musicRequest)
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      success: true,
+      capability: 'music_generation',
+      provider: result.artifact.musicProvider,
+      model: result.artifact.lyricsModel,
+      jobStatus: 'completed',
+      artifactId: result.artifact.id,
+      storageUrl: result.artifact.audioUrl,
+      error: null,
+      blocker: null,
+      ...result,
+    }, { status: 201 })
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Music studio error' },
-      { status: 500 },
-    )
+    const error = err instanceof Error ? err.message : 'Music studio error'
+    return NextResponse.json({
+      success: false, capability: 'music_generation', provider: null, model: null,
+      jobStatus: 'failed', artifactId: null, storageUrl: null, error, blocker: error,
+    }, { status: 500 })
   }
 }
