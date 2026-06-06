@@ -21,6 +21,13 @@ vi.mock('@/lib/brain', () => ({
   }),
 }))
 
+vi.mock('@/lib/artifact-store', () => ({
+  createArtifact: vi.fn(async () => ({
+    id: 'artifact_adult_text_1',
+    storageUrl: '/api/artifacts/file/adult-text.txt',
+  })),
+}))
+
 describe('/api/brain/adult-text', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -90,6 +97,7 @@ describe('/api/brain/adult-text', () => {
     expect(data.success).toBe(true)
     expect(data.provider).toBe('together')
     expect(data.output).toContain('consenting adult')
+    expect(data.artifactId).toBe('artifact_adult_text_1')
   })
 
   it('routes adult_text capability through specialist providers without GenX fallback', async () => {

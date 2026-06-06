@@ -20,7 +20,7 @@ type ExecuteBody = {
   costMode?: 'cheap' | 'balanced' | 'premium'
   appSlug?: string
   adultPolicy?: string
-  mode?: 'text' | 'image'
+  mode?: 'text' | 'image' | 'video' | 'voice'
   voiceId?: string
   size?: string
   style?: string
@@ -86,7 +86,12 @@ function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
   if (tab === 'Video') return 'video'
   if (tab === 'Music / Audio') return 'music_generation'
   if (tab === 'Voice / TTS') return 'tts'
-  if (tab === 'Adult') return adultMode === 'image' ? 'adult_image' : 'adult_text'
+  if (tab === 'Adult') {
+    if (adultMode === 'image') return 'adult_image'
+    if (adultMode === 'video') return 'adult_video'
+    if (adultMode === 'voice') return 'adult_voice'
+    return 'adult_text'
+  }
   return 'chat'
 }
 
@@ -103,7 +108,10 @@ export async function POST(request: NextRequest) {
 
   const config = getStudioRouteConfig(tab)
   if (config.status === 'missing') {
-    return NextResponse.json({ success: false, executed: false, error: config.detail, route: config }, { status: 501 })
+    return NextResponse.json({
+      success: false, executed: false, capability: config.capability, provider: null, model: null,
+      jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: config.detail, blocker: config.detail, route: config,
+    }, { status: 501 })
   }
 
   const capability = normalizeCapability(tab, body.mode)
@@ -114,11 +122,15 @@ export async function POST(request: NextRequest) {
     selectedModel: body.model === 'auto' ? undefined : body.model,
     costMode: body.costMode ?? 'balanced',
     adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
-    requiresMedia: ['image', 'video', 'adult_image', 'music_generation', 'tts'].includes(capability),
+    requiresMedia: ['image', 'video', 'adult_image', 'adult_video', 'adult_voice', 'music_generation', 'tts'].includes(capability),
   })
 
   if (route.blockedReason) {
-    return NextResponse.json({ success: false, executed: false, error: route.blockedReason, route }, { status: 409 })
+    return NextResponse.json({
+      success: false, executed: false, capability, provider: null, model: null,
+      jobStatus: 'blocked', artifactId: null, storageUrl: null,
+      error: route.blockedReason, blocker: route.blockedReason, route,
+    }, { status: 409 })
   }
 
   try {
@@ -170,8 +182,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: response.ok && Boolean(data.executed), executed: Boolean(data.executed), result: data, artifact, route }, { status: response.status })
     }
 
-    if (tab === 'Video') {
-      const provider = route.selectedProvider === 'together' || route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
+    if (tab === 'Video' || capability === 'adult_video') {
+      const provider = route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
         ? route.selectedProvider
         : 'genx'
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {
@@ -182,21 +194,25 @@ export async function POST(request: NextRequest) {
         appSlug,
         provider,
         model: route.selectedModel,
+        capability,
       }) as Request)
       const data = await readJson(response)
-      const artifact = response.ok && (data.jobId || data.resultUrl)
-        ? await persistArtifact({
-          appSlug,
-          type: 'video',
-          subType: 'studio_video_job',
-          title: `Video job: ${prompt.slice(0, 80)}`,
-          provider: String(data.provider ?? provider),
-          model: String(data.model ?? route.selectedModel ?? ''),
-          contentUrl: typeof data.resultUrl === 'string' ? data.resultUrl : undefined,
-          metadata: { tab, route, result: data },
-        })
-        : null
-      return NextResponse.json({ success: response.ok, executed: response.ok && !data.error, result: data, artifact, route }, { status: response.status })
+      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      return NextResponse.json({
+        success: Boolean(data.success),
+        executed: Boolean(data.executed),
+        capability,
+        provider: data.provider ?? route.selectedProvider,
+        model: data.model ?? route.selectedModel,
+        jobStatus: data.jobStatus ?? data.status ?? 'processing',
+        artifactId: data.artifactId ?? null,
+        storageUrl: data.storageUrl ?? null,
+        error: data.error ?? null,
+        blocker: data.blocker ?? data.error ?? null,
+        result: data,
+        artifact,
+        route,
+      }, { status: response.status })
     }
 
     if (tab === 'Music / Audio') {
@@ -214,10 +230,25 @@ export async function POST(request: NextRequest) {
         },
       }))
       const data = await readJson(response)
-      return NextResponse.json({ success: response.ok, executed: response.ok, result: data, artifact: data.job ?? data.artifact ?? null, route }, { status: response.status })
+      const job = data.job as Record<string, unknown> | undefined
+      return NextResponse.json({
+        success: response.ok,
+        executed: response.ok,
+        capability,
+        provider: job?.provider ?? route.selectedProvider,
+        model: job?.model ?? route.selectedModel,
+        jobStatus: job?.status ?? 'queued',
+        artifactId: job?.artifactId ?? null,
+        storageUrl: job?.storageUrl ?? null,
+        error: data.error ?? null,
+        blocker: data.error ?? null,
+        result: data,
+        artifact: data.artifact ?? null,
+        route,
+      }, { status: response.status })
     }
 
-    if (tab === 'Voice / TTS') {
+    if (tab === 'Voice / TTS' || capability === 'adult_voice') {
       const provider = ['genx', 'groq', 'huggingface'].includes(String(route.selectedProvider))
         ? route.selectedProvider
         : 'auto'
@@ -227,25 +258,16 @@ export async function POST(request: NextRequest) {
         model: route.selectedModel,
         voiceId: body.voiceId,
         appSlug,
+        capability,
       }))
-      const contentType = response.headers.get('content-type') ?? ''
-      if (!response.ok || contentType.includes('application/json')) {
-        const data = await readJson(response)
-        return NextResponse.json({ success: false, executed: false, result: data, error: String(data.error ?? 'TTS unavailable'), route }, { status: response.status })
-      }
-      const audio = Buffer.from(await response.arrayBuffer())
-      const artifact = await persistArtifact({
-        appSlug,
-        type: 'audio',
-        subType: 'studio_tts',
-        title: `TTS: ${prompt.slice(0, 80)}`,
-        provider: response.headers.get('x-provider') ?? String(provider),
-        model: response.headers.get('x-model') ?? String(route.selectedModel ?? ''),
-        content: audio,
-        mimeType: contentType || 'audio/mpeg',
-        metadata: { tab, route },
-      })
-      return NextResponse.json({ success: true, executed: true, artifact, audioBase64: `data:${contentType || 'audio/mpeg'};base64,${audio.toString('base64')}`, route })
+      const data = await readJson(response)
+      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      return NextResponse.json({
+        ...data,
+        result: data,
+        artifact,
+        route,
+      }, { status: response.status })
     }
 
     if (tab === 'Adult') {
@@ -254,24 +276,12 @@ export async function POST(request: NextRequest) {
           prompt,
           appSlug,
           size: body.size ?? '768x768',
+          provider: route.selectedProvider,
+          model: route.selectedModel,
         }))
         const data = await readJson(response)
-        const binary = dataUriToBuffer(data.imageBase64 ?? data.imageUrl)
-        const artifact = response.ok && data.executed
-          ? await persistArtifact({
-            appSlug,
-            type: 'image',
-            subType: 'adult_image',
-            title: `Adult image: ${prompt.slice(0, 80)}`,
-            provider: String(data.provider ?? route.selectedProvider ?? ''),
-            model: String(data.model ?? route.selectedModel ?? ''),
-            content: binary.content,
-            contentUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
-            mimeType: binary.mimeType ?? 'image/png',
-            metadata: { tab, route, result: data },
-          })
-          : null
-        return NextResponse.json({ success: response.ok && Boolean(data.executed), executed: Boolean(data.executed), result: data, artifact, route }, { status: response.status })
+        const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+        return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
       }
       const response = await adultTextPost(jsonRequest('/api/brain/adult-text', {
         prompt,
@@ -280,21 +290,8 @@ export async function POST(request: NextRequest) {
         model: route.selectedModel,
       }))
       const data = await readJson(response)
-      const text = String(data.output ?? data.text ?? JSON.stringify(data, null, 2))
-      const artifact = response.ok && data.executed
-        ? await persistArtifact({
-          appSlug,
-          type: 'document',
-          subType: 'adult_text',
-          title: `Adult text: ${prompt.slice(0, 80)}`,
-          provider: String(data.provider ?? route.selectedProvider ?? ''),
-          model: String(data.model ?? route.selectedModel ?? ''),
-          content: text,
-          mimeType: 'text/plain',
-          metadata: { tab, route },
-        })
-        : null
-      return NextResponse.json({ success: response.ok && Boolean(data.executed), executed: Boolean(data.executed), result: data, artifact, route }, { status: response.status })
+      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
     }
 
     return NextResponse.json({ success: false, executed: false, error: `${tab} execution is not available through this route.`, route }, { status: 400 })

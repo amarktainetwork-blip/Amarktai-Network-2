@@ -44,6 +44,7 @@ export type AiCapability =
   | 'adult_image'
   | 'adult_video'
   | 'adult_voice'
+  | 'audio'
   | 'repo_audit'
   | 'crawling'
   | 'browser_qa'
@@ -106,6 +107,7 @@ const CAPABILITY_TO_ROLE: Record<AiCapability, string[]> = {
   adult_image: ['vision'],
   adult_video: ['vision'],
   adult_voice: ['chat'],
+  audio: ['chat'],
   repo_audit: ['coding', 'reasoning'],
   crawling: ['chat', 'reasoning'],
   browser_qa: ['chat', 'reasoning'],
@@ -155,6 +157,7 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
   'adult_image',
   'adult_video',
   'adult_voice',
+  'audio',
   'repo_audit',
   'crawling',
   'browser_qa',
@@ -180,7 +183,7 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
     adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
     budgetAllows: typeof input.budgetRemainingUsd !== 'number' || input.budgetRemainingUsd >= COST_ESTIMATE[costMode],
   })
-  if (!governanceValidation.allowed && (input.selectedProvider || ['adult_video', 'adult_voice'].includes(governedCapability))) {
+  if (!governanceValidation.allowed && input.selectedProvider) {
     return blocked(input, costMode, governanceValidation.reason)
   }
 
@@ -274,7 +277,7 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
       if (capability === 'adult_text') return ['genx', 'together', 'huggingface', 'openai'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
       if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
-      if (capability === 'adult_video' || capability === 'adult_voice') return false
+      if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
       if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
       if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
       if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false

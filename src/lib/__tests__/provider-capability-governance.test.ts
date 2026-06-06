@@ -92,11 +92,11 @@ describe('provider capability governance', () => {
       'minimax:minimax-music',
       'minimax:minimax-voice-clone',
     ]))
-    expect(matrix.blockedCapabilities.map((capability) => capability.capability)).toEqual(expect.arrayContaining(['adult_video', 'adult_voice']))
-    expect(validateCapabilitySelection({ capability: 'adult_video', adultPolicyAllows: true }).allowed).toBe(false)
-    expect(validateCapabilitySelection({ capability: 'adult_voice', adultPolicyAllows: true }).allowed).toBe(false)
-    expect(validateCapabilitySelection({ capability: 'adult_text', adultPolicyAllows: false }).blockers).toContain('adult_policy_disabled')
-    expect(validateCapabilitySelection({ capability: 'adult_image', adultPolicyAllows: false }).blockers).toContain('adult_policy_disabled')
+    expect(matrix.capabilities.map((capability) => capability.capability)).toEqual(expect.arrayContaining(['adult_video', 'adult_voice']))
+    expect(validateCapabilitySelection({ capability: 'adult_video', adultPolicyAllows: true }).allowed).toBe(true)
+    expect(validateCapabilitySelection({ capability: 'adult_voice', adultPolicyAllows: true }).allowed).toBe(true)
+    expect(validateCapabilitySelection({ capability: 'adult_text', adultPolicyAllows: false }).blockers).toContain('adult_policy')
+    expect(validateCapabilitySelection({ capability: 'adult_image', adultPolicyAllows: false }).blockers).toContain('adult_policy')
   })
 
   it('surfaces governance truth in Settings, Operations, and model catalog routes', () => {

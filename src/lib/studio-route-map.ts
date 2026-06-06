@@ -104,7 +104,7 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
     route: '/api/admin/studio/execute',
     status: 'execute',
     artifactType: 'document',
-    detail: 'Adult text and adult image use policy gates and approved provider keys; video/voice are not exposed as working until production route, policy, safeguards, polling/playback, artifacts, and live tests exist.',
+    detail: 'Adult text, image, video, and voice use the same policy-gated provider capability registry and report live provider readiness truthfully.',
   },
   Artifacts: {
     tab: 'Artifacts',

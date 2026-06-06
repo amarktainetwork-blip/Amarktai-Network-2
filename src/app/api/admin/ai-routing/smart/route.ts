@@ -3,9 +3,16 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { planAiRoute } from '@/lib/ai-routing-policy'
 import { shouldAvoidProvider } from '@/lib/provider-intelligence'
+import { routeLiveModel } from '@/lib/live-ai-routing'
+import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import { getRuntimeProviderStatus } from '@/lib/runtime-capability-truth'
 
 const smartRouteSchema = z.object({
-  capability: z.enum(['chat', 'coding', 'reasoning', 'creative', 'image_generation', 'video_generation', 'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'moderation', 'research', 'adult_image', 'adult_text']),
+  capability: z.enum([
+    'chat', 'coding', 'reasoning', 'creative', 'image_generation', 'video_generation',
+    'voice_tts', 'voice_stt', 'tts', 'stt', 'audio', 'music_generation', 'embeddings',
+    'moderation', 'research', 'adult_image', 'adult_text', 'adult_video', 'adult_voice',
+  ]),
   costPreference: z.enum(['free_first', 'cheap', 'balanced', 'premium']).optional(),
   allowAdult: z.boolean().optional().default(false),
   requireStreaming: z.boolean().optional(),
@@ -31,7 +38,89 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid smart routing request', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const basePlan = await planAiRoute(parsed.data)
+  const canonicalCapability = parsed.data.capability === 'voice_tts'
+    ? 'tts'
+    : parsed.data.capability === 'voice_stt'
+      ? 'stt'
+      : parsed.data.capability
+  const mediaRoute = getMediaCapabilityRoute(canonicalCapability)
+  if (mediaRoute) {
+    const appSlug = parsed.data.appProfile?.appSlug || 'amarktai-network'
+    const adultCapability = canonicalCapability.startsWith('adult_')
+    const safetyBlocker = adultCapability && !parsed.data.allowAdult
+      ? 'Adult capability requested but allowAdult is false.'
+      : adultCapability && parsed.data.appProfile?.safetyProfile !== 'adult_safe'
+        ? 'Adult capability requires app safetyProfile="adult_safe".'
+        : null
+    const runtimeProviders = await getRuntimeProviderStatus()
+    const connected = new Set(runtimeProviders.filter((provider) => provider.connected).map((provider) => provider.key))
+    const candidates = []
+    const avoidance: Array<{ provider: string; model: string; avoid: boolean; reason: string }> = []
+
+    for (const entry of mediaRoute.providers) {
+      const routed = routeLiveModel({
+        capability: canonicalCapability as Parameters<typeof routeLiveModel>[0]['capability'],
+        appSlug,
+        selectedProvider: entry.provider,
+        selectedModel: entry.model,
+        costMode: parsed.data.costPreference === 'premium'
+          ? 'premium'
+          : parsed.data.costPreference === 'cheap' || parsed.data.costPreference === 'free_first'
+            ? 'cheap'
+            : 'balanced',
+        adultPolicy: adultCapability && parsed.data.allowAdult ? 'full_adult_app_mode' : 'off',
+        requiresMedia: true,
+      })
+      const configured = connected.has(entry.provider)
+      const decision = parsed.data.avoidBadProviders && configured
+        ? await shouldAvoidProvider({
+          appSlug,
+          provider: entry.provider,
+          model: entry.model,
+          capability: canonicalCapability,
+          days: 14,
+        })
+        : { avoid: false, reason: configured ? 'Provider intelligence disabled.' : 'Provider is not connected.' }
+      avoidance.push({ provider: entry.provider, model: entry.model, avoid: decision.avoid, reason: decision.reason })
+      candidates.push({
+        provider: entry.provider,
+        model: entry.model,
+        displayName: entry.model,
+        costTier: 'genx',
+        reason: routed.reason || `Canonical ${canonicalCapability} route.`,
+        enabled: !routed.blockedReason,
+        configured,
+        blocked: Boolean(safetyBlocker || routed.blockedReason || !configured || decision.avoid),
+        blocker: safetyBlocker
+          ?? routed.blockedReason
+          ?? (!configured ? `Provider "${entry.provider}" is missing or has not passed its live test.` : null)
+          ?? (decision.avoid ? `Provider intelligence: ${decision.reason}` : null),
+      })
+    }
+
+    const selected = candidates.find((candidate) => !candidate.blocked) ?? null
+    const blockers = [
+      ...(safetyBlocker ? [safetyBlocker] : []),
+      ...(!selected && !safetyBlocker ? [`No tested provider is available for ${canonicalCapability}.`] : []),
+    ]
+    return NextResponse.json({
+      success: true,
+      smartRoutingApplied: true,
+      avoidance,
+      plan: {
+        capability: canonicalCapability,
+        costPreference: parsed.data.costPreference ?? 'balanced',
+        selected,
+        candidates,
+        blockers,
+        safetyProfile: parsed.data.appProfile?.safetyProfile ?? 'standard',
+        streamingSupported: canonicalCapability === 'adult_text',
+        generatedAt: new Date().toISOString(),
+      },
+    })
+  }
+
+  const basePlan = await planAiRoute(parsed.data as Parameters<typeof planAiRoute>[0])
   if (!parsed.data.avoidBadProviders || !basePlan.candidates.length) {
     return NextResponse.json({ success: true, plan: basePlan, smartRoutingApplied: false })
   }
