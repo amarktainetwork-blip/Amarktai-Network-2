@@ -14,10 +14,11 @@ const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
   genx: ['chat', 'reasoning', 'code', 'image_generation', 'voice', 'agent_planning'],
   huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings'],
   qwen: ['chat', 'reasoning', 'code', 'vision', 'image_generation', 'video_generation', 'voice'],
-  minimax: ['chat', 'reasoning', 'code', 'voice', 'video_generation', 'music'],
+  mimo: ['chat', 'reasoning', 'code', 'vision', 'voice', 'video_understanding', 'tools'],
   groq: ['chat', 'reasoning', 'code', 'voice'],
   together: ['chat', 'code', 'image_generation'],
-  openai: ['chat', 'reasoning', 'code', 'vision', 'image_generation', 'embeddings', 'voice', 'agent_planning'],
+  replicate: ['image_generation', 'video_generation', 'voice', 'music'],
+  fal: ['image_generation', 'video_generation', 'voice', 'music'],
 }
 
 export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = APPROVED_AI_PROVIDERS.map((provider) => ({

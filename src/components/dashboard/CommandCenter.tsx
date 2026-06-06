@@ -35,19 +35,23 @@ type CommandJob = {
     nextVisibleStep: string
     executionRoute: string
     options?: StudioCommandOptions
+    selectedProviders?: string[]
   }
   timeline: Array<{ type: string; title: string; detail: string; timestamp: string }>
+  execution?: { error?: string; detail?: string; imageUrl?: string; pollUrl?: string; jobId?: string }
 }
 
 const starters = [
   'Create song',
-  'Create movie',
+  'Create image',
+  'Create video',
   'Create avatar',
+  'Generate voice',
   'Build app',
   'Audit repo',
+  'Fix repo',
   'Create PR',
   'Check system',
-  'Repair app',
 ]
 
 const capabilities: Array<{ value: Capability; label: string }> = [
@@ -140,6 +144,9 @@ export default function CommandCenter() {
                   <Fact label="Expected outputs" value={active.route.artifacts.join(', ')} />
                 </div>
                 {active.route.approvalRequired && <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/8 p-3 text-sm font-semibold text-amber-200">{active.route.approvalReason}</div>}
+                {active.execution?.error && <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/8 p-3 text-sm font-semibold text-red-200">{active.execution.error}</div>}
+                {active.execution?.detail && <div className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-400/8 p-3 text-sm font-semibold text-emerald-200">{active.execution.detail}</div>}
+                {active.execution?.imageUrl && <a href={active.execution.imageUrl} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-slate-950">Open image <ArrowRight className="h-4 w-4" /></a>}
                 {attachedHref.startsWith('/admin') && <Link href={attachedHref} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2 text-xs font-black text-slate-950">Open attached workspace <ArrowRight className="h-4 w-4" /></Link>}
               </div>
               <div className="max-w-[92%] rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
@@ -189,7 +196,7 @@ export default function CommandCenter() {
 
         <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
           <button onClick={() => setAdvanced((value) => !value)} className="flex w-full items-center justify-between text-sm font-black text-slate-300">Advanced <ChevronDown className={`h-4 w-4 transition ${advanced ? 'rotate-180' : ''}`} /></button>
-          {advanced && <div className="mt-4 space-y-2 text-xs leading-5 text-slate-400"><p>Provider overrides, deployment controls, merge controls, and model selection stay here.</p><p>Current strategy: {active?.route.providerStrategy.join(' → ') || 'Resolved after command routing.'}</p></div>}
+          {advanced && <div className="mt-4 space-y-2 text-xs leading-5 text-slate-400"><p>Provider overrides, deployment controls, merge controls, and model selection stay here.</p><p>Connected route: {active?.route.selectedProviders?.join(' → ') || 'Resolved after live connection checks.'}</p></div>}
         </section>
       </aside>
     </div>
@@ -202,7 +209,7 @@ function CapabilityControls({ capability, options, setOptions }: { capability: C
     return (
       <div className="space-y-3">
         <Field label="Duration"><select value={options.duration} onChange={(event) => update({ duration: event.target.value })} className="command-select">{SONG_DURATIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
-        <Field label="Genres"><div className="max-h-36 overflow-y-auto rounded-xl border border-slate-700/60 bg-slate-950/50 p-2"><div className="flex flex-wrap gap-1.5">{SONG_GENRES.map((genre) => <button key={genre} onClick={() => update({ genres: options.genres?.includes(genre) ? options.genres.filter((item) => item !== genre) : [...(options.genres ?? []), genre] })} className={`rounded-full border px-2 py-1 text-[11px] font-bold ${options.genres?.includes(genre) ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>{genre}</button>)}</div></div></Field>
+        <Field label="Genres"><div className="rounded-xl border border-slate-700/60 bg-slate-950/50 p-2"><div className="flex flex-wrap gap-1.5">{SONG_GENRES.map((genre) => <button key={genre} onClick={() => update({ genres: options.genres?.includes(genre) ? options.genres.filter((item) => item !== genre) : [...(options.genres ?? []), genre] })} className={`rounded-full border px-2 py-1 text-[11px] font-bold ${options.genres?.includes(genre) ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>{genre}</button>)}</div></div></Field>
         <Toggle label="Combine selected genres" checked={Boolean(options.combineGenres)} onChange={(checked) => update({ combineGenres: checked })} />
         <div className="grid grid-cols-2 gap-2">
           <Field label="Vocals"><Select values={SONG_VOCALS} value={options.vocals} onChange={(value) => update({ vocals: value })} /></Field>

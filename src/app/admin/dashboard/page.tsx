@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, Boxes, Command, Library, ShieldCheck } from 'lucide-react'
-import { NETWORK_APPS, PRODUCT_POSITIONING } from '@/lib/product-contract'
+import { PRODUCT_POSITIONING } from '@/lib/product-contract'
+import { NETWORK_APPS } from '@/lib/network-apps-registry'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 
@@ -44,7 +45,7 @@ export default async function OverviewPage() {
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Metric icon={<Command />} label="Active command jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
-        <Metric icon={<Boxes />} label="Network Apps" value={`${NETWORK_APPS.filter((app) => app.status === 'Live' || app.status === 'In build').length} active/in build`} />
+        <Metric icon={<Boxes />} label="Network Apps" value={`${NETWORK_APPS.filter((app) => app.status === 'Ready' || app.status === 'In build').length} ready/in build`} />
         <Metric icon={<Library />} label="Recent outputs" value={String(artifacts.length)} />
         <Metric icon={<ShieldCheck />} label="Readiness" value={ready ? 'Ready' : 'Needs setup'} />
       </section>

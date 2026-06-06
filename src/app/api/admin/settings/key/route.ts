@@ -3,10 +3,10 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { encryptVaultKey } from '@/lib/crypto-vault'
-import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
+import { PROVIDER_MESH } from '@/lib/provider-mesh'
 
-const toolKeys = new Set(['github', 'firecrawl', 'crawl4ai', 'playwright', 'webdock', 'storage'])
-const providerKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
+const toolKeys = new Set<string>(PROVIDER_MESH.filter((node) => node.kind !== 'provider' && node.envAliases.length > 0).map((node) => node.id))
+const providerKeys = new Set<string>(PROVIDER_MESH.filter((node) => node.kind === 'provider').map((node) => node.id))
 
 const schema = z.object({
   key: z.string().min(1),

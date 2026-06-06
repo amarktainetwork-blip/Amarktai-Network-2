@@ -29,7 +29,7 @@ export default function ContactPage() {
           email: form.email,
           companyOrProject: form.organization,
           message: [
-            '[PRIVATE INFRASTRUCTURE INQUIRY]',
+            '[AMARKTAI NETWORK INQUIRY]',
             `Organization: ${form.organization}`,
             `Operating environment: ${form.environment}`,
             `Notes: ${form.message}`,
@@ -52,10 +52,10 @@ export default function ContactPage() {
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Contact</p>
           <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
-            A private inquiry channel for serious AI infrastructure conversations.
+            Let’s talk about what you want to build, connect, or improve.
           </h1>
           <p className="mt-7 max-w-2xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
-            Share the operating environment, workflow scope, and governance constraints that matter. The response path is handled by a human operator.
+            Share the outcome, app, workflow, or operating challenge that matters. A human operator will review the request and respond.
           </p>
         </div>
       </section>
@@ -66,10 +66,10 @@ export default function ContactPage() {
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Inquiry profile</p>
             <div className="mt-8 space-y-6">
               {[
-                'Private AI operations strategy',
-                'Model routing and provider architecture',
-                'Agent workflow design',
-                'Memory, artifact, and deployment governance',
+                'Connected business apps',
+                'Command-driven workflows',
+                'Media, app, and repository creation',
+                'Deployment and operating support',
               ].map((item) => (
                 <div key={item} className="flex gap-4">
                   <div className="mt-2 h-1.5 w-1.5 shrink-0 bg-[var(--amarkt-blue)]" />

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import PublicShell from '@/components/public/PublicShell'
-import { NETWORK_APPS } from '@/lib/product-contract'
+import { NETWORK_APPS } from '@/lib/network-apps-registry'
 
 export default function PublicNetworkAppsPage() {
   return (
@@ -34,12 +34,10 @@ export default function PublicNetworkAppsPage() {
 }
 
 function Status({ value }: { value: string }) {
-  const style = value === 'Live'
+  const style = value === 'Ready'
     ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200'
     : value === 'In build'
       ? 'border-cyan-300/30 bg-cyan-300/10 text-cyan-100'
-      : value === 'Needs setup' || value === 'Blocked'
-        ? 'border-amber-300/30 bg-amber-300/10 text-amber-100'
-        : 'border-white/15 bg-white/5 text-slate-200'
-  return <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-black ${style}`}>{value === 'Blocked' ? 'Needs setup' : value}</span>
+      : 'border-white/15 bg-white/5 text-slate-200'
+  return <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-black ${style}`}>{value}</span>
 }

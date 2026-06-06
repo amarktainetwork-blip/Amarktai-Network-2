@@ -1,5 +1,4 @@
 import {
-  Bot,
   Boxes,
   BrainCircuit,
   Command,
@@ -15,7 +14,6 @@ export type DashboardSectionId =
   | 'command'
   | 'network-apps'
   | 'outputs'
-  | 'agents'
   | 'memory'
   | 'settings'
   | 'system'
@@ -33,7 +31,6 @@ export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
   { id: 'command', href: '/admin/dashboard/command', label: 'Command', description: 'One command window for every Amarktai capability.', icon: Command },
   { id: 'network-apps', href: '/admin/dashboard/network-apps', label: 'Network Apps', description: 'Connected business modules and shared learning.', icon: Boxes },
   { id: 'outputs', href: '/admin/dashboard/outputs', label: 'Outputs', description: 'Media, reports, app builds, diffs, PRs, and artifacts.', icon: Library },
-  { id: 'agents', href: '/admin/dashboard/agents', label: 'Agents', description: 'Agent teams and live activity in plain English.', icon: Bot },
   { id: 'memory', href: '/admin/dashboard/memory', label: 'Memory', description: 'Shared context, outcomes, and learning by module.', icon: BrainCircuit },
   { id: 'settings', href: '/admin/dashboard/settings', label: 'Settings', description: 'Keys, connections, storage, queues, and service setup.', icon: Settings2 },
   { id: 'system', href: '/admin/dashboard/system', label: 'System', description: 'Admin-only VPS, services, queues, logs, and readiness.', icon: Sparkles },

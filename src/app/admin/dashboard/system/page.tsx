@@ -12,7 +12,7 @@ export default async function SystemPage() {
         <Panel title="Services">{serviceRows.map(([name, value]) => <Row key={name} label={name} value={formatService(value)} />)}</Panel>
         <Panel title="Runtime truth">{(runtime?.providers ?? []).slice(0, 14).map((provider) => <Row key={provider.key} label={provider.displayName} value={provider.configured ? provider.status : 'Needs setup'} />)}</Panel>
       </section>
-      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><summary className="cursor-pointer text-sm font-black text-slate-300">Advanced diagnostics</summary><pre className="mt-4 max-h-[520px] overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-500">{JSON.stringify({ vps, runtime }, null, 2)}</pre></details>
+      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><summary className="cursor-pointer text-sm font-black text-slate-300">Advanced diagnostics</summary><div className="mt-4 grid gap-2 md:grid-cols-2">{(runtime?.blockers ?? []).map((blocker) => <Row key={blocker} label="Action" value={blocker} />)}{!runtime?.blockers?.length && <p className="text-sm text-slate-400">No runtime blockers reported.</p>}</div></details>
     </div>
   )
 }

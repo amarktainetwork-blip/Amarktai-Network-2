@@ -1,5 +1,7 @@
 import type { CommandIntent, ProductSurface } from '@/lib/product-contract'
 import { extractStudioOptions, type StudioCommandOptions } from '@/lib/studio-options'
+import { providersForCapability, type ProviderCapability } from '@/lib/provider-mesh'
+import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
 
 export interface CommandRoute {
   intent: CommandIntent
@@ -20,11 +22,14 @@ export interface CommandRoute {
   selectedAgents: string[]
   nextStep: string
   artifactType: string[]
+  selectedCapability: ProviderCapability | 'app_builder' | 'system' | 'network_app' | 'workflow'
+  selectedProviderStrategy: string[]
+  selectedProviders: string[]
 }
 
 type CommandRouteTemplate = Omit<
   CommandRoute,
-  'intent' | 'confidence' | 'options' | 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType'
+  'intent' | 'confidence' | 'options' | 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType' | 'selectedCapability' | 'selectedProviderStrategy' | 'selectedProviders'
 >
 
 const RULES: Array<{
@@ -133,7 +138,7 @@ function toolchainFor(surface: ProductSurface) {
   return ['command router', 'agents', 'memory', 'artifacts']
 }
 
-export function routeCommand(prompt: string, selectedOptions: StudioCommandOptions = {}): CommandRoute {
+export function routeCommand(prompt: string, selectedOptions: StudioCommandOptions = {}, connectedProviderIds: readonly string[] = []): CommandRoute {
   const normalized = prompt.trim()
   const options = extractStudioOptions(normalized, selectedOptions)
   let best: { score: number; rule: typeof RULES[number] } | null = null
@@ -142,7 +147,7 @@ export function routeCommand(prompt: string, selectedOptions: StudioCommandOptio
     if (score > 0 && (!best || score > best.score)) best = { score, rule }
   }
   if (!best) {
-    const fallback: Omit<CommandRoute, 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType'> = {
+    const fallback: Omit<CommandRoute, 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType' | 'selectedCapability' | 'selectedProviderStrategy' | 'selectedProviders'> = {
       intent: 'ask_question',
       surface: 'Command',
       toolchain: ['GenX', 'memory', 'connected app context'],
@@ -157,20 +162,40 @@ export function routeCommand(prompt: string, selectedOptions: StudioCommandOptio
       confidence: 0.55,
       options,
     }
-    return withPublicContract(fallback)
+    return withPublicContract(fallback, connectedProviderIds)
   }
   return withPublicContract({
     intent: best.rule.intent,
     ...best.rule.route,
     confidence: Math.min(0.98, 0.72 + best.score * 0.1),
     options,
-  })
+  }, connectedProviderIds)
 }
 
-function withPublicContract(route: Omit<CommandRoute, 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType'>): CommandRoute {
+export async function routeCommandWithProviderMesh(prompt: string, selectedOptions: StudioCommandOptions = {}) {
+  const truth = await getPlatformSettingsTruth()
+  return routeCommand(prompt, selectedOptions, truth.connectedProviderIds)
+}
+
+function withPublicContract(
+  route: Omit<CommandRoute, 'missingInformation' | 'selectedSurface' | 'selectedAgents' | 'nextStep' | 'artifactType' | 'selectedCapability' | 'selectedProviderStrategy' | 'selectedProviders'>,
+  connectedProviderIds: readonly string[],
+): CommandRoute {
   const missingInformation = route.intent === 'create_song' && !route.options.genres?.length
     ? ['Which genre or genre combination should the song use?']
     : []
+  const selectedCapability = capabilityForIntent(route.intent)
+  const compatibleProviders = typeof selectedCapability === 'string' && isProviderCapability(selectedCapability)
+    ? providersForCapability(selectedCapability, connectedProviderIds)
+    : []
+  const preferredIds = preferredProvidersForIntent(route.intent)
+  const selectedProviders = compatibleProviders
+    .slice()
+    .sort((a, b) => preferredIds.indexOf(a.id) - preferredIds.indexOf(b.id))
+    .map((provider) => provider.id)
+  const selectedProviderStrategy = selectedProviders.length
+    ? selectedProviders.map((provider, index) => `${index === 0 ? 'Primary' : 'Fallback'}: ${provider}`)
+    : route.providerStrategy
 
   return {
     ...route,
@@ -179,5 +204,37 @@ function withPublicContract(route: Omit<CommandRoute, 'missingInformation' | 'se
     selectedAgents: route.agentTeam,
     nextStep: missingInformation[0] ?? route.nextVisibleStep,
     artifactType: route.artifacts,
+    selectedCapability,
+    selectedProviderStrategy,
+    selectedProviders,
   }
+}
+
+function capabilityForIntent(intent: CommandIntent): CommandRoute['selectedCapability'] {
+  if (intent === 'create_song') return 'music'
+  if (intent === 'create_image') return 'image'
+  if (intent === 'create_movie') return 'video'
+  if (intent === 'create_avatar') return 'avatar'
+  if (intent === 'create_voice') return 'tts'
+  if (intent === 'research_topic' || intent === 'crawl_site') return 'crawl'
+  if (intent === 'audit_repo' || intent === 'fix_repo' || intent === 'create_pr' || intent === 'deploy_app') return 'repo'
+  if (intent === 'build_new_app') return 'app_builder'
+  if (intent === 'monitor_vps' || intent === 'explain_status') return 'system'
+  if (intent === 'automate_workflow') return 'workflow'
+  if (intent === 'check_app_status' || intent === 'repair_connected_app' || intent === 'create_marketing_campaign' || intent === 'run_crypto_analysis') return 'network_app'
+  return 'text'
+}
+
+function preferredProvidersForIntent(intent: CommandIntent): string[] {
+  if (intent === 'create_image') return ['genx', 'qwen', 'together', 'replicate', 'fal', 'huggingface']
+  if (intent === 'create_movie') return ['genx', 'replicate', 'fal', 'qwen', 'together', 'huggingface']
+  if (intent === 'create_song') return ['genx', 'replicate', 'fal', 'together', 'huggingface']
+  if (intent === 'create_avatar') return ['genx', 'replicate', 'fal', 'qwen']
+  if (intent === 'create_voice') return ['genx', 'mimo', 'groq', 'replicate']
+  if (intent === 'audit_repo' || intent === 'fix_repo' || intent === 'create_pr' || intent === 'build_new_app') return ['genx', 'mimo', 'qwen', 'groq', 'together', 'huggingface']
+  return ['genx', 'mimo', 'qwen', 'groq', 'together', 'huggingface']
+}
+
+function isProviderCapability(value: string): value is ProviderCapability {
+  return !['app_builder', 'system', 'network_app', 'workflow'].includes(value)
 }

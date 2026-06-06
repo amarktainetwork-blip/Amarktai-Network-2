@@ -3,7 +3,7 @@ import { routeCommand } from '@/lib/command-router'
 
 describe('unified command router', () => {
   it('routes songs to Studio with multi-artifact output', () => {
-    const route = routeCommand('Create a 3-minute rock, pop, and rasta song.')
+    const route = routeCommand('Create a 3-minute rock, pop, and rasta song.', {}, ['genx', 'replicate'])
     expect(route.intent).toBe('create_song')
     expect(route.surface).toBe('Studio')
     expect(route.artifacts).toContain('MP3/WAV')
@@ -11,6 +11,8 @@ describe('unified command router', () => {
     expect(route.options.duration).toBe('180')
     expect(route.options.genres).toEqual(expect.arrayContaining(['rock', 'pop', 'rasta/reggae']))
     expect(route.options.combineGenres).toBe(true)
+    expect(route.selectedCapability).toBe('music')
+    expect(route.selectedProviders).toEqual(['genx', 'replicate'])
   })
 
   it('routes repo fixes through an approval gate', () => {

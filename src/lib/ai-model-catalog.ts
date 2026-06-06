@@ -58,11 +58,11 @@ const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
     model('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Balanced Qwen route.'),
     model('qwen', 'qwen-max', 'Qwen Max', 'Qwen', ['text'], ['chat', 'reasoning', 'coding'], 'medium', 'Higher quality Qwen route.'),
   ],
-  minimax: [
-    model('minimax', 'MiniMax-M2.7', 'MiniMax M2.7', 'MiniMax/Mimo', ['text'], ['chat', 'reasoning', 'coding'], 'medium', 'Primary MiniMax/Mimo route.'),
-    model('minimax', 'MiniMax-M2.7-highspeed', 'MiniMax M2.7 Highspeed', 'MiniMax/Mimo', ['text'], ['chat', 'coding'], 'low', 'Fast MiniMax/Mimo route.'),
-    model('minimax', 'task:voice-tts', 'MiniMax/Mimo TTS', 'MiniMax/Mimo', ['voice_tts'], ['chat'], 'low', 'Voice playback route.'),
-    model('minimax', 'task:voice-stt', 'MiniMax/Mimo STT', 'MiniMax/Mimo', ['voice_stt'], ['chat'], 'low', 'Speech-to-text route.'),
+  mimo: [
+    model('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'medium', 'OpenAI-compatible reasoning, coding, and multimodal route.'),
+    model('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'premium', 'Long-context reasoning and coding route.'),
+    model('mimo', 'task:voice-tts', 'Xiaomi MiMo TTS', 'Xiaomi MiMo', ['voice_tts'], ['chat'], 'low', 'Speech synthesis route when enabled on the account.'),
+    model('mimo', 'task:voice-stt', 'Xiaomi MiMo STT', 'Xiaomi MiMo', ['voice_stt'], ['chat'], 'low', 'Speech recognition route when enabled on the account.'),
   ],
   groq: [
     model('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B Versatile', 'Groq', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Fast workbench and assistant route.'),
@@ -71,11 +71,15 @@ const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
     model('together', 'meta-llama/Llama-3-70b-chat-hf', 'Llama 3 70B Chat', 'Together AI', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Open model route for repo tasks.'),
     model('together', 'task:image', 'Together Image Route', 'Together AI', ['image'], ['vision'], 'medium', 'Image route when the app package allows it.'),
   ],
-  openai: [
-    model('openai', 'gpt-4o', 'GPT-4o', 'OpenAI', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'premium', 'Premium workbench and assistant route.'),
-    model('openai', 'gpt-4o-mini', 'GPT-4o Mini', 'OpenAI', ['multimodal', 'text'], ['chat', 'coding'], 'low', 'Fast OpenAI route.'),
-    model('openai', 'task:tts', 'OpenAI TTS', 'OpenAI', ['voice_tts'], ['chat'], 'medium', 'Configured text-to-speech route.'),
-    model('openai', 'task:moderation', 'OpenAI Moderation', 'OpenAI', ['text'], ['chat'], 'low', 'Moderation route.'),
+  replicate: [
+    model('replicate', 'task:image', 'Replicate Image', 'Replicate', ['image'], ['vision'], 'medium', 'Asynchronous image specialist route.'),
+    model('replicate', 'task:video', 'Replicate Video', 'Replicate', ['video'], ['vision'], 'premium', 'Asynchronous video specialist route.'),
+    model('replicate', 'task:audio', 'Replicate Audio', 'Replicate', ['music', 'voice_tts', 'voice_stt'], ['chat'], 'medium', 'Audio and music specialist route.'),
+  ],
+  fal: [
+    model('fal', 'task:image', 'Fal Image', 'Fal', ['image'], ['vision'], 'medium', 'Asynchronous image specialist route.'),
+    model('fal', 'task:video', 'Fal Video', 'Fal', ['video'], ['vision'], 'premium', 'Asynchronous video specialist route.'),
+    model('fal', 'task:audio', 'Fal Audio', 'Fal', ['music', 'voice_tts'], ['chat'], 'medium', 'Audio and avatar specialist route.'),
   ],
 }
 
@@ -128,7 +132,7 @@ export async function getProviderModelCatalog(provider: string): Promise<Provide
   }
 
   const providerDef = APPROVED_AI_PROVIDERS.find((entry) => entry.key === provider)!
-  const models = PROVIDER_MODELS[provider]
+  const models = PROVIDER_MODELS[provider] ?? []
 
   return {
     provider,

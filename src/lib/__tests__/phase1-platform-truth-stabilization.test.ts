@@ -22,13 +22,12 @@ describe('Phase 1 platform truth stabilization', () => {
     delete process.env.AMARKTAI_ALLOW_DEV_STORAGE_FALLBACK
   })
 
-  it('keeps the dashboard to the eight command operating-system sections', () => {
+  it('keeps the dashboard to the seven command operating-system sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Overview',
       'Command',
       'Network Apps',
       'Outputs',
-      'Agents',
       'Memory',
       'Settings',
       'System',
@@ -38,7 +37,6 @@ describe('Phase 1 platform truth stabilization', () => {
       '/admin/dashboard/command',
       '/admin/dashboard/network-apps',
       '/admin/dashboard/outputs',
-      '/admin/dashboard/agents',
       '/admin/dashboard/memory',
       '/admin/dashboard/settings',
       '/admin/dashboard/system',
@@ -49,30 +47,16 @@ describe('Phase 1 platform truth stabilization', () => {
     const settings = read('app/admin/dashboard/settings/page.tsx')
     expect(APPROVED_AI_PROVIDERS.map((provider) => provider.displayName)).toContain('GenX')
     expect(settings).toContain('/api/admin/settings/status')
-    expect(settings).toContain('Qdrant')
+    expect(read('lib/provider-mesh.ts')).toContain("displayName: 'Qdrant'")
     expect(settings).not.toContain('Firecrawl')
   })
 
   it('provider connected count only counts configured entries with test/status routes', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: {
-        integrationConfig: {
-          findUnique: vi.fn(async ({ where }: { where: { key: string } }) => (
-            where.key === 'genx'
-              ? { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }) }
-              : null
-          )),
-        },
-        gitHubConfig: {
-          findFirst: vi.fn(async () => ({ lastValidatedAt: new Date('2026-05-07T00:00:00Z') })),
-        },
-      },
-    }))
-    vi.doMock('@/lib/provider-config', () => ({
-      getProviderKeyWithSource: vi.fn(async (key: string) => ({
-        key: key === 'genx' || key === 'github' ? `${key}_configured_token` : null,
-        source: key === 'genx' || key === 'github' ? 'vault' : 'missing',
-      })),
+    vi.doMock('@/lib/provider-mesh-status', () => ({
+      getMeshCredential: vi.fn(async (key: string) => key === 'genx' || key === 'github' ? `${key}_configured_token` : null),
+      getMeshTestNotes: vi.fn(async (key: string) => key === 'genx' || key === 'github'
+        ? { lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: '2026-05-07T00:00:00Z' }
+        : {}),
     }))
 
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
@@ -80,8 +64,8 @@ describe('Phase 1 platform truth stabilization', () => {
     expect(truth.connectedCount).toBe(2)
     expect(truth.providers.find((provider) => provider.key === 'genx')?.status).toBe('Connected')
     expect(truth.providers.find((provider) => provider.key === 'groq')?.status).toBe('Needs key')
-    expect(truth.tools.find((tool) => tool.key === 'firecrawl')?.status).toBe('Needs key')
-    expect(truth.storage.connected).toBe(true)
+    expect(truth.tools.find((tool) => tool.key === 'local-crawler')?.status).toBe('Needs live test')
+    expect(truth.storage.connected).toBe(false)
   })
 
   it('unifies storage roots across local JSON, storage driver, and Workbench workspace', async () => {
