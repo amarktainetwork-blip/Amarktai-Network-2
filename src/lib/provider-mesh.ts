@@ -36,12 +36,13 @@ export type ProviderMeshId =
   | 'mimo'
   | 'groq'
   | 'together'
-  | 'replicate'
-  | 'fal'
   | 'github'
   | 'redis'
   | 'qdrant'
   | 'local-crawler'
+  | 'playwright'
+  | 'scrapy'
+  | 'trafilatura'
   | 'ffmpeg'
   | 'storage'
   | 'smtp'
@@ -154,36 +155,6 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     artifactHandling: 'remote_url',
   },
   {
-    id: 'replicate',
-    displayName: 'Replicate',
-    kind: 'provider',
-    envAliases: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
-    baseUrl: 'https://api.replicate.com/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['image', 'video', 'audio', 'music', 'avatar', 'tts', 'stt', 'async_jobs'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'remote_url',
-  },
-  {
-    id: 'fal',
-    displayName: 'Fal',
-    kind: 'provider',
-    envAliases: ['FAL_KEY', 'FAL_API_KEY'],
-    baseUrl: 'https://api.fal.ai/v1',
-    authMethod: 'Key token',
-    capabilities: ['image', 'video', 'audio', 'music', 'avatar', 'async_jobs'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'remote_url',
-  },
-  {
     id: 'github',
     displayName: 'GitHub',
     kind: 'tool',
@@ -241,6 +212,51 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     settingsVisible: true,
     systemVisible: true,
     asyncJobs: true,
+    artifactHandling: 'local',
+  },
+  {
+    id: 'playwright',
+    displayName: 'Playwright',
+    kind: 'tool',
+    envAliases: [],
+    baseUrl: 'Local Node.js package and browser runtime',
+    authMethod: 'Local runtime',
+    capabilities: ['crawl', 'render'],
+    testRoute: '/api/admin/settings/test-provider',
+    normalUserVisible: false,
+    settingsVisible: true,
+    systemVisible: true,
+    asyncJobs: false,
+    artifactHandling: 'local',
+  },
+  {
+    id: 'scrapy',
+    displayName: 'Scrapy',
+    kind: 'tool',
+    envAliases: [],
+    baseUrl: 'Local Python package',
+    authMethod: 'Local runtime',
+    capabilities: ['crawl'],
+    testRoute: '/api/admin/settings/test-provider',
+    normalUserVisible: false,
+    settingsVisible: true,
+    systemVisible: true,
+    asyncJobs: true,
+    artifactHandling: 'local',
+  },
+  {
+    id: 'trafilatura',
+    displayName: 'Trafilatura',
+    kind: 'tool',
+    envAliases: [],
+    baseUrl: 'Local Python package',
+    authMethod: 'Local runtime',
+    capabilities: ['crawl'],
+    testRoute: '/api/admin/settings/test-provider',
+    normalUserVisible: false,
+    settingsVisible: true,
+    systemVisible: true,
+    asyncJobs: false,
     artifactHandling: 'local',
   },
   {

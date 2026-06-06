@@ -115,7 +115,7 @@ export default function CommandCenter() {
     if (!active) return ''
     if (active.route.surface === 'Workbench') return '/admin/dashboard/workbench'
     if (active.route.surface === 'System') return '/admin/dashboard/system'
-    if (active.route.surface === 'Network Apps') return '/admin/dashboard/network-apps'
+    if (active.route.surface === 'Network Apps') return '/admin/dashboard/workspace'
     return active.route.executionRoute
   }, [active])
 
@@ -123,7 +123,7 @@ export default function CommandCenter() {
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <section className="overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-900/70">
         <div className="border-b border-slate-700/50 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.12),transparent_40%)] p-5 lg:p-7">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Unified Command</p>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Workspace</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Say what you want done.</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Describe the outcome naturally. Amarktai selects the capability, coordinates the work, and keeps progress understandable.</p>
           <div className="mt-5 flex flex-wrap gap-2">

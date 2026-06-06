@@ -1,53 +1,9 @@
-/**
- * @module runtime-capability-truth
- * @description Single source of truth for runtime provider/capability status.
- *
- * Provider decisions come from ai-provider-governance.ts. Key reads go through
- * getServiceKey() from service-vault, which checks the DB-encrypted vault first
- * then falls back to environment variables — the same resolution order used by
- * the Settings page.
- */
-
-import { getServiceKey, getServiceConfigField } from '@/lib/service-vault'
-import { getProviderKeyWithSource, type CoreProvider } from '@/lib/provider-config'
-import {
-  getGenXCoveredProviderKeys,
-  getRuntimeProviderGovernance,
-  getWiredProviderKeys,
-  type ProviderGovernanceStatus,
-} from '@/lib/ai-provider-governance'
-import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
+import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+import { getProviderKeyWithSource } from '@/lib/provider-config'
+import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
-
-const GENX_COVERED_PROVIDERS = getGenXCoveredProviderKeys()
-const WIRED_PROVIDER_KEYS = getWiredProviderKeys()
-const ADULT_APPROVED_PROVIDER_KEYS = new Set(['genx', 'huggingface', 'together', 'openai', 'minimax'])
-
-function getLocalCoreStatus(): LocalCoreStatus {
-  const memory = checkWritable(LOCAL_STORE_FILES.memory)
-  const approvals = checkWritable(LOCAL_STORE_FILES.approvals)
-  const artifacts = checkWritable(LOCAL_STORE_FILES.artifacts)
-  const research = checkWritable(LOCAL_STORE_FILES.research)
-  const apps = checkWritable(LOCAL_STORE_FILES.apps)
-  const agents = checkWritable(LOCAL_STORE_FILES.agents)
-
-  interface WithId { id: string }
-  const appCount = listRecords<WithId>(LOCAL_STORE_FILES.apps).length
-  const agentCount = listRecords<WithId>(LOCAL_STORE_FILES.agents).length
-
-  const allWorking = memory.writable && approvals.writable && artifacts.writable &&
-    research.writable && apps.writable && agents.writable
-
-  return {
-    memory: { writable: memory.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.memory },
-    approvals: { writable: approvals.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.approvals },
-    artifacts: { writable: artifacts.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.artifacts },
-    research: { writable: research.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.research },
-    apps: { writable: apps.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.apps, count: appCount },
-    agents: { writable: agents.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.agents, count: agentCount },
-    allWorking,
-  }
-}
+import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
+import type { ProviderCapability } from '@/lib/provider-mesh'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -70,12 +26,14 @@ export interface ProviderRuntimeEntry {
   displayName: string
   reason: string
   configured: boolean
+  connected?: boolean
   coveredByGenX: boolean
   keySource: 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
   status: ProviderStatus
-  governanceStatus?: ProviderGovernanceStatus
+  governanceStatus?: string
   showInPrimarySetup?: boolean
   defaultCostRole?: string
+  capabilities?: string[]
 }
 
 export type CapabilityStatus = 'available' | 'blocked' | 'not_implemented'
@@ -96,114 +54,6 @@ export interface LocalCoreStatus {
   apps: { writable: boolean; driver: string; file: string; count: number }
   agents: { writable: boolean; driver: string; file: string; count: number }
   allWorking: boolean
-}
-
-export interface DashboardRuntimeTruth {
-  success: true
-  genx: GenXRuntimeStatus
-  providers: ProviderRuntimeEntry[]
-  capabilities: CapabilityRuntimeEntry[]
-  adultGate: AdultCapabilityGate
-  blockers: string[]
-  localCore: LocalCoreStatus
-}
-
-async function resolveKey(integrationKey: string): Promise<{ hasKey: boolean; source: ProviderRuntimeEntry['keySource'] }> {
-  const resolved = await getProviderKeyWithSource(integrationKey as CoreProvider)
-  if (!resolved.key) return { hasKey: false, source: 'missing' }
-  return { hasKey: true, source: resolved.source }
-}
-
-export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
-  const { hasKey, source } = await resolveKey('genx')
-  const apiUrl = process.env.GENX_API_URL ?? 'https://query.genx.sh'
-
-  if (!hasKey) {
-    return {
-      configured: false,
-      available: false,
-      keySource: 'missing',
-      modelCount: 0,
-      capabilities: [],
-      apiUrl: null,
-    }
-  }
-
-  const capabilities = [
-    'text_chat', 'reasoning', 'coding', 'image_generation', 'video_generation',
-    'voice_tts', 'voice_stt', 'music_generation', 'embeddings', 'vision',
-    'translation', 'moderation', 'avatars',
-  ]
-
-  let modelCount = LIVE_GENX_MODEL_COUNT
-  let available = true
-  try {
-    const key = await getServiceKey('genx', 'GENX_API_KEY')
-    if (key) {
-      const res = await fetch(`${apiUrl}/api/v1/models`, {
-        headers: { Authorization: `Bearer ${key}` },
-        signal: AbortSignal.timeout(5_000),
-      })
-      if (res.ok) {
-        const data = await res.json() as { data?: unknown[] } | unknown[]
-        const models = Array.isArray(data) ? data : (data as { data?: unknown[] }).data
-        if (Array.isArray(models) && models.length > 0) modelCount = models.length
-      } else {
-        available = false
-      }
-    }
-  } catch {
-    available = false
-  }
-
-  return {
-    configured: true,
-    available,
-    keySource: source,
-    modelCount,
-    capabilities,
-    apiUrl,
-  }
-}
-
-export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
-  const governance = getRuntimeProviderGovernance()
-  const results: ProviderRuntimeEntry[] = await Promise.all(
-    governance.map(async (meta) => {
-      const localRuntime = meta.key === 'local-crawler'
-      const { hasKey, source } = localRuntime
-        ? { hasKey: true, source: 'env' as const }
-        : await resolveKey(meta.integrationKey)
-      const coveredByGenX = GENX_COVERED_PROVIDERS.has(meta.key)
-
-      let status: ProviderStatus
-      if (coveredByGenX) {
-        status = 'covered_by_genx'
-      } else if (hasKey) {
-        status = WIRED_PROVIDER_KEYS.has(meta.key) ? 'configured_wired' : 'configured_not_wired'
-      } else {
-        status = meta.status === 'deprecated' ? 'blocked' : 'not_configured_optional'
-      }
-
-      return {
-        key: meta.key,
-        displayName: meta.displayName,
-        reason: meta.reason,
-        configured: hasKey,
-        coveredByGenX,
-        keySource: source,
-        status,
-        governanceStatus: meta.status,
-        showInPrimarySetup: meta.showInPrimarySetup,
-        defaultCostRole: meta.defaultCostRole,
-      }
-    }),
-  )
-  return results
-}
-
-export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[]> {
-  return getRuntimeProviderStatus()
 }
 
 export type AdultCapabilityGateStatus =
@@ -231,300 +81,162 @@ export interface AdultCapabilityGate {
   configuredProviders: string[]
 }
 
-export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
-  function hasProvider(key: string) {
-    return providers.find(p => p.key === key)?.configured === true
-  }
+export interface DashboardRuntimeTruth {
+  success: true
+  genx: GenXRuntimeStatus
+  providers: ProviderRuntimeEntry[]
+  capabilities: CapabilityRuntimeEntry[]
+  adultGate: AdultCapabilityGate
+  blockers: string[]
+  localCore: LocalCoreStatus
+}
 
-  const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
-  const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
-  const savedProvider = await getServiceConfigField('adult_mode', 'providerType', '').catch(() => null) ?? ''
-  const savedModel = await getServiceConfigField('adult_mode', 'providerModel', '').catch(() => null) ?? ''
-
-  const globalEnabled = true
-  const configuredProviders = [...ADULT_APPROVED_PROVIDER_KEYS].filter((key) => hasProvider(key))
-  const providerAvailable = configuredProviders.length > 0
-  const selectedProvider = savedProvider && configuredProviders.includes(savedProvider)
-    ? savedProvider
-    : configuredProviders[0] ?? null
-
-  const testPassed = lastTestStatus === 'passed'
-  const base = {
-    providerAvailable,
-    testPassed,
-    globalEnabled,
-    enabled: globalEnabled,
-    selectedProvider,
-    selectedModel: savedModel || null,
-    allowedCategories: ['legal_adult_text', 'legal_adult_image'],
-    blockedCategories: ['adult_video', 'adult_voice', 'minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'genitals', 'explicit_sex_acts', 'coercion_exploitation_violence_degradation', 'illegal_content', 'safety_bypassing'],
-    lastTestStatus: lastTestStatus || null,
-    lastError: lastError || null,
-    configuredProviders,
-  }
-
-  if (!providerAvailable) {
-    return {
-      ...base,
-      status: 'not_wired',
-      blocker: 'No approved adult-capable provider key is configured. Add GenX, Hugging Face, Together AI, OpenAI, or MiniMax/Mimo in Settings.',
-      providerAvailable: false,
-    }
-  }
-
-  if (!testPassed) {
-    // Test failure is diagnostic — provider may still work. Report status accurately but do not globally block.
-    return {
-      ...base,
-      status: lastTestStatus === 'failed' ? 'configured_with_last_error' : 'needs_provider_test',
-      blocker: lastTestStatus === 'failed'
-        ? 'Last provider test failed. Re-run the provider test in Settings to confirm the provider works.'
-        : 'Provider key exists, but a live provider test has not been run yet.',
-    }
-  }
-
+function getLocalCoreStatus(): LocalCoreStatus {
+  const memory = checkWritable(LOCAL_STORE_FILES.memory)
+  const approvals = checkWritable(LOCAL_STORE_FILES.approvals)
+  const artifacts = checkWritable(LOCAL_STORE_FILES.artifacts)
+  const research = checkWritable(LOCAL_STORE_FILES.research)
+  const apps = checkWritable(LOCAL_STORE_FILES.apps)
+  const agents = checkWritable(LOCAL_STORE_FILES.agents)
+  interface WithId { id: string }
   return {
-    ...base,
-    status: 'ready',
-    blocker: null,
+    memory: { writable: memory.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.memory },
+    approvals: { writable: approvals.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.approvals },
+    artifacts: { writable: artifacts.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.artifacts },
+    research: { writable: research.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.research },
+    apps: { writable: apps.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.apps, count: listRecords<WithId>(LOCAL_STORE_FILES.apps).length },
+    agents: { writable: agents.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.agents, count: listRecords<WithId>(LOCAL_STORE_FILES.agents).length },
+    allWorking: memory.writable && approvals.writable && artifacts.writable && research.writable && apps.writable && agents.writable,
   }
 }
 
-export async function getCapabilityStatus(genxConfigured: boolean, providers: ProviderRuntimeEntry[]): Promise<CapabilityRuntimeEntry[]> {
-  function isConfigured(key: string) {
-    return providers.find(p => p.key === key)?.configured === true
+export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
+  const truth = await getPlatformSettingsTruth()
+  return Promise.all(truth.entries.map(async (entry) => {
+    const source = entry.kind === 'provider'
+      ? (await getProviderKeyWithSource(entry.key)).source
+      : entry.configured ? 'env' as const : 'missing' as const
+    return {
+      key: entry.key,
+      displayName: entry.label,
+      reason: entry.connected ? 'Live test passed.' : entry.blocker,
+      configured: entry.configured,
+      connected: entry.connected,
+      coveredByGenX: false,
+      keySource: source,
+      status: entry.connected
+        ? 'configured_wired' as const
+        : entry.configured
+          ? 'configured_not_wired' as const
+          : entry.optional
+            ? 'not_configured_optional' as const
+            : 'blocked' as const,
+      governanceStatus: 'approved',
+      showInPrimarySetup: entry.kind === 'provider',
+      defaultCostRole: entry.key === 'genx' ? 'primary' : 'specialist',
+      capabilities: entry.capabilities,
+    }
+  }))
+}
+
+export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[]> {
+  return getRuntimeProviderStatus()
+}
+
+export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
+  const providers = await getRuntimeProviderStatus()
+  const genx = providers.find((provider) => provider.key === 'genx')
+  return {
+    configured: Boolean(genx?.configured),
+    available: Boolean(genx?.connected),
+    keySource: genx?.keySource ?? 'missing',
+    modelCount: genx?.connected ? LIVE_GENX_MODEL_COUNT : 0,
+    capabilities: genx?.connected ? genx.capabilities ?? [] : [],
+    apiUrl: genx?.configured ? process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh' : null,
   }
+}
 
-  const hasQwen = isConfigured('qwen')
-  const hasMinimax = isConfigured('minimax')
-  const hasDeepSeek = isConfigured('deepseek')
-  const hasGemini = isConfigured('gemini')
-  const hasHF = isConfigured('huggingface')
-  const hasTogether = isConfigured('together')
-  const hasGroq = isConfigured('groq')
-  const hasReplicate = isConfigured('replicate')
-  const hasElevenLabs = isConfigured('elevenlabs')
-  const hasDeepgram = isConfigured('deepgram')
-  const hasLocalCrawler = isConfigured('local-crawler')
-  const hasMem0 = isConfigured('mem0')
-  const hasGitHub = isConfigured('github')
-  const hasOpenRouter = isConfigured('openrouter')
-  const hasOpenAI = isConfigured('openai')
+export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
+  const approved = providers.filter((provider) =>
+    provider.connected && ['genx', 'huggingface', 'together'].includes(provider.key),
+  )
+  const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
+  const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
+  const selectedProvider = approved[0]?.key ?? null
+  const providerAvailable = approved.length > 0
+  const testPassed = providerAvailable && lastTestStatus === 'passed'
+  return {
+    status: testPassed ? 'ready' : providerAvailable ? 'needs_provider_test' : 'not_wired',
+    blocker: testPassed ? null : providerAvailable ? 'Run the adult-mode live test.' : 'No approved tested adult-capable provider is connected.',
+    providerAvailable,
+    testPassed,
+    globalEnabled: true,
+    enabled: true,
+    selectedProvider,
+    selectedModel: null,
+    allowedCategories: ['legal_adult_text', 'legal_adult_image'],
+    blockedCategories: ['adult_video', 'adult_voice', 'minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content'],
+    lastTestStatus: lastTestStatus || null,
+    lastError: lastError || null,
+    configuredProviders: approved.map((provider) => provider.key),
+  }
+}
 
-  // Text/chat can run via GenX OR any core text provider
-  const hasTextProvider = genxConfigured || hasQwen || hasMinimax || hasDeepSeek || hasGemini
-    || hasHF || hasGroq || hasTogether || hasOpenRouter || hasOpenAI
-  // Coding can run via GenX OR any coding-capable provider
-  const hasCodingProvider = genxConfigured || hasQwen || hasMinimax || hasDeepSeek || hasGemini
-    || hasGroq || hasTogether
-  // Image can run via GenX OR Qwen/MiniMax/HF/Together/Replicate/OpenAI
-  const hasImageProvider = genxConfigured || hasQwen || hasMinimax || hasHF || hasTogether || hasReplicate || hasOpenAI
-  // Video can run via GenX OR Qwen/MiniMax/Replicate
-  const hasVideoProvider = genxConfigured || hasQwen || hasMinimax || hasReplicate
-  // TTS via GenX OR MiniMax/ElevenLabs/Deepgram/Groq/HF/OpenAI
-  const hasTTSProvider = genxConfigured || hasMinimax || hasElevenLabs || hasDeepgram || hasGroq || hasHF || hasOpenAI
-  // STT via GenX OR Deepgram/MiniMax/HF/OpenAI
-  const hasSTTProvider = genxConfigured || hasDeepgram || hasMinimax || hasHF || hasOpenAI
-  // Research always has a local crawler; models enrich and summarize its output.
-  const hasResearchProvider = hasLocalCrawler || genxConfigured || hasGemini || hasOpenRouter
+const CAPABILITY_ROWS: Array<{ name: string; capabilities: ProviderCapability[] }> = [
+  { name: 'Text / Chat', capabilities: ['text'] },
+  { name: 'Coding Agent', capabilities: ['code'] },
+  { name: 'Image Generation', capabilities: ['image'] },
+  { name: 'Video Generation', capabilities: ['video'] },
+  { name: 'Voice TTS', capabilities: ['tts'] },
+  { name: 'STT / Transcription', capabilities: ['stt'] },
+  { name: 'Music Generation', capabilities: ['music'] },
+  { name: 'Embeddings', capabilities: ['embeddings'] },
+  { name: 'Web Crawler / Research', capabilities: ['crawl'] },
+  { name: 'Repo / GitHub', capabilities: ['repo'] },
+]
 
-  const adultGate = await getAdultCapabilityGate(providers)
-
-  return [
-    {
-      name: 'Text / Chat',
-      status: hasTextProvider ? 'available' : 'blocked',
-      blocker: hasTextProvider ? null : 'Configure at least one AI provider (Qwen, MiniMax, DeepSeek, Gemini, Groq, Together, HuggingFace, or GenX) in Settings',
-      models: [
-        ...(genxConfigured ? ['GPT-4o (via GenX)', 'Claude Opus 4 (via GenX)', 'Gemini 2.5 Pro (via GenX)', 'Grok 3 (via GenX)'] : []),
-        ...(hasQwen ? ['Qwen Plus', 'Qwen Turbo', 'Qwen Max'] : []),
-        ...(hasMinimax ? ['MiniMax MoE', 'MiniMax Text'] : []),
-        ...(hasDeepSeek ? ['DeepSeek V3', 'DeepSeek R1'] : []),
-        ...(hasGemini ? ['Gemini 2.5 Pro', 'Gemini 2.5 Flash'] : []),
-        ...(hasGroq ? ['Groq Llama 3.3 70B', 'Groq Llama 3.1 70B'] : []),
-        ...(hasTogether ? ['Together Llama 3 70B', 'Together Qwen 2.5 72B'] : []),
-      ],
-      nextAction: hasTextProvider ? null : 'Add a primary AI provider key in Settings',
-    },
-    {
-      name: 'Coding Agent',
-      status: hasCodingProvider ? 'available' : 'blocked',
-      blocker: hasCodingProvider ? null : 'Configure GenX, Qwen, MiniMax, DeepSeek, Gemini, Groq, or Together in Settings',
-      models: [
-        ...(genxConfigured ? ['GPT-4.1 (via GenX)', 'Claude Sonnet 3.7 (via GenX)', 'DeepSeek R1 (via GenX)'] : []),
-        ...(hasQwen ? ['Qwen Plus', 'Qwen Turbo'] : []),
-        ...(hasMinimax ? ['MiniMax MoE'] : []),
-        ...(hasDeepSeek ? ['DeepSeek R1', 'DeepSeek V3'] : []),
-        ...(hasGemini ? ['Gemini 2.5 Flash'] : []),
-        ...(hasGroq ? ['Groq Llama 3.3 70B'] : []),
-        ...(hasTogether ? ['Together Llama 3 70B'] : []),
-      ],
-      nextAction: hasCodingProvider ? null : 'Add GenX, Qwen, or DeepSeek in Settings',
-    },
-    {
-      name: 'Image Generation',
-      status: hasImageProvider ? 'available' : 'blocked',
-      blocker: hasImageProvider ? null : 'Configure GenX, Qwen/DashScope, MiniMax/Mimo, HuggingFace, Together, Replicate, or OpenAI Direct in Settings',
-      models: [
-        ...(genxConfigured ? ['Recraft v3 (via GenX)', 'DALL-E 3 (via GenX)', 'Grok Imagine (via GenX)'] : []),
-        ...(hasQwen ? ['Qwen Image (DashScope)', 'Wanx 2.1 (DashScope)'] : []),
-        ...(hasMinimax ? ['MiniMax Image'] : []),
-        ...(hasHF ? ['SDXL (HuggingFace)', 'Custom model endpoint'] : []),
-        ...(hasTogether ? ['FLUX.1 Schnell (Together AI)'] : []),
-        ...(hasReplicate ? ['SDXL (Replicate)'] : []),
-        ...(hasOpenAI ? ['GPT Image (OpenAI Direct)'] : []),
-      ],
-      nextAction: hasImageProvider ? null : 'Add GenX or an image-capable provider key in Settings',
-    },
-    {
-      name: 'Video Generation',
-      status: hasVideoProvider ? 'available' : 'blocked',
-      blocker: hasVideoProvider ? null : 'Configure GenX, Qwen/DashScope, MiniMax/Mimo, or Replicate in Settings',
-      models: [
-        ...(genxConfigured ? ['Veo 2 (via GenX)', 'Kling (via GenX)', 'Seedance (via GenX)', 'PixVerse (via GenX)'] : []),
-        ...(hasQwen ? ['Wan Video 2.1 (DashScope)'] : []),
-        ...(hasMinimax ? ['MiniMax Video-01'] : []),
-        ...(hasReplicate ? ['Replicate video models'] : []),
-      ],
-      nextAction: hasVideoProvider ? 'Confirm video quota before generating (high cost)' : 'Add GenX, Qwen, MiniMax, or Replicate in Settings',
-    },
-    {
-      name: 'Voice TTS',
-      status: hasTTSProvider ? 'available' : 'blocked',
-      blocker: hasTTSProvider ? null : 'Configure GenX, MiniMax/Mimo, ElevenLabs, Deepgram, Groq, HuggingFace, or OpenAI Direct in Settings',
-      models: [
-        ...(genxConfigured ? ['Grok TTS (via GenX)', 'Aura 2 (via GenX)', 'GenX LM Voice v1'] : []),
-        ...(hasMinimax ? ['MiniMax Speech-02', 'MiniMax Speech-01'] : []),
-        ...(hasElevenLabs ? ['ElevenLabs TTS'] : []),
-        ...(hasDeepgram ? ['Deepgram Aura 2'] : []),
-        ...(hasGroq ? ['Groq PlayAI TTS'] : []),
-        ...(hasHF ? ['HuggingFace MMS TTS', 'Custom TTS endpoint'] : []),
-        ...(hasOpenAI ? ['OpenAI TTS-1', 'OpenAI TTS-1 HD'] : []),
-      ],
-      nextAction: hasTTSProvider ? null : 'Add a TTS provider key in Settings',
-    },
-    {
-      name: 'STT / Transcription',
-      status: hasSTTProvider ? 'available' : 'blocked',
-      blocker: hasSTTProvider ? null : 'Configure GenX, Deepgram, MiniMax/Mimo, HuggingFace, or OpenAI Direct in Settings',
-      models: [
-        ...(genxConfigured ? ['GenX transcription', 'Whisper (via GenX)', 'Deepgram Nova (via GenX)'] : []),
-        ...(hasDeepgram ? ['Deepgram Nova 3 (direct)'] : []),
-        ...(hasMinimax ? ['MiniMax STT'] : []),
-        ...(hasHF ? ['HuggingFace Whisper', 'Custom STT endpoint'] : []),
-        ...(hasOpenAI ? ['OpenAI Whisper (direct)'] : []),
-      ],
-      nextAction: hasSTTProvider ? null : 'Add GenX or Deepgram in Settings',
-    },
-    {
-      name: 'Music Generation',
-      status: genxConfigured ? 'available' : 'blocked',
-      blocker: genxConfigured ? null : 'Configure GenX before enabling Lyria music generation.',
-      models: genxConfigured ? ['lyria-3-clip-preview', 'lyria-3-pro-preview'] : [],
-      nextAction: genxConfigured ? 'Run a live GenX music job test' : 'Add and test GENX_API_KEY',
-    },
-    {
-      name: 'Embeddings',
-      status: genxConfigured || hasOpenAI || hasGemini || hasHF ? 'available' : 'blocked',
-      blocker: genxConfigured || hasOpenAI || hasGemini || hasHF ? null : 'Configure GenX, OpenAI Direct, Gemini, or HuggingFace in Settings',
-      models: [
-        ...(genxConfigured ? ['GenX embeddings', 'text-embedding-3 (via GenX)'] : []),
-        ...(hasOpenAI ? ['OpenAI text-embedding-3-small/large'] : []),
-        ...(hasGemini ? ['Gemini embedding-001'] : []),
-        ...(hasHF ? ['HuggingFace sentence-transformers', 'Custom embedding endpoint'] : []),
-      ],
-      nextAction: genxConfigured ? null : 'Add GenX or an embedding provider in Settings',
-    },
-    {
-      name: 'Adult Image',
-      status: adultGate.globalEnabled && adultGate.providerAvailable ? 'available' : 'blocked',
-      blocker: adultGate.blocker,
-      models: adultGate.globalEnabled && adultGate.providerAvailable
-        ? [
-            ...(hasTogether ? ['FLUX.1-schnell (Together AI)', 'SDXL (Together AI)'] : []),
-            ...(hasHF ? ['RealVisXL (HuggingFace)', 'DreamShaper (HuggingFace)'] : []),
-            ...(hasReplicate ? ['SDXL Replicate'] : []),
-          ]
-        : [],
-      nextAction: adultGate.status === 'ready'
-        ? null
-        : adultGate.status === 'not_wired'
-        ? 'Add Together AI, HuggingFace, Replicate, or xAI key in Settings → AI Providers'
-        : adultGate.status === 'needs_provider_test' || adultGate.status === 'configured_with_last_error'
-        ? 'Run "Test provider" in Settings → Adult Mode'
-        : 'Enable adult mode in Settings → Adult Mode',
-    },
-    {
-      name: 'Web Crawler / Research',
-      status: hasResearchProvider ? 'available' : 'blocked',
-      blocker: hasResearchProvider ? null : 'Install the local crawler runtime or configure GenX, Gemini, or OpenRouter',
-      models: [
-        ...(hasLocalCrawler ? ['Playwright + Scrapy + Trafilatura'] : []),
-        ...(genxConfigured ? ['GenX (Gemini/GPT-4.1 research)'] : []),
-        ...(hasGemini ? ['Gemini research / search grounding'] : []),
-        ...(hasOpenRouter ? ['OpenRouter research models'] : []),
-      ],
-      nextAction: hasLocalCrawler ? null : 'Install Playwright, Scrapy, and Trafilatura',
-    },
-    {
-      name: 'Memory',
-      status: hasMem0 ? 'available' : 'not_implemented',
-      blocker: hasMem0 ? null : 'Mem0 not configured. Memory uses built-in DB persistence by default.',
-      models: [
-        ...(hasMem0 ? ['Mem0 long-term memory'] : ['Built-in DB memory (limited)']),
-      ],
-      nextAction: hasMem0 ? null : 'Add Mem0 API key in Settings for enhanced persistent memory',
-    },
-    {
-      name: 'Repo / GitHub',
-      status: hasGitHub ? 'available' : 'blocked',
-      blocker: hasGitHub ? null : 'GitHub Personal Access Token not configured',
-      models: hasGitHub ? ['GitHub API'] : [],
-      nextAction: hasGitHub ? null : 'Add GitHub Personal Access Token in Settings',
-    },
-  ]
+export async function getCapabilityStatus(
+  _genxConfigured: boolean,
+  providers: ProviderRuntimeEntry[],
+): Promise<CapabilityRuntimeEntry[]> {
+  return CAPABILITY_ROWS.map((row) => {
+    const connected = providers.filter((provider) =>
+      provider.connected && row.capabilities.some((capability) => provider.capabilities?.includes(capability)),
+    )
+    return {
+      name: row.name,
+      status: connected.length ? 'available' as const : 'blocked' as const,
+      blocker: connected.length ? null : `No tested approved connection provides ${row.capabilities.join(' or ')}.`,
+      models: connected.map((provider) => provider.displayName),
+      nextAction: connected.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
+    }
+  })
 }
 
 export async function getModelCatalogueStatus(): Promise<{ modelCount: number; source: 'live' | 'static' }> {
   const genx = await getGenXRuntimeStatus()
-  return {
-    modelCount: genx.modelCount,
-    source: genx.available ? 'live' : 'static',
-  }
+  return { modelCount: genx.modelCount, source: genx.available ? 'live' : 'static' }
 }
 
 export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth> {
-  const [genx, providers] = await Promise.all([
-    getGenXRuntimeStatus(),
-    getRuntimeProviderStatus(),
-  ])
-
+  const providers = await getRuntimeProviderStatus()
+  const genxProvider = providers.find((provider) => provider.key === 'genx')
+  const genx: GenXRuntimeStatus = {
+    configured: Boolean(genxProvider?.configured),
+    available: Boolean(genxProvider?.connected),
+    keySource: genxProvider?.keySource ?? 'missing',
+    modelCount: genxProvider?.connected ? LIVE_GENX_MODEL_COUNT : 0,
+    capabilities: genxProvider?.connected ? genxProvider.capabilities ?? [] : [],
+    apiUrl: genxProvider?.configured ? process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh' : null,
+  }
   const [capabilities, adultGate] = await Promise.all([
     getCapabilityStatus(genx.configured, providers),
     getAdultCapabilityGate(providers),
   ])
-
-  const blockers: string[] = []
-
-  // GenX is only a hard blocker if no direct providers can handle text/chat.
-  // If direct primary providers are configured, GenX is optional.
-  const hasDirectTextProvider = providers.some(
-    p => p.configured && ['qwen', 'minimax', 'deepseek', 'gemini', 'huggingface', 'groq', 'together', 'openrouter', 'openai'].includes(p.key),
-  )
-  if (!genx.configured && !hasDirectTextProvider) {
-    blockers.push('GenX API key not configured — add GENX_API_KEY in Settings')
-  } else if (!genx.configured) {
-    // GenX not configured but direct providers exist — informational only, not a hard blocker
-  }
-  if (genx.configured && !genx.available) blockers.push('GenX key configured but endpoint unreachable — check GENX_API_URL')
-
-  const blockedCapabilities = capabilities.filter(c => c.status === 'blocked')
-  for (const cap of blockedCapabilities) {
-    if (cap.blocker) blockers.push(`${cap.name}: ${cap.blocker}`)
-  }
-
-  const localCore = getLocalCoreStatus()
-
+  const blockers = [
+    ...providers.filter((provider) => provider.status === 'blocked').map((provider) => `${provider.displayName}: ${provider.reason}`),
+    ...capabilities.filter((capability) => capability.status === 'blocked' && capability.blocker).map((capability) => `${capability.name}: ${capability.blocker}`),
+  ]
   return {
     success: true,
     genx,
@@ -532,6 +244,6 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     capabilities,
     adultGate,
     blockers,
-    localCore,
+    localCore: getLocalCoreStatus(),
   }
 }

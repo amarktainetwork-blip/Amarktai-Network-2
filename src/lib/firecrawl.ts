@@ -258,9 +258,9 @@ function analyzeContent(pages: CrawledPage[], url: string): ContentAnalysis {
   // Recommended stack
   const safetyLevel = ['religious', 'health', 'finance', 'education'].includes(bestNiche) ? 'strict' : 'standard'
   const budgetMode = ['finance', 'health'].includes(bestNiche) ? 'best_quality' : 'balanced'
-  const providers = ['groq', 'openai'] // Default cheap + quality
-  if (capabilities.includes('image_generation')) providers.push('replicate')
-  if (capabilities.includes('retrieval')) providers.push('cohere')
+  const providers = ['genx', 'groq']
+  if (capabilities.includes('image_generation')) providers.push('qwen')
+  if (capabilities.includes('retrieval')) providers.push('huggingface')
 
   const pageCount = pages.length
   const summary = `Crawled ${pageCount} pages from ${url}. Detected niche: ${bestNiche}. Found ${features.length} features. Recommended ${capabilities.length} AI capabilities.`

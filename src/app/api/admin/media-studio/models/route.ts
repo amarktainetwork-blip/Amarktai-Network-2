@@ -99,11 +99,6 @@ export async function GET() {
         blocker: 'Music generation is post-launch. No music route is implemented yet.',
       }))
 
-  if (configuredProviders.has('openai')) image.push(directModel('gpt-image-1', 'GPT Image', 'OpenAI Direct', 'image', 'high'))
-  if (configuredProviders.has('replicate')) {
-    image.push(directModel('replicate/sdxl', 'SDXL', 'Replicate', 'image', 'medium'))
-    video.push(directModel('replicate/video', 'Configured video model', 'Replicate', 'video', 'high'))
-  }
   if (configuredProviders.has('huggingface')) {
     image.push(directModel('hf/custom-image-model', 'Configured image endpoint/model', 'Hugging Face', 'image', 'medium'))
     voice.push(directModel('hf/tts-model', 'Configured TTS endpoint/model', 'Hugging Face', 'voice', 'medium'))
@@ -114,22 +109,9 @@ export async function GET() {
     video.push(directModel('wanx2.1-t2v-turbo', 'Wan video', 'Qwen / DashScope', 'video', 'medium'))
     voice.push(directModel('qwen-tts', 'Qwen TTS', 'Qwen / DashScope', 'voice', 'low'))
   }
-  if (configuredProviders.has('minimax')) {
-    video.push(directModel('minimax/video-01', 'MiniMax Video', 'MiniMax', 'video', 'medium'))
-    voice.push(directModel('minimax/speech-02', 'MiniMax Speech', 'MiniMax', 'voice', 'low'))
+  if (false) {
     // Music generation for MiniMax is post-launch — route not yet implemented
-    music.push({
-      id: 'minimax/music-01',
-      label: 'MiniMax Music (post-launch)',
-      provider: 'MiniMax',
-      category: 'music',
-      available: false,
-      costTier: 'medium',
-      blocker: 'Music generation is post-launch. MiniMax music route not yet implemented.',
-    })
   }
-  if (configuredProviders.has('elevenlabs')) voice.push(directModel('elevenlabs/tts', 'ElevenLabs TTS', 'ElevenLabs', 'voice', 'high'))
-  if (configuredProviders.has('deepgram')) voice.push(directModel('deepgram/aura-2', 'Aura 2', 'Deepgram', 'voice', 'medium'))
 
   return NextResponse.json({
     genx: {

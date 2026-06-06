@@ -14,8 +14,9 @@
 import { prisma } from '@/lib/prisma'
 import { timingSafeEqual } from 'crypto'
 import { getDefaultModelForProvider, MODEL_REGISTRY } from '@/lib/model-registry'
-import { decryptVaultKey } from '@/lib/crypto-vault'
-import { getServiceKey, isUsableServiceKey } from '@/lib/service-vault'
+import { isUsableServiceKey } from '@/lib/service-vault'
+import { getProviderMeshNode, type ProviderMeshId } from '@/lib/provider-mesh'
+import { getMeshCredential } from '@/lib/provider-mesh-status'
 
 // ── Request / Response Contracts ─────────────────────────────────────────────
 
@@ -159,87 +160,30 @@ export interface ProviderCallResult {
 }
 
 /**
- * Look up an API key for a provider from the database vault first,
- * then fall back to the corresponding environment variable.
+ * Compatibility lookup that delegates exclusively to provider mesh truth.
  *
- * This is the single source of truth for API key resolution across ALL
  * brain/* routes — stream, tts, stt, research, suggestive-image etc.
- * must use this helper instead of reading process.env directly.
  *
- * @param providerKey - Provider key, e.g. 'openai', 'mistral'
- * @returns The API key string, or null if not configured anywhere
  */
 export async function getVaultApiKey(providerKey: string): Promise<string | null> {
-  const serviceEnvMap: Record<string, string[]> = {
-    openai: ['OPENAI_API_KEY'],
-    anthropic: ['ANTHROPIC_API_KEY'],
-    gemini: ['GEMINI_API_KEY'],
-    groq: ['GROQ_API_KEY'],
-    deepseek: ['DEEPSEEK_API_KEY'],
-    openrouter: ['OPENROUTER_API_KEY'],
-    together: ['TOGETHER_API_KEY'],
-    grok: ['GROK_API_KEY', 'XAI_API_KEY'],
-    xai: ['XAI_API_KEY', 'GROK_API_KEY'],
-    qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
-    nvidia: ['NVIDIA_API_KEY'],
-    huggingface: ['HUGGINGFACE_API_KEY'],
-    replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
-    suno: ['SUNO_API_KEY'],
-    github: ['GITHUB_TOKEN'],
-    cohere: ['COHERE_API_KEY'],
-    mistral: ['MISTRAL_API_KEY'],
-    genx: ['GENX_API_KEY'],
-    firecrawl: ['FIRECRAWL_API_KEY'],
-  }
-  for (const envVar of serviceEnvMap[providerKey] ?? []) {
-    const serviceKey = await getServiceKey(providerKey, envVar)
-    if (serviceKey) return normalizeProviderApiKey(serviceKey)
-  }
+  const normalized = providerKey === 'dashscope'
+    ? 'qwen'
+    : providerKey === 'hf'
+      ? 'huggingface'
+      : providerKey
+  if (!getProviderMeshNode(normalized)) return null
+  return normalizeProviderApiKey(await getMeshCredential(normalized as ProviderMeshId))
+}
+/*
 
   // DB vault is the authoritative source (set via the Admin → AI Providers UI)
-  try {
-    const row = await prisma.aiProvider.findUnique({
-      where: { providerKey },
-      select: { apiKey: true },
-    })
-    if (row?.apiKey) {
-      const decrypted = decryptVaultKey(row.apiKey)
-      return normalizeProviderApiKey(decrypted)
-    }
-  } catch {
     // DB unavailable — fall through to env
   }
 
   // Env-var fallback for local dev / CI where the DB may not be provisioned
-  const envMap: Record<string, string> = {
-    openai:      'OPENAI_API_KEY',
-    anthropic:   'ANTHROPIC_API_KEY',
-    gemini:      'GEMINI_API_KEY',
-    groq:        'GROQ_API_KEY',
-    deepseek:    'DEEPSEEK_API_KEY',
-    openrouter:  'OPENROUTER_API_KEY',
-    together:    'TOGETHER_API_KEY',
-    grok:        'GROK_API_KEY',
-    qwen:        'QWEN_API_KEY',
-    nvidia:      'NVIDIA_API_KEY',
-    huggingface: 'HUGGINGFACE_API_KEY',
-    replicate:   'REPLICATE_API_KEY',
-    suno:        'SUNO_API_KEY',
-    github:      'GITHUB_TOKEN',
-    cohere:      'COHERE_API_KEY',
-    mistral:     'MISTRAL_API_KEY',
-    genx:        'GENX_API_KEY',
-    firecrawl:   'FIRECRAWL_API_KEY',
-  }
-  const envVar = envMap[providerKey]
-  if (envVar && process.env[envVar]) return normalizeProviderApiKey(process.env[envVar]!) ?? null
-  if (providerKey === 'replicate' && process.env.REPLICATE_API_TOKEN) {
-    return normalizeProviderApiKey(process.env.REPLICATE_API_TOKEN) ?? null
-  }
-
-  return null
 }
 
+*/
 /**
  * OpenAI image generation models that require /v1/images/generations instead of /v1/chat/completions.
  * These models MUST NEVER be routed to the chat/completions endpoint.
@@ -296,13 +240,20 @@ export async function callProvider(
   systemPrompt?: string,
 ): Promise<ProviderCallResult> {
   const start = Date.now()
+  const meshNode = getProviderMeshNode(providerKey)
+  if (!meshNode || meshNode.kind !== 'provider') {
+    return {
+      ok: false,
+      output: null,
+      error: `Provider "${providerKey}" is not approved by the provider mesh`,
+      latencyMs: Date.now() - start,
+      model,
+      providerKey,
+    }
+  }
 
-  const vault = await prisma.aiProvider.findUnique({
-    where: { providerKey },
-    select: { apiKey: true, baseUrl: true, defaultModel: true },
-  })
-
-  if (!vault?.apiKey) {
+  const meshApiKey = await getVaultApiKey(providerKey)
+  if (!meshApiKey) {
     return {
       ok: false, output: null,
       error: `Provider "${providerKey}" is not configured (no API key)`,
@@ -310,7 +261,7 @@ export async function callProvider(
     }
   }
 
-  const resolvedApiKey = normalizeProviderApiKey(decryptVaultKey(vault.apiKey)) ?? ''
+  const resolvedApiKey = meshApiKey
   if (!resolvedApiKey) {
     return {
       ok: false, output: null,
@@ -321,7 +272,7 @@ export async function callProvider(
 
   let resolvedModel: string
   try {
-    resolvedModel = model || vault.defaultModel || defaultModelFor(providerKey)
+    resolvedModel = model || defaultModelFor(providerKey)
   } catch (err) {
     return {
       ok: false,
@@ -371,7 +322,7 @@ export async function callProvider(
           grok:       'https://api.x.ai',
           qwen:       'https://dashscope-intl.aliyuncs.com/compatible-mode',
         }
-        const base = vault.baseUrl || baseMap[providerKey] || 'https://api.openai.com'
+        const base = meshNode.baseUrl || baseMap[providerKey] || 'https://api.openai.com'
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${resolvedApiKey}`,
@@ -485,7 +436,7 @@ export async function callProvider(
 
       // ── Hugging Face Inference ──────────────────────────────────────────────
       case 'huggingface': {
-        const base = vault.baseUrl || 'https://api-inference.huggingface.co'
+        const base = meshNode.baseUrl || 'https://api-inference.huggingface.co'
         const headers: Record<string, string> = {
           Authorization: `Bearer ${resolvedApiKey}`,
         }
@@ -548,7 +499,7 @@ export async function callProvider(
 
       // ── NVIDIA NIM (OpenAI-compatible) ──────────────────────────────────────
       case 'nvidia': {
-        const base = vault.baseUrl || 'https://integrate.api.nvidia.com/v1'
+        const base = meshNode.baseUrl || 'https://integrate.api.nvidia.com/v1'
         const res = await fetch(`${base}/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resolvedApiKey}` },
@@ -571,7 +522,7 @@ export async function callProvider(
 
       // ── Anthropic (Claude) ────────────────────────────────────────────────
       case 'anthropic': {
-        const base = vault.baseUrl || 'https://api.anthropic.com'
+        const base = meshNode.baseUrl || 'https://api.anthropic.com'
         const anthropicBody: Record<string, unknown> = {
           model: resolvedModel,
           max_tokens: 1024,
@@ -601,7 +552,7 @@ export async function callProvider(
 
       // ── Cohere ────────────────────────────────────────────────────────────
       case 'cohere': {
-        const base = vault.baseUrl || 'https://api.cohere.com'
+        const base = meshNode.baseUrl || 'https://api.cohere.com'
         const res = await fetch(`${base}/v2/chat`, {
           method: 'POST',
           headers: {
@@ -628,7 +579,7 @@ export async function callProvider(
 
       // ── Mistral AI (OpenAI-compatible) ─────────────────────────────────────
       case 'mistral': {
-        const base = vault.baseUrl || 'https://api.mistral.ai'
+        const base = meshNode.baseUrl || 'https://api.mistral.ai'
         const res = await fetch(`${base}/v1/chat/completions`, {
           method: 'POST',
           headers: {
@@ -654,68 +605,6 @@ export async function callProvider(
       }
 
       // ── Replicate ──────────────────────────────────────────────────────────
-      // Replicate uses an async prediction API. We create a prediction and poll
-      // until it resolves (up to the global timeout). The model is specified as
-      // an owner/name[:version] string, e.g. "meta/llama-2-70b-chat".
-      case 'replicate': {
-        const base = vault.baseUrl || 'https://api.replicate.com'
-        // Step 1: create prediction
-        const createRes = await fetch(`${base}/v1/models/${resolvedModel}/predictions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${resolvedApiKey}`,
-          },
-          body: JSON.stringify({ input: { prompt: message } }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!createRes.ok) {
-          const errBody = await createRes.json().catch(() => ({})) as { detail?: string }
-          return { ok: false, output: null, error: `Replicate HTTP ${createRes.status}: ${errBody?.detail ?? 'prediction create failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const prediction = await createRes.json() as { id?: string; urls?: { get?: string }; status?: string; error?: string; output?: unknown }
-
-        if (!prediction.id) {
-          return { ok: false, output: null, error: 'Replicate: prediction ID missing', latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-
-        // Step 2: poll until succeeded / failed (max 28 s to stay within timeout)
-        const pollUrl = prediction.urls?.get ?? `${base}/v1/predictions/${prediction.id}`
-        // 800 ms gives ~35 polls within the 30 s window without overwhelming the API rate limits
-        const POLL_INTERVAL_MS = 800
-        // 2 s buffer ensures the final response can still be read before AbortSignal fires
-        const POLL_DEADLINE = start + timeout - 2_000
-
-        let pollResult = prediction
-        while (pollResult.status !== 'succeeded' && pollResult.status !== 'failed') {
-          if (Date.now() >= POLL_DEADLINE) {
-            return { ok: false, output: null, error: `Replicate: prediction timed out (id=${prediction.id})`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-          }
-          await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
-          const pollRes = await fetch(pollUrl, {
-            headers: { Authorization: `Token ${resolvedApiKey}` },
-          })
-          if (!pollRes.ok) break
-          pollResult = await pollRes.json() as typeof prediction
-        }
-
-        if (pollResult.status === 'failed' || pollResult.error) {
-          return { ok: false, output: null, error: `Replicate prediction failed: ${pollResult.error ?? 'unknown'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-
-        // Output can be a string, an array of strings, or structured data
-        const raw = pollResult.output
-        let text: string | null = null
-        if (typeof raw === 'string') {
-          text = raw
-        } else if (Array.isArray(raw)) {
-          text = (raw as string[]).join('')
-        } else if (raw != null) {
-          text = JSON.stringify(raw)
-        }
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       default:
         return { ok: false, output: null, error: `Unknown provider: "${providerKey}"`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
     }

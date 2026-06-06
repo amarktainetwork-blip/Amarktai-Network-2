@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/settings/test-genx
  *
- * Test the AI Engine connection using the provided (or stored) API key and URL.
+ * Test the GenX connection using the provided or stored API key.
  * Returns real test results — never faked.
  *
  * Response fields:
@@ -100,15 +100,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (!apiKey) apiKey = process.env.GENX_API_KEY ?? ''
-  if (!apiUrl) apiUrl = process.env.GENX_API_URL ?? ''
-
-  if (!apiUrl) {
+  if (!apiUrl) apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+  if (!apiKey) {
     return NextResponse.json({
       success: false,
       catalogOk: false,
       chatOk: false,
       modelCount: 0,
-      error: 'No AI Engine API URL configured',
+      error: 'GenX API key is not configured',
     })
   }
 
@@ -202,8 +201,7 @@ export async function POST(req: NextRequest) {
       }),
       signal: AbortSignal.timeout(15_000),
     })
-    // 200 OK or 400/422 (bad model id / bad request) both confirm the endpoint exists
-    if (res.ok || res.status === 400 || res.status === 422) {
+    if (res.ok) {
       chatOk = true
     } else {
       chatError = httpStatusToError(res.status)
@@ -317,7 +315,7 @@ export async function POST(req: NextRequest) {
     ...(chatError     ? { chatError }     : {}),
     ...(generateError ? { generateError } : {}),
     ...(!success && !catalogError && !chatError
-      ? { error: 'AI Engine connection failed' }
+      ? { error: 'GenX connection failed' }
       : {}),
   })
 }

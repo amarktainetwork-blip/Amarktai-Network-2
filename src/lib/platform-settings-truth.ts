@@ -26,7 +26,7 @@ export interface SettingsTruthEntry {
 async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
   const node = PROVIDER_MESH.find((item) => item.id === id)!
   const notes = await getMeshTestNotes(id)
-  const localRuntime = id === 'local-crawler' || id === 'ffmpeg' || id === 'storage'
+  const localRuntime = id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage'
   const storageWritable = id === 'storage' ? checkWritable(LOCAL_STORE_FILES.artifacts).writable : false
   const credential = localRuntime ? 'local-runtime' : await getMeshCredential(id)
   const configured = Boolean(credential) || storageWritable

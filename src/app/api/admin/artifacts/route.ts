@@ -164,8 +164,6 @@ export async function POST(request: NextRequest) {
     const allowedCdnHostnames = [
       'oaidalleapi.blob.core.windows.net',
       'openai.com',
-      'replicate.delivery',
-      'pbxt.replicate.delivery',
       'api.together.xyz',
       'storage.googleapis.com',
       'lh3.googleusercontent.com',

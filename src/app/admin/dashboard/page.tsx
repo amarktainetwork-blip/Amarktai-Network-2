@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { ArrowRight, Boxes, Command, Library, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Command, Library, ShieldCheck } from 'lucide-react'
 import { PRODUCT_POSITIONING } from '@/lib/product-contract'
-import { NETWORK_APPS } from '@/lib/network-apps-registry'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 
@@ -27,9 +26,9 @@ export default async function OverviewPage() {
             <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white lg:text-5xl">One intelligent command layer for the whole network.</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{PRODUCT_POSITIONING}</p>
           </div>
-          <Link href="/admin/dashboard/command" className="group rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/15">
+          <Link href="/admin/dashboard/workspace" className="group rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/15">
             <Command className="h-7 w-7 text-cyan-300" />
-            <p className="mt-4 text-lg font-black text-white">Open Command</p>
+            <p className="mt-4 text-lg font-black text-white">Open Workspace</p>
             <p className="mt-1 text-sm leading-6 text-slate-300">Describe the outcome. Amarktai chooses the right capability and shows the next step.</p>
             <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] text-cyan-300">Start <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
           </Link>
@@ -44,14 +43,13 @@ export default async function OverviewPage() {
       )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={<Command />} label="Active command jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
-        <Metric icon={<Boxes />} label="Network Apps" value={`${NETWORK_APPS.filter((app) => app.status === 'Ready' || app.status === 'In build').length} ready/in build`} />
+        <Metric icon={<Command />} label="Active workspace jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
         <Metric icon={<Library />} label="Recent outputs" value={String(artifacts.length)} />
         <Metric icon={<ShieldCheck />} label="Readiness" value={ready ? 'Ready' : 'Needs setup'} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-2">
-        <Panel title="Current jobs" empty="No command jobs yet. Open Command to start one.">
+        <Panel title="Current jobs" empty="No workspace jobs yet. Open Workspace to start one.">
           {jobs.map((job) => (
             <div key={job.id} className="rounded-xl border border-slate-700/40 bg-slate-950/45 p-3">
               <div className="flex items-center justify-between gap-3">

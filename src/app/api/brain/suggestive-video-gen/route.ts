@@ -6,7 +6,7 @@
  * CURRENT STATE: BLOCKED — no working video provider for this capability.
  * Hugging Face Inference API does not support zeroscope or text-to-video-ms
  * via a stable endpoint. This route returns a truthful 503 with a clear
- * provider requirement until Replicate or another video provider is wired.
+ * provider requirement until an approved video provider is wired.
  *
  * GATING (still enforced for when a provider is added):
  *   - App must have safeMode=false AND suggestiveMode=true
@@ -109,8 +109,8 @@ export async function POST(request: NextRequest) {
         error:
           'Video generation failed: unsupported model or provider. ' +
           'Hugging Face does not support this video model via API. ' +
-          'Suggestive video generation requires Replicate or another video provider.',
-        provider_required: 'replicate',
+          'Suggestive video generation requires a tested GenX, Qwen, or Together video route.',
+        provider_required: 'approved_video_provider',
         availabilityLevel: 'BLOCKED',
       },
       { status: 503 },

@@ -17,8 +17,6 @@ const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
   mimo: ['chat', 'reasoning', 'code', 'vision', 'voice', 'video_understanding', 'tools'],
   groq: ['chat', 'reasoning', 'code', 'voice'],
   together: ['chat', 'code', 'image_generation'],
-  replicate: ['image_generation', 'video_generation', 'voice', 'music'],
-  fal: ['image_generation', 'video_generation', 'voice', 'music'],
 }
 
 export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = APPROVED_AI_PROVIDERS.map((provider) => ({

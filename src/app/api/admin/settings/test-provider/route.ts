@@ -20,7 +20,7 @@ async function runExistingTest(id: ProviderMeshId, request: NextRequest): Promis
   return null
 }
 async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
-  if (id === 'local-crawler' || id === 'ffmpeg' || id === 'storage') {
+  if (id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage') {
     const result = await testLocalTool(id)
     return { success: result.connected, detail: result.detail }
   }
@@ -36,25 +36,6 @@ async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
       signal: AbortSignal.timeout(20_000),
     })
     return response.ok ? { success: true, detail: 'OpenAI-compatible chat passed.' } : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
-  }
-
-  if (id === 'replicate') {
-    const response = await fetch('https://api.replicate.com/v1/account', {
-      headers: { Authorization: `Bearer ${credential}` },
-      signal: AbortSignal.timeout(15_000),
-    })
-    return response.ok ? { success: true, detail: 'Authenticated account access passed.' } : { success: false, error: `Replicate returned HTTP ${response.status}` }
-  }
-
-  if (id === 'fal') {
-    const response = await fetch('https://api.fal.ai/v1/models?status=active', {
-      headers: { Authorization: `Key ${credential}` },
-      signal: AbortSignal.timeout(15_000),
-    })
-    const payload = response.ok ? await response.json().catch(() => ({})) as { models?: unknown[] } : {}
-    return response.ok
-      ? { success: true, detail: `${payload.models?.length ?? 0} active models visible.` }
-      : { success: false, error: `Fal returned HTTP ${response.status}` }
   }
 
   if (id === 'qdrant') {
@@ -77,6 +58,16 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({})) as { key?: string }
   const node = getProviderMeshNode(body.key || '')
   if (!node) return NextResponse.json({ success: false, error: 'Unknown connection' }, { status: 404 })
+  const localRuntime = ['local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'storage'].includes(node.id)
+  if (!localRuntime && node.envAliases.length > 0 && !await getMeshCredential(node.id)) {
+    return NextResponse.json({
+      success: false,
+      connected: false,
+      status: 'missing',
+      error: 'Key not present',
+      capabilities: [],
+    })
+  }
 
   const startedAt = Date.now()
   try {

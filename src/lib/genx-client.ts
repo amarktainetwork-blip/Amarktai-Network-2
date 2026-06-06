@@ -273,7 +273,7 @@ export function invalidateEndpointProfile(): void {
  * redeploying.
  */
 export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: string; configured: boolean }> {
-  let apiUrl = process.env.GENX_API_URL ?? ''
+  let apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
   let apiKey = process.env.GENX_API_KEY ?? ''
 
   try {
@@ -293,7 +293,7 @@ export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: str
   const { isUsableServiceKey } = await import('@/lib/service-vault')
   const normalizedUrl = normaliseBaseUrl(apiUrl) ?? ''
   const normalizedKey = isUsableServiceKey(apiKey) ? apiKey.trim() : ''
-  return { apiUrl: normalizedUrl, apiKey: normalizedKey, configured: !!normalizedUrl && !!normalizedKey }
+  return { apiUrl: normalizedUrl, apiKey: normalizedKey, configured: !!normalizedKey }
 }
 
 /**
@@ -415,14 +415,14 @@ async function buildHeaders(): Promise<Record<string, string>> {
 // ── Status ────────────────────────────────────────────────────────────────────
 
 export function getGenXStatus(): GenXStatus {
-  const envUrl = process.env.GENX_API_URL ?? ''
+  const envUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
   const envKey = process.env.GENX_API_KEY ?? ''
-  if (!envUrl || !envKey) {
+  if (!envKey) {
     return {
       configured: false,
       available: false,
       apiUrl: null,
-      error: 'GenX not configured (GENX_API_URL and GENX_API_KEY are required)',
+      error: 'GenX API key is not configured',
     }
   }
   return { configured: true, available: false, apiUrl: normaliseBaseUrl(envUrl), error: 'GenX has not been live-probed in this sync status path' }
@@ -439,7 +439,7 @@ export async function getGenXStatusAsync(): Promise<GenXStatus> {
       configured: false,
       available: false,
       apiUrl: apiUrl || null,
-      error: 'GenX not configured (GENX_API_URL and GENX_API_KEY are required)',
+      error: 'GenX API key is not configured',
       modelCount: 0,
     }
   }
@@ -718,7 +718,7 @@ export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallRe
     return {
       success: false, output: null, model: resolvedRequest.model,
       usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
-      latencyMs: 0, error: 'GenX not configured (GENX_API_URL not set)', genxUsed: false,
+      latencyMs: 0, error: 'GenX API key is not configured', genxUsed: false,
     }
   }
 
@@ -784,7 +784,7 @@ export async function streamGenXChat(
   }
   const profile = await getEndpointProfile()
   if (!profile) {
-    const error = 'GenX not configured (GENX_API_URL not set)'
+    const error = 'GenX API key is not configured'
     onEvent({ type: 'error', error })
     return { success: false, output: '', model: resolvedRequest.model, error }
   }
@@ -869,7 +869,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
     return {
       success: false, url: null, jobId: null, status: 'failed',
       model: resolvedRequest.model, latencyMs: 0,
-      error: 'GenX not configured (GENX_API_URL not set)',
+      error: 'GenX API key is not configured',
     }
   }
 

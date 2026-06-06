@@ -153,7 +153,7 @@ function supportsCapability(model: ModelEntry, capability: AiCapability, require
     case 'moderation': return model.supports_moderation === true
     case 'research': return model.supports_reasoning || model.supports_agent_planning || model.supports_tool_use
     case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'xai', 'qwen', 'minimax'].includes(model.provider)
-    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface', 'replicate', 'xai', 'qwen', 'minimax'].includes(model.provider)
+    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface', 'qwen'].includes(model.provider)
     default: return false
   }
 }

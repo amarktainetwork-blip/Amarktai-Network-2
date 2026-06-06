@@ -71,16 +71,6 @@ const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
     model('together', 'meta-llama/Llama-3-70b-chat-hf', 'Llama 3 70B Chat', 'Together AI', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Open model route for repo tasks.'),
     model('together', 'task:image', 'Together Image Route', 'Together AI', ['image'], ['vision'], 'medium', 'Image route when the app package allows it.'),
   ],
-  replicate: [
-    model('replicate', 'task:image', 'Replicate Image', 'Replicate', ['image'], ['vision'], 'medium', 'Asynchronous image specialist route.'),
-    model('replicate', 'task:video', 'Replicate Video', 'Replicate', ['video'], ['vision'], 'premium', 'Asynchronous video specialist route.'),
-    model('replicate', 'task:audio', 'Replicate Audio', 'Replicate', ['music', 'voice_tts', 'voice_stt'], ['chat'], 'medium', 'Audio and music specialist route.'),
-  ],
-  fal: [
-    model('fal', 'task:image', 'Fal Image', 'Fal', ['image'], ['vision'], 'medium', 'Asynchronous image specialist route.'),
-    model('fal', 'task:video', 'Fal Video', 'Fal', ['video'], ['vision'], 'premium', 'Asynchronous video specialist route.'),
-    model('fal', 'task:audio', 'Fal Audio', 'Fal', ['music', 'voice_tts'], ['chat'], 'medium', 'Audio and avatar specialist route.'),
-  ],
 }
 
 export const STATIC_PROVIDER_MODELS: Record<string, ProviderModelOption[]> = PROVIDER_MODELS

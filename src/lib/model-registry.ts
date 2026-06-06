@@ -187,7 +187,7 @@ export interface ModelEntry {
  * **Do NOT hard-code model decisions elsewhere** – always query this registry
  * via the helper functions exported below.
  */
-export const MODEL_REGISTRY: readonly ModelEntry[] = [
+const LEGACY_MODEL_REGISTRY: readonly ModelEntry[] = [
 
   // ── OpenAI (Layer 1 – Premium) ──────────────────────────────────────────
 
@@ -6127,6 +6127,19 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
 
 ] as const satisfies readonly ModelEntry[];
 
+const ACTIVE_MODEL_PROVIDERS = new Set([
+  'genx',
+  'huggingface',
+  'qwen',
+  'mimo',
+  'groq',
+  'together',
+])
+
+export const MODEL_REGISTRY: readonly ModelEntry[] = LEGACY_MODEL_REGISTRY.filter(
+  (model) => ACTIVE_MODEL_PROVIDERS.has(model.provider),
+)
+
 // ── Boolean capability keys (used for type-safe filtering) ──────────────
 
 /** Keys of `ModelEntry` that hold boolean capability flags. */
@@ -6393,7 +6406,6 @@ const DEFAULT_MODEL_MAP: Record<string, string> = {
   huggingface: 'meta-llama/Llama-3-8b-chat-hf',
   nvidia: 'nvidia/llama-3.1-nemotron-70b-instruct',
   gemini: 'gemini-1.5-flash',
-  replicate: 'wan-ai/wan2.1-t2v-480p',
   anthropic: 'claude-3-5-haiku-20241022',
   cohere: 'command-r',
   mistral: 'mistral-small-latest',
