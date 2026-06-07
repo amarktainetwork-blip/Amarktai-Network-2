@@ -312,6 +312,72 @@ async function tryGenXMedia(
   return { success: result.success, url: result.url, jobId: result.jobId, status: result.status, model: result.model, error: result.error }
 }
 
+async function trySelectedTextProvider({
+  input,
+  provider,
+  model,
+  systemPrompt,
+}: {
+  input: string
+  provider: string
+  model: string
+  systemPrompt?: string
+}): Promise<{ success: boolean; output: string | null; provider: string; model: string; error: string | null }> {
+  const normalizedProvider = provider.trim().toLowerCase()
+  const selectedModel = model.trim()
+
+  if (!normalizedProvider || normalizedProvider === 'auto') {
+    return {
+      success: false,
+      output: null,
+      provider: normalizedProvider || 'auto',
+      model: selectedModel,
+      error: 'No selected text provider was supplied.',
+    }
+  }
+
+  if (normalizedProvider === 'genx') {
+    const result = await tryGenXChat(input, selectedModel, systemPrompt)
+    return {
+      success: result.success,
+      output: result.output,
+      provider: 'genx',
+      model: result.model,
+      error: result.error,
+    }
+  }
+
+  try {
+    const providerInput = systemPrompt ? `${systemPrompt}\n\n${input}` : input
+    const result = await callProvider(normalizedProvider, selectedModel, providerInput, undefined)
+    if (result.output) {
+      return {
+        success: true,
+        output: result.output,
+        provider: normalizedProvider,
+        model: selectedModel,
+        error: null,
+      }
+    }
+
+    return {
+      success: false,
+      output: null,
+      provider: normalizedProvider,
+      model: selectedModel,
+      error: 'Selected provider returned no text output.',
+    }
+  } catch (err) {
+    return {
+      success: false,
+      output: null,
+      provider: normalizedProvider,
+      model: selectedModel,
+      error: err instanceof Error ? err.message : 'Selected provider failed.',
+    }
+  }
+}
+
 // ── Fallback text chain ───────────────────────────────────────────────────────
 
 const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
@@ -1490,35 +1556,94 @@ export async function executeCapability(
   }
 
   // ── Chat (default) ────────────────────────────────────────────────────────
-  const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
+  const selectedProvider = request.providerOverride?.trim().toLowerCase()
+  const selectedModel = request.modelOverride
+    ?? (selectedProvider && selectedProvider !== 'genx'
+      ? TEXT_FALLBACK_CHAIN.find((entry) => entry.key === selectedProvider)?.model ?? GENX_TEXT_MODELS[0]
+      : GENX_TEXT_MODELS[0])
 
-  if (!request.providerOverride || request.providerOverride === 'genx') {
-    const res = await tryGenXChat(request.input, model)
-    if (res.success && res.output) {
+  if (selectedProvider && selectedProvider !== 'auto') {
+    const selected = await trySelectedTextProvider({
+      input: request.input,
+      provider: selectedProvider,
+      model: selectedModel,
+    })
+
+    if (selected.success && selected.output) {
       let artifactId: string | undefined
-      if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
-      logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'text', output: res.output, artifactId, fallbackUsed: false }
+      if (save) artifactId = await maybeSaveArtifact(cap, selected.output, selected.provider, selected.model, appSlug, request.traceId)
+      logExecution(cap, selected.provider, selected.model, false, !!artifactId, null)
+      return {
+        success: true,
+        capability: cap,
+        provider: selected.provider,
+        model: selected.model,
+        outputType: 'text',
+        output: selected.output,
+        artifactId,
+        fallbackUsed: false,
+      }
+    }
+
+    console.warn(`[capability-router] Selected provider ${selectedProvider}:${selectedModel} failed:`, selected.error)
+  }
+
+  if (!selectedProvider || selectedProvider === 'auto') {
+    const genx = await tryGenXChat(request.input, selectedModel)
+    if (genx.success && genx.output) {
+      let artifactId: string | undefined
+      if (save) artifactId = await maybeSaveArtifact(cap, genx.output, 'genx', genx.model, appSlug, request.traceId)
+      logExecution(cap, 'genx', genx.model, false, !!artifactId, null)
+      return {
+        success: true,
+        capability: cap,
+        provider: 'genx',
+        model: genx.model,
+        outputType: 'text',
+        output: genx.output,
+        artifactId,
+        fallbackUsed: false,
+      }
     }
   }
 
-  const fallback = await tryFallbackText(request.input)
+  const fallbackChain = selectedProvider && selectedProvider !== 'auto'
+    ? TEXT_FALLBACK_CHAIN.filter((entry) => entry.key !== selectedProvider)
+    : TEXT_FALLBACK_CHAIN
+
+  const fallback = await tryFallbackText(request.input, fallbackChain)
   if (fallback.success && fallback.output) {
     let artifactId: string | undefined
     if (save) artifactId = await maybeSaveArtifact(cap, fallback.output, fallback.provider, fallback.model, appSlug, request.traceId)
     logExecution(cap, fallback.provider, fallback.model, true, !!artifactId, null)
-    return { success: true, capability: cap, provider: fallback.provider, model: fallback.model, outputType: 'text', output: fallback.output, artifactId, fallbackUsed: true, fallbackReason: 'GenX unavailable' }
+    return {
+      success: true,
+      capability: cap,
+      provider: fallback.provider,
+      model: fallback.model,
+      outputType: 'text',
+      output: fallback.output,
+      artifactId,
+      fallbackUsed: true,
+      fallbackReason: selectedProvider
+        ? `Selected provider ${selectedProvider}:${selectedModel} unavailable`
+        : 'Primary provider unavailable',
+    }
   }
 
-  logExecution(cap, null, null, true, false, 'All providers failed')
+  const error = selectedProvider
+    ? `Selected provider ${selectedProvider}:${selectedModel} failed and fallback providers did not return text.`
+    : 'All text providers failed. Please configure at least one approved AI text provider.'
+
+  logExecution(cap, selectedProvider ?? null, selectedModel, true, false, error)
   return {
     success: false,
     capability: cap,
-    provider: null,
-    model: null,
+    provider: selectedProvider ?? null,
+    model: selectedModel,
     outputType: 'text',
     output: null,
     fallbackUsed: true,
-    error: 'All providers failed. Please configure at least one AI provider (GenX, Gemini, Groq, or OpenRouter).',
+    error,
   }
 }

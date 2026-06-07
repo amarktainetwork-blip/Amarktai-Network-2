@@ -177,7 +177,8 @@ function taskCapabilities(taskId: string): UniversalCapabilityGroup[] {
   if (taskId.includes('speech-to-text')) return ['STT']
   if (taskId.includes('text-to-speech')) return ['voice/TTS']
   if (taskId.includes('embedding')) return ['embeddings/moderation']
-  return ['chat', 'coding']
+  if (taskId.includes('text')) return ['chat', 'coding']
+  return ['chat']
 }
 
 function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityGroup, UniversalModelRoute[]> {

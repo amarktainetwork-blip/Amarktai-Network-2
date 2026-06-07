@@ -116,25 +116,187 @@ async function configured(provider: ApprovedProviderKey) {
   return false
 }
 
+const SAFE_LIVE_DISCOVERY_PROVIDERS = new Set<ApprovedProviderKey>([
+  'genx',
+  'groq',
+  'qwen',
+  'together',
+  'huggingface',
+])
+
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
+}
+
+function openAiCompatibleModelsEndpoint(baseUrl: string): string {
+  const base = trimTrailingSlash(baseUrl)
+  if (base.endsWith('/v1')) return `${base}/models`
+  return `${base}/v1/models`
+}
+
+function inferLiveModelRoles(provider: ApprovedProviderKey, modelId: string): ModelRole[] {
+  const id = modelId.toLowerCase()
+  if (/embed|bge|gte|e5/.test(id)) return []
+  if (/whisper|speech-to-text|stt/.test(id)) return []
+  if (/tts|text-to-speech|voice/.test(id)) return []
+  if (/image|flux|sdxl|stable-diffusion|kolors/.test(id)) return ['vision']
+  if (/video|wanx|sora|hunyuan|cogvideo|ltx/.test(id)) return ['vision']
+  if (/coder|code|codestral/.test(id)) return ['chat', 'reasoning', 'coding']
+  if (/reason|r1|qwq|deepseek/.test(id)) return ['chat', 'reasoning', 'coding']
+  return ['chat', 'reasoning']
+}
+
+function inferLiveModelModalities(provider: ApprovedProviderKey, modelId: string): ModelModality[] {
+  const id = modelId.toLowerCase()
+  if (/embed|bge|gte|e5/.test(id)) return ['embedding']
+  if (/whisper|speech-to-text|stt/.test(id)) return ['voice_stt']
+  if (/tts|text-to-speech|voice/.test(id)) return ['voice_tts']
+  if (/image|flux|sdxl|stable-diffusion|kolors/.test(id)) return ['image']
+  if (/video|wanx|sora|hunyuan|cogvideo|ltx/.test(id)) return ['video']
+  if (/vl|vision|omni|multimodal/.test(id)) return ['multimodal', 'text']
+  return ['text']
+}
+
+function inferLiveModelCostTier(provider: ApprovedProviderKey, modelId: string): ProviderModelOption['costTier'] {
+  const id = modelId.toLowerCase()
+  if (/max|70b|72b|405b|large|pro|plus|premium|reason/.test(id)) return 'medium'
+  if (/turbo|mini|small|8b|7b|cheap|fast/.test(id)) return 'low'
+  return provider === 'huggingface' ? 'unknown' : 'low'
+}
+
+function liveModelOption(
+  provider: ApprovedProviderKey,
+  modelId: string,
+  displayName: string,
+): ProviderModelOption {
+  const providerDef = APPROVED_AI_PROVIDERS.find((entry) => entry.key === provider)!
+  return {
+    provider,
+    modelId,
+    displayName,
+    family: providerDef.displayName,
+    modalities: inferLiveModelModalities(provider, modelId),
+    roles: inferLiveModelRoles(provider, modelId),
+    costTier: inferLiveModelCostTier(provider, modelId),
+    source: 'provider_live',
+    enabled: false,
+    notes: 'Discovered from provider /models endpoint. Not auto-routed until approved in the static/governed catalog.',
+  }
+}
+
+function mergeProviderModels(models: ProviderModelOption[]): ProviderModelOption[] {
+  const byId = new Map<string, ProviderModelOption>()
+
+  for (const model of models) {
+    const key = `${model.provider}:${model.modelId}`
+    const existing = byId.get(key)
+    if (!existing) {
+      byId.set(key, model)
+      continue
+    }
+
+    byId.set(key, {
+      ...existing,
+      modalities: [...new Set([...existing.modalities, ...model.modalities])],
+      roles: [...new Set([...existing.roles, ...model.roles])],
+      // Preserve curated static routes as enabled/routed. Live rows only enrich metadata.
+      enabled: existing.enabled || model.enabled,
+      source: existing.source === 'static' ? existing.source : model.source,
+      notes: existing.notes || model.notes,
+    })
+  }
+
+  return [...byId.values()]
+}
+
+async function discoverOpenAiCompatibleProviderModels(
+  provider: ApprovedProviderKey,
+  providerDef: typeof APPROVED_AI_PROVIDERS[number],
+): Promise<ProviderModelOption[]> {
+  const apiKey = await getProviderKey(provider)
+  if (!apiKey?.trim()) return []
+
+  const endpoint = openAiCompatibleModelsEndpoint(providerDef.defaultBaseUrl)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      throw new Error(`${provider} /models HTTP ${res.status}`)
+    }
+
+    const data = await res.json().catch(() => ({})) as {
+      data?: Array<{ id?: string; name?: string }>
+      models?: Array<{ id?: string; name?: string }>
+    }
+
+    const rows = Array.isArray(data.data)
+      ? data.data
+      : Array.isArray(data.models)
+        ? data.models
+        : []
+
+    return rows
+      .map((row) => String(row.id || row.name || '').trim())
+      .filter(Boolean)
+      .slice(0, 500)
+      .map((id) => liveModelOption(provider, id, id))
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 export async function getProviderModelCatalog(provider: string): Promise<ProviderModelCatalog> {
   if (!isApprovedAIProvider(provider)) {
     throw new Error(`Provider "${provider}" is not approved for dashboard model routing.`)
   }
 
-  const providerDef = APPROVED_AI_PROVIDERS.find((entry) => entry.key === provider)!
-  const models = PROVIDER_MODELS[provider] ?? []
+  const providerKey = provider as ApprovedProviderKey
+  const providerDef = APPROVED_AI_PROVIDERS.find((entry) => entry.key === providerKey)!
+  const staticModels = PROVIDER_MODELS[providerKey] ?? []
+  const isConfigured = await configured(providerKey)
+  const supportsLiveDiscovery = SAFE_LIVE_DISCOVERY_PROVIDERS.has(providerKey)
+
+  let liveDiscoveryStatus: ProviderModelCatalog['liveDiscoveryStatus'] = supportsLiveDiscovery ? 'not_attempted' : 'not_supported'
+  let liveModels: ProviderModelOption[] = []
+  const notes = [providerDef.notes]
+
+  if (supportsLiveDiscovery && providerKey !== 'genx' && isConfigured) {
+    try {
+      liveModels = await discoverOpenAiCompatibleProviderModels(providerKey, providerDef)
+      liveDiscoveryStatus = 'success'
+      notes.push(`Live discovery found ${liveModels.length} provider models. Live-discovered models remain disabled until explicitly routed.`)
+    } catch (err) {
+      liveDiscoveryStatus = 'failed'
+      notes.push(err instanceof Error ? err.message : 'Live discovery failed.')
+    }
+  }
+
+  if (providerKey === 'genx') {
+    liveDiscoveryStatus = 'not_attempted'
+    notes.push('GenX live discovery is handled by the universal GenX catalog path.')
+  }
 
   return {
     provider,
     displayName: providerDef.displayName,
-    configured: await configured(provider),
+    configured: isConfigured,
     governanceStatus: 'approved',
-    supportsCustomModelIds: false,
-    supportsLiveDiscovery: provider === 'genx',
-    liveDiscoveryStatus: provider === 'genx' ? 'not_attempted' : 'not_supported',
-    models,
-    recommendedDefaults: recommendedDefaults(provider),
-    notes: [providerDef.notes],
+    supportsCustomModelIds: supportsLiveDiscovery,
+    supportsLiveDiscovery,
+    liveDiscoveryStatus,
+    models: mergeProviderModels([...staticModels, ...liveModels]),
+    recommendedDefaults: recommendedDefaults(providerKey),
+    notes,
   }
 }
 
