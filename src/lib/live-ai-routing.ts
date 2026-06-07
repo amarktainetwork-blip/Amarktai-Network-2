@@ -167,6 +167,15 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
 ] as const
 
 export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
+  const requestedProvider =
+    input.selectedProvider && input.selectedProvider !== 'auto'
+      ? input.selectedProvider
+      : undefined
+  const requestedModel =
+    input.selectedModel && input.selectedModel !== 'auto'
+      ? input.selectedModel
+      : undefined
+
   const costMode = input.costMode ?? 'balanced'
   const appSlug = input.appSlug ?? 'dashboard'
   const governedCapability = normalizeGovernedCapability(input.capability)
@@ -178,12 +187,12 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const governanceValidation = validateCapabilitySelection({
     appSlug,
     capability: governedCapability,
-    provider: input.selectedProvider,
-    modelId: input.selectedModel,
+    provider: requestedProvider,
+    modelId: requestedModel,
     adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
     budgetAllows: typeof input.budgetRemainingUsd !== 'number' || input.budgetRemainingUsd >= COST_ESTIMATE[costMode],
   })
-  if (!governanceValidation.allowed && input.selectedProvider) {
+  if (!governanceValidation.allowed && requestedProvider) {
     return blocked(input, costMode, governanceValidation.reason)
   }
 
