@@ -58,6 +58,7 @@ export type GovernedCapability =
   | 'stt'
   | 'voice_selection'
   | 'voice_cloning'
+  | 'avatar_video'
   | 'embeddings'
   | 'rag'
   | 'moderation'
@@ -241,6 +242,7 @@ const CAPABILITY_ALIASES: Record<string, GovernedCapability> = {
   song: 'song_generation',
   music: 'music_generation',
   code: 'coding',
+  avatar: 'avatar_video',
 }
 
 export function normalizeGovernedCapability(capability: string): GovernedCapability | null {
@@ -250,7 +252,7 @@ export function normalizeGovernedCapability(capability: string): GovernedCapabil
     'chat', 'reasoning', 'coding', 'repo_audit', 'research', 'crawling', 'browser_qa',
     'image_generation', 'image_editing', 'image_to_video', 'video_generation',
     'music_generation', 'song_generation', 'lyrics_generation', 'instrumental_music',
-    'tts', 'stt', 'voice_selection', 'voice_cloning', 'embeddings', 'rag', 'moderation',
+    'tts', 'stt', 'voice_selection', 'voice_cloning', 'avatar_video', 'embeddings', 'rag', 'moderation',
     'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'app_memory', 'artifacts', 'operations',
     'audio',
   ])

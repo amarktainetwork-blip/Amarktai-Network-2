@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import {
   createMusic,
-  createMusicJob,
   listMusicJobs,
   generateLyrics,
   getMusicArtifactAsync,
@@ -15,6 +14,9 @@ import {
   AVAILABLE_VOCAL_STYLES,
   type MusicCreationRequest,
 } from '@/lib/music-studio'
+import { callGenXMedia, GENX_AUDIO_MODELS } from '@/lib/genx-client'
+import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
+import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
 /**
  * GET /api/admin/music-studio
@@ -161,19 +163,73 @@ export async function POST(request: NextRequest) {
           blocker,
         }, { status: 503 })
       }
-      const job = await createMusicJob(musicRequest)
-      return NextResponse.json({
-        success: true,
+      const model = GENX_AUDIO_MODELS[0]
+      const prompt = musicRequest.existingLyrics?.trim()
+        ? `${musicRequest.title ?? musicRequest.theme}\n\n${musicRequest.existingLyrics}`
+        : `${musicRequest.title ?? musicRequest.theme}. ${musicRequest.theme}. ${musicRequest.genre} music, ${musicRequest.vocalStyle.replaceAll('_', ' ')}.`
+      const generated = await callGenXMedia({
+        model,
+        prompt,
+        type: 'audio',
+        duration: musicRequest.durationSeconds,
+        params: {
+          style: musicRequest.genre,
+          instrumental: musicRequest.instrumental ?? musicRequest.vocalStyle === 'instrumental_only',
+        },
+      })
+      if (!generated.success || (!generated.url && !generated.jobId)) {
+        const blocker = generated.error ?? 'Music provider returned no playable audio or trackable provider job.'
+        return NextResponse.json({
+          success: false, executed: false, capability: 'music_generation', provider: 'genx', model,
+          jobStatus: 'failed', jobId: null, pollUrl: null, artifactId: null, storageUrl: null,
+          error: blocker, blocker,
+        }, { status: 502 })
+      }
+      if (generated.url) {
+        const persisted = await persistCanonicalMediaResult({
+          result: generated,
+          appSlug: musicRequest.appSlug,
+          type: 'music',
+          subType: 'generated_audio',
+          title: musicRequest.title ?? musicRequest.theme.slice(0, 80),
+          description: `${musicRequest.genre} / ${musicRequest.vocalStyle} / ${musicRequest.theme}`,
+          provider: 'genx',
+          model: generated.model,
+          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre },
+        })
+        return NextResponse.json({
+          success: true,
+          executed: true,
+          capability: 'music_generation',
+          provider: 'genx',
+          model: generated.model,
+          jobStatus: 'completed',
+          status: 'completed',
+          jobId: null,
+          pollUrl: null,
+          artifactId: persisted.artifactId,
+          storageUrl: persisted.storageUrl,
+          audioUrl: persisted.mediaUrl,
+          musicUrl: persisted.mediaUrl,
+          error: null,
+          blocker: null,
+          artifact: persisted.artifact,
+        }, { status: 201 })
+      }
+      const job = createLocalMediaJob({
         capability: 'music_generation',
-        provider: job.provider ?? null,
-        model: job.model ?? null,
-        jobStatus: job.status,
-        artifactId: job.artifactId ?? null,
-        storageUrl: null,
-        error: null,
-        blocker: null,
-        job,
-      }, { status: 202 })
+        appSlug: musicRequest.appSlug,
+        type: 'music',
+        subType: 'generated_audio',
+        title: musicRequest.title ?? musicRequest.theme.slice(0, 80),
+        description: `${musicRequest.genre} / ${musicRequest.vocalStyle} / ${musicRequest.theme}`,
+        prompt,
+        provider: 'genx',
+        model: generated.model,
+        providerJobId: generated.jobId!,
+        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle },
+      })
+      return NextResponse.json(localMediaJobResponse(job), { status: 202 })
     }
 
     // action === 'create' (default — synchronous)

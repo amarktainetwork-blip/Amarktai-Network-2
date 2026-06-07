@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
+import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
 import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
 import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
@@ -77,8 +78,8 @@ async function persistArtifact(input: {
 
 function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
   if (tab === 'Research') return 'research'
-  if (tab === 'Image') return 'image'
-  if (tab === 'Video') return 'video'
+  if (tab === 'Image') return 'image_generation'
+  if (tab === 'Video') return 'video_generation'
   if (tab === 'Music / Audio') return 'music_generation'
   if (tab === 'Voice / TTS') return 'tts'
   if (tab === 'Avatar / Talking Video') return 'avatar_video'
@@ -111,6 +112,12 @@ export async function POST(request: NextRequest) {
   }
 
   const capability = normalizeCapability(tab, body.mode)
+  if (tab === 'Avatar / Talking Video') {
+    const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
+    const data = await readJson(response)
+    return NextResponse.json({ ...data, result: data, artifact: null }, { status: response.status })
+  }
+
   const route = routeLiveModel({
     capability,
     appSlug,
@@ -171,25 +178,45 @@ export async function POST(request: NextRequest) {
           metadata: { tab, route },
         })
         : null
-      const success = Boolean(persisted?.success)
+      const localJob = persisted?.status === 'processing'
+        && persisted.jobId
+        && String(data.provider ?? route.selectedProvider) === 'genx'
+        ? createLocalMediaJob({
+          capability: 'image_generation',
+          appSlug,
+          type: 'image',
+          subType: 'studio_image',
+          title: `Image: ${prompt.slice(0, 80)}`,
+          prompt,
+          provider: String(data.provider ?? route.selectedProvider ?? ''),
+          model: String(data.model ?? route.selectedModel ?? ''),
+          providerJobId: persisted.jobId,
+          metadata: { tab, route, responseShapeKeys: persisted.responseShapeKeys },
+        })
+        : null
+      const tracked = localJob ? localMediaJobResponse(localJob) : null
+      const success = Boolean(persisted?.success || tracked?.success)
       return NextResponse.json({
+        ...tracked,
         success,
         executed: success,
         capability,
         provider: persisted?.provider ?? data.provider ?? route.selectedProvider,
         model: persisted?.model ?? data.model ?? route.selectedModel,
-        jobStatus: persisted?.status ?? 'failed',
-        jobId: persisted?.jobId ?? null,
+        jobStatus: tracked?.jobStatus ?? persisted?.status ?? 'failed',
+        jobId: tracked?.jobId ?? persisted?.jobId ?? null,
+        providerJobId: tracked?.providerJobId ?? persisted?.jobId ?? null,
+        pollUrl: tracked?.pollUrl ?? null,
         artifactId: persisted?.artifactId ?? null,
         storageUrl: persisted?.storageUrl ?? null,
         imageUrl: persisted?.mediaUrl ?? null,
-        blocker: persisted?.blocker ?? data.error ?? null,
-        error: persisted?.blocker ?? data.error ?? null,
+        blocker: tracked ? null : persisted?.blocker ?? data.error ?? null,
+        error: tracked ? null : persisted?.blocker ?? data.error ?? null,
         responseShapeKeys: persisted?.responseShapeKeys ?? Object.keys(data).sort(),
         result: data,
         artifact: persisted?.artifact ?? null,
         route,
-      }, { status: success ? 200 : response.ok ? 502 : response.status })
+      }, { status: tracked ? 202 : success ? 200 : response.ok ? 502 : response.status })
     }
 
     if (tab === 'Video' || capability === 'adult_video') {
@@ -225,17 +252,6 @@ export async function POST(request: NextRequest) {
       }, { status: response.status })
     }
 
-    if (tab === 'Avatar / Talking Video') {
-      const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', {
-        prompt,
-        appSlug,
-        provider: route.selectedProvider,
-        model: route.selectedModel,
-      }))
-      const data = await readJson(response)
-      return NextResponse.json({ ...data, result: data, artifact: null, route }, { status: response.status })
-    }
-
     if (tab === 'Music / Audio') {
       const response = await musicPost(jsonRequest('/api/admin/music-studio', {
         action: 'create_async',
@@ -244,25 +260,27 @@ export async function POST(request: NextRequest) {
           theme: prompt,
           genre: 'cinematic',
           genres: ['cinematic'],
-          vocalStyle: 'instrumental',
+          vocalStyle: 'instrumental_only',
           prompt,
           provider: route.selectedProvider,
           model: route.selectedModel,
         },
       }))
       const data = await readJson(response)
-      const job = data.job as Record<string, unknown> | undefined
       return NextResponse.json({
-        success: response.ok,
-        executed: response.ok,
+        ...data,
+        success: Boolean(data.success),
+        executed: Boolean(data.executed),
         capability,
-        provider: job?.provider ?? route.selectedProvider,
-        model: job?.model ?? route.selectedModel,
-        jobStatus: job?.status ?? 'queued',
-        artifactId: job?.artifactId ?? null,
-        storageUrl: job?.storageUrl ?? null,
+        provider: data.provider ?? route.selectedProvider,
+        model: data.model ?? route.selectedModel,
+        jobStatus: data.jobStatus ?? data.status ?? 'failed',
+        jobId: data.jobId ?? null,
+        pollUrl: data.pollUrl ?? null,
+        artifactId: data.artifactId ?? null,
+        storageUrl: data.storageUrl ?? null,
         error: data.error ?? null,
-        blocker: data.error ?? null,
+        blocker: data.blocker ?? data.error ?? null,
         result: data,
         artifact: data.artifact ?? null,
         route,
@@ -270,13 +288,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Voice / TTS' || capability === 'adult_voice') {
-      const provider = ['genx', 'groq', 'huggingface'].includes(String(route.selectedProvider))
+      const provider = ['genx', 'huggingface'].includes(String(route.selectedProvider))
         ? route.selectedProvider
         : 'auto'
       const response = await ttsPost(jsonRequest('/api/brain/tts', {
         text: prompt,
         provider,
-        model: route.selectedModel,
+        model: provider === 'auto' ? undefined : route.selectedModel,
         voiceId: body.voiceId,
         appSlug,
         capability,

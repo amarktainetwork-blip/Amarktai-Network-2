@@ -72,6 +72,7 @@ async function ensureVideoArtifact(job: {
       traceId,
       mimeType: 'video/mp4',
       contentUrl: job.resultUrl,
+      allowRemoteReference: true,
       metadata: { capability: capabilityFor(job.resultMeta), jobId: job.id },
     })
     return { artifactId: artifact.id, storageUrl: artifact.storageUrl, artifactError: null }
@@ -112,6 +113,7 @@ function responsePayload(
     error: error ?? null,
     blocker: error ?? null,
     jobId: job.id,
+    pollUrl: `/api/brain/video-generate/${job.id}`,
     status: job.status,
     resultUrl: job.resultUrl,
     prompt: job.prompt,

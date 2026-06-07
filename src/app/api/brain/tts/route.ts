@@ -5,13 +5,10 @@ import { callGenXMedia, GENX_TTS_MODELS } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
 type TtsCapability = 'tts' | 'adult_voice'
-type TtsProvider = 'auto' | 'genx' | 'groq' | 'huggingface'
-
-const VOICES = {
-  groq: { male: 'Atlas-PlayAI', female: 'Arista-PlayAI', default: 'Arista-PlayAI' },
-}
+type TtsProvider = 'auto' | 'genx' | 'huggingface'
 
 function result(input: {
   success: boolean
@@ -80,21 +77,31 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const requestedProvider = (typeof body.provider === 'string' ? body.provider : 'auto') as TtsProvider
-    if (!['auto', 'genx', 'groq', 'huggingface'].includes(requestedProvider)) {
+    const requestedProviderValue = typeof body.provider === 'string' ? body.provider : 'auto'
+    if (requestedProviderValue === 'groq') {
+      return NextResponse.json(result({
+        success: false,
+        capability,
+        traceId,
+        provider: 'groq',
+        model: typeof body.model === 'string' ? body.model : 'playai-tts',
+        jobStatus: 'blocked',
+        error: 'Groq TTS is not an approved working audio execution route.',
+      }), { status: 409 })
+    }
+    if (!['auto', 'genx', 'huggingface'].includes(requestedProviderValue)) {
       return NextResponse.json(result({
         success: false,
         capability,
         traceId,
         jobStatus: 'blocked',
-        error: `Provider "${requestedProvider}" is not in the canonical ${capability} route.`,
+        error: `Provider "${requestedProviderValue}" is not in the canonical ${capability} route.`,
       }), { status: 400 })
     }
+    const requestedProvider = requestedProviderValue as TtsProvider
 
     const route = getMediaCapabilityRoute(capability)!
     const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
-    const voiceId = typeof body.voiceId === 'string' && body.voiceId ? body.voiceId : null
-    const gender = body.gender === 'male' || body.gender === 'female' ? body.gender : 'default'
     const attempts: Array<Record<string, unknown>> = []
 
     for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
@@ -108,6 +115,10 @@ export async function POST(request: NextRequest) {
         const generated = await callGenXMedia({ model: genxModel, prompt: text, type: 'audio' }).catch((cause) => ({
           success: false,
           url: null,
+          jobId: null,
+          status: 'failed' as const,
+          model: genxModel,
+          latencyMs: 0,
           error: cause instanceof Error ? cause.message : 'GenX TTS failed.',
         }))
         if (generated.success && generated.url) {
@@ -118,33 +129,26 @@ export async function POST(request: NextRequest) {
           } else {
             error = 'GenX returned an audio URL that could not be downloaded.'
           }
+        } else if (generated.success && generated.jobId) {
+          const job = createLocalMediaJob({
+            capability,
+            appSlug,
+            type: 'audio',
+            subType: capability,
+            title: `${capability === 'adult_voice' ? 'Adult voice' : 'TTS'}: ${text.slice(0, 80)}`,
+            prompt: text,
+            provider: 'genx',
+            model: generated.model,
+            providerJobId: generated.jobId,
+            metadata: { capability, traceId },
+          })
+          return NextResponse.json({
+            ...localMediaJobResponse(job),
+            traceId,
+            attempts,
+          }, { status: 202 })
         } else {
           error = generated.error ?? 'GenX returned no audio.'
-        }
-      }
-
-      if (entry.provider === 'groq') {
-        const apiKey = await getVaultApiKey('groq')
-        if (!apiKey) {
-          error = 'Groq API key is missing.'
-        } else {
-          const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model,
-              input: text,
-              voice: voiceId ?? VOICES.groq[gender],
-              response_format: 'mp3',
-            }),
-            signal: AbortSignal.timeout(60_000),
-          }).catch(() => null)
-          if (response?.ok) {
-            audio = Buffer.from(await response.arrayBuffer())
-            mimeType = response.headers.get('content-type') ?? mimeType
-          } else {
-            error = response ? `Groq returned HTTP ${response.status}.` : 'Groq TTS request failed.'
-          }
         }
       }
 
