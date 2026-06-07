@@ -22,13 +22,25 @@ function parseNotes(raw?: string | null): MeshTestNotes {
 
 export async function getMeshCredential(id: ProviderMeshId): Promise<string | null> {
   const node = getProviderMeshNode(id)
-  const row = await prisma.integrationConfig.findUnique({
-    where: { key: id },
-    select: { apiKey: true },
-  }).catch(() => null)
+  const [row, providerRow] = await Promise.all([
+    prisma.integrationConfig.findUnique({
+      where: { key: id },
+      select: { apiKey: true },
+    }).catch(() => null),
+    node?.kind === 'provider' && prisma.aiProvider
+      ? prisma.aiProvider.findUnique({
+        where: { providerKey: id },
+        select: { apiKey: true },
+      }).catch(() => null)
+      : Promise.resolve(null),
+  ])
 
   if (row?.apiKey) {
     const decrypted = decryptVaultKey(row.apiKey)
+    if (decrypted?.trim()) return decrypted.trim()
+  }
+  if (providerRow?.apiKey) {
+    const decrypted = decryptVaultKey(providerRow.apiKey)
     if (decrypted?.trim()) return decrypted.trim()
   }
 
@@ -40,11 +52,31 @@ export async function getMeshCredential(id: ProviderMeshId): Promise<string | nu
 }
 
 export async function getMeshTestNotes(id: ProviderMeshId): Promise<MeshTestNotes> {
-  const row = await prisma.integrationConfig.findUnique({
-    where: { key: id },
-    select: { notes: true },
-  }).catch(() => null)
-  return parseNotes(row?.notes)
+  const node = getProviderMeshNode(id)
+  const [row, providerRow] = await Promise.all([
+    prisma.integrationConfig.findUnique({
+      where: { key: id },
+      select: { notes: true },
+    }).catch(() => null),
+    node?.kind === 'provider' && prisma.aiProvider
+      ? prisma.aiProvider.findUnique({
+        where: { providerKey: id },
+        select: { healthStatus: true, healthMessage: true, lastCheckedAt: true },
+      }).catch(() => null)
+      : Promise.resolve(null),
+  ])
+  const notes = parseNotes(row?.notes)
+  if (notes.lastTestStatus) return notes
+  if (!providerRow?.lastCheckedAt) return notes
+  const passed = providerRow.healthStatus === 'healthy'
+  return {
+    ...notes,
+    lastTestStatus: passed ? 'passed' : providerRow.healthStatus === 'error' || providerRow.healthStatus === 'degraded' ? 'failed' : 'needs_live_test',
+    lastTestPassed: passed,
+    lastTestedAt: providerRow.lastCheckedAt.toISOString(),
+    lastError: passed ? '' : providerRow.healthMessage,
+    detail: providerRow.healthMessage,
+  }
 }
 
 export async function recordMeshTestResult(input: {

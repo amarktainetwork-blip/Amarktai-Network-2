@@ -21,11 +21,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     let mounted = true
-    fetch('/api/admin/system/status').then((res) => res.json()).catch(() => null).then((system) => {
+    fetch('/api/admin/settings/status').then((res) => res.json()).catch(() => null).then((response) => {
       if (!mounted) return
-      const storage = system?.status?.storage?.status ?? 'Needs test'
+      const truth = response?.truth
+      const connected = Number(truth?.connectedCount ?? 0)
+      const storageConnected = Boolean(truth?.storage?.connected)
       setStatus({
-        appStatus: storage === 'Connected' || storage === 'ready' ? 'Ready' : 'Needs setup',
+        appStatus: storageConnected ? `${connected} connections ready` : 'Storage needs setup',
       })
       setPulse(true)
     })

@@ -262,11 +262,14 @@ describe('adult mode does not require a separate adult key', () => {
     delete process.env.ADULT_MODE_ENABLED
   })
 
-  it('adult gate uses Together AI provider key (no separate key needed)', async () => {
+  it('adult gate uses connected Together AI without a separate adult live-test flag', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({
-        together: { apiKey: 'tg_q1234567890abcdef1234567890' },
-        adult_mode: { notes: JSON.stringify({ mode: 'specialist', lastTestStatus: 'passed' }) },
+        together: {
+          apiKey: 'tg_q1234567890abcdef1234567890',
+          notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }),
+        },
+        adult_mode: { notes: JSON.stringify({ mode: 'specialist', lastTestStatus: 'failed' }) },
       }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
@@ -279,11 +282,13 @@ describe('adult mode does not require a separate adult key', () => {
     expect(truth.adultGate.configuredProviders).toContain('together')
   })
 
-  it('adult gate uses HuggingFace provider key (no separate key needed)', async () => {
+  it('adult gate uses connected HuggingFace provider key', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({
-        huggingface: { apiKey: 'hf_q1234567890abcdef01234567' },
-        adult_mode: { notes: JSON.stringify({ mode: 'specialist', lastTestStatus: 'passed' }) },
+        huggingface: {
+          apiKey: 'hf_q1234567890abcdef01234567',
+          notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }),
+        },
       }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
@@ -313,8 +318,8 @@ describe('adult mode does not require a separate adult key', () => {
 
 // ── configured_with_last_error status ────────────────────────────────────────
 
-describe('adult gate configured_with_last_error status', () => {
-  it('reports configured_with_last_error when test failed (not globally blocked)', async () => {
+describe('adult gate ignores the obsolete separate adult live-test gate', () => {
+  it('remains ready when the provider passed but the legacy adult test failed', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({
         together: { apiKey: 'tg_q1234567890abcdef1234567890' },
@@ -329,16 +334,17 @@ describe('adult gate configured_with_last_error status', () => {
       displayName: 'Together AI',
       reason: '',
       configured: true,
+      connected: true,
       coveredByGenX: false,
       keySource: 'vault' as const,
       status: 'configured_wired' as const,
     }
     const gate = await getAdultCapabilityGate([togetherProvider])
 
-    expect(gate.status).toBe('configured_with_last_error')
-    expect(gate.testPassed).toBe(false)
+    expect(gate.status).toBe('ready')
+    expect(gate.testPassed).toBe(true)
     expect(gate.providerAvailable).toBe(true)
-    expect(gate.blocker).toBeTruthy()
+    expect(gate.blocker).toBeNull()
   })
 })
 

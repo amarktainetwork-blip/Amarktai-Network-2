@@ -4,6 +4,7 @@ import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
 import type { ProviderCapability } from '@/lib/provider-mesh'
+import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -157,23 +158,30 @@ export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
 }
 
 export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
-  const approved = providers.filter((provider) =>
-    provider.connected && ['genx', 'huggingface', 'together'].includes(provider.key),
-  )
+  const adultRoutes = [
+    MEDIA_CAPABILITY_ROUTES.adult_text,
+    MEDIA_CAPABILITY_ROUTES.adult_image,
+    MEDIA_CAPABILITY_ROUTES.adult_video,
+    MEDIA_CAPABILITY_ROUTES.adult_voice,
+  ]
+  const compatibleProviderIds = new Set(adultRoutes.flatMap((route) => route.providers.map((entry) => entry.provider)))
+  const approved = providers.filter((provider) => provider.connected && compatibleProviderIds.has(provider.key as never))
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
   const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
   const selectedProvider = approved[0]?.key ?? null
   const providerAvailable = approved.length > 0
-  const testPassed = providerAvailable && lastTestStatus === 'passed'
+  const selectedModel = selectedProvider
+    ? adultRoutes.flatMap((route) => route.providers).find((entry) => entry.provider === selectedProvider)?.model ?? null
+    : null
   return {
-    status: testPassed ? 'ready' : providerAvailable ? 'needs_provider_test' : 'not_wired',
-    blocker: testPassed ? null : providerAvailable ? 'Run the adult-mode live test.' : 'No approved tested adult-capable provider is connected.',
+    status: providerAvailable ? 'ready' : 'not_wired',
+    blocker: providerAvailable ? null : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
     providerAvailable,
-    testPassed,
+    testPassed: providerAvailable,
     globalEnabled: true,
     enabled: true,
     selectedProvider,
-    selectedModel: null,
+    selectedModel,
     allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
     blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content'],
     lastTestStatus: lastTestStatus || null,

@@ -5,6 +5,8 @@ import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
 import { createArtifact } from '@/lib/artifact-store'
 
+const MAX_PROCESSING_MS = 15 * 60 * 1000
+
 async function pollQwenWanJob(providerJobId: string, apiKey: string) {
   const taskId = providerJobId.replace(/^qwen-wan:/, '')
   if (!taskId) throw new Error('Invalid Qwen Wan provider job ID.')
@@ -143,6 +145,17 @@ export async function GET(
     return NextResponse.json(responsePayload(job, artifact))
   }
 
+  if (Date.now() - job.createdAt.getTime() > MAX_PROCESSING_MS) {
+    const updated = await prisma.videoGenerationJob.update({
+      where: { id: jobId },
+      data: {
+        status: 'failed',
+        errorMessage: `Video provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
+      },
+    })
+    return NextResponse.json(responsePayload(updated))
+  }
+
   let update: { status: string; resultUrl?: string; error?: string } | null = null
   try {
     if (job.provider === 'genx' && job.providerJobId) {
@@ -152,7 +165,11 @@ export async function GET(
         const providerResult = await getGenXJobStatus(job.providerJobId.replace(/^genx-job:/, ''))
         if (providerResult) {
           update = {
-            status: providerResult.status === 'completed' ? 'succeeded' : providerResult.status,
+            status: providerResult.status === 'completed'
+              ? 'succeeded'
+              : providerResult.status === 'failed'
+                ? 'failed'
+                : 'processing',
             resultUrl: providerResult.resultUrl ?? undefined,
             error: providerResult.error,
           }
@@ -169,10 +186,20 @@ export async function GET(
       update = { status: 'failed', error: `Provider "${job.provider}" is not in the canonical video route.` }
     }
   } catch (error) {
-    return NextResponse.json(responsePayload({
-      ...job,
-      errorMessage: error instanceof Error ? error.message : 'Provider polling temporarily unavailable.',
-    }))
+    const message = error instanceof Error ? error.message : 'Provider polling temporarily unavailable.'
+    const stale = Date.now() - job.createdAt.getTime() > MAX_PROCESSING_MS / 2
+    if (stale) {
+      const updated = await prisma.videoGenerationJob.update({
+        where: { id: jobId },
+        data: { status: 'failed', errorMessage: message },
+      })
+      return NextResponse.json(responsePayload(updated))
+    }
+    return NextResponse.json({
+      ...responsePayload(job),
+      blocker: message,
+      error: message,
+    })
   }
 
   if (!update) return NextResponse.json(responsePayload(job))

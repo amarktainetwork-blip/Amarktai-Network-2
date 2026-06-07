@@ -23,6 +23,7 @@ import { randomUUID } from 'crypto'
 import { getVaultApiKey } from '@/lib/brain'
 import { isUsableServiceKey } from '@/lib/service-vault'
 import { callGenXMedia, GENX_AUDIO_MODELS, getGenXStatusAsync } from '@/lib/genx-client'
+import { createArtifact } from '@/lib/artifact-store'
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ Constants Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
@@ -239,7 +240,7 @@ export interface MusicStudioSummary {
 // Uses the platform's Artifact model (type='music') instead of an in-memory Map.
 // Falls back gracefully to empty results if the DB is unavailable.
 
-async function saveMusicArtifactToDB(artifact: MusicArtifact): Promise<void> {
+async function _saveMusicArtifactToDB(artifact: MusicArtifact): Promise<void> {
   try {
     const { prisma } = await import('@/lib/prisma')
     await prisma.artifact.create({
@@ -589,6 +590,50 @@ async function generateCoverArt(
   return null
 }
 
+async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<string> {
+  const metadata = {
+    genre: artifact.genre,
+    vocalStyle: artifact.vocalStyle,
+    theme: artifact.theme,
+    durationSeconds: artifact.durationSeconds,
+    bpm: artifact.bpm,
+    lyrics: artifact.lyrics,
+    structure: artifact.structure,
+    coverArtUrl: artifact.coverArtUrl,
+    coverArtModel: artifact.coverArtModel,
+    artifactType: artifact.artifactType,
+    tags: artifact.tags,
+    generatedAt: artifact.generatedAt,
+  }
+  const saved = artifact.artifactType === 'generated_audio' && artifact.audioUrl
+    ? await createArtifact({
+      appSlug: artifact.appSlug,
+      type: 'music',
+      subType: 'generated_audio',
+      title: artifact.title,
+      description: `${artifact.genre} / ${artifact.vocalStyle} / ${artifact.theme}`,
+      provider: artifact.musicProvider,
+      model: artifact.lyricsModel,
+      contentUrl: artifact.audioUrl,
+      allowRemoteReference: true,
+      mimeType: artifact.audioMimeType ?? 'audio/mpeg',
+      metadata,
+    })
+    : await createArtifact({
+      appSlug: artifact.appSlug,
+      type: 'report',
+      subType: 'music_plan',
+      title: `${artifact.title} - song plan`,
+      description: 'Lyrics and production plan only. No playable song was generated.',
+      provider: artifact.musicProvider,
+      model: artifact.lyricsModel,
+      content: Buffer.from(JSON.stringify(metadata, null, 2)),
+      mimeType: 'application/json',
+      metadata,
+    })
+  return saved.id
+}
+
 // Ã¢â€â‚¬Ã¢â€â‚¬ Lyrics-only Generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /**
@@ -832,7 +877,7 @@ export async function createMusic(
 
   artifactStore.set(artifact.id, artifact)
   // Persist to DB for production durability
-  await saveMusicArtifactToDB(artifact)
+  artifact.id = await saveCanonicalMusicArtifact(artifact)
 
   return {
     artifact,
@@ -1095,6 +1140,8 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
         coverArtChoice: request.coverArtChoice ?? 'auto',
         existingLyrics: request.existingLyrics ?? '',
         productionNotes: request.productionNotes ?? '',
+        provider: 'genx',
+        model: GENX_AUDIO_MODELS[0],
       },
     })
     jobId = row.id
@@ -1125,8 +1172,8 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
     artifactId: null,
     result: null,
     errorMessage: null,
-    provider: '',
-    model: '',
+    provider: 'genx',
+    model: GENX_AUDIO_MODELS[0],
     createdAt: new Date().toISOString(),
     startedAt: null,
     completedAt: null,
@@ -1150,6 +1197,9 @@ async function processMusicJobBackground(
 
   try {
     const result = await createMusic(request)
+    if (result.status !== 'generated' || !result.artifact.audioUrl) {
+      throw new Error('Music provider returned no playable audio. A planning artifact may have been saved, but no completed song was created.')
+    }
     if (prismaClient) {
       await prismaClient.musicGenerationJob.update({
         where: { id: jobId },
