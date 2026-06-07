@@ -1,103 +1,122 @@
 import { NextRequest } from 'next/server'
-import { getSession } from '@/lib/session'
-import { streamGenXChat } from '@/lib/genx-client'
-import { routeLiveModel } from '@/lib/live-ai-routing'
-import { recordEstimatedCost } from '@/lib/cost-tracking'
+import { POST as chatPOST } from '../chat/route'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
-export async function POST(request: NextRequest) {
-  const session = await getSession()
-  if (!session.isLoggedIn) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+type StreamPayload = Record<string, unknown>
 
-  const body = await request.json().catch(() => ({})) as {
-    message?: string
-    capability?: string
-    providerOverride?: string
-    modelOverride?: string
-    costMode?: 'cheap' | 'balanced' | 'premium'
-    metadata?: Record<string, unknown>
-  }
-  if (!body.message?.trim()) return Response.json({ error: 'message is required' }, { status: 400 })
+function encodeSse(payload: StreamPayload | '[DONE]') {
+  if (payload === '[DONE]') return `data: [DONE]\n\n`
+  return `data: ${JSON.stringify(payload)}\n\n`
+}
 
-  const route = routeLiveModel({
-    capability: normalizeCapability(body.capability),
-    appSlug: String(body.metadata?.appSlug ?? 'studio'),
-    selectedProvider: body.providerOverride,
-    selectedModel: body.modelOverride,
-    costMode: body.costMode ?? 'balanced',
-    adultPolicy: String(body.metadata?.adultPolicy ?? 'full_adult_app_mode') as never,
-  })
-  if (route.blockedReason || !route.selectedProvider || !route.selectedModel) {
-    return Response.json({ success: false, error: route.blockedReason ?? 'No approved route is available', route }, { status: 409 })
-  }
-  const selectedProvider = route.selectedProvider
-  const selectedModel = route.selectedModel
+function extractOutput(payload: Record<string, unknown>) {
+  return String(
+    payload.output ??
+      payload.message ??
+      payload.response ??
+      payload.text ??
+      payload.content ??
+      '',
+  )
+}
 
+export async function POST(req: NextRequest) {
   const encoder = new TextEncoder()
-  const stream = new ReadableStream({
+
+  const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      function send(payload: Record<string, unknown>) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
+      const send = (payload: StreamPayload | '[DONE]') => {
+        controller.enqueue(encoder.encode(encodeSse(payload)))
       }
-      send({ status: 'Routing', route })
+
       try {
-        if (selectedProvider === 'genx') {
-          await streamGenXChat({
-            model: selectedModel,
-            messages: [
-              { role: 'system', content: 'You are the AmarktAI Network operations assistant. Use dashboard, app, memory, artifact, and Workbench context when helpful. Follow safety policy.' },
-              { role: 'user', content: body.message! },
-            ],
-            stream: true,
-            metadata: body.metadata,
-          }, (event) => {
-            if (event.type === 'chunk') send({ content: event.content })
-            if (event.type === 'error') send({ status: event.error })
-            if (event.type === 'done') send({ status: 'Done' })
-          }, request.signal)
-        } else {
-          send({
-            status: 'Selected provider streaming pending',
-            route: { selectedProvider, selectedModel },
-            blocker: 'This Studio streaming route currently streams through GenX only. Phase 2 should wire this provider to its real protected execution route before showing streamed output.',
-          })
+        send({
+          status: 'Routing',
+          message: 'Routing through AI Brain assistant chat execution.',
+        })
+
+        const chatResponse = await chatPOST(req)
+
+        let payload: Record<string, unknown>
+        try {
+          payload = (await chatResponse.json()) as Record<string, unknown>
+        } catch {
+          payload = {
+            success: false,
+            error: `Assistant chat route returned non-JSON response with HTTP ${chatResponse.status}.`,
+          }
         }
-        await recordEstimatedCost({
-          provider: selectedProvider,
-          model: selectedModel,
-          appSlug: String(body.metadata?.appSlug ?? 'studio'),
-          agentId: 'amarktai-assistant',
-          capability: body.capability ?? 'chat',
-          runType: 'studio-stream',
-          costMode: route.costMode,
-          estimatedCostUsd: route.estimatedCostUsd,
-        }).catch(() => null)
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      } catch (error) {
-        send({ status: error instanceof Error ? error.message : 'Studio stream failed' })
-      } finally {
+
+        if (!chatResponse.ok || payload.success === false) {
+          send({
+            status: 'Error',
+            success: false,
+            error:
+              payload.error ??
+              `Assistant chat route failed with HTTP ${chatResponse.status}.`,
+            blocker: payload.blocker ?? null,
+            provider: payload.provider ?? null,
+            model: payload.model ?? null,
+            route: payload.route ?? null,
+          })
+          send('[DONE]')
+          controller.close()
+          return
+        }
+
+        const output = extractOutput(payload)
+
+        send({
+          status: 'Answer',
+          type: 'message',
+          success: true,
+          provider: payload.provider ?? null,
+          model: payload.model ?? null,
+          capability: payload.capability ?? 'chat',
+          route: payload.route ?? null,
+
+          // Multiple keys are intentional because existing dashboard parsers
+          // may read text, delta, content, message, or output.
+          text: output,
+          delta: output,
+          content: output,
+          message: output,
+          output,
+        })
+
+        send({
+          status: 'Done',
+          success: true,
+          provider: payload.provider ?? null,
+          model: payload.model ?? null,
+        })
+
+        send('[DONE]')
+        controller.close()
+      } catch (err) {
+        send({
+          status: 'Error',
+          success: false,
+          error:
+            err instanceof Error
+              ? err.message
+              : 'Assistant stream route failed.',
+        })
+        send('[DONE]')
         controller.close()
       }
     },
   })
 
   return new Response(stream, {
+    status: 200,
     headers: {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
     },
   })
-}
-
-function normalizeCapability(value?: string) {
-  if (value === 'code') return 'coding'
-  if (value === 'image_generation') return 'image'
-  if (value === 'video_generation') return 'video'
-  if (value === 'tts') return 'voice_tts'
-  if (value === 'stt') return 'voice_stt'
-  if (value === 'scrape_website') return 'research'
-  if (value === 'adult_text') return 'adult_text'
-  return 'chat'
 }
