@@ -2,7 +2,7 @@ import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
 
-export type SettingsTruthStatus = 'Connected' | 'Configured' | 'Needs key' | 'Needs live test' | 'Needs test route' | 'Failed'
+export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
 
 export interface SettingsTruthEntry {
   key: ProviderMeshId
@@ -39,7 +39,7 @@ async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
       : configured
         ? 'Needs live test'
         : node.optional
-          ? 'Configured'
+          ? 'Optional'
           : 'Needs key'
 
   return {
@@ -56,7 +56,15 @@ async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
     capabilities: [...node.capabilities],
     lastTestResult: connected ? 'Live test passed' : failed ? 'Live test failed' : 'Not tested',
     lastTestedAt: typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null,
-    blocker: connected ? '' : failed ? notes.lastError || 'Live test failed' : configured ? 'Run the live test' : `Add ${node.envAliases.join(' or ') || 'the local runtime'}`,
+    blocker: connected
+      ? ''
+      : failed
+        ? notes.lastError || 'Live test failed'
+        : configured
+          ? `Run the ${node.displayName} live test`
+          : node.optional
+            ? 'Optional connection is not configured'
+            : `Add ${node.envAliases.join(' or ') || 'the local runtime'}`,
     error: typeof notes.lastError === 'string' ? notes.lastError : '',
     unlocks: node.capabilities.join(', '),
   }

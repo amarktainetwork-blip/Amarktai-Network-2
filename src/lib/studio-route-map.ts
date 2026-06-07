@@ -93,10 +93,10 @@ export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
   'Avatar / Talking Video': {
     tab: 'Avatar / Talking Video',
     capability: 'avatar_video',
-    route: null,
-    status: 'missing',
+    route: '/api/admin/studio/execute',
+    status: 'execute',
     artifactType: 'video',
-    detail: 'Backend missing - Phase 3/provider-specific implementation required.',
+    detail: 'Returns a real avatar job only when an approved lip-sync provider exists; otherwise returns the exact setup blocker.',
   },
   Adult: {
     tab: 'Adult',

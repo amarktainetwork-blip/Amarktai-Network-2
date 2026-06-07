@@ -44,8 +44,27 @@ export interface CreateArtifactInput {
   content?: Buffer | string
   /** If content is a URL, store the URL directly without uploading */
   contentUrl?: string
+  /** Preserve a verified remote URL if downloading it is temporarily unavailable. */
+  allowRemoteReference?: boolean
   status?: ArtifactStatus
   errorMessage?: string
+}
+
+const SECRET_KEY_PATTERN = /(api[-_]?key|authorization|bearer|token|secret|password|credential|cookie)/i
+const SECRET_VALUE_PATTERN = /\b(sk|hf|ghp|gnxk|gsk|tg)[-_A-Za-z0-9]{8,}\b|Bearer\s+\S+/i
+
+export function sanitizeArtifactMetadata(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sanitizeArtifactMetadata)
+  if (!value || typeof value !== 'object') {
+    if (typeof value === 'string' && SECRET_VALUE_PATTERN.test(value)) return '[redacted]'
+    return value
+  }
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+      key,
+      SECRET_KEY_PATTERN.test(key) ? '[redacted]' : sanitizeArtifactMetadata(item),
+    ]),
+  )
 }
 
 export interface ArtifactRecord {
@@ -158,10 +177,23 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
   let mimeType = input.mimeType ?? inferMimeType(input.type, input.subType)
 
   if (!content && contentUrl.startsWith('http')) {
-    const fetched = await fetchExternalArtifact(contentUrl)
-    content = fetched.content
-    mimeType = input.mimeType ?? fetched.mimeType ?? mimeType
-    contentUrl = ''
+    try {
+      const fetched = await fetchExternalArtifact(contentUrl)
+      content = fetched.content
+      mimeType = input.mimeType ?? fetched.mimeType ?? mimeType
+      contentUrl = ''
+    } catch (error) {
+      if (!input.allowRemoteReference) throw error
+    }
+  }
+
+  if (
+    ['image', 'audio', 'music', 'video'].includes(input.type)
+    && (input.status ?? 'completed') === 'completed'
+    && !content
+    && !contentUrl
+  ) {
+    throw new Error('Completed media artifacts require real media bytes or a real media URL.')
   }
 
   let storagePath = ''
@@ -203,7 +235,7 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
       status: input.status ?? 'completed',
       errorMessage: input.errorMessage ?? '',
       costUsdCents: input.costUsdCents ?? 0,
-      metadata: JSON.stringify(input.metadata ?? {}),
+      metadata: JSON.stringify(sanitizeArtifactMetadata(input.metadata ?? {})),
     },
   })
 

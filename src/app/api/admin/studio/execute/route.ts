@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
+import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
 import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
 import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
@@ -10,6 +11,7 @@ import { POST as videoPost } from '@/app/api/brain/video-generate/route'
 import { POST as ttsPost } from '@/app/api/brain/tts/route'
 import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
+import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 
 type ExecuteBody = {
@@ -36,13 +38,6 @@ function jsonRequest(path: string, body: Record<string, unknown>) {
 
 async function readJson(response: Response): Promise<Record<string, unknown>> {
   return await response.json().catch(() => ({})) as Record<string, unknown>
-}
-
-function dataUriToBuffer(value: unknown): { content?: Buffer; mimeType?: string } {
-  if (typeof value !== 'string') return {}
-  const match = value.match(/^data:([^;]+);base64,(.+)$/)
-  if (!match) return {}
-  return { mimeType: match[1], content: Buffer.from(match[2], 'base64') }
 }
 
 async function persistArtifact(input: {
@@ -86,6 +81,7 @@ function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
   if (tab === 'Video') return 'video'
   if (tab === 'Music / Audio') return 'music_generation'
   if (tab === 'Voice / TTS') return 'tts'
+  if (tab === 'Avatar / Talking Video') return 'avatar_video'
   if (tab === 'Adult') {
     if (adultMode === 'image') return 'adult_image'
     if (adultMode === 'video') return 'adult_video'
@@ -163,23 +159,37 @@ export async function POST(request: NextRequest) {
         modelOverride: route.selectedModel,
       }))
       const data = await readJson(response)
-      const imagePayload = data.imageBase64 ?? data.imageUrl
-      const binary = dataUriToBuffer(imagePayload)
-      const artifact = response.ok && data.executed
-        ? await persistArtifact({
+      const persisted = response.ok && data.executed
+        ? await persistCanonicalMediaResult({
+          result: data,
           appSlug,
           type: 'image',
           subType: 'studio_image',
           title: `Image: ${prompt.slice(0, 80)}`,
           provider: String(data.provider ?? route.selectedProvider ?? ''),
           model: String(data.model ?? route.selectedModel ?? ''),
-          content: binary.content,
-          contentUrl: typeof data.imageUrl === 'string' ? data.imageUrl : undefined,
-          mimeType: binary.mimeType ?? 'image/png',
-          metadata: { tab, route, result: data },
+          metadata: { tab, route },
         })
         : null
-      return NextResponse.json({ success: response.ok && Boolean(data.executed), executed: Boolean(data.executed), result: data, artifact, route }, { status: response.status })
+      const success = Boolean(persisted?.success)
+      return NextResponse.json({
+        success,
+        executed: success,
+        capability,
+        provider: persisted?.provider ?? data.provider ?? route.selectedProvider,
+        model: persisted?.model ?? data.model ?? route.selectedModel,
+        jobStatus: persisted?.status ?? 'failed',
+        jobId: persisted?.jobId ?? null,
+        artifactId: persisted?.artifactId ?? null,
+        storageUrl: persisted?.storageUrl ?? null,
+        imageUrl: persisted?.mediaUrl ?? null,
+        blocker: persisted?.blocker ?? data.error ?? null,
+        error: persisted?.blocker ?? data.error ?? null,
+        responseShapeKeys: persisted?.responseShapeKeys ?? Object.keys(data).sort(),
+        result: data,
+        artifact: persisted?.artifact ?? null,
+        route,
+      }, { status: success ? 200 : response.ok ? 502 : response.status })
     }
 
     if (tab === 'Video' || capability === 'adult_video') {
@@ -213,6 +223,17 @@ export async function POST(request: NextRequest) {
         artifact,
         route,
       }, { status: response.status })
+    }
+
+    if (tab === 'Avatar / Talking Video') {
+      const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', {
+        prompt,
+        appSlug,
+        provider: route.selectedProvider,
+        model: route.selectedModel,
+      }))
+      const data = await readJson(response)
+      return NextResponse.json({ ...data, result: data, artifact: null, route }, { status: response.status })
     }
 
     if (tab === 'Music / Audio') {

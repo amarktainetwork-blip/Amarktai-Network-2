@@ -22,11 +22,14 @@ describe('final dashboard UX', () => {
     ]) expect(read(page), page).not.toMatch(/max-h-\[|overflow-y-auto/)
   })
 
-  it('keeps Studio, Workbench, and App Builder outside the primary navigation', () => {
+  it('renders the standalone core sections in primary navigation', () => {
     const nav = read('lib/dashboard-nav.ts')
-    expect(nav).not.toContain("label: 'Studio'")
-    expect(nav).not.toContain("label: 'Workbench'")
-    expect(nav).not.toContain("label: 'App Builder'")
+    expect(nav).toContain("label: 'App Builder'")
+    expect(nav).toContain("label: 'Repo Workbench'")
+    expect(nav).toContain("label: 'Media Studio / Playground'")
+    expect(nav).toContain("label: 'Outputs'")
+    expect(nav).toContain("label: 'Settings'")
+    expect(nav).toContain("label: 'Advanced Admin'")
     expect(nav).not.toContain("label: 'Agents'")
   })
 })

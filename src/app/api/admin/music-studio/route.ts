@@ -146,6 +146,21 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'create_async') {
+      const status = await getMusicStudioStatusAsync()
+      if (!status.audioProviderConfigured) {
+        const blocker = 'No connected music/audio provider can start real song generation. Configure and test GenX audio generation.'
+        return NextResponse.json({
+          success: false,
+          capability: 'music_generation',
+          provider: null,
+          model: null,
+          jobStatus: 'needs_setup',
+          artifactId: null,
+          storageUrl: null,
+          error: blocker,
+          blocker,
+        }, { status: 503 })
+      }
       const job = await createMusicJob(musicRequest)
       return NextResponse.json({
         success: true,
@@ -163,18 +178,22 @@ export async function POST(request: NextRequest) {
 
     // action === 'create' (default — synchronous)
     const result = await createMusic(musicRequest)
+    const completed = result.status === 'generated' && Boolean(result.artifact.audioUrl)
     return NextResponse.json({
-      success: true,
+      success: completed,
       capability: 'music_generation',
       provider: result.artifact.musicProvider,
       model: result.artifact.lyricsModel,
-      jobStatus: 'completed',
-      artifactId: result.artifact.id,
-      storageUrl: result.artifact.audioUrl,
-      error: null,
-      blocker: null,
+      jobStatus: completed ? 'completed' : 'failed',
+      artifactId: completed ? result.artifact.id : null,
+      planningArtifactId: completed ? null : result.artifact.id,
+      storageUrl: completed ? result.artifact.audioUrl : null,
+      audioUrl: completed ? result.artifact.audioUrl : null,
+      musicUrl: completed ? result.artifact.audioUrl : null,
+      error: completed ? null : 'Music provider returned no playable audio.',
+      blocker: completed ? null : 'Music provider returned no playable audio. The saved output is a planning artifact, not a completed song.',
       ...result,
-    }, { status: 201 })
+    }, { status: completed ? 201 : 502 })
   } catch (err) {
     const error = err instanceof Error ? err.message : 'Music studio error'
     return NextResponse.json({
