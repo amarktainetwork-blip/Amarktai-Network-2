@@ -80,6 +80,12 @@ function getArtifactUrl(artifact: LocalArtifact | ArtifactRecord) {
   if (artifact.storageUrl) return artifact.storageUrl
   if ('contentUrl' in artifact && artifact.contentUrl) return artifact.contentUrl
   if ('url' in artifact && artifact.url) return artifact.url
+  if (artifact.metadata && typeof artifact.metadata === 'object') {
+    for (const key of ['mediaUrl', 'resultUrl', 'imageUrl', 'audioUrl', 'musicUrl', 'videoUrl']) {
+      const value = artifact.metadata[key]
+      if (typeof value === 'string' && value) return value
+    }
+  }
   return ''
 }
 

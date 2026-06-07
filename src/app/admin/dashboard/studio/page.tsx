@@ -22,6 +22,7 @@ const studioModes: StudioMode[] = [
   { label: 'Video', tab: 'Video', capability: 'video_generation' },
   { label: 'Music / Song', tab: 'Music / Audio', capability: 'music_generation' },
   { label: 'Voice / TTS', tab: 'Voice / TTS', capability: 'tts' },
+  { label: 'Avatar Video', tab: 'Avatar / Talking Video', capability: 'avatar_video' },
   { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
   { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
   { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
@@ -253,26 +254,43 @@ export default function StudioPage() {
       setLastPayload(data)
       if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Studio execution failed')
       if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
-      const pollUrl = typeof data.result?.pollUrl === 'string' ? data.result.pollUrl : ''
+      let effectiveData = data as Record<string, unknown>
+      const pollUrl = typeof data.pollUrl === 'string'
+        ? data.pollUrl
+        : typeof data.result?.pollUrl === 'string'
+          ? data.result.pollUrl
+          : ''
       if (pollUrl) {
-        setJobStatus(String(data.result?.status ?? 'pending'))
+        setJobStatus(String(data.jobStatus ?? data.status ?? data.result?.status ?? 'pending'))
         const finalJob = await pollStudioJob(pollUrl)
-        if (finalJob?.status) setJobStatus(String(finalJob.status))
-        if (finalJob && !extractResultUrl(finalJob) && String(finalJob.status) !== 'failed') setStatus('Job created, output pending')
+        if (finalJob) {
+          effectiveData = finalJob
+          setLastPayload(finalJob)
+        }
+        if (finalJob?.status || finalJob?.jobStatus) setJobStatus(String(finalJob.status ?? finalJob.jobStatus))
+        if (finalJob && !extractResultUrl(finalJob) && !['failed', 'blocked'].includes(String(finalJob.status ?? finalJob.jobStatus))) {
+          setStatus('Job created, output pending')
+        }
       } else {
         setJobStatus(data.artifact?.id || data.audioBase64 ? 'completed' : 'processing')
       }
       setConversation((current) => [
         ...current,
         { role: 'user', content: message },
-        { role: 'assistant', content: summarizeStudioResult(data) },
+        { role: 'assistant', content: summarizeStudioResult(effectiveData) },
       ])
-      setLastResult(extractStudioDetails(data, {
+      setLastResult(extractStudioDetails(effectiveData, {
         provider: executionProvider,
         model: executionModel,
-        jobStatus: pollUrl ? 'processing' : String(data.result?.status ?? ''),
+        jobStatus: String(effectiveData.jobStatus ?? effectiveData.status ?? (effectiveData.result as Record<string, unknown> | undefined)?.status ?? ''),
       }))
-      setStatus(data.workbenchUrl ? 'Workbench handoff saved' : data.artifact?.id ? `Artifact saved: ${data.artifact.id}` : pollUrl ? 'Job created, output pending' : 'Backend executed')
+      setStatus(effectiveData.workbenchUrl
+        ? 'Workbench handoff saved'
+        : effectiveData.artifactId
+          ? `Artifact saved: ${String(effectiveData.artifactId)}`
+          : pollUrl
+            ? 'Job created, output pending'
+            : 'Backend executed')
       await loadArtifacts().catch(() => null)
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Studio request failed')
@@ -917,7 +935,15 @@ function getArtifactUrl(artifact?: ArtifactSummary) {
 }
 
 function extractResultUrl(job: Record<string, unknown>) {
-  return stringMeta(job, 'resultUrl') ?? stringMeta(job, 'storageUrl') ?? stringMeta(job, 'artifactUrl') ?? stringMeta(job, 'imageUrl') ?? ''
+  return stringMeta(job, 'resultUrl')
+    ?? stringMeta(job, 'storageUrl')
+    ?? stringMeta(job, 'mediaUrl')
+    ?? stringMeta(job, 'artifactUrl')
+    ?? stringMeta(job, 'imageUrl')
+    ?? stringMeta(job, 'audioUrl')
+    ?? stringMeta(job, 'musicUrl')
+    ?? stringMeta(job, 'videoUrl')
+    ?? ''
 }
 
 function stringMeta(source: Record<string, unknown> | undefined, key: string) {

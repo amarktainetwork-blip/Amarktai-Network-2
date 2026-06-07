@@ -164,4 +164,5 @@ export const LOCAL_STORE_FILES = {
   apps: 'apps/apps.json',
   agents: 'agents/agents.json',
   jobs: 'jobs/jobs.json',
+  mediaJobs: 'jobs/media-jobs.json',
 } as const

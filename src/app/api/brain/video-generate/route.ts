@@ -165,6 +165,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         model: usedModel,
         traceId: `video-job-${job.id}`,
         contentUrl: resultUrl,
+        allowRemoteReference: true,
         mimeType: 'video/mp4',
         metadata: { capability, jobId: job.id },
       })
@@ -192,5 +193,5 @@ export async function POST(request: Request): Promise<NextResponse> {
     error: null,
     blocker: null,
     pollUrl: `/api/brain/video-generate/${job.id}`,
-  }, { status: 202 })
+  }, { status: status === 'succeeded' ? 201 : 202 })
 }

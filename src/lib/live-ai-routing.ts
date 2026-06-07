@@ -296,7 +296,9 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
 function governedCandidates(capability: AiCapability): ProviderModelOption[] {
   const normalized = normalizeGovernedCapability(capability) as GovernedCapability | null
   if (!normalized) return []
-  return getModelsForCapability(normalized).map(governedModelToProviderOption)
+  return getModelsForCapability(normalized)
+    .filter((model) => !(['tts', 'adult_voice'].includes(normalized) && model.provider === 'groq'))
+    .map(governedModelToProviderOption)
 }
 
 function governedModelToProviderOption(model: GovernedModel): ProviderModelOption {
