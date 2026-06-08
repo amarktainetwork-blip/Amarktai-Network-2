@@ -42,6 +42,11 @@ type ExecuteBody = {
   style?: string
   capability?: string
   adultMode?: string
+  genre?: string
+  vocalStyle?: string
+  durationSeconds?: number
+  instrumental?: boolean
+  lyrics?: string
 }
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -186,6 +191,26 @@ function normalizeStudioTab(input: unknown, body?: ExecuteBody): StudioExecuteTa
   }
 
   return null
+}
+
+
+function inferMusicGenre(prompt: string): string {
+  const p = prompt.toLowerCase()
+  if (p.includes('reggae') || p.includes('rasta')) return 'reggae pop rock r&b'
+  if (p.includes('r&b') || p.includes('rnb')) return 'r&b pop'
+  if (p.includes('rock')) return 'pop rock'
+  return 'pop'
+}
+
+function inferMusicVocalStyle(prompt: string, explicit?: string, instrumental?: boolean): string {
+  if (explicit?.trim()) return explicit.trim()
+  if (instrumental === true) return 'instrumental_only'
+
+  const p = prompt.toLowerCase()
+  if (p.includes('female') || p.includes('woman') || p.includes('girl')) return 'female lead vocal, sung lyrics, natural harmonies'
+  if (p.includes('male') || p.includes('man')) return 'male lead vocal, sung lyrics'
+  if (p.includes('vocal') || p.includes('sing') || p.includes('lyrics')) return 'lead vocal, sung lyrics'
+  return 'female lead vocal, sung lyrics'
 }
 
 export async function POST(request: NextRequest) {
@@ -354,9 +379,9 @@ export async function POST(request: NextRequest) {
         request: {
           appSlug,
           theme: prompt,
-          genre: 'cinematic',
+          genre: body.genre?.trim() || inferMusicGenre(prompt),
           genres: ['cinematic'],
-          vocalStyle: 'instrumental_only',
+          vocalStyle: inferMusicVocalStyle(prompt, body.vocalStyle, body.instrumental),
           prompt,
           provider: route.selectedProvider,
           model: route.selectedModel,
