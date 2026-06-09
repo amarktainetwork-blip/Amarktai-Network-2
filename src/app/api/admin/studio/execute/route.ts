@@ -15,6 +15,19 @@ import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
 import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 
+type StudioExecuteTab =
+  | 'Chat'
+  | 'Coding'
+  | 'Research'
+  | 'Image'
+  | 'Video'
+  | 'Music / Audio'
+  | 'Voice / TTS'
+  | 'STT / Transcription'
+  | 'Avatar / Talking Video'
+  | 'Adult'
+  | 'Artifacts'
+
 type ExecuteBody = {
   tab?: StudioTab
   prompt?: string
@@ -27,6 +40,13 @@ type ExecuteBody = {
   voiceId?: string
   size?: string
   style?: string
+  capability?: string
+  adultMode?: string
+  genre?: string
+  vocalStyle?: string
+  durationSeconds?: number
+  instrumental?: boolean
+  lyrics?: string
 }
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -92,12 +112,113 @@ function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
   return 'chat'
 }
 
+
+function normalizeStudioTab(input: unknown, body?: ExecuteBody): StudioExecuteTab | null {
+  const normalize = (value: unknown) =>
+    typeof value === 'string'
+      ? value.trim().toLowerCase().replace(/[_-]/g, ' ').replace(/\s+/g, ' ')
+      : ''
+
+  const candidates = [
+    normalize(input),
+    normalize(body?.tab),
+    normalize(body?.mode),
+    normalize(body?.capability),
+    normalize(body?.adultMode),
+  ].filter(Boolean)
+
+  for (const value of candidates) {
+    if (value === 'chat') return 'Chat'
+    if (value === 'research') return 'Research'
+    if (value === 'coding' || value === 'code' || value === 'code generation') return 'Coding'
+
+    if (
+      value === 'image' ||
+      value === 'image generation' ||
+      value === 'image gen' ||
+      value === 'generate image'
+    ) return 'Image'
+
+    if (
+      value === 'video' ||
+      value === 'video generation' ||
+      value === 'video gen' ||
+      value === 'generate video'
+    ) return 'Video'
+
+    if (
+      value === 'music' ||
+      value === 'song' ||
+      value === 'audio' ||
+      value === 'music audio' ||
+      value === 'music generation' ||
+      value === 'audio generation'
+    ) return 'Music / Audio'
+
+    if (
+      value === 'tts' ||
+      value === 'voice' ||
+      value === 'voice tts' ||
+      value === 'text to speech' ||
+      value === 'voice generation'
+    ) return 'Voice / TTS'
+
+    if (
+      value === 'stt' ||
+      value === 'speech to text' ||
+      value === 'transcription' ||
+      value === 'stt transcription'
+    ) return 'STT / Transcription'
+
+    if (
+      value === 'avatar' ||
+      value === 'avatar video' ||
+      value === 'talking video' ||
+      value === 'avatar talking video'
+    ) return 'Avatar / Talking Video'
+
+    if (
+      value === 'adult' ||
+      value === 'adult text' ||
+      value === 'adult image' ||
+      value === 'adult video' ||
+      value === 'adult voice' ||
+      value === 'text' ||
+      value === 'image adult' ||
+      value === 'video adult' ||
+      value === 'voice adult'
+    ) return 'Adult'
+  }
+
+  return null
+}
+
+
+function inferMusicGenre(prompt: string): string {
+  const p = prompt.toLowerCase()
+  if (p.includes('reggae') || p.includes('rasta')) return 'reggae pop rock r&b'
+  if (p.includes('r&b') || p.includes('rnb')) return 'r&b pop'
+  if (p.includes('rock')) return 'pop rock'
+  return 'pop'
+}
+
+function inferMusicVocalStyle(prompt: string, explicit?: string, instrumental?: boolean): string {
+  if (explicit?.trim()) return explicit.trim()
+  if (instrumental === true) return 'instrumental_only'
+
+  const p = prompt.toLowerCase()
+  if (p.includes('female') || p.includes('woman') || p.includes('girl')) return 'female lead vocal, sung lyrics, natural harmonies'
+  if (p.includes('male') || p.includes('man')) return 'male lead vocal, sung lyrics'
+  if (p.includes('vocal') || p.includes('sing') || p.includes('lyrics')) return 'lead vocal, sung lyrics'
+  return 'female lead vocal, sung lyrics'
+}
+
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({})) as ExecuteBody
-  const tab = body.tab
+  const tab = normalizeStudioTab(body.tab ?? body.mode ?? body.capability, body)
   const prompt = body.prompt?.trim() ?? ''
   const appSlug = body.appSlug?.trim() || 'amarktai-network'
   if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
@@ -258,9 +379,9 @@ export async function POST(request: NextRequest) {
         request: {
           appSlug,
           theme: prompt,
-          genre: 'cinematic',
+          genre: body.genre?.trim() || inferMusicGenre(prompt),
           genres: ['cinematic'],
-          vocalStyle: 'instrumental_only',
+          vocalStyle: inferMusicVocalStyle(prompt, body.vocalStyle, body.instrumental),
           prompt,
           provider: route.selectedProvider,
           model: route.selectedModel,

@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { getAllProviderModelCatalogs, getProviderModelCatalog } from '@/lib/ai-model-catalog'
 import { getUniversalModelCatalog } from '@/lib/universal-model-catalog'
 import { getCapabilityGovernanceMatrix, ROOT_WORKSPACE } from '@/lib/provider-capability-governance'
+import { getModelBrainTruth } from '@/lib/ai-brain-router'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,9 +19,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, catalog })
   }
 
-  const [catalogs, universal] = await Promise.all([
+  const [catalogs, universal, brain] = await Promise.all([
     getAllProviderModelCatalogs(),
     getUniversalModelCatalog(),
+    getModelBrainTruth(),
   ])
   const governance = getCapabilityGovernanceMatrix()
   return NextResponse.json({
@@ -28,11 +30,16 @@ export async function GET(request: NextRequest) {
     catalogs,
     universal,
     governance,
+    brain,
     rootWorkspace: ROOT_WORKSPACE,
     summary: {
       providers: catalogs.length,
       configured: catalogs.filter((catalog) => catalog.configured).length,
       models: universal.models.length,
+      discoveredModels: brain.counts.discovered,
+      testedModels: brain.counts.tested,
+      approvedModels: brain.counts.approved,
+      routedModels: brain.counts.routed,
       governedModels: governance.models.length,
       genxExpectedLiveModels: 58,
       customModelProviders: catalogs.filter((catalog) => catalog.supportsCustomModelIds).map((catalog) => catalog.provider),
