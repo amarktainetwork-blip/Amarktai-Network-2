@@ -3,8 +3,11 @@ import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
-import type { ProviderCapability } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+import {
+  getRuntimeProviderGovernance,
+  type ProviderGovernanceEntry,
+} from '@/lib/ai-provider-governance'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -92,6 +95,43 @@ export interface DashboardRuntimeTruth {
   localCore: LocalCoreStatus
 }
 
+const DIRECT_AI_PROVIDER_KEYS = new Set([
+  'huggingface',
+  'qwen',
+  'mimo',
+  'groq',
+  'together',
+  'minimax',
+  'deepseek',
+  'gemini',
+  'replicate',
+  'elevenlabs',
+  'deepgram',
+  'openrouter',
+  'xai',
+  'moonshot',
+  'zhipu',
+])
+
+const EXTRA_RUNTIME_PROVIDERS: ProviderGovernanceEntry[] = [
+  {
+    key: 'firecrawl',
+    displayName: 'Firecrawl',
+    integrationKey: 'firecrawl',
+    envVar: 'FIRECRAWL_API_KEY',
+    envVarAliases: ['FIRECRAWL_API_KEY'],
+    status: 'active_optional',
+    setupGroup: 'primary',
+    reason: 'Research and crawler provider for app intelligence.',
+    capabilities: ['research', 'crawler'],
+    coveredByGenX: false,
+    wired: true,
+    showInPrimarySetup: true,
+    defaultCostRole: 'ops',
+    notes: 'Configured through FIRECRAWL_API_KEY.',
+  },
+]
+
 function getLocalCoreStatus(): LocalCoreStatus {
   const memory = checkWritable(LOCAL_STORE_FILES.memory)
   const approvals = checkWritable(LOCAL_STORE_FILES.approvals)
@@ -99,7 +139,9 @@ function getLocalCoreStatus(): LocalCoreStatus {
   const research = checkWritable(LOCAL_STORE_FILES.research)
   const apps = checkWritable(LOCAL_STORE_FILES.apps)
   const agents = checkWritable(LOCAL_STORE_FILES.agents)
+
   interface WithId { id: string }
+
   return {
     memory: { writable: memory.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.memory },
     approvals: { writable: approvals.writable, driver: 'local_vps', file: LOCAL_STORE_FILES.approvals },
@@ -111,33 +153,96 @@ function getLocalCoreStatus(): LocalCoreStatus {
   }
 }
 
+function capabilityModelsFor(provider: ProviderRuntimeEntry, capabilityName: string): string[] {
+  if (capabilityName === 'Music Generation' && provider.key === 'genx') {
+    return ['lyria-3-clip-preview', 'lyria-3-pro-preview']
+  }
+
+  return [provider.displayName]
+}
+
+function providerCanSatisfy(
+  provider: ProviderRuntimeEntry,
+  capabilityAliases: readonly string[],
+): boolean {
+  if (!provider.configured) return false
+  if (provider.status === 'blocked' || provider.status === 'not_configured_optional') return false
+
+  const providerCapabilities = new Set(provider.capabilities ?? [])
+  return capabilityAliases.some((capability) => providerCapabilities.has(capability))
+}
+
+function governanceRuntimeEntry(
+  governance: ProviderGovernanceEntry,
+  configured: boolean,
+  keySource: ProviderRuntimeEntry['keySource'],
+): ProviderRuntimeEntry {
+  return {
+    key: governance.key,
+    displayName: governance.displayName,
+    reason: configured ? 'Provider key configured. Live route may still need a provider test.' : governance.reason,
+    configured,
+    connected: configured,
+    coveredByGenX: governance.coveredByGenX,
+    keySource,
+    status: configured ? 'configured_wired' : 'not_configured_optional',
+    governanceStatus: governance.status,
+    showInPrimarySetup: governance.showInPrimarySetup,
+    defaultCostRole: governance.defaultCostRole,
+    capabilities: governance.capabilities,
+  }
+}
+
 export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
   const truth = await getPlatformSettingsTruth()
-  return Promise.all(truth.entries.map(async (entry) => {
+  const governanceEntries = [...getRuntimeProviderGovernance(), ...EXTRA_RUNTIME_PROVIDERS]
+  const governanceByKey = new Map(governanceEntries.map((entry) => [entry.key, entry]))
+  const providerMap = new Map<string, ProviderRuntimeEntry>()
+
+  for (const entry of truth.entries) {
+    const governance = governanceByKey.get(entry.key)
     const source = entry.kind === 'provider'
       ? (await getProviderKeyWithSource(entry.key)).source
       : entry.configured ? 'env' as const : 'missing' as const
-    return {
+
+    const configured = Boolean(entry.configured)
+    const connected = Boolean(entry.connected)
+
+    providerMap.set(entry.key, {
       key: entry.key,
       displayName: entry.label,
-      reason: entry.connected ? 'Live test passed.' : entry.blocker,
-      configured: entry.configured,
-      connected: entry.connected,
-      coveredByGenX: false,
+      reason: connected ? 'Live test passed.' : entry.blocker,
+      configured,
+      connected,
+      coveredByGenX: governance?.coveredByGenX ?? false,
       keySource: source,
-      status: entry.connected
-        ? 'configured_wired' as const
-        : entry.configured
-          ? 'configured_not_wired' as const
+      status: connected
+        ? 'configured_wired'
+        : configured
+          ? 'configured_not_wired'
           : entry.optional
-            ? 'not_configured_optional' as const
-            : 'blocked' as const,
-      governanceStatus: 'approved',
-      showInPrimarySetup: entry.kind === 'provider',
-      defaultCostRole: entry.key === 'genx' ? 'primary' : 'specialist',
-      capabilities: entry.capabilities,
-    }
-  }))
+            ? 'not_configured_optional'
+            : 'blocked',
+      governanceStatus: governance?.status ?? 'approved',
+      showInPrimarySetup: governance?.showInPrimarySetup ?? entry.kind === 'provider',
+      defaultCostRole: governance?.defaultCostRole ?? (entry.key === 'genx' ? 'gateway' : entry.kind === 'provider' ? 'specialist' : 'ops'),
+      capabilities: governance?.capabilities?.length ? governance.capabilities : entry.capabilities,
+    })
+  }
+
+  for (const governance of governanceEntries) {
+    if (providerMap.has(governance.key)) continue
+
+    const keyResult = await getProviderKeyWithSource(governance.integrationKey || governance.key)
+    const configured = Boolean(keyResult.key)
+
+    providerMap.set(governance.key, governanceRuntimeEntry(governance, configured, keyResult.source))
+  }
+
+  return [...providerMap.values()].filter((provider) =>
+    provider.governanceStatus !== 'proposed' &&
+    provider.defaultCostRole !== 'deprecated',
+  )
 }
 
 export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[]> {
@@ -147,12 +252,13 @@ export async function getFallbackProviderStatus(): Promise<ProviderRuntimeEntry[
 export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
   const providers = await getRuntimeProviderStatus()
   const genx = providers.find((provider) => provider.key === 'genx')
+
   return {
     configured: Boolean(genx?.configured),
-    available: Boolean(genx?.connected),
+    available: Boolean(genx?.configured),
     keySource: genx?.keySource ?? 'missing',
-    modelCount: genx?.connected ? LIVE_GENX_MODEL_COUNT : 0,
-    capabilities: genx?.connected ? genx.capabilities ?? [] : [],
+    modelCount: genx?.configured ? LIVE_GENX_MODEL_COUNT : 0,
+    capabilities: genx?.configured ? genx.capabilities ?? [] : [],
     apiUrl: genx?.configured ? process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh' : null,
   }
 }
@@ -173,6 +279,7 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   const selectedModel = selectedProvider
     ? adultRoutes.flatMap((route) => route.providers).find((entry) => entry.provider === selectedProvider)?.model ?? null
     : null
+
   return {
     status: providerAvailable ? 'ready' : 'not_wired',
     blocker: providerAvailable ? null : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
@@ -190,17 +297,17 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   }
 }
 
-const CAPABILITY_ROWS: Array<{ name: string; capabilities: ProviderCapability[] }> = [
-  { name: 'Text / Chat', capabilities: ['text'] },
-  { name: 'Coding Agent', capabilities: ['code'] },
-  { name: 'Image Generation', capabilities: ['image'] },
-  { name: 'Video Generation', capabilities: ['video'] },
-  { name: 'Voice TTS', capabilities: ['tts'] },
-  { name: 'STT / Transcription', capabilities: ['stt'] },
-  { name: 'Music Generation', capabilities: ['music'] },
+const CAPABILITY_ROWS: Array<{ name: string; capabilities: string[] }> = [
+  { name: 'Text / Chat', capabilities: ['text', 'streaming_text', 'chat'] },
+  { name: 'Coding Agent', capabilities: ['code', 'coding'] },
+  { name: 'Image Generation', capabilities: ['image', 'image_generation'] },
+  { name: 'Video Generation', capabilities: ['video', 'image_to_video', 'video_generation'] },
+  { name: 'Voice TTS', capabilities: ['tts', 'voice_tts'] },
+  { name: 'STT / Transcription', capabilities: ['stt', 'voice_stt'] },
+  { name: 'Music Generation', capabilities: ['music', 'music_generation'] },
   { name: 'Embeddings', capabilities: ['embeddings'] },
-  { name: 'Web Crawler / Research', capabilities: ['crawl'] },
-  { name: 'Repo / GitHub', capabilities: ['repo'] },
+  { name: 'Web Crawler / Research', capabilities: ['crawl', 'render', 'crawler', 'research', 'web_search'] },
+  { name: 'Repo / GitHub', capabilities: ['repo', 'pull_request'] },
 ]
 
 export async function getCapabilityStatus(
@@ -208,15 +315,26 @@ export async function getCapabilityStatus(
   providers: ProviderRuntimeEntry[],
 ): Promise<CapabilityRuntimeEntry[]> {
   return CAPABILITY_ROWS.map((row) => {
-    const connected = providers.filter((provider) =>
-      provider.connected && row.capabilities.some((capability) => provider.capabilities?.includes(capability)),
-    )
+    if (row.name === 'Music Generation') {
+      const genx = providers.find((provider) => provider.key === 'genx' && provider.configured)
+      return {
+        name: row.name,
+        status: genx ? 'available' : 'blocked',
+        blocker: genx ? null : 'Configure GenX for Lyria music generation before live testing.',
+        models: genx ? ['lyria-3-clip-preview', 'lyria-3-pro-preview'] : [],
+        nextAction: genx ? null : 'Configure GenX, then run the Lyria music live test.',
+      }
+    }
+
+    const configured = providers.filter((provider) => providerCanSatisfy(provider, row.capabilities))
+    const models = configured.flatMap((provider) => capabilityModelsFor(provider, row.name))
+
     return {
       name: row.name,
-      status: connected.length ? 'available' as const : 'blocked' as const,
-      blocker: connected.length ? null : `No tested approved connection provides ${row.capabilities.join(' or ')}.`,
-      models: connected.map((provider) => provider.displayName),
-      nextAction: connected.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
+      status: configured.length ? 'available' : 'blocked',
+      blocker: configured.length ? null : `No configured approved connection provides ${row.capabilities.join(' or ')}.`,
+      models,
+      nextAction: configured.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
     }
   })
 }
@@ -231,20 +349,39 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
   const genxProvider = providers.find((provider) => provider.key === 'genx')
   const genx: GenXRuntimeStatus = {
     configured: Boolean(genxProvider?.configured),
-    available: Boolean(genxProvider?.connected),
+    available: Boolean(genxProvider?.configured),
     keySource: genxProvider?.keySource ?? 'missing',
-    modelCount: genxProvider?.connected ? LIVE_GENX_MODEL_COUNT : 0,
-    capabilities: genxProvider?.connected ? genxProvider.capabilities ?? [] : [],
+    modelCount: genxProvider?.configured ? LIVE_GENX_MODEL_COUNT : 0,
+    capabilities: genxProvider?.configured ? genxProvider.capabilities ?? [] : [],
     apiUrl: genxProvider?.configured ? process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh' : null,
   }
+
   const [capabilities, adultGate] = await Promise.all([
     getCapabilityStatus(genx.configured, providers),
     getAdultCapabilityGate(providers),
   ])
+
+  const hasDirectAiProvider = providers.some((provider) =>
+    provider.key !== 'genx' &&
+    provider.configured &&
+    DIRECT_AI_PROVIDER_KEYS.has(provider.key),
+  )
+
   const blockers = [
-    ...providers.filter((provider) => provider.status === 'blocked').map((provider) => `${provider.displayName}: ${provider.reason}`),
-    ...capabilities.filter((capability) => capability.status === 'blocked' && capability.blocker).map((capability) => `${capability.name}: ${capability.blocker}`),
+    ...(!genx.configured && !hasDirectAiProvider ? ['GenX API key not configured and no direct AI provider key is configured.'] : []),
+    ...providers
+      .filter((provider) =>
+        provider.status === 'blocked' &&
+        provider.key !== 'genx' &&
+        provider.governanceStatus !== 'deprecated' &&
+        provider.governanceStatus !== 'proposed',
+      )
+      .map((provider) => `${provider.displayName}: ${provider.reason}`),
+    ...capabilities
+      .filter((capability) => capability.status === 'blocked' && capability.blocker)
+      .map((capability) => `${capability.name}: ${capability.blocker}`),
   ]
+
   return {
     success: true,
     genx,

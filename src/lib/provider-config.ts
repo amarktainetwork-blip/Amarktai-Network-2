@@ -1,6 +1,6 @@
 import { getMeshCredential } from '@/lib/provider-mesh-status'
 import { getProviderMeshNode, type ProviderMeshId } from '@/lib/provider-mesh'
-import { isUsableServiceKey } from '@/lib/service-vault'
+import { getServiceKey, isUsableServiceKey } from '@/lib/service-vault'
 
 export type CoreProvider =
   | ProviderMeshId
@@ -11,6 +11,7 @@ export type CoreProvider =
   | 'minimax'
   | 'deepseek'
   | 'gemini'
+  | 'firecrawl'
   | 'replicate'
   | 'elevenlabs'
   | 'deepgram'
@@ -37,6 +38,7 @@ const PROVIDER_ENV_ALIASES: Record<string, string[]> = {
   grok: ['GROK_API_KEY', 'XAI_API_KEY'],
   deepseek: ['DEEPSEEK_API_KEY'],
   gemini: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
+  firecrawl: ['FIRECRAWL_API_KEY'],
   replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
   elevenlabs: ['ELEVENLABS_API_KEY'],
   deepgram: ['DEEPGRAM_API_KEY'],
@@ -96,19 +98,26 @@ export async function getProviderKeyWithSource(provider: CoreProvider | string):
   key: string | null
   source: ProviderKeySource
 }> {
+  const normalized = normalizeProviderKey(provider)
   const envKey = getEnvKeyForProvider(provider)
   const id = activeProviderId(provider)
 
-  if (!id) {
-    return envKey ? { key: envKey, source: 'env' } : { key: null, source: 'missing' }
+  if (id) {
+    const key = await getMeshCredential(id)
+    if (isUsableServiceKey(key)) {
+      const trimmed = key.trim()
+      return { key: trimmed, source: envKey === trimmed ? 'env' : 'vault' }
+    }
+
+    if (envKey) return { key: envKey, source: 'env' }
+
+    return { key: null, source: 'missing' }
   }
 
-  const key = await getMeshCredential(id)
-  if (isUsableServiceKey(key)) {
-    const trimmed = key.trim()
-    return { key: trimmed, source: envKey === trimmed ? 'env' : 'vault' }
-  }
+  const aliases = envAliasesForProvider(provider)
+  const vaultKey = await getServiceKey(normalized, aliases[0] ?? '').catch(() => null)
 
+  if (isUsableServiceKey(vaultKey)) return { key: vaultKey.trim(), source: 'vault' }
   if (envKey) return { key: envKey, source: 'env' }
 
   return { key: null, source: 'missing' }
