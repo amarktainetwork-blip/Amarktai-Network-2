@@ -1,0 +1,923 @@
+================================================================
+ AMARKTAI PLAYGROUND / STUDIO SECTION TRUTH REPORT
+================================================================
+Mon Jun  8 09:31:09 UTC 2026
+/var/www/amarktai-audit/Amarktai-Network-2
+amarktainetw
+
+===== GIT STATE =====
+phase1-ai-brain-router
+ebc3d61 fix: preserve vocal song options in studio music generation
+e6a14b4 fix: serve media artifacts with browser-ready MIME types
+ea0d4da fix: persist authenticated GenX media artifacts locally
+876b146 fix: normalize studio media routing and prove music jobs
+25eb342 fix: bridge assistant stream route to working chat execution
+4ec9e37 feat: stabilize AI brain and provider universe truth
+03da8ae Merge pull request #83 from amarktainetwork-blip/fix-live-media-execution-artifacts-jobs
+823f1eb Fix live media job and artifact contracts
+ M src/app/admin/dashboard/outputs/page.tsx
+?? amarktai-network@1.0.0
+?? next
+?? public/__tmp_audio/
+?? reports/
+?? src/app/admin/dashboard/outputs/page.tsx.bak.20260608-082817
+?? src/app/api/tmp/
+?? src/app/final-vocal-song/
+ahead/behind origin/main:
+0	6
+
+===== PLAYGROUND / STUDIO FILES =====
+FOUND: src/app/admin/dashboard/studio/page.tsx
+FOUND: src/app/api/admin/studio/execute/route.ts
+FOUND: src/app/api/admin/studio/stt/route.ts
+FOUND: src/app/api/admin/music-studio/route.ts
+FOUND: src/app/api/admin/music-studio/jobs/[jobId]/route.ts
+FOUND: src/app/api/brain/image/route.ts
+FOUND: src/app/api/brain/image-edit/route.ts
+FOUND: src/app/api/brain/video-generate/route.ts
+FOUND: src/app/api/brain/video-generate/[jobId]/route.ts
+FOUND: src/app/api/brain/avatar-video/route.ts
+FOUND: src/app/api/brain/tts/route.ts
+FOUND: src/app/api/brain/stt/route.ts
+FOUND: src/app/api/brain/media-jobs/[jobId]/route.ts
+FOUND: src/lib/live-ai-routing.ts
+FOUND: src/lib/studio-route-map.ts
+FOUND: src/lib/media-job-store.ts
+FOUND: src/lib/artifact-store.ts
+FOUND: src/lib/canonical-media-artifact.ts
+FOUND: src/lib/genx-client.ts
+FOUND: src/lib/provider-config.ts
+
+===== STUDIO FRONTEND MODES / BUTTONS / API CALLS =====
+6:import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+7:import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+14:  adultMode?: 'text' | 'image' | 'video' | 'voice'
+19:  { label: 'Chat', tab: 'Chat', capability: 'chat' },
+20:  { label: 'Research', tab: 'Research', capability: 'research' },
+21:  { label: 'Image', tab: 'Image', capability: 'image_generation' },
+22:  { label: 'Video', tab: 'Video', capability: 'video_generation' },
+23:  { label: 'Music / Song', tab: 'Music / Audio', capability: 'music_generation' },
+24:  { label: 'Voice / TTS', tab: 'Voice / TTS', capability: 'tts' },
+25:  { label: 'Avatar Video', tab: 'Avatar / Talking Video', capability: 'avatar_video' },
+26:  { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
+28:  { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
+29:  { label: 'Adult Video', tab: 'Adult', capability: 'adult_video', adultMode: 'video' },
+30:  { label: 'Adult Voice', tab: 'Adult', capability: 'adult_voice', adultMode: 'voice' },
+31:  { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
+34:const MUSIC_GENRES = [
+40:type MusicGenre = typeof MUSIC_GENRES[number]
+42:const VOICE_TYPES = ['male', 'female', 'deep', 'calm', 'emotional', 'narrator', 'assistant', 'seductive', 'cinematic', 'robotic'] as const
+43:type VoiceType = typeof VOICE_TYPES[number]
+48:  voice?: Array<{ provider: string; label: string; status: string }>
+49:  modelCatalog?: unknown[]
+55:  providers?: Array<{ provider: string; model: string }>
+57:type ArtifactSummary = {
+62:  provider?: string
+63:  model?: string
+71:  provider: string
+72:  model: string
+75:  artifactStatus: string
+83:  const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
+86:  const [modelId, setModelId] = useState('auto')
+87:  const [provider, setProvider] = useState('auto')
+89:  const [voice, setVoice] = useState('auto')
+94:  const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
+95:  const [audioPreview, setAudioPreview] = useState('')
+97:  const [adultMode, setAdultMode] = useState<'text' | 'image' | 'video' | 'voice'>('text')
+103:  // Music controls
+104:  const [musicGenres, setMusicGenres] = useState<MusicGenre[]>([])
+105:  const [musicTempo, setMusicTempo] = useState('medium')
+106:  const [musicMood, setMusicMood] = useState('')
+107:  const [musicVocals, setMusicVocals] = useState<'instrumental' | 'male' | 'female' | 'duet'>('female')
+108:  const [musicExplicit, setMusicExplicit] = useState(false)
+109:  const [musicLanguage, setMusicLanguage] = useState('english')
+110:  // Voice/TTS controls
+111:  const [voiceType, setVoiceType] = useState<VoiceType>('female')
+118:      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
+119:      fetch('/api/admin/amarktai-assistant/context').then((response) => response.json()).catch(() => null),
+120:      fetch('/api/admin/ai-routing').then((response) => response.json()).catch(() => null),
+121:    ]).then(([modelData, contextData, routingData]) => {
+122:      setCatalog(modelData?.universal ?? null)
+128:  const loadArtifacts = useCallback(async () => {
+129:    const response = await fetch(`/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}&limit=30`)
+131:    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
+135:    loadArtifacts().catch(() => null)
+136:  }, [loadArtifacts])
+143:  const modelOptions = useMemo(() => {
+146:      return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
+148:    return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
+150:  const selectedModel = modelOptions.find((model) => model.modelId === modelId)
+151:  const executionProvider = selectedModel?.provider ?? provider
+152:  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+154:  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
+155:  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
+162:  const latestArtifact = artifacts[0]
+175:      const response = await fetch('/api/admin/amarktai-assistant/stream', {
+181:          providerOverride: executionProvider,
+182:          modelOverride: executionModel,
+227:    if (tab === 'Chat') return sendMessage()
+228:    if (tab === 'STT / Transcription') return transcribeUpload()
+232:    setAudioPreview('')
+236:      const endpoint = tab === 'Coding' ? '/api/admin/studio/workbench-handoff' : '/api/admin/studio/execute'
+237:      const response = await fetch(endpoint, {
+244:          provider: selectedModel?.provider ?? provider,
+245:          model: selectedModel?.modelId === 'auto' ? undefined : selectedModel?.modelId ?? modelId,
+249:          voiceId: voice,
+256:      if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
+275:        setJobStatus(data.artifact?.id || data.audioBase64 ? 'completed' : 'processing')
+283:        provider: executionProvider,
+284:        model: executionModel,
+289:        : effectiveData.artifactId
+290:          ? `Artifact saved: ${String(effectiveData.artifactId)}`
+294:      await loadArtifacts().catch(() => null)
+305:      setStatus('Select an audio file first')
+309:    setStatus('Uploading to STT route')
+315:      form.append('provider', executionProvider)
+316:      if (executionModel) form.append('model', executionModel)
+317:      const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
+320:      if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'STT failed')
+327:        provider: executionProvider,
+328:        model: executionModel,
+331:      setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
+333:      await loadArtifacts().catch(() => null)
+335:      setStatus(error instanceof Error ? error.message : 'STT request failed')
+345:    await fetch('/api/admin/memory', {
+355:      const response = await fetch(pollUrl).catch(() => null)
+360:        await loadArtifacts().catch(() => null)
+382:            <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
+383:            <DarkMetric label="Models" value={String(catalog?.models.length ?? '...')} />
+429:            {(mode.capability === 'image_generation' || mode.capability === 'adult_image') && (
+442:            {mode.capability === 'music_generation' && (
+448:                    {MUSIC_GENRES.map((genre) => {
+449:                      const selected = musicGenres.includes(genre)
+455:                            if (selected) setMusicGenres((current) => current.filter((g) => g !== genre))
+456:                            else if (musicGenres.length < 5) setMusicGenres((current) => [...current, genre])
+470:                  {musicGenres.length > 0 && (
+471:                    <button type="button" onClick={() => setMusicGenres([])} className="mt-1.5 flex items-center gap-1 text-[10px] font-bold text-slate-600 hover:text-slate-400">
+476:                {/* Music options */}
+479:                    <select value={musicVocals} onChange={(e) => setMusicVocals(e.target.value as typeof musicVocals)} className="dark-select">
+487:                    <select value={musicTempo} onChange={(e) => setMusicTempo(e.target.value)} className="dark-select">
+495:                    <select value={musicLanguage} onChange={(e) => setMusicLanguage(e.target.value)} className="dark-select">
+505:                      <input type="checkbox" checked={musicExplicit} onChange={(e) => setMusicExplicit(e.target.checked)} className="accent-cyan-500" />
+514:                    value={musicMood}
+515:                    onChange={(e) => setMusicMood(e.target.value)}
+523:                  <RouteFact label="Vocals" value="Not verified - requires live provider test." />
+524:                  <RouteFact label="Models" value="lyria-3-clip-preview / lyria-3-pro-preview" />
+525:                  <RouteFact label="Capability" value="music_generation / song_generation" />
+530:            {(mode.capability === 'tts' || mode.capability === 'adult_voice') && (
+533:                  <DarkField label="Voice provider">
+534:                    <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
+535:                      {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
+536:                      {!context?.voice?.length && <option value="auto">Auto</option>}
+539:                  <DarkField label="Voice type">
+540:                    <select value={voiceType} onChange={(e) => setVoiceType(e.target.value as VoiceType)} className="dark-select">
+541:                      {VOICE_TYPES.map((vt) => <option key={vt} value={vt}>{vt.charAt(0).toUpperCase() + vt.slice(1)}</option>)}
+545:                <p className="text-xs font-semibold text-slate-500">Voice route status: {voiceStatus}</p>
+549:            {mode.capability === 'stt' && (
+552:                <span>{uploadFile?.name ?? 'Upload audio or video'}</span>
+555:                  accept="audio/*,video/*"
+567:                disabled={(mode.capability !== 'stt' && !message.trim()) || streaming || executing}
+587:              <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+594:            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Recent artifacts</p>
+596:              {artifacts.slice(0, 8).map((artifact) => (
+597:                <div key={artifact.id} className="min-w-36 rounded-xl border border-slate-700/40 bg-slate-800/50 p-2">
+598:                  <p className="truncate text-xs font-black text-slate-300">{artifact.title || artifact.id}</p>
+599:                  <p className="mt-1 text-[10px] font-semibold text-slate-600">{artifact.type ?? 'artifact'}</p>
+602:              {!artifacts.length && <p className="text-xs font-semibold text-slate-600">No artifacts yet.</p>}
+609:              <DarkField label="Provider">
+610:                <select value={provider} onChange={(event) => setProvider(event.target.value)} className="dark-select">
+612:                  {APPROVED_AI_PROVIDERS.map((item) => <option key={item.key} value={item.key}>{item.displayName}</option>)}
+615:              <DarkField label="Model / task">
+616:                <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="dark-select">
+618:                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
+630:                  {(catalog?.adultPolicies ?? ['off', 'suggestive', 'adult_text', 'adult_image', 'full_adult_app_mode', 'specialist']).map((item) => <option key={item} value={item}>{item}</option>)}
+634:              <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
+635:              <RouteFact label="Media provider mesh" value="Available capabilities require a canonical route and a provider that passed its live test." />
+644:          <span className="hidden">{'<ArtifactPreview artifact={artifact} />'} {'<audio controls src={audioPreview}'}</span>
+656:              <RouteFact label="Provider" value={providerLabel(executionProvider)} />
+657:              <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
+658:              <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
+671:                audioPreview={audioPreview}
+672:                latestArtifact={latestArtifact}
+686:              <ResultPanel title="Artifact preview">
+687:                {latestArtifact ? <ArtifactPreview artifact={latestArtifact} /> : <p className="text-xs font-semibold text-slate-600">Artifacts appear here after completion.</p>}
+691:                  <button onClick={() => loadArtifacts().catch(() => null)} className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800">Refresh artifacts</button>
+703:              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+707:              {lastResult?.provider && <RouteFact label="Resolved provider" value={lastResult.provider} />}
+708:              {lastResult?.model && <RouteFact label="Resolved model" value={lastResult.model} />}
+717:function ResultWorkspace({ mode, conversation, audioPreview, latestArtifact, lastPayload, streaming }: {
+720:  audioPreview: string
+721:  latestArtifact?: ArtifactSummary
+729:  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') {
+730:    const url = resultUrl || getArtifactUrl(latestArtifact)
+733:      <img src={url} alt="Generated output" className="h-full max-h-[560px] w-full rounded-xl object-contain" />
+734:    ) : <EmptyResult text="Image previews appear here after the job returns storageUrl or imageUrl." />
+736:  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') {
+737:    const url = resultUrl || getArtifactUrl(latestArtifact)
+738:    return url ? <video controls src={url} className="h-full max-h-[560px] w-full rounded-xl" /> : <EmptyResult text="Video player appears here after async polling returns an output URL." />
+740:  if (mode.capability === 'music_generation' || mode.capability === 'tts' || mode.capability === 'adult_voice') {
+741:    const url = audioPreview || resultUrl || getArtifactUrl(latestArtifact)
+742:    return url ? <audio controls src={url} className="mt-8 w-full" /> : <EmptyResult text="Music/audio playback appears here after generation completes." />
+744:  if (mode.capability === 'stt') {
+778:function JobState({ state, provider, model }: { state: string; provider: string; model: string }) {
+783:        <span className="text-[10px] font-semibold text-slate-600">{provider}</span>
+785:      <p className="mt-2 truncate text-xs font-bold text-slate-400">{model}</p>
+833:function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
+834:  if (mode.capability === 'coding') return 'coding'
+835:  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'image'
+836:  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'video'
+837:  if (mode.capability === 'music_generation') return 'music/audio'
+838:  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'voice/TTS'
+839:  if (mode.capability === 'stt') return 'STT'
+841:  return 'chat'
+845:  if (mode.capability === 'research') return 'Research the target, summarize findings, and save an artifact.'
+846:  if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
+847:  if (mode.capability === 'music_generation') return 'Describe the song, genre/style, mood, duration, instrumental/vocals, and intended use.'
+848:  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Enter text to generate speech with the selected voice/provider/model.'
+849:  if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
+855:  if (mode.capability === 'chat') return 'Conversation output appears here as the Assistant responds.'
+856:  if (mode.capability === 'research') return 'Research reports, sources, and follow-up actions appear here after the run.'
+857:  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'Generated images and saved artifact previews appear here when the provider returns output.'
+858:  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'Video progress and the final player appear here after async polling returns a usable output.'
+859:  if (mode.capability === 'music_generation') return 'Music job progress, audio playback, and artifact status appear here.'
+860:  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Generated speech plays here when the selected voice route returns audio.'
+861:  if (mode.capability === 'stt') return 'Transcripts appear here after the upload finishes.'
+863:  if (mode.capability === 'coding') return 'Workbench handoff status appears here, with the next repo action available after saving.'
+868:  if (mode.capability === 'coding') return 'Send to Workbench'
+869:  if (mode.capability === 'stt') return 'Transcribe'
+870:  if (mode.capability === 'chat') return 'Send'
+871:  if (mode.capability === 'music_generation') return 'Generate music'
+882:  if (typeof result?.imageUrl === 'string') return `Image generated: ${result.imageUrl}`
+884:  if (data.artifact && typeof data.artifact === 'object' && 'id' in data.artifact) return `Artifact saved: ${String((data.artifact as { id?: unknown }).id)}`
+888:function modelIdForExecution(value: string | undefined) {
+893:function extractStudioDetails(data: Record<string, unknown>, fallback: { provider: string; model?: string; jobStatus?: string }): StudioResultDetails {
+896:  const artifact = data.artifact as Record<string, unknown> | undefined
+897:  const provider = String(data.provider ?? result?.provider ?? route?.selectedProvider ?? fallback.provider ?? 'auto')
+898:  const model = String(data.model ?? result?.model ?? route?.selectedModel ?? fallback.model ?? 'Auto resolved by backend')
+900:  const artifactId = String(data.artifactId ?? (artifact && typeof artifact === 'object' ? artifact.id ?? '' : ''))
+903:    provider,
+904:    model,
+905:    routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and model router'),
+907:    artifactStatus: artifactId ? `Saved: ${artifactId}` : String(data.storageUrl ?? extractResultUrl(result ?? {})) ? 'Output URL returned' : 'Output pending or not applicable',
+909:    nextAction: blocker ? 'Resolve blocker in Settings or provider configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
+913:function ArtifactPreview({ artifact }: { artifact: ArtifactSummary }) {
+914:  const url = getArtifactUrl(artifact)
+915:  const kind = `${artifact.type ?? ''} ${artifact.subType ?? ''}`.toLowerCase()
+917:  if (kind.includes('image')) {
+919:    return <img src={url} alt={artifact.title ?? artifact.id} className="mt-3 max-h-64 w-full rounded-lg object-contain" />
+921:  if (kind.includes('video')) return <video controls src={url} className="mt-3 max-h-64 w-full rounded-lg" />
+922:  if (kind.includes('audio') || kind.includes('voice') || kind.includes('music')) return <audio controls src={url} className="mt-3 w-full" />
+923:  return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open/download artifact</a>
+926:function getArtifactUrl(artifact?: ArtifactSummary) {
+927:  if (!artifact) return ''
+928:  return artifact.storageUrl
+929:    ?? artifact.contentUrl
+930:    ?? artifact.url
+931:    ?? stringMeta(artifact.metadata, 'storageUrl')
+932:    ?? stringMeta(artifact.metadata, 'resultUrl')
+933:    ?? stringMeta(artifact.metadata, 'imageUrl')
+941:    ?? stringMeta(job, 'artifactUrl')
+942:    ?? stringMeta(job, 'imageUrl')
+943:    ?? stringMeta(job, 'audioUrl')
+944:    ?? stringMeta(job, 'musicUrl')
+945:    ?? stringMeta(job, 'videoUrl')
+
+===== STUDIO EXECUTE ROUTING SUMMARY =====
+3:import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
+4:import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
+5:import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
+6:import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
+7:import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
+8:import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
+9:import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
+10:import { POST as imagePost } from '@/app/api/brain/image/route'
+11:import { POST as videoPost } from '@/app/api/brain/video-generate/route'
+12:import { POST as ttsPost } from '@/app/api/brain/tts/route'
+14:import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
+15:import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
+16:import { POST as musicPost } from '@/app/api/admin/music-studio/route'
+18:type StudioExecuteTab =
+20:  | 'Coding'
+21:  | 'Research'
+22:  | 'Image'
+23:  | 'Video'
+24:  | 'Music / Audio'
+25:  | 'Voice / TTS'
+26:  | 'STT / Transcription'
+27:  | 'Avatar / Talking Video'
+29:  | 'Artifacts'
+32:  tab?: StudioTab
+34:  provider?: string
+35:  model?: string
+39:  mode?: 'text' | 'image' | 'video' | 'voice'
+40:  voiceId?: string
+43:  capability?: string
+64:async function persistArtifact(input: {
+66:  type: ArtifactType
+70:  provider?: string
+71:  model?: string
+78:    return await createArtifact({
+84:      provider: input.provider,
+85:      model: input.model,
+91:  } catch (error) {
+94:      warning: error instanceof Error ? error.message : 'Artifact persistence failed',
+99:function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
+100:  if (tab === 'Research') return 'research'
+101:  if (tab === 'Image') return 'image_generation'
+102:  if (tab === 'Video') return 'video_generation'
+103:  if (tab === 'Music / Audio') return 'music_generation'
+104:  if (tab === 'Voice / TTS') return 'tts'
+105:  if (tab === 'Avatar / Talking Video') return 'avatar_video'
+106:  if (tab === 'Adult') {
+107:    if (adultMode === 'image') return 'adult_image'
+108:    if (adultMode === 'video') return 'adult_video'
+109:    if (adultMode === 'voice') return 'adult_voice'
+116:function normalizeStudioTab(input: unknown, body?: ExecuteBody): StudioExecuteTab | null {
+124:    normalize(body?.tab),
+126:    normalize(body?.capability),
+132:    if (value === 'research') return 'Research'
+133:    if (value === 'coding' || value === 'code' || value === 'code generation') return 'Coding'
+136:      value === 'image' ||
+137:      value === 'image generation' ||
+138:      value === 'image gen' ||
+139:      value === 'generate image'
+140:    ) return 'Image'
+143:      value === 'video' ||
+144:      value === 'video generation' ||
+145:      value === 'video gen' ||
+146:      value === 'generate video'
+147:    ) return 'Video'
+150:      value === 'music' ||
+153:      value === 'music audio' ||
+154:      value === 'music generation' ||
+156:    ) return 'Music / Audio'
+159:      value === 'tts' ||
+160:      value === 'voice' ||
+161:      value === 'voice tts' ||
+163:      value === 'voice generation'
+164:    ) return 'Voice / TTS'
+167:      value === 'stt' ||
+170:      value === 'stt transcription'
+171:    ) return 'STT / Transcription'
+174:      value === 'avatar' ||
+175:      value === 'avatar video' ||
+176:      value === 'talking video' ||
+177:      value === 'avatar talking video'
+178:    ) return 'Avatar / Talking Video'
+183:      value === 'adult image' ||
+184:      value === 'adult video' ||
+185:      value === 'adult voice' ||
+187:      value === 'image adult' ||
+188:      value === 'video adult' ||
+189:      value === 'voice adult'
+197:function inferMusicGenre(prompt: string): string {
+205:function inferMusicVocalStyle(prompt: string, explicit?: string, instrumental?: boolean): string {
+218:  if (!session.isLoggedIn) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+221:  const tab = normalizeStudioTab(body.tab ?? body.mode ?? body.capability, body)
+224:  if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
+225:  if (!prompt) return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
+227:  const config = getStudioRouteConfig(tab)
+230:      success: false, executed: false, capability: config.capability, provider: null, model: null,
+231:      jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: config.detail, blocker: config.detail, route: config,
+235:  const capability = normalizeCapability(tab, body.mode)
+236:  if (tab === 'Avatar / Talking Video') {
+237:    const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
+239:    return NextResponse.json({ ...data, result: data, artifact: null }, { status: response.status })
+242:  const route = routeLiveModel({
+243:    capability,
+245:    selectedProvider: body.provider ?? 'auto',
+246:    selectedModel: body.model === 'auto' ? undefined : body.model,
+249:    requiresMedia: ['image', 'video', 'adult_image', 'adult_video', 'adult_voice', 'music_generation', 'tts'].includes(capability),
+252:  if (route.blockedReason) {
+254:      success: false, executed: false, capability, provider: null, model: null,
+255:      jobStatus: 'blocked', artifactId: null, storageUrl: null,
+256:      error: route.blockedReason, blocker: route.blockedReason, route,
+261:    if (tab === 'Research') {
+262:      const response = await researchAssistPost(jsonRequest('/api/admin/research/assist', { prompt, appSlug }))
+264:      const artifact = await persistArtifact({
+267:        subType: 'research_brief',
+268:        title: `Research: ${prompt.slice(0, 80)}`,
+269:        description: 'Studio Research Agent result',
+270:        provider: String(route.selectedProvider ?? 'research'),
+271:        model: String(route.selectedModel ?? ''),
+274:        metadata: { tab, route },
+276:      return NextResponse.json({ success: response.ok, executed: response.ok, result: data, artifact, route }, { status: response.status })
+279:    if (tab === 'Image') {
+280:      if (route.selectedProvider === 'huggingface') {
+281:        return NextResponse.json({ success: false, executed: false, error: 'Hugging Face image generation is task-based and is not wired to this image execution route yet.', route }, { status: 409 })
+283:      const response = await imagePost(jsonRequest('/api/brain/image', {
+286:        providerOverride: route.selectedProvider,
+287:        modelOverride: route.selectedModel,
+294:          type: 'image',
+295:          subType: 'studio_image',
+296:          title: `Image: ${prompt.slice(0, 80)}`,
+297:          provider: String(data.provider ?? route.selectedProvider ?? ''),
+298:          model: String(data.model ?? route.selectedModel ?? ''),
+299:          metadata: { tab, route },
+302:      const localJob = persisted?.status === 'processing'
+303:        && persisted.jobId
+304:        && String(data.provider ?? route.selectedProvider) === 'genx'
+305:        ? createLocalMediaJob({
+306:          capability: 'image_generation',
+308:          type: 'image',
+309:          subType: 'studio_image',
+310:          title: `Image: ${prompt.slice(0, 80)}`,
+312:          provider: String(data.provider ?? route.selectedProvider ?? ''),
+313:          model: String(data.model ?? route.selectedModel ?? ''),
+314:          providerJobId: persisted.jobId,
+315:          metadata: { tab, route, responseShapeKeys: persisted.responseShapeKeys },
+318:      const tracked = localJob ? localMediaJobResponse(localJob) : null
+319:      const success = Boolean(persisted?.success || tracked?.success)
+322:        success,
+323:        executed: success,
+324:        capability,
+325:        provider: persisted?.provider ?? data.provider ?? route.selectedProvider,
+326:        model: persisted?.model ?? data.model ?? route.selectedModel,
+327:        jobStatus: tracked?.jobStatus ?? persisted?.status ?? 'failed',
+328:        jobId: tracked?.jobId ?? persisted?.jobId ?? null,
+329:        providerJobId: tracked?.providerJobId ?? persisted?.jobId ?? null,
+331:        artifactId: persisted?.artifactId ?? null,
+333:        imageUrl: persisted?.mediaUrl ?? null,
+334:        blocker: tracked ? null : persisted?.blocker ?? data.error ?? null,
+335:        error: tracked ? null : persisted?.blocker ?? data.error ?? null,
+338:        artifact: persisted?.artifact ?? null,
+340:      }, { status: tracked ? 202 : success ? 200 : response.ok ? 502 : response.status })
+343:    if (tab === 'Video' || capability === 'adult_video') {
+344:      const provider = route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
+345:        ? route.selectedProvider
+346:        : 'genx'
+347:      const response = await videoPost(jsonRequest('/api/brain/video-generate', {
+353:        provider,
+354:        model: route.selectedModel,
+355:        capability,
+358:      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+360:        success: Boolean(data.success),
+362:        capability,
+363:        provider: data.provider ?? route.selectedProvider,
+364:        model: data.model ?? route.selectedModel,
+365:        jobStatus: data.jobStatus ?? data.status ?? 'processing',
+366:        artifactId: data.artifactId ?? null,
+368:        error: data.error ?? null,
+369:        blocker: data.blocker ?? data.error ?? null,
+371:        artifact,
+376:    if (tab === 'Music / Audio') {
+377:      const response = await musicPost(jsonRequest('/api/admin/music-studio', {
+382:          genre: body.genre?.trim() || inferMusicGenre(prompt),
+384:          vocalStyle: inferMusicVocalStyle(prompt, body.vocalStyle, body.instrumental),
+386:          provider: route.selectedProvider,
+387:          model: route.selectedModel,
+393:        success: Boolean(data.success),
+395:        capability,
+396:        provider: data.provider ?? route.selectedProvider,
+397:        model: data.model ?? route.selectedModel,
+398:        jobStatus: data.jobStatus ?? data.status ?? 'failed',
+399:        jobId: data.jobId ?? null,
+401:        artifactId: data.artifactId ?? null,
+403:        error: data.error ?? null,
+404:        blocker: data.blocker ?? data.error ?? null,
+406:        artifact: data.artifact ?? null,
+411:    if (tab === 'Voice / TTS' || capability === 'adult_voice') {
+412:      const provider = ['genx', 'huggingface'].includes(String(route.selectedProvider))
+413:        ? route.selectedProvider
+415:      const response = await ttsPost(jsonRequest('/api/brain/tts', {
+417:        provider,
+418:        model: provider === 'auto' ? undefined : route.selectedModel,
+419:        voiceId: body.voiceId,
+421:        capability,
+424:      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+428:        artifact,
+433:    if (tab === 'Adult') {
+434:      if (body.mode === 'image') {
+435:        const response = await adultImagePost(jsonRequest('/api/brain/adult-image', {
+439:          provider: route.selectedProvider,
+440:          model: route.selectedModel,
+443:        const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+444:        return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
+449:        provider: route.selectedProvider,
+450:        model: route.selectedModel,
+453:      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+454:      return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
+457:    return NextResponse.json({ success: false, executed: false, error: `${tab} execution is not available through this route.`, route }, { status: 400 })
+458:  } catch (error) {
+460:      success: false,
+462:      error: error instanceof Error ? error.message : 'Studio execution failed',
+
+===== MEDIA ROUTE BLOCKERS =====
+
+--- src/app/api/brain/image/route.ts ---
+3:import { callGenXMedia, GENX_IMAGE_MODELS } from '@/lib/genx-client';
+9: *   0. GenX — gpt-image-2, nano-banana-2, nano-banana-pro, etc. (primary)
+11: *   2. Together AI — FLUX.1-schnell-Free → FLUX.1-schnell
+13: *   4. Qwen/DashScope — wanx2.1-t2i-turbo → wanx-v1 (async AIGC endpoint with polling)
+43:/** Together AI FLUX models tried in order for fallback image generation. */
+79:    // ── Provider 0: GenX — primary image generation ─────────────────────
+80:    if (!providerOverride || providerOverride === 'genx') {
+81:      const genxModel = modelOverride ?? requestedModel ?? GENX_IMAGE_MODELS[0];
+83:        const genxResult = await callGenXMedia({ model: genxModel, prompt: prompt.trim(), type: 'image' });
+84:        if (genxResult.success && genxResult.url) {
+87:            imageUrl: genxResult.url,
+88:            provider: 'genx',
+89:            model: genxResult.model,
+93:        if (genxResult.success && genxResult.jobId) {
+96:            jobId: genxResult.jobId,
+97:            status: genxResult.status,
+98:            provider: 'genx',
+99:            model: genxResult.model,
+103:      } catch (genxErr) {
+104:        console.warn('[brain/image] GenX image failed:', genxErr instanceof Error ? genxErr.message : genxErr);
+193:    // ── Provider 2: Together AI FLUX (fallback) ────────────────────────
+194:    const togetherKey = await getVaultApiKey('together');
+195:    if (togetherKey && (!providerOverride || providerOverride === 'together')) {
+198:          const response = await fetch('https://api.together.xyz/v1/images/generations', {
+201:              Authorization: `Bearer ${togetherKey}`,
+221:                provider: 'together',
+228:          console.warn(`[brain/image] Together AI ${fluxModel} failed:`, fluxErr instanceof Error ? fluxErr.message : fluxErr);
+276:    // ── Provider 4: Qwen/DashScope — Wanx image generation (async) ────
+278:    // Polls until the job succeeds or the deadline is reached.
+279:    const qwenKey = await getVaultApiKey('qwen');
+280:    if (qwenKey && (!providerOverride || providerOverride === 'qwen')) {
+295:              Authorization: `Bearer ${qwenKey}`,
+309:            console.warn(`[brain/image] Qwen ${wanxModel.id} submit failed (${submitRes.status}): ${errText.slice(0, 200)}`);
+318:            console.warn('[brain/image] Qwen Wanx: no task_id in submit response');
+330:              headers: { Authorization: `Bearer ${qwenKey}` },
+344:              provider: 'qwen',
+351:          console.warn(`[brain/image] Qwen ${wanxModel.id} error:`, qErr instanceof Error ? qErr.message : qErr);
+356:    // ── No provider available — structured failure, never falls back to text ──
+357:    const candidateModels = [...GENX_IMAGE_MODELS, ...GPT_IMAGE_MODELS_ORDERED, 'dall-e-3', 'dall-e-2'];
+358:    const rejectionReasons: string[] = ['genx: not configured or returned no image'];
+360:    if (!togetherKey) rejectionReasons.push('together: no API key configured');
+362:    if (!qwenKey) rejectionReasons.push('qwen: no API key configured (Wanx image generation)');
+371:          'Configure at least one of: GenX, OpenAI (gpt-image-1/dall-e-3), Together AI (FLUX), ' +
+372:          'Gemini (Imagen 3.0), or Qwen/DashScope (Wanx) in Admin → AI Providers.',
+375:        providers_checked: ['genx', 'openai', 'together', 'gemini', 'qwen'],
+
+--- src/app/api/brain/video-generate/route.ts ---
+5:import { callGenXMedia, GENX_VIDEO_MODELS } from '@/lib/genx-client'
+6:import { createArtifact } from '@/lib/artifact-store'
+15:  provider: z.enum(['genx', 'qwen', 'auto']).optional().default('auto'),
+20:async function createQwenJob(prompt: string, model: string, apiKey: string) {
+34:  if (!response.ok) throw new Error(`Qwen Wan returned HTTP ${response.status}`)
+36:  if (!data.output?.task_id) throw new Error('Qwen Wan did not return a task ID')
+37:  return { providerJobId: `qwen-wan:${data.output.task_id}`, status: 'processing' }
+43:    ['groq', 'llama-3.3-70b-versatile'],
+44:    ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+45:    ['qwen', 'qwen-plus'],
+55:  if (!parsed.success) return NextResponse.json({
+56:    success: false, executed: false, capability: 'video_generation', provider: null, model: null,
+57:    jobStatus: 'blocked', artifactId: null, storageUrl: null, error: 'Invalid request',
+69:        success: false, executed: false, capability, provider: null, model: null,
+70:        jobStatus: 'blocked', artifactId: null, storageUrl: null, error, blocker: error,
+75:      const error = `Prompt blocked by policy: ${scan.categories.join(', ')}.`
+77:        success: false, executed: false, capability, provider: null, model: null,
+78:        jobStatus: 'blocked', artifactId: null, storageUrl: null, error, blocker: error,
+84:  let providerJobId = ''
+90:  if (provider === 'auto' || provider === 'genx') {
+91:    const genxModel = model && GENX_VIDEO_MODELS.includes(model as (typeof GENX_VIDEO_MODELS)[number])
+93:      : GENX_VIDEO_MODELS[0]
+94:    const result = await callGenXMedia({ model: genxModel, prompt: enhancedPrompt, type: 'video', duration })
+95:    if (result.success && (result.jobId || result.url)) {
+96:      providerJobId = result.jobId ? `genx-job:${result.jobId}` : `genx-sync:${result.url}`
+97:      usedProvider = 'genx'
+98:      usedModel = genxModel
+104:  if (!providerJobId && (provider === 'auto' || provider === 'qwen')) {
+105:    const apiKey = await getVaultApiKey('qwen')
+107:      const qwenModel = model || 'wanx2.1-t2v-turbo'
+109:        const result = await createQwenJob(enhancedPrompt, qwenModel, apiKey)
+110:        providerJobId = result.providerJobId
+111:        usedProvider = 'qwen'
+112:        usedModel = qwenModel
+120:  if (!providerJobId) {
+123:      success: false,
+128:      jobStatus: 'needs_setup',
+129:      artifactId: null,
+130:      storageUrl: null,
+134:      error: 'No tested approved video provider could start a real job.',
+135:      blocker: 'No tested approved video provider could start a real job.',
+139:  const job = await prisma.videoGenerationJob.create({
+149:      providerJobId,
+154:  let artifactId: string | null = null
+155:  let storageUrl: string | null = null
+158:      const artifact = await createArtifact({
+166:        traceId: `video-job-${job.id}`,
+170:        metadata: { capability, jobId: job.id },
+172:      artifactId = artifact.id
+173:      storageUrl = artifact.storageUrl
+175:      const message = `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`
+177:        success: false, executed: false, capability, provider: usedProvider, model: usedModel,
+178:        jobStatus: 'failed', artifactId: null, storageUrl: null, error: message, blocker: message, jobId: job.id,
+183:    success: true,
+186:    jobId: job.id,
+187:    status: job.status,
+188:    jobStatus: job.status,
+191:    artifactId,
+192:    storageUrl,
+195:    pollUrl: `/api/brain/video-generate/${job.id}`,
+
+--- src/app/api/brain/avatar-video/route.ts ---
+9:      success: false,
+12:      jobStatus: 'blocked',
+13:      artifactId: null,
+14:      storageUrl: null,
+26:    : 'avatar video provider unavailable'
+29:    success: false,
+34:    jobStatus: 'needs_setup',
+35:    artifactId: null,
+36:    storageUrl: null,
+39:    setupRequirement: 'Connect and approve an avatar/lip-sync video provider with artifact persistence.',
+
+--- src/app/api/brain/tts/route.ts ---
+4:import { callGenXMedia, GENX_TTS_MODELS } from '@/lib/genx-client'
+5:import { createArtifact } from '@/lib/artifact-store'
+8:import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
+11:type TtsProvider = 'auto' | 'genx' | 'huggingface'
+14:  success: boolean
+18:  jobStatus: string
+19:  artifactId?: string | null
+20:  storageUrl?: string | null
+28:    success: input.success,
+29:    executed: input.success,
+33:    jobStatus: input.jobStatus,
+34:    artifactId: input.artifactId ?? null,
+35:    storageUrl: input.storageUrl ?? null,
+53:      return NextResponse.json(result({ success: false, capability, traceId, jobStatus: 'blocked', error: 'text is required.' }), { status: 400 })
+61:          success: false,
+64:          jobStatus: 'blocked',
+71:          success: false,
+74:          jobStatus: 'blocked',
+75:          error: `Text blocked by policy: ${scan.categories.join(', ')}.`,
+81:    if (requestedProviderValue === 'groq') {
+83:        success: false,
+86:        provider: 'groq',
+88:        jobStatus: 'blocked',
+89:        error: 'Groq TTS is not an approved working audio execution route.',
+92:    if (!['auto', 'genx', 'huggingface'].includes(requestedProviderValue)) {
+94:        success: false,
+97:        jobStatus: 'blocked',
+113:      if (entry.provider === 'genx') {
+114:        const genxModel = GENX_TTS_MODELS.includes(model as (typeof GENX_TTS_MODELS)[number]) ? model : GENX_TTS_MODELS[0]
+115:        const generated = await callGenXMedia({ model: genxModel, prompt: text, type: 'audio' }).catch((cause) => ({
+116:          success: false,
+118:          jobId: null,
+120:          model: genxModel,
+122:          error: cause instanceof Error ? cause.message : 'GenX TTS failed.',
+124:        if (generated.success && generated.url) {
+130:            error = 'GenX returned an audio URL that could not be downloaded.'
+132:        } else if (generated.success && generated.jobId) {
+133:          const job = createLocalMediaJob({
+140:            provider: 'genx',
+142:            providerJobId: generated.jobId,
+146:            ...localMediaJobResponse(job),
+151:          error = generated.error ?? 'GenX returned no audio.'
+158:          error = 'Hugging Face API key is missing.'
+170:            error = response ? `Hugging Face returned HTTP ${response.status}.` : 'Hugging Face TTS request failed.'
+181:        const artifact = await createArtifact({
+202:              'X-Job-Status': 'completed',
+203:              'X-Artifact-Id': artifact.id,
+204:              'X-Storage-Url': artifact.storageUrl,
+209:          success: true,
+214:          jobStatus: 'completed',
+215:          artifactId: artifact.id,
+216:          storageUrl: artifact.storageUrl,
+220:      } catch (artifactError) {
+222:          success: false,
+227:          jobStatus: 'failed',
+228:          error: `Generation completed but artifact persistence failed: ${artifactError instanceof Error ? artifactError.message : 'unknown error'}`,
+235:      success: false,
+238:      jobStatus: 'needs_setup',
+239:      error: `No tested ${capability} provider returned real audio.`,
+244:      success: false,
+247:      jobStatus: 'failed',
+
+--- src/app/api/brain/stt/route.ts ---
+8: *   - Groq STT (low-cost, fast — whisper-large-v3 / distil-whisper-large-v3-en / whisper-large-v3-turbo)
+11: *   - Hugging Face STT (free fallback — openai/whisper-large-v3 / openai/whisper-small)
+19: *   - provider (string, optional) — 'groq' | 'openai' | 'gemini' | 'huggingface' | 'auto' (default: 'auto')
+25: * STRICT RULE: Never fakes success. Returns error if no provider configured.
+29:  const unavailable = (
+30:    reason: 'provider_not_configured' | 'all_providers_unavailable' | 'invalid_request' | 'transcription_failed',
+50:      return unavailable('invalid_request', 'Content-Type must be multipart/form-data with an audio file', 400);
+57:      return unavailable('invalid_request', 'An audio file is required in the "file" field', 400);
+65:    const groqKey  = await getVaultApiKey('groq');
+69:    const qwenKey  = await getVaultApiKey('qwen');
+71:    // ── GenX STT first attempt ────────────────────────────────────────────────
+72:    // GenX STT accepts audio as base64 via the media generate endpoint.
+73:    if (requestedProvider === 'auto' || requestedProvider === 'genx') {
+75:        const { callGenXMedia, GENX_STT_MODELS } = await import('@/lib/genx-client');
+76:        const genxModel = requestedModel ?? GENX_STT_MODELS[0];
+80:        const genxResult = await callGenXMedia({
+81:          model: genxModel,
+86:        if (genxResult.success && genxResult.url) {
+87:          // GenX STT returns the transcript text in the url field for text-mode outputs
+88:          const transcript = genxResult.url;
+91:            model: genxResult.model,
+93:            provider: 'genx',
+99:        // GenX STT failed — fall through to other providers
+101:      if (requestedProvider === 'genx') {
+102:        return unavailable('provider_not_configured', 'GenX STT requested but GenX is not configured or returned no transcript. Add GENX_API_URL/GENX_API_KEY.', 503, 'genx');
+107:    let provider: 'groq' | 'openai' | 'gemini' | 'huggingface' | 'qwen';
+108:    if (requestedProvider === 'groq') {
+109:      if (!groqKey) {
+110:        return unavailable('provider_not_configured', 'Groq STT requested but no Groq API key is configured. Add it via Admin → AI Providers.', 503, 'groq');
+112:      provider = 'groq';
+115:        return unavailable('provider_not_configured', 'OpenAI STT requested but no OpenAI API key is configured. Add it via Admin → AI Providers.', 503, 'openai');
+120:        return unavailable('provider_not_configured', 'Gemini STT requested but no Gemini API key is configured. Add it via Admin → AI Providers.', 503, 'gemini');
+125:        return unavailable('provider_not_configured', 'Hugging Face STT requested but no Hugging Face API key is configured. Add it via Admin → AI Providers.', 503, 'huggingface');
+128:    } else if (requestedProvider === 'qwen') {
+129:      if (!qwenKey) {
+130:        return unavailable('provider_not_configured', 'Qwen STT requested but no Qwen/DashScope API key is configured. Add it via Admin → AI Providers.', 503, 'qwen');
+132:      provider = 'qwen';
+134:      // Auto: OpenAI is the golden-path baseline. Groq is used as fallback when
+135:      // OpenAI is not configured. Gemini, Qwen, and Hugging Face are last-resort options.
+138:      } else if (groqKey) {
+139:        provider = 'groq';
+142:      } else if (qwenKey) {
+143:        provider = 'qwen';
+147:        return unavailable(
+148:          'all_providers_unavailable',
+149:          'Voice input is currently unavailable: no STT provider is configured. Add an API key via Admin → AI Providers (OpenAI, Groq, Gemini, Qwen, or Hugging Face).',
+157:      ?? (provider === 'groq' ? 'whisper-large-v3' : provider === 'gemini' ? 'gemini-2.0-flash-live-001' : provider === 'qwen' ? 'qwen-audio-turbo' : provider === 'huggingface' ? 'openai/whisper-large-v3' : 'whisper-1');
+159:    if (provider === 'groq') {
+160:      // Groq STT via OpenAI-compatible endpoint
+166:      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+168:        headers: { Authorization: `Bearer ${groqKey}` },
+174:          return unavailable('transcription_failed', `Groq transcription failed: ${err}`, response.status, 'groq');
+182:        provider: 'groq',
+216:        return unavailable('transcription_failed', `Gemini transcription failed: ${err}`, response.status, 'gemini');
+233:      // Hugging Face Inference API — free fallback STT
+250:        return unavailable('transcription_failed', `Hugging Face transcription failed: ${err}`, response.status, 'huggingface');
+265:    if (provider === 'qwen') {
+266:      // Qwen Audio (qwen-audio-turbo / qwen-audio-chat) via DashScope compatible-mode.
+280:            Authorization: `Bearer ${qwenKey}`,
+304:        return unavailable('transcription_failed', `Qwen Audio transcription failed: ${err}`, response.status, 'qwen');
+315:        provider: 'qwen',
+336:      return unavailable('transcription_failed', `OpenAI transcription failed: ${err}`, response.status, 'openai');
+350:    return unavailable('transcription_failed', `Internal server error: ${String(err)}`, 500);
+
+===== PROVIDER KEY SOURCE CHECK FROM APP CODE =====
+provider-config import: false
+
+===== SAFE ENV CHECK FOR REQUIRED PROVIDERS =====
+GENX_API_KEY=EMPTY
+GENX_BASE_URL=SET length=21
+HUGGINGFACE_API_KEY=EMPTY
+TOGETHER_API_KEY=MISSING
+GROQ_API_KEY=MISSING
+QWEN_API_KEY=EMPTY
+MIMO_API_KEY=EMPTY
+MIMO_BASE_URL=EMPTY
+DATABASE_URL=SET length=119
+REDIS_URL=SET length=22
+
+===== DATABASE PROVIDER / KEY TABLE COUNTS =====
+models containing provider/key/integration:
+aiProvider
+apiKey
+appIntegration
+integrationConfig
+providerBudget
+--- aiProvider ---
+[]
+--- apiKey ---
+[]
+--- appIntegration ---
+[]
+--- integrationConfig ---
+[
+  {
+    "id": 1,
+    "key": "[redacted length=4]",
+    "displayName": "GenX",
+    "apiKey": "[redacted length=37]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"provider\",\"savedAt\":\"2026-06-06T09:49:07.805Z\",\"lastTestStatus\":\"passed\",\"latencyMs\":1586,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:57:24.012Z\",\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"image\",\"video\",\"image_to_video\",\"avatar\",\"music\",\"audio\",\"tts\",\"stt\",\"files\",\"sessions\",\"async_jobs\",\"tools\"],\"lastError\":\"\",\"detail\":\"\",\"modelCount\":60,\"catalogOk\":true,\"chatOk\":false,\"generateOk\":true,\"executionOk\":true}",
+    "createdAt": "2026-06-05T18:13:06.178Z",
+    "updatedAt": "2026-06-06T13:57:24.014Z"
+  },
+  {
+    "id": 6,
+    "key": "[redacted length=13]",
+    "displayName": "Local Crawler",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":738,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:22.480Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available · Scrapy available · Trafilatura available\"}",
+    "createdAt": "2026-06-06T09:55:05.789Z",
+    "updatedAt": "2026-06-06T13:15:22.482Z"
+  },
+  {
+    "id": 7,
+    "key": "[redacted length=7]",
+    "displayName": "Storage",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":24,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:55.908Z\",\"capabilities\":[\"storage\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:12.301Z",
+    "updatedAt": "2026-06-06T13:15:55.910Z"
+  },
+  {
+    "id": 8,
+    "key": "[redacted length=4]",
+    "displayName": "SMTP",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":299,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:58.125Z\",\"capabilities\":[\"email\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:17.885Z",
+    "updatedAt": "2026-06-06T13:15:58.126Z"
+  },
+  {
+    "id": 9,
+    "key": "[redacted length=5]",
+    "displayName": "Redis",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":12,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T12:41:05.444Z\",\"capabilities\":[\"queue\"],\"lastError\":\"\",\"detail\":\"PING/PONG succeeded via ioredis\"}",
+    "createdAt": "2026-06-06T09:55:27.032Z",
+    "updatedAt": "2026-06-06T12:41:05.446Z"
+  },
+  {
+    "id": 12,
+    "key": "[redacted length=6]",
+    "displayName": "Qdrant",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:19:37.951Z\",\"capabilities\":[\"vector_store\"],\"lastError\":\"\",\"detail\":\"Collections endpoint passed.\",\"latencyMs\":34}",
+    "createdAt": "2026-06-06T12:39:07.547Z",
+    "updatedAt": "2026-06-06T13:19:37.953Z"
+  },
+  {
+    "id": 13,
+    "key": "[redacted length=10]",
+    "displayName": "Playwright",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":555,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:32.713Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available\"}",
+    "createdAt": "2026-06-06T12:39:11.770Z",
+    "updatedAt": "2026-06-06T13:15:32.714Z"
+  },
+  {
+    "id": 14,
+    "key": "[redacted length=6]",
+    "displayName": "Scrapy",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":500,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:44.316Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Scrapy available\"}",
+    "createdAt": "2026-06-06T12:39:14.122Z",
+    "updatedAt": "2026-06-06T13:15:44.318Z"
+  },
+  {
+    "id": 15,
+    "key": "[redacted length=11]",
+    "displayName": "Trafilatura",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":640,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:50.947Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Trafilatura available\"}",
+    "createdAt": "2026-06-06T12:39:17.314Z",
+    "updatedAt": "2026-06-06T13:15:50.949Z"
+  },
+  {
+    "id": 16,
+    "key": "[redacted length=6]",
+    "displayName": "ffmpeg",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":80,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:47.153Z\",\"capabilities\":[\"video\",\"audio\"],\"lastError\":\"\",\"detail\":\"ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers\"}",
+    "createdAt": "2026-06-06T12:39:18.781Z",
+    "updatedAt": "2026-06-06T13:15:47.155Z"
+  }
+]
+--- providerBudget ---
+[]
+
+===== BUILD ROUTE TYPES =====
+├ ○ /admin/dashboard/studio                                11.2 kB         119 kB
+├ ƒ /api/admin/studio/execute                                677 B         103 kB
+├ ƒ /api/brain/avatar-video                                  677 B         103 kB
+├ ƒ /api/brain/image                                         677 B         103 kB
+├ ƒ /api/brain/image-edit                                    677 B         103 kB
+├ ƒ /api/brain/media-jobs/[jobId]                            677 B         103 kB
+├ ƒ /api/brain/stt                                           677 B         103 kB
+├ ƒ /api/brain/tts                                           677 B         103 kB
+├ ƒ /api/brain/video-generate                                677 B         103 kB
+├ ƒ /api/brain/video-generate/[jobId]                        677 B         103 kB
+
+===== LOCAL ROUTE STATUS WITHOUT AUTH =====
+307 /admin/dashboard/studio
+405 /api/admin/studio/execute
+405 /api/brain/image
+405 /api/brain/video-generate
+405 /api/brain/avatar-video
+405 /api/brain/tts
+405 /api/brain/stt
+
+================================================================
+ END PLAYGROUND REPORT
+================================================================

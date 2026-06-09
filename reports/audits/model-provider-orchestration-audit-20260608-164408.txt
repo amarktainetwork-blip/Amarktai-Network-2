@@ -1,0 +1,3199 @@
+================================================================
+ AMARKTAI MODEL / PROVIDER / ORCHESTRATION AUDIT
+================================================================
+Mon Jun  8 16:44:08 UTC 2026
+/var/www/amarktai-audit/Amarktai-Network-2
+amarktainetw
+
+===== GIT STATE =====
+ M src/app/admin/dashboard/studio/page.tsx
+?? reports/
+bcb047f fix: simplify dashboard foundation and home flow
+4867993 fix: make outputs media library live and artifact-aware
+ebc3d61 fix: preserve vocal song options in studio music generation
+e6a14b4 fix: serve media artifacts with browser-ready MIME types
+ea0d4da fix: persist authenticated GenX media artifacts locally
+876b146 fix: normalize studio media routing and prove music jobs
+25eb342 fix: bridge assistant stream route to working chat execution
+4ec9e37 feat: stabilize AI brain and provider universe truth
+03da8ae Merge pull request #83 from amarktainetwork-blip/fix-live-media-execution-artifacts-jobs
+823f1eb Fix live media job and artifact contracts
+0	8
+
+===== INTERNAL DOCS / NOTES / REPORTS =====
+./AUDIT.md
+./FRONTEND_DASHBOARD_AUDIT.md
+./README.md
+./docs/FINAL_VPS_INSTALL_PLAN.md
+./docs/GO_LIVE_CHECKLIST.md
+./docs/README.md
+./docs/adding-a-provider.md
+./docs/ai/model-stack-research.md
+./docs/amarktai-rebuild-plan.md
+./docs/architecture/STANDALONE_APP_PLATFORM_READINESS.md
+./docs/audits/ADULT_MEDIA_CAPABILITY_WIRING.md
+./docs/audits/API_PROVIDER_ROUTE_CLEANUP_AUDIT.md
+./docs/audits/CAPABILITY_GOVERNANCE_AND_ROOT_WORKSPACE_IMPLEMENTATION.md
+./docs/audits/CINEMATIC_PUBLIC_WEBSITE_REBUILD.md
+./docs/audits/DASHBOARD_CORRECTION_AUDIT_PR74.md
+./docs/audits/DASHBOARD_PRODUCTIZATION_FIX.md
+./docs/audits/DASHBOARD_SECTION_OPTIONS_AUDIT.md
+./docs/audits/DASHBOARD_SINGLE_SOURCE_TRUTH_AUDIT.md
+./docs/audits/FINAL_DASHBOARD_GO_LIVE_WIRING.md
+./docs/audits/FINAL_DASHBOARD_REBUILD.md
+./docs/audits/FINAL_GO_LIVE_DASHBOARD_COMPLETION.md
+./docs/audits/FINAL_GO_LIVE_DASHBOARD_IMPLEMENTATION.md
+./docs/audits/FINAL_LIVE_RUNTIME_PROOF.md
+./docs/audits/FINAL_PREMIUM_PUBLIC_WEBSITE.md
+./docs/audits/FINAL_PUBLIC_WEBSITE_REBUILD.md
+./docs/audits/FINAL_SOURCE_OF_TRUTH_AND_PROVIDER_MESH_AUDIT.md
+./docs/audits/FORENSIC_PRODUCT_TRUTH_AUDIT.md
+./docs/audits/FULL_PROVIDER_FUNCTION_CAPABILITY_RESEARCH.md
+./docs/audits/FULL_PROVIDER_MODEL_CAPABILITY_GOVERNANCE_AUDIT.md
+./docs/audits/LIVE_MEDIA_TERMINAL_PROOF_FIX.md
+./docs/audits/PHASE_1B_PRODUCT_FOUNDATION_REBUILD.md
+./docs/audits/PHASE_1_FRONTEND_DASHBOARD_CLEANUP.md
+./docs/audits/PHASE_1_PLATFORM_TRUTH_STABILIZATION.md
+./docs/audits/PHASE_1_ROUTE_TRUTH_MAP.md
+./docs/audits/PHASE_2_REAL_STUDIO_WORKBENCH.md
+./docs/audits/PUBLIC_WEBSITE_3D_PRODUCT_SHOWCASE.md
+./docs/audits/PUBLIC_WEBSITE_HARD_RESET.md
+./docs/audits/STANDALONE_CORE_MEDIA_DASHBOARD_FIX.md
+./docs/audits/TAKEOVER_BACKEND_SOURCE_OF_TRUTH.md
+./docs/brain-api.md
+./docs/budget-management.md
+./docs/configuring-app-profiles.md
+./docs/deploy/NEXT_STATIC_ASSET_DELIVERY.md
+./docs/deploy/backend-deploy-checklist.md
+./docs/developer-guide.md
+./docs/forensic/FINAL_ADULT_REPO_TRUTH_FIX_REPORT.md
+./docs/forensic/FULL_DASHBOARD_OPERATING_SYSTEM_COMPLETION.md
+./docs/forensic/MARKTAI_NETWORK_FULL_GOLIVE_AUDIT.md
+./docs/forensic/PHASE_10_MEDIA_ARTIFACTS_PROVIDER_RESULTS.md
+./docs/forensic/PHASE_11_PROVIDER_INTELLIGENCE_ROUTING_MEMORY.md
+./docs/forensic/PHASE_12_AI_OPS_UI_INTEGRATION.md
+./docs/forensic/PHASE_13_APP_AI_PERSISTENCE_AIVA_ACTIONS.md
+./docs/forensic/PHASE_14_PRE_REDESIGN_HARDENING.md
+./docs/forensic/PHASE_15_FRONTEND_REDESIGN_COMMAND_CENTER.md
+./docs/forensic/PHASE_15_FRONTEND_REDESIGN_SCOPE.md
+./docs/forensic/PHASE_16_DASHBOARD_AI_ENGINE_POLISH.md
+./docs/forensic/PHASE_17_AIVA_REPO_MOBILE_POLISH.md
+./docs/forensic/PHASE_18_FINAL_PROOF_DEPLOY_VERIFICATION.md
+./docs/forensic/PHASE_1_GOLIVE_OPERATOR_VERIFICATION.md
+./docs/forensic/PHASE_2_ROUTING_STREAMING_FOUNDATION.md
+./docs/forensic/PHASE_3_ROUTING_AIVA_VOICE_UI.md
+./docs/forensic/PHASE_4_AIVA_TTS_PLAYBACK.md
+./docs/forensic/PHASE_5_AI_PROVIDER_GOVERNANCE.md
+./docs/forensic/PHASE_6_AI_PROVIDER_MODEL_PERFECTION.md
+./docs/forensic/PHASE_7_APP_AI_CAPABILITIES_SIMPLE_WORKSPACE.md
+./docs/forensic/PHASE_8_PROVIDER_STREAMING_PERFORMANCE.md
+./docs/forensic/PHASE_9_SPECIALIST_PROVIDER_ROUTES.md
+./docs/forensic/adult-mode-golive-audit.md
+./docs/forensic/ai-engine-genx-model-audit.md
+./docs/forensic/apps-agents-golive-audit.md
+./docs/forensic/backend-audit-results.md
+./docs/forensic/budget-cost-queue-audit.md
+./docs/forensic/dashboard-ai-system-completion-report.md
+./docs/forensic/dashboard-ai-system-consolidation-audit.md
+./docs/forensic/dashboard-final-golive-readiness-report.md
+./docs/forensic/dashboard-golive-audit.md
+./docs/forensic/dashboard-runtime-wiring-completion-report.md
+./docs/forensic/full-golive-repo-inventory.md
+./docs/forensic/hidden-unused-code-map.md
+./docs/forensic/learning-memory-rag-golive-audit.md
+./docs/forensic/mcp-tools-webhooks-audit.md
+./docs/forensic/mcp-tools-webhooks-golive-audit.md
+./docs/forensic/media-studio-golive-audit.md
+./docs/forensic/phase1-command-summary.json
+./docs/forensic/repo-workbench-audit.md
+./docs/forensic/repo-workbench-golive-audit.md
+./docs/forensic/runtime-wiring-one-source-truth-audit.md
+./docs/forensic/security-auth-permissions-audit.md
+./docs/forensic/settings-provider-key-audit.md
+./docs/forensic/system-health-vps-deploy-audit.md
+./docs/health-monitoring.md
+./docs/registering-models.md
+./docs/repo-workbench/README.md
+./docs/safety-policies.md
+./reports/audits/amarktai-platform-capability-audit-20260608-090611.txt
+./reports/audits/dashboard-design-foundation-20260608-112439.txt
+./reports/audits/dashboard-section-map-20260608-111717.txt
+./reports/audits/model-provider-orchestration-audit-20260608-164408.txt
+./reports/audits/playground-section-truth-20260608-093109.txt
+./reports/audits/playground-studio-section-audit-20260608-141254.txt
+./services/realtime/README.md
+
+===== PACKAGE / OPEN SOURCE MEDIA + AGENT LIBRARIES =====
+bullmq: ^5.73.0
+ioredis: ^5.10.1
+playwright: ^1.60.0
+
+===== SYSTEM MEDIA TOOLS =====
+--- ffmpeg ---
+/usr/bin/ffmpeg
+ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers
+built with gcc 13 (Ubuntu 13.2.0-23ubuntu3)
+--- ffprobe ---
+/usr/bin/ffprobe
+ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers
+built with gcc 13 (Ubuntu 13.2.0-23ubuntu3)
+--- python3 ---
+/usr/bin/python3
+--- node ---
+/usr/bin/node
+--- npm ---
+/usr/bin/npm
+10.9.7
+--- git ---
+/usr/bin/git
+--- convert ---
+/usr/bin/convert
+Version: ImageMagick 6.9.12-98 Q16 x86_64 18038 https://legacy.imagemagick.org
+Copyright: (C) 1999 ImageMagick Studio LLC
+--- magick ---
+
+===== CORE ARCHITECTURE FILES =====
+
+--- src/lib/agent-registry.ts ---
+LINES: 259
+1:import { routeLiveModel, type AiCapability, type ModelStrategy } from '@/lib/live-ai-routing'
+2:import type { CostMode } from '@/lib/approved-ai-catalog'
+4:export interface OperatorAgent {
+8:  allowedCapabilities: AiCapability[]
+9:  defaultModelStrategy: ModelStrategy
+15:export const OPERATOR_AGENTS: readonly OperatorAgent[] = [
+17:    id: 'coding-agent',
+18:    name: 'Coding Agent',
+21:    defaultModelStrategy: 'balanced',
+27:    id: 'code-review-agent',
+28:    name: 'Code Review Agent',
+31:    defaultModelStrategy: 'balanced',
+37:    id: 'repo-audit-agent',
+38:    name: 'Repo Audit Agent',
+41:    defaultModelStrategy: 'premium',
+47:    id: 'deployment-agent',
+48:    name: 'Deployment Agent',
+51:    defaultModelStrategy: 'balanced',
+57:    id: 'research-agent',
+58:    name: 'Research Agent',
+61:    defaultModelStrategy: 'cheap',
+63:    appScope: 'apps with research capability enabled',
+67:    id: 'scraping-agent',
+68:    name: 'Scraping Agent',
+71:    defaultModelStrategy: 'cheap',
+73:    appScope: 'apps with research capability enabled',
+77:    id: 'creative-agent',
+78:    name: 'Creative Agent',
+79:    purpose: 'Drafts image, video, voice, and creative plans when the app package allows them.',
+80:    allowedCapabilities: ['chat', 'image', 'video', 'voice_tts', 'avatar_video'],
+81:    defaultModelStrategy: 'balanced',
+84:    approvalRequirements: ['media run above threshold', 'avatar/video generation'],
+87:    id: 'image-agent',
+88:    name: 'Image Agent',
+89:    purpose: 'Generates and edits images using approved GenX image models.',
+90:    allowedCapabilities: ['image', 'chat'],
+91:    defaultModelStrategy: 'balanced',
+93:    appScope: 'apps with image capability enabled',
+94:    approvalRequirements: ['image generation above threshold'],
+97:    id: 'video-agent',
+98:    name: 'Video Agent',
+99:    purpose: 'Generates video content and image-to-video clips using GenX video models.',
+100:    allowedCapabilities: ['video', 'chat'],
+101:    defaultModelStrategy: 'premium',
+103:    appScope: 'apps with video capability enabled',
+104:    approvalRequirements: ['video generation approval'],
+107:    id: 'music-audio-agent',
+108:    name: 'Music/Audio Agent',
+109:    purpose: 'Composes music, sound effects, and audio clips using GenX audio models.',
+111:    defaultModelStrategy: 'balanced',
+113:    appScope: 'apps with audio capability enabled',
+114:    approvalRequirements: ['audio generation above threshold'],
+117:    id: 'voice-agent',
+118:    name: 'Voice Agent',
+119:    purpose: 'Converts text to speech and handles voice UX using GenX TTS models.',
+120:    allowedCapabilities: ['voice_tts', 'chat'],
+121:    defaultModelStrategy: 'cheap',
+123:    appScope: 'apps with voice_tts capability enabled',
+124:    approvalRequirements: ['voice generation above threshold'],
+127:    id: 'avatar-talking-video-agent',
+128:    name: 'Avatar/Talking Video Agent',
+129:    purpose: 'Creates talking avatar and lip-sync video using GenX avatar/video models.',
+130:    allowedCapabilities: ['avatar_video', 'video', 'chat'],
+131:    defaultModelStrategy: 'premium',
+133:    appScope: 'apps with avatar_video capability enabled',
+134:    approvalRequirements: ['avatar generation approval'],
+137:    id: 'marketing-agent',
+138:    name: 'Marketing Agent',
+140:    allowedCapabilities: ['chat', 'research', 'image'],
+141:    defaultModelStrategy: 'cheap',
+147:    id: 'app-operator-agent',
+148:    name: 'App Operator Agent',
+151:    defaultModelStrategy: 'balanced',
+157:    id: 'system-vps-agent',
+158:    name: 'System/VPS Agent',
+161:    defaultModelStrategy: 'cheap',
+167:    id: 'cost-budget-agent',
+168:    name: 'Cost/Budget Agent',
+169:    purpose: 'Monitors AI spend, enforces budget limits, and flags routes exceeding approval thresholds.',
+171:    defaultModelStrategy: 'cheap',
+177:    id: 'safety-policy-agent',
+178:    name: 'Safety/Policy Agent',
+179:    purpose: 'Checks app policy, adult capability settings, and approval requirements.',
+181:    defaultModelStrategy: 'balanced',
+184:    approvalRequirements: ['adult capability enablement', 'policy override'],
+187:    id: 'adult-policy-agent',
+188:    name: 'Adult Policy Agent',
+189:    purpose: 'Enforces adult content gating, validates app adult policy, and gates adult model routes.',
+191:    defaultModelStrategy: 'balanced',
+194:    approvalRequirements: ['adult content enablement', 'adult route activation'],
+197:    id: 'memory-learning-agent',
+198:    name: 'Memory/Learning Agent',
+201:    defaultModelStrategy: 'cheap',
+207:    id: 'qa-test-agent',
+208:    name: 'QA/Test Agent',
+211:    defaultModelStrategy: 'balanced',
+217:    id: 'product-ux-agent',
+218:    name: 'Product/UX Agent',
+221:    defaultModelStrategy: 'balanced',
+228:export function listOperatorAgents(appSlug = 'dashboard') {
+229:  return OPERATOR_AGENTS.map((agent) => {
+230:    const route = routeLiveModel({
+231:      capability: agent.allowedCapabilities[0],
+233:      costMode: agent.costMode,
+234:      adultPolicy: agent.allowedCapabilities.some((capability) => capability.startsWith('adult_')) ? 'off' : undefined,
+237:      ...agent,
+238:      status: route.blockedReason ? 'unavailable' : 'available',
+239:      executionRoute: route.blockedReason ? null : {
+240:        provider: route.selectedProvider,
+241:        model: route.selectedModel,
+242:        reason: route.reason,
+244:      unavailableReason: route.blockedReason,
+249:export function assignAgentToAppPackage(agentId: string, appSlug: string) {
+250:  const agent = OPERATOR_AGENTS.find((entry) => entry.id === agentId)
+251:  if (!agent) throw new Error('Unknown agent')
+253:    agentId,
+256:    allowedCapabilities: agent.allowedCapabilities,
+257:    approvalRequirements: agent.approvalRequirements,
+
+--- src/lib/agent-runtime.ts ---
+LINES: 641
+2: * @module agent-runtime
+3: * @description Internal Agent Runtime for the AmarktAI Network.
+5: * Implements AmarktAI's own internal agents — planner, router, validator,
+13:import { callProvider } from '@/lib/brain'
+14:import type { ProviderCallResult } from '@/lib/brain'
+16:import { getDefaultModelForProvider } from '@/lib/model-registry'
+20:/** Every agent role the runtime can instantiate. */
+21:export type AgentType =
+23:  | 'router'
+33:  | 'voice'
+40:  /** Consumer-facing marketing agent — drives personalised outreach and campaign execution. */
+41:  | 'marketing_agent'
+43:/** Lifecycle status of an individual agent task. */
+44:export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'waiting'
+46:/** Static metadata that describes an agent's role, capabilities, and constraints. */
+47:export interface AgentDefinition {
+48:  type: AgentType
+54:  /** Agent types this agent is allowed to hand off work to. */
+55:  canHandoff: AgentType[]
+57:  /** Provider key used when no app-level override exists. */
+58:  defaultProvider?: string
+59:  /** Model id used when no app-level override exists. */
+60:  defaultModel?: string
+63:/** A single unit of work dispatched to an agent. */
+64:export interface AgentTask {
+66:  agentType: AgentType
+73:  status: AgentStatus
+79:  handoffFrom?: AgentType
+80:  handoffTo?: AgentType
+83:// ─── Agent Definitions ──────────────────────────────────────────────────────
+85:const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<AgentType, AgentDefinition>([
+92:        'Breaks complex tasks into ordered sub-steps and coordinates their execution across agents.',
+94:      requiredPermissions: ['agent:planner'],
+95:      canHandoff: ['router', 'creative', 'trading_analyst'],
+97:      defaultProvider: 'openai',
+98:      defaultModel: 'gpt-4o',
+102:    'router',
+104:      type: 'router',
+105:      name: 'Router',
+107:        'Routes sub-tasks to appropriate models and providers based on task requirements and app constraints.',
+108:      capabilities: ['task_routing', 'model_selection', 'provider_matching', 'load_balancing'],
+109:      requiredPermissions: ['agent:router'],
+112:      defaultProvider: 'openai',
+113:      defaultModel: 'gpt-4o-mini',
+122:        'Validates agent outputs for quality, accuracy, and adherence to constraints.',
+124:      requiredPermissions: ['agent:validator'],
+127:      defaultProvider: 'openai',
+128:      defaultModel: 'gpt-4o',
+139:      requiredPermissions: ['agent:memory'],
+142:      defaultProvider: 'openai',
+143:      defaultModel: 'gpt-4o-mini',
+154:      requiredPermissions: ['agent:retrieval'],
+157:      defaultProvider: 'openai',
+158:      defaultModel: 'gpt-4o',
+169:      requiredPermissions: ['agent:creative'],
+172:      defaultProvider: 'gemini',
+173:      defaultModel: 'gemini-2.0-flash',
+184:      requiredPermissions: ['agent:campaign'],
+187:      defaultProvider: 'openai',
+188:      defaultModel: 'gpt-4o',
+199:      requiredPermissions: ['agent:trading_analyst'],
+202:      defaultProvider: 'openai',
+203:      defaultModel: 'gpt-4o',
+214:      requiredPermissions: ['agent:app_ops'],
+217:      defaultProvider: 'openai',
+218:      defaultModel: 'gpt-4o-mini',
+229:      requiredPermissions: ['agent:learning'],
+232:      defaultProvider: 'openai',
+233:      defaultModel: 'gpt-4o-mini',
+244:      requiredPermissions: ['agent:security'],
+247:      defaultProvider: 'openai',
+248:      defaultModel: 'gpt-4o',
+252:    'voice',
+254:      type: 'voice',
+255:      name: 'Voice',
+257:        'Orchestrates voice-driven workflows including TTS script generation, multi-voice profile routing, and speech interaction planning.',
+258:      capabilities: ['tts_script_generation', 'voice_profile_routing', 'speech_workflow_planning', 'audio_content_planning', 'multi_voice_coordination'],
+259:      requiredPermissions: ['agent:voice'],
+262:      defaultProvider: 'openai',
+263:      defaultModel: 'gpt-4o',
+274:      requiredPermissions: ['agent:travel_planner'],
+275:      canHandoff: ['creative', 'voice'],
+277:      defaultProvider: 'gemini',
+278:      defaultModel: 'gemini-1.5-pro',
+289:      requiredPermissions: ['agent:developer'],
+292:      defaultProvider: 'openai',
+293:      defaultModel: 'gpt-4o',
+304:      requiredPermissions: ['agent:support_community'],
+307:      defaultProvider: 'openai',
+308:      defaultModel: 'gpt-4o-mini',
+317:        'Detects degraded services, generates recovery playbooks, routes failovers, and monitors post-recovery stability.',
+319:      requiredPermissions: ['agent:healing'],
+322:      defaultProvider: 'openai',
+323:      defaultModel: 'gpt-4o-mini',
+332:        'Consumer-facing conversational agent deployed to an app. Handles natural language chat, FAQ resolution, '
+335:      requiredPermissions: ['agent:chatbot'],
+338:      defaultProvider: 'openai',
+339:      defaultModel: 'gpt-4o-mini',
+343:    'marketing_agent',
+345:      type: 'marketing_agent',
+346:      name: 'Marketing Agent',
+348:        'Consumer-facing marketing agent that drives personalised outreach, campaign execution, '
+351:      requiredPermissions: ['agent:marketing_agent'],
+354:      defaultProvider: 'openai',
+355:      defaultModel: 'gpt-4o',
+368: * Build a system prompt that grounds the LLM in the agent's role.
+370: * The prompt incorporates the agent's name, description, capabilities, and
+373:function buildSystemPrompt(definition: AgentDefinition, task: AgentTask): string {
+375:    `You are the "${definition.name}" agent in the AmarktAI Network.`,
+383:    lines.push(``, `You received this task via handoff from the "${task.handoffFrom}" agent.`)
+399: * Resolve which provider and model to use for a given agent + app combination.
+401: * Priority: app profile preferred models → agent defaults → global fallback.
+403:function resolveProviderAndModel(
+404:  definition: AgentDefinition,
+406:): { provider: string; model: string } {
+409:  // Use the agent's default provider if the app allows it; otherwise fall back
+410:  // to the first allowed provider on the app profile.
+411:  let provider = definition.defaultProvider ?? 'openai'
+412:  if (!profile.allowed_providers.includes(provider) && profile.allowed_providers.length > 0) {
+413:    provider = profile.allowed_providers[0]
+416:  // Prefer the agent's configured default model; fall back to registry lookup.
+417:  let model = definition.defaultModel ?? getDefaultModelForProvider(provider)
+419:  // Only override with an app-preferred model when it belongs to the resolved
+420:  // provider (avoids mismatched provider/model combos like cohere + gpt-4o).
+421:  if (profile.preferred_models.length > 0 && profile.allowed_models.length > 0) {
+422:    const compatiblePreferred = profile.preferred_models.find((m) =>
+423:      profile.allowed_models.includes(m),
+426:      model = compatiblePreferred
+430:  return { provider, model }
+435:const activeTasks: Map<string, AgentTask> = new Map()
+440: * Returns every registered agent definition.
+442: * @returns A read-only map of AgentType → AgentDefinition.
+444:export function getAgentDefinitions(): ReadonlyMap<AgentType, AgentDefinition> {
+445:  return AGENT_DEFINITIONS
+449: * Returns the definition for a single agent type.
+451: * @throws {Error} If the agent type is not registered.
+453:export function getAgentDefinition(type: AgentType): AgentDefinition {
+454:  const def = AGENT_DEFINITIONS.get(type)
+456:    throw new Error(`[agent-runtime] Unknown agent type: ${type}`)
+462: * Check whether an app has permission to invoke a specific agent.
+464: * Permission strings follow the pattern `agent:<type>` and are declared on
+465: * the app profile's `agent_permissions` array.
+467:export function isAgentPermitted(agentType: AgentType, appSlug: string): boolean {
+468:  const definition = AGENT_DEFINITIONS.get(agentType)
+473:    profile.agent_permissions.includes(perm),
+478: * Create a new AgentTask (idle, not yet executed).
+480: * @param agentType  The type of agent to invoke.
+482: * @param input      Message and optional context for the agent.
+483: * @returns A fully initialised AgentTask in `idle` status.
+485:export function createAgentTask(
+486:  agentType: AgentType,
+488:  input: AgentTask['input'],
+489:): AgentTask {
+490:  const definition = getAgentDefinition(agentType)
+493:  if (!isAgentPermitted(agentType, appSlug)) {
+495:      `[agent-runtime] App "${appSlug}" is not permitted to use the "${definition.name}" agent. ` +
+500:  const task: AgentTask = {
+502:    agentType,
+518: * Execute an agent task end-to-end.
+520: * Builds a system prompt from the agent definition, resolves the appropriate
+521: * provider/model, calls the provider, and returns the completed task.
+523: * @param task  An AgentTask (typically created via {@link createAgentTask}).
+526:export async function executeAgent(task: AgentTask): Promise<AgentTask> {
+527:  const definition = getAgentDefinition(task.agentType)
+536:  const { provider, model } = resolveProviderAndModel(definition, task.appSlug)
+538:  let result: ProviderCallResult
+541:    result = await callProvider(provider, model, fullMessage)
+556:    task.error = result.error ?? 'Provider returned a non-ok response with no error message.'
+567: * Hand off a completed (or failed) task to another agent.
+569: * Creates a new child task for `targetAgentType`, linking it to the current
+573: * @param targetAgentType   The agent type to hand off to.
+574: * @returns A new AgentTask ready for execution.
+575: * @throws {Error} If the current agent is not allowed to hand off to the target.
+578:  currentTask: AgentTask,
+579:  targetAgentType: AgentType,
+580:): AgentTask {
+581:  const currentDef = getAgentDefinition(currentTask.agentType)
+583:  if (!currentDef.canHandoff.includes(targetAgentType)) {
+585:      `[agent-runtime] Agent "${currentDef.name}" is not allowed to hand off to "${targetAgentType}". ` +
+591:  const childInput: AgentTask['input'] = {
+600:  const childTask = createAgentTask(targetAgentType, currentTask.appSlug, childInput)
+603:  childTask.handoffFrom = currentTask.agentType
+604:  currentTask.handoffTo = targetAgentType
+617:export function getAgentStatus(): {
+618:  configuredAgents: number
+635:    configuredAgents: AGENT_DEFINITIONS.size,
+
+--- src/lib/app-profiles.ts ---
+LINES: 697
+6: * agent permissions, and escalation logic. The Brain Gateway and
+15:/** When to escalate a task to a premium provider. */
+21:  /** Provider key to escalate to. */
+22:  escalate_to_provider: string;
+23:  /** Preferred model on the escalation provider. */
+24:  escalate_to_model: string;
+33:  /** Model IDs eligible to act as validators. */
+34:  validator_models: string[];
+53:  /** Provider keys this app is allowed to use. */
+54:  allowed_providers: string[];
+55:  /** Model IDs this app is allowed to use. */
+56:  allowed_models: string[];
+57:  /** Preferred model IDs (ordered by priority, first = best). */
+58:  preferred_models: string[];
+69:  /** Permitted agent-level actions. */
+70:  agent_permissions: string[];
+105:  /** Preferred cost tier for model routing (cheap, balanced, premium). */
+108:  /** Ordered list of fallback providers when primary fails. */
+109:  fallback_chain?: string[];
+114:   * - `low_cost`        — cheapest viable models, aggressive cost savings
+117:   * - `ultra_resilient` — maximum uptime; distributes load across all providers
+136:const ALL_PROVIDERS = [
+137:  'genx', 'groq', 'huggingface', 'together', 'qwen', 'mimo',
+140:const BACKBONE_PROVIDERS = [
+141:  'genx', 'huggingface', 'groq', 'together', 'qwen', 'mimo',
+144:const BASIC_AGENT_PERMISSIONS = [
+146:  'agent:planner', 'agent:router', 'agent:memory',
+148:const FULL_AGENT_PERMISSIONS = [
+149:  'chat', 'summarise', 'translate', 'tool_use', 'agent_planning', 'code_generation',
+150:  'agent:planner', 'agent:router', 'agent:validator', 'agent:memory', 'agent:retrieval',
+151:  'agent:creative', 'agent:campaign', 'agent:trading_analyst', 'agent:app_ops', 'agent:learning',
+152:  'agent:security', 'agent:voice', 'agent:travel_planner', 'agent:developer',
+153:  'agent:support_community', 'agent:healing',
+159:// ── Default profile (fallback for unknown apps) ─────────────────────────────
+169:  // Allow every known provider so the routing engine can reach any configured key.
+170:  // When only OpenAI is configured, BACKBONE_PROVIDERS would silently exclude it and
+171:  // cause the "no eligible models" fallback even with a valid key.
+172:  allowed_providers: ALL_PROVIDERS,
+173:  // Empty array = wildcard (intentional): allow ALL models from the above providers.
+174:  // A non-empty list would restrict routing to only the listed model IDs, which
+175:  // would filter out OpenAI chat/image models for unknown-slug requests.
+176:  allowed_models: [],
+177:  preferred_models: ['gpt-4o-mini', 'llama-3.3-70b-versatile', 'deepseek-chat'],
+182:  agent_permissions: BASIC_AGENT_PERMISSIONS,
+189:  //   'high'   → highly budget-conscious → cost ceiling = 'low'   (only free/very_low/low models)
+190:  //   'medium' → balanced               → cost ceiling = 'medium' (up to medium cost, e.g. gpt-4o-mini, gpt-image-1-mini)
+192:  // 'medium' is the right default so that common OpenAI models (gpt-4o-mini at 'low', gpt-image-1-mini at 'medium')
+213:    allowed_providers: ALL_PROVIDERS,
+214:    allowed_models: [
+219:    preferred_models: ['gpt-4o', 'deepseek-reasoner', 'llama-3.3-70b-versatile'],
+224:      escalate_to_provider: 'openai',
+225:      escalate_to_model: 'gpt-4o',
+230:      validator_models: ['deepseek-reasoner', 'grok-3-mini-beta'],
+233:    agent_permissions: FULL_AGENT_PERMISSIONS,
+254:    allowed_providers: ALL_PROVIDERS,
+255:    allowed_models: [
+261:    preferred_models: ['gpt-4o', 'deepseek-reasoner', 'grok-3-mini-beta'],
+267:        escalate_to_provider: 'openai',
+268:        escalate_to_model: 'gpt-4o',
+273:        escalate_to_provider: 'grok',
+274:        escalate_to_model: 'grok-3-mini-beta',
+281:        validator_models: ['deepseek-reasoner', 'gpt-4o', 'grok-3-mini-beta'],
+286:        validator_models: ['gpt-4o', 'deepseek-reasoner'],
+290:    agent_permissions: [...FULL_AGENT_PERMISSIONS, 'data_retrieval'],
+311:    allowed_providers: ALL_PROVIDERS,
+312:    allowed_models: [
+318:    preferred_models: ['gpt-4o', 'llama-3.3-70b-versatile', 'grok-3-mini-beta'],
+323:      escalate_to_provider: 'openai',
+324:      escalate_to_model: 'gpt-4o',
+329:      validator_models: ['deepseek-chat', 'gpt-4o-mini'],
+332:    agent_permissions: [...BASIC_AGENT_PERMISSIONS, 'tool_use', 'code_generation'],
+333:    multimodal_permissions: ['vision', 'image_generation'],
+353:    allowed_providers: [...BACKBONE_PROVIDERS, 'openai'],
+354:    allowed_models: [
+360:    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat', 'gpt-4o-mini'],
+365:      escalate_to_provider: 'openai',
+366:      escalate_to_model: 'gpt-4o-mini',
+371:      validator_models: ['deepseek-chat', 'gpt-4o-mini'],
+374:    agent_permissions: [...BASIC_AGENT_PERMISSIONS, 'tool_use'],
+395:    allowed_providers: BACKBONE_PROVIDERS,
+396:    allowed_models: [
+401:    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat'],
+406:      escalate_to_provider: 'deepseek',
+407:      escalate_to_model: 'deepseek-chat',
+412:      validator_models: ['deepseek-chat', 'mistralai/Mixtral-8x7B-Instruct-v0.1'],
+415:    agent_permissions: BASIC_AGENT_PERMISSIONS,
+436:    allowed_providers: BACKBONE_PROVIDERS,
+437:    allowed_models: [
+442:    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat'],
+448:      validator_models: ['deepseek-chat'],
+451:    agent_permissions: BASIC_AGENT_PERMISSIONS,
+470:    allowed_providers: ALL_PROVIDERS,
+471:    allowed_models: [],  // empty = wildcard (allow all)
+472:    preferred_models: [],
+475:    agent_permissions: FULL_AGENT_PERMISSIONS,
+476:    multimodal_permissions: ['vision', 'image_generation'],
+486:      'general_chat', 'deep_reasoning', 'coding', 'image_generation',
+487:      'voice_stt', 'voice_tts', 'research_search', 'deep_research',
+488:      'reranking', 'embeddings', 'video_planning', 'video_generation',
+489:      'multimodal_vision', 'agent_planning', 'creative_writing',
+499:    allowed_providers: ALL_PROVIDERS,
+500:    allowed_models: [],  // empty = wildcard (allow all)
+501:    preferred_models: [],
+504:    agent_permissions: FULL_AGENT_PERMISSIONS,
+505:    multimodal_permissions: ['vision', 'image_generation'],
+515:      'general_chat', 'deep_reasoning', 'coding', 'image_generation',
+516:      'voice_stt', 'voice_tts', 'research_search', 'deep_research',
+517:      'reranking', 'embeddings', 'video_planning', 'video_generation',
+518:      'multimodal_vision', 'agent_planning', 'creative_writing',
+528:    allowed_providers: ALL_PROVIDERS,
+529:    allowed_models: [],  // empty = wildcard (allow all)
+530:    preferred_models: [],
+533:    agent_permissions: FULL_AGENT_PERMISSIONS,
+534:    multimodal_permissions: ['vision', 'image_generation'],
+544:      'general_chat', 'deep_reasoning', 'coding', 'image_generation',
+545:      'voice_stt', 'voice_tts', 'research_search', 'deep_research',
+546:      'reranking', 'embeddings', 'video_planning', 'video_generation',
+547:      'multimodal_vision', 'agent_planning', 'creative_writing',
+572:/** Check whether a provider key is allowed for the given profile. */
+573:export function isProviderAllowed(profile: AppProfile, providerKey: string): boolean {
+574:  return profile.allowed_providers.includes(providerKey);
+577:/** Check whether a model ID is in the profile's allowed list. Empty list = allow all. */
+578:export function isModelAllowed(profile: AppProfile, modelId: string): boolean {
+579:  if (profile.allowed_models.length === 0) return true;
+580:  return profile.allowed_models.includes(modelId);
+583:/** Get the ordered list of preferred models for the given profile. */
+584:export function getPreferredModels(profile: AppProfile): string[] {
+585:  return profile.preferred_models;
+589: * Determine whether the task should escalate to a premium provider.
+655: * Returns null if not found or DB unavailable.
+675:      allowed_providers: JSON.parse((dbProfile.allowedProviders as string) || '[]'),
+676:      allowed_models: JSON.parse((dbProfile.allowedModels as string) || '[]'),
+677:      preferred_models: JSON.parse((dbProfile.preferredModels as string) || '[]'),
+680:      agent_permissions: JSON.parse((dbProfile.agentPermissions as string) || '[]'),
+690:      fallback_chain: JSON.parse((dbProfile.fallbackChain as string) || '[]'),
+
+--- src/lib/app-agent.ts ---
+LINES: 650
+2: * @module app-agent
+3: * @description Per-app dedicated AI agent for the AmarktAI Super-Brain.
+5: * Every connected app gets its own App Agent that:
+7: *   - ALWAYS routes through the central AmarktAI orchestration
+8: *   - NEVER calls providers directly
+13: *   App → AmarktAI Super-Brain → App Agent → Central Router/Orchestrator → Provider/Tool → Response → App
+22:export interface AppAgentConfig {
+67:  // Capability permissions
+82:  preferredProviders: string[]
+83:  preferredModels: string[]
+84:  fallbackChain: string[]
+99:export interface AppAgentRequest {
+108:export interface AppAgentResponse {
+112:  agentId: string
+116:  routedProvider: string | null
+117:  routedModel: string | null
+124:// ── App Agent CRUD ──────────────────────────────────────────────────────────
+127: * Create a new App Agent for a registered app.
+129:export async function createAppAgent(config: {
+135:}): Promise<AppAgentConfig> {
+136:  const agent = await prisma.appAgent.create({
+147:  return dbRowToConfig(agent)
+151: * Get an App Agent config by app slug.
+153:export async function getAppAgent(appSlug: string): Promise<AppAgentConfig | null> {
+154:  const agent = await prisma.appAgent.findUnique({ where: { appSlug } })
+155:  return agent ? dbRowToConfig(agent) : null
+159: * Update an App Agent's configuration.
+161:export async function updateAppAgent(
+163:  updates: Partial<Omit<AppAgentConfig, 'id' | 'appSlug'>>,
+164:): Promise<AppAgentConfig | null> {
+175:  const agent = await prisma.appAgent.update({
+179:  return dbRowToConfig(agent)
+183: * List all App Agents.
+185:export async function listAppAgents(): Promise<AppAgentConfig[]> {
+186:  const agents = await prisma.appAgent.findMany({ orderBy: { createdAt: 'desc' } })
+187:  return agents.map(dbRowToConfig)
+191: * Delete an App Agent.
+193:export async function deleteAppAgent(appSlug: string): Promise<boolean> {
+195:    await prisma.appAgent.delete({ where: { appSlug } })
+205: * Parse admin plain-English notes into structured agent rules.
+207: * into actionable structured rules the agent enforces.
+263: * Update an agent's structured rules from admin notes.
+267:  const agent = await prisma.appAgent.findUnique({ where: { appSlug } })
+268:  if (!agent) throw new Error(`App agent not found: ${appSlug}`)
+270:  const existingRules = safeJsonParse<StructuredRule[]>(agent.structuredRules, [])
+275:  await prisma.appAgent.update({
+286:// ── App Agent System Prompt Builder ─────────────────────────────────────────
+289: * Build the system prompt for an App Agent.
+291: * prompt that the central orchestrator will use when routing through the agent.
+293:export function buildAgentSystemPrompt(config: AppAgentConfig): string {
+396: * Build religious-specific instructions for the agent.
+398:function buildReligiousInstructions(config: AppAgentConfig): string {
+430:// ── App Agent Request Processing ────────────────────────────────────────────
+433: * Process a request through the App Agent → Super-Brain pipeline.
+435: * Flow: App → Super-Brain → App Agent (augment with rules) → Central Orchestrator → Provider → Response
+437: * The agent does NOT call providers directly. It prepares the augmented request
+440:export async function processAppAgentRequest(
+441:  request: AppAgentRequest,
+442:): Promise<AppAgentResponse> {
+448:  // 1. Load agent config
+449:  const agent = await getAppAgent(request.appSlug)
+450:  if (!agent) {
+455:      agentId: '',
+458:      errors: [`No app agent found for: ${request.appSlug}`],
+459:      routedProvider: null,
+460:      routedModel: null,
+468:  if (!agent.active) {
+473:      agentId: agent.id,
+476:      errors: ['App agent is currently inactive'],
+477:      routedProvider: null,
+478:      routedModel: null,
+480:      budgetMode: agent.budgetMode,
+487:  const systemPrompt = buildAgentSystemPrompt(agent)
+488:  appliedRules.push(`tone:${agent.tone}`, `creativity:${agent.creativity}`, `budget:${agent.budgetMode}`)
+490:  if (agent.structuredRules.length > 0) {
+491:    appliedRules.push(`structured_rules:${agent.structuredRules.length}`)
+493:  if (agent.religiousMode !== 'none') {
+494:    appliedRules.push(`religious:${agent.religiousMode}`)
+497:  // 3. Enforce capability permissions
+498:  const taskCapability = mapTaskTypeToCapability(request.taskType)
+499:  if (agent.allowedCapabilities.length > 0 && taskCapability && !agent.allowedCapabilities.includes(taskCapability)) {
+504:      agentId: agent.id,
+508:        `Capability "${taskCapability}" is not allowed for this app agent. ` +
+509:        `Allowed: ${agent.allowedCapabilities.join(', ')}. ` +
+510:        `Update the agent's allowed capabilities in Admin → App Agents.`,
+512:      routedProvider: null,
+513:      routedModel: null,
+515:      budgetMode: agent.budgetMode,
+522:  const budgetMode = agent.budgetMode as 'low_cost' | 'balanced' | 'best_quality'
+527:  // 5. The agent delegates to central orchestration
+533:    appCategory: agent.appType,
+543:    agentId: agent.id,
+547:    routedProvider: result.routedProvider,
+548:    routedModel: result.routedModel,
+550:    budgetMode: agent.budgetMode,
+558:// ── Capability Permission Helpers ───────────────────────────────────────────
+560:/** Exact match table for task type → capability mapping (module-scoped for performance). */
+561:const TASK_TYPE_TO_CAPABILITY: Record<string, string> = {
+563:  image: 'image_generation', image_generation: 'image_generation', image_gen: 'image_generation',
+564:  generate_image: 'image_generation', create_image: 'image_generation',
+565:  stt: 'speech_to_text', speech_to_text: 'speech_to_text', transcribe: 'speech_to_text', transcription: 'speech_to_text',
+566:  tts: 'text_to_speech', text_to_speech: 'text_to_speech', synthesize: 'text_to_speech', speak: 'text_to_speech',
+567:  realtime_voice: 'realtime_voice', voice_interaction: 'realtime_voice', realtime: 'realtime_voice',
+571:  video: 'video', video_generation: 'video', video_planning: 'video',
+577: * Map a task type keyword to a canonical capability for permission checking.
+578: * Uses exact prefix/suffix matching to avoid false positives (e.g. 'invoice_search').
+579: * Returns null if the task type doesn't map to a restricted capability.
+581:function mapTaskTypeToCapability(taskType: string): string | null {
+584:  if (TASK_TYPE_TO_CAPABILITY[t]) return TASK_TYPE_TO_CAPABILITY[t]
+586:  // Prefix match for compound types like 'image_edit', 'video_plan'
+587:  if (t.startsWith('image_') || t.startsWith('generate_image')) return 'image_generation'
+588:  if (t.startsWith('video_')) return 'video'
+589:  if (t.startsWith('voice_') || t.startsWith('realtime_')) return 'realtime_voice'
+596:function safeJsonParse<T>(json: string, fallback: T): T {
+600:    return fallback
+605:function dbRowToConfig(row: any): AppAgentConfig {
+644:    preferredProviders: safeJsonParse(row.preferredProviders, []),
+645:    preferredModels: safeJsonParse(row.preferredModels, []),
+646:    fallbackChain: safeJsonParse(row.fallbackChain, []),
+
+--- src/lib/capability-engine.ts ---
+LINES: 894
+2: * Capability Engine — formal capability classification, routing, and fallback.
+5: *  1. Classifies required capability/capabilities
+6: *  2. Determines which configured providers/models can satisfy them
+7: *  3. Filters by policy, safety, budget, latency, provider health
+9: *  5. Selects best result-per-cost route
+10: *  6. Builds intelligent fallback chain
+11: *  7. Returns exact missing-dependency message when no route exists
+15:  type ModelEntry,
+16:  type ModelRole,
+17:  getUsableModels,
+18:  getModelRegistry,
+19:  getProviderHealth,
+20:  isProviderUsable,
+21:  isProviderDegraded,
+22:} from './model-registry';
+25:// Capability classes
+28:export type CapabilityClass =
+38:  | 'agent_planning'
+40:  | 'image_generation'
+41:  | 'image_editing'
+42:  | 'video_planning'
+43:  | 'video_generation'
+44:  | 'voice_input'
+45:  | 'voice_output'
+46:  | 'realtime_voice'
+47:  | 'adult_18plus_image'
+53:  | 'suggestive_image_generation'
+54:  | 'suggestive_video_planning'
+55:  | 'suggestive_video_generation';
+60:// Mapping: capability class → required model flags / roles
+63:interface CapabilityRequirement {
+64:  /** Required boolean capability flags on ModelEntry (any one satisfies) */
+65:  anyCapabilityFlag?: (keyof ModelEntry)[];
+67:  anyRole?: ModelRole[];
+70:  /** Suggested providers that commonly support this capability */
+71:  suggestedProviders: string[];
+74:const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
+76:    anyCapabilityFlag: ['supports_chat'],
+78:    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini', 'huggingface'],
+81:    anyCapabilityFlag: ['supports_reasoning'],
+83:    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+86:    anyCapabilityFlag: ['supports_code'],
+88:    suggestedProviders: ['openai', 'deepseek', 'groq'],
+91:    anyCapabilityFlag: ['supports_embeddings'],
+93:    suggestedProviders: ['openai', 'huggingface', 'nvidia'],
+96:    anyCapabilityFlag: ['supports_embeddings'],
+98:    suggestedProviders: ['openai', 'qwen', 'gemini', 'huggingface'],
+101:    anyCapabilityFlag: ['supports_reranking'],
+103:    suggestedProviders: ['nvidia', 'huggingface'],
+106:    anyCapabilityFlag: ['supports_chat'],
+108:    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini'],
+111:    anyCapabilityFlag: ['supports_chat'],
+113:    suggestedProviders: ['openai', 'groq', 'deepseek'],
+116:    anyCapabilityFlag: ['supports_chat'],
+118:    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+120:  agent_planning: {
+121:    anyCapabilityFlag: ['supports_agent_planning'],
+122:    label: 'agent planning',
+123:    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+126:    anyCapabilityFlag: ['supports_vision'],
+128:    suggestedProviders: ['openai', 'gemini', 'huggingface'],
+130:  image_generation: {
+131:    anyCapabilityFlag: ['supports_image_generation'],
+132:    label: 'image generation',
+133:    suggestedProviders: ['openai', 'together', 'gemini', 'qwen', 'huggingface'],
+135:  image_editing: {
+136:    anyCapabilityFlag: ['supports_image_generation'],
+137:    label: 'image editing',
+138:    suggestedProviders: ['openai', 'huggingface'],
+140:  video_planning: {
+141:    anyCapabilityFlag: ['supports_video_planning'],
+142:    label: 'video planning / storyboarding',
+143:    suggestedProviders: ['gemini', 'groq', 'openai', 'deepseek'],
+145:  video_generation: {
+146:    anyCapabilityFlag: ['supports_video_generation'],
+147:    label: 'video generation',
+148:    // Hugging Face is NOT a valid video generation provider (no async job API).
+150:    suggestedProviders: ['genx', 'together', 'qwen'],
+152:  voice_input: {
+153:    anyCapabilityFlag: ['supports_stt', 'supports_voice_interaction'],
+154:    anyRole: ['voice_interaction'],
+155:    label: 'voice / speech input (STT)',
+156:    suggestedProviders: ['groq', 'openai', 'gemini', 'qwen', 'huggingface'],
+158:  voice_output: {
+159:    anyCapabilityFlag: ['supports_tts'],
+160:    anyRole: ['tts'],
+161:    label: 'voice / speech output (TTS)',
+162:    suggestedProviders: ['groq', 'openai', 'gemini', 'huggingface'],
+164:  realtime_voice: {
+165:    anyCapabilityFlag: ['supports_voice_interaction'],
+166:    label: 'realtime voice interaction',
+167:    suggestedProviders: ['openai'],
+169:  adult_18plus_image: {
+170:    anyCapabilityFlag: ['supports_image_generation'],
+171:    label: 'adult 18+ image generation',
+172:    suggestedProviders: ['huggingface'],
+175:    anyCapabilityFlag: ['supports_moderation'],
+177:    suggestedProviders: ['openai'],
+180:    anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
+182:    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+185:    anyCapabilityFlag: ['supports_chat'],
+187:    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+190:    anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
+192:    suggestedProviders: ['openai', 'gemini'],
+195:    anyCapabilityFlag: ['supports_chat'],
+197:    suggestedProviders: ['openai', 'deepseek'],
+199:  suggestive_image_generation: {
+200:    anyCapabilityFlag: ['supports_image_generation'],
+201:    label: 'suggestive image generation (non-explicit)',
+202:    suggestedProviders: ['openai', 'together', 'qwen', 'huggingface'],
+204:  suggestive_video_planning: {
+205:    anyCapabilityFlag: ['supports_video_planning'],
+206:    label: 'suggestive video planning (non-explicit)',
+207:    suggestedProviders: ['openai', 'gemini'],
+209:  suggestive_video_generation: {
+210:    anyCapabilityFlag: ['supports_video_generation'],
+211:    label: 'suggestive video generation (non-explicit, prompt-guarded)',
+212:    suggestedProviders: ['genx', 'qwen', 'together'],
+222:  capabilities: CapabilityClass[];
+224:  { patterns: [/image.*generat/i, /generate.*image/i, /create.*image/i, /dall-?e/i, /picture/i], capabilities: ['image_generation'] },
+225:  { patterns: [/image.*edit/i, /edit.*image/i, /modify.*image/i, /inpaint/i], capabilities: ['image_editing'] },
+226:  { patterns: [/video.*generat/i, /generate.*video/i, /create.*video/i], capabilities: ['video_generation'] },
+227:  { patterns: [/video.*plan/i, /plan.*video/i, /storyboard/i, /scene.*decompos/i, /reel/i, /animation/i, /video.*script/i], capabilities: ['video_planning'] },
+228:  { patterns: [/voice.*input/i, /speech.*text/i, /stt/i, /transcri/i, /whisper/i], capabilities: ['voice_input'] },
+229:  { patterns: [/voice.*output/i, /text.*speech/i, /tts/i, /speak/i, /narrat/i], capabilities: ['voice_output'] },
+230:  { patterns: [/realtime.*voice/i, /voice.*chat/i, /live.*voice/i], capabilities: ['realtime_voice'] },
+231:  { patterns: [/adult/i, /nsfw/i, /18\+/i, /explicit/i], capabilities: ['adult_18plus_image'] },
+235:  { patterns: [/vision/i, /multimodal/i, /describe.*image/i, /image.*understand/i], capabilities: ['multimodal_understanding'] },
+236:  { patterns: [/agent/i, /plan/i, /tool.*use/i, /workflow/i], capabilities: ['agent_planning'] },
+247:  { patterns: [/suggestive.*image/i, /image.*suggestive/i, /lingerie/i, /swimwear/i, /swimsuit/i, /bikini/i, /fashion.*model/i, /model.*pose/i], capabilities: ['suggestive_image_generation'] },
+248:  { patterns: [/suggestive.*video.*gen/i, /generate.*suggestive.*video/i, /fashion.*video.*gen/i], capabilities: ['suggestive_video_generation'] },
+249:  { patterns: [/suggestive.*video/i, /video.*suggestive/i, /fashion.*video/i, /model.*video/i, /beach.*video/i, /gym.*reel/i], capabilities: ['suggestive_video_planning'] },
+255:): CapabilityClass[] {
+257:  const matched = new Set<CapabilityClass>();
+277:export interface ResolveCapabilityResult {
+279:  primaryCapability: CapabilityClass;
+280:  capabilities: CapabilityClass[];
+281:  routeResult: CapabilityRouteResult;
+284:export type ResolveCapabilityOptions = Omit<CapabilityRouteRequest, 'capabilities'>;
+286:function mapExplicitTaskTypeToCapabilities(taskType: string): CapabilityClass[] {
+296:  if (t === 'image_generation' || t === 'image' || t === 'generate_image' || t === 'create_image') return ['image_generation'];
+297:  if (t === 'image_editing' || t === 'image_edit') return ['image_editing'];
+298:  if (t === 'video_generation' || t === 'video') return ['video_generation'];
+299:  if (t === 'video_planning') return ['video_planning'];
+300:  if (t === 'voice_input' || t === 'stt') return ['voice_input'];
+301:  if (t === 'voice_output' || t === 'tts') return ['voice_output'];
+302:  if (t === 'realtime_voice') return ['realtime_voice'];
+303:  if (t === 'adult_18plus_image' || t === 'adult_image') return ['adult_18plus_image'];
+304:  if (t === 'suggestive_image_generation' || t === 'suggestive' || t === 'suggestive_image') return ['suggestive_image_generation'];
+305:  if (t === 'suggestive_video_planning') return ['suggestive_video_planning'];
+306:  if (t === 'suggestive_video_generation') return ['suggestive_video_generation'];
+310:  // so we route it through the reasoning class and keep it off voice/image specialist routes.
+311:  if (t === 'onboarding_assistant') return ['deep_reasoning']; // structured onboarding planning requires reasoning routes only
+316:function isGenericExplicitCapability(cap: CapabilityClass): boolean {
+321: * Authoritative capability resolver.
+325: *  2) message capability detection
+329:export function resolveCapability(
+332:  options?: ResolveCapabilityOptions,
+333:): ResolveCapabilityResult {
+336:  const explicitNonGeneric = explicitCaps.some((cap) => !isGenericExplicitCapability(cap));
+337:  const merged: CapabilityClass[] = explicitNonGeneric
+339:    : Array.from(new Set<CapabilityClass>([...explicitCaps, ...detectedCaps]));
+340:  const capabilities: CapabilityClass[] = merged.length > 0 ? merged : ['general_chat'];
+341:  const routeResult = resolveCapabilityRoutes({
+345:  const primaryCapability = explicitCaps[0] ?? detectedCaps[0] ?? capabilities[0];
+349:    primaryCapability,
+351:    routeResult,
+356:// Capability resolution: find models that satisfy a capability
+359:export interface CapabilityRoute {
+360:  capability: CapabilityClass;
+361:  /** Viable models sorted by best result-per-cost */
+362:  models: ModelEntry[];
+363:  /** True if at least one usable model exists */
+369:function modelSatisfiesCapability(
+370:  model: ModelEntry,
+371:  req: CapabilityRequirement,
+373:  if (req.anyCapabilityFlag) {
+374:    for (const flag of req.anyCapabilityFlag) {
+375:      if ((model as unknown as Record<string, unknown>)[flag] === true) return true;
+379:    if (req.anyRole.includes(model.primary_role)) return true;
+381:      if (model.secondary_roles.includes(r)) return true;
+407:// Route resolution
+410:export interface CapabilityRouteRequest {
+411:  capabilities: CapabilityClass[];
+412:  allowedProviders?: string[];
+413:  blockedProviders?: string[];
+419:  maxCostTier?: string;
+422:export interface CapabilityRouteResult {
+423:  routes: CapabilityRoute[];
+424:  /** True if ALL requested capabilities have at least one viable route */
+432:export function resolveCapabilityRoutes(
+433:  request: CapabilityRouteRequest,
+434:): CapabilityRouteResult {
+436:  const routes: CapabilityRoute[] = [];
+440:    const req = CAPABILITY_MAP[cap];
+442:      routes.push({
+443:        capability: cap,
+444:        models: [],
+446:        missingMessage: `Unknown capability class "${cap}".`,
+448:      missingCapabilities.push(`Unknown capability "${cap}".`);
+452:    // Backend route guard: if no execution route exists, capability is unavailable
+453:    if (!BACKEND_ROUTE_EXISTS[cap]) {
+454:      const msg = `Route not implemented: no backend execution route exists for ${req.label}.`;
+455:      routes.push({
+456:        capability: cap,
+457:        models: [],
+465:    // Realtime voice requires separate WebSocket service to be running
+466:    if (cap === 'realtime_voice' && !process.env.REALTIME_SERVICE_URL?.trim()) {
+468:        'Realtime voice service not configured: set REALTIME_SERVICE_URL to the running WebSocket service (see services/realtime/). ' +
+470:      routes.push({ capability: cap, models: [], available: false, missingMessage: msg });
+475:    // Adult capability guard: adult_18plus_image requires explicit adult mode
+476:    if (cap === 'adult_18plus_image' && !request.adultMode) {
+477:      routes.push({
+478:        capability: cap,
+479:        models: [],
+482:          'Adult 18+ image capability requires explicit adult mode to be enabled for this app. Enable adult mode in app settings.',
+485:        'Adult 18+ image requires adult mode enabled.',
+490:    // Suggestive capability guard: requires safeMode=false AND suggestiveMode=true
+492:      (cap === 'suggestive_image_generation' || cap === 'suggestive_video_planning' || cap === 'suggestive_video_generation') &&
+495:      routes.push({
+496:        capability: cap,
+497:        models: [],
+500:          `${CAPABILITY_MAP[cap]?.label ?? cap} requires suggestive mode to be enabled for this app (safeMode must be off). Enable suggestive mode in app settings.`,
+506:    // Get all usable models
+507:    let candidates = getUsableModels().filter((m) =>
+508:      modelSatisfiesCapability(m, req),
+511:    // Filter by provider allow/block lists
+512:    if (request.allowedProviders && request.allowedProviders.length > 0) {
+514:        request.allowedProviders!.includes(m.provider),
+517:    if (request.blockedProviders && request.blockedProviders.length > 0) {
+519:        (m) => !request.blockedProviders!.includes(m.provider),
+523:    // Filter by provider health
+524:    candidates = candidates.filter((m) => isProviderUsable(m.provider));
+527:    if (request.maxCostTier) {
+528:      const maxOrder = COST_ORDER[request.maxCostTier] ?? 5;
+540:      const degradedA = isProviderDegraded(a.provider) ? 1 : 0;
+541:      const degradedB = isProviderDegraded(b.provider) ? 1 : 0;
+543:      // Deprioritise degraded providers
+562:      routes.push({ capability: cap, models: [], available: false, missingMessage: msg });
+565:      routes.push({ capability: cap, models: candidates, available: true, missingMessage: null });
+570:    routes,
+578:// Backend route existence map
+580:// Tracks which capabilities have real, working backend execution routes.
+581:// If a route does not exist, the capability must show UNAVAILABLE regardless
+582:// of model/provider configuration.
+584:const BACKEND_ROUTE_EXISTS: Record<CapabilityClass, boolean> = {
+589:  embeddings:                true,   // /api/brain/request (embedding pipeline)
+590:  reranking:                 true,   // /api/brain/rerank (Hugging Face cross-encoder / NVIDIA)
+594:  agent_planning:            true,   // /api/brain/request (agent_chain)
+596:  image_generation:          true,   // /api/brain/request (DALL-E / FLUX)
+597:  image_editing:             true,   // /api/brain/image-edit (OpenAI DALL-E 2 inpainting + Hugging Face SD-inpainting)
+598:  video_planning:            true,   // /api/brain/request (AI text — always possible via chat models)
+599:  video_generation:          true,   // /api/brain/video-generate (async job pipeline — Replicate / Together AI)
+600:  voice_input:               true,   // /api/brain/stt + /api/voice/stt (Groq Whisper / OpenAI Whisper / Gemini Live / Hugging Face Whisper)
+601:  voice_output:              true,   // /api/brain/tts + /api/voice/tts (Groq PlayAI / OpenAI TTS / Gemini TTS / Hugging Face MMS)
+602:  realtime_voice:            true,   // /api/realtime/session (session config) + separate WS service (services/realtime)
+603:  adult_18plus_image:        true,   // /api/brain/adult-image (Hugging Face — adultMode gated, ALWAYS_BLOCKED enforced)
+609:  suggestive_image_generation:  true, // /api/brain/suggestive-image (prompt-guarded, safeMode+suggestiveMode gated)
+610:  suggestive_video_planning:    true, // /api/brain/suggestive-video (planning only, no generation)
+611:  suggestive_video_generation:  true, // /api/brain/suggestive-video-gen (Hugging Face text-to-video, prompt-guarded)
+
+--- src/lib/capability-router.ts ---
+LINES: 1649
+2: * @module capability-router
+3: * @description Central capability router for the AmarktAI Network — PHASE 1.
+5: * Routes AI capability requests to the best available provider, always trying
+6: * GenX first, then falling back to cheap alternatives (Gemini, Groq,
+7: * OpenRouter, Grok, Qwen).
+10: *   chat, code, file_analysis, image_generation, image_edit,
+11: *   video_generation, image_to_video, music_generation, lyrics_generation,
+12: *   tts, stt, voice_response, adult_text, adult_image, adult_video,
+19:  callGenXChat,
+20:  callGenXMedia,
+21:  GENX_TEXT_MODELS,
+22:  GENX_IMAGE_MODELS,
+23:  GENX_VIDEO_MODELS,
+24:  GENX_AUDIO_MODELS,
+25:  GENX_TTS_MODELS,
+26:} from '@/lib/genx-client'
+27:import { callProvider, getVaultApiKey } from '@/lib/brain'
+29:import { createArtifact } from '@/lib/artifact-store'
+30:import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
+34:export interface CapabilityRequest {
+37:  /** Explicit capability override (auto-detected from input when absent) */
+38:  capability?: string
+41:  /** App slug for artifact ownership */
+43:  /** Workspace slug for artifact ownership */
+45:  /** Force a specific provider (skips the automatic chain) */
+46:  providerOverride?: string
+47:  /** Force a specific model ID */
+48:  modelOverride?: string
+53:  /** Persist output as an Artifact DB record */
+54:  saveArtifact?: boolean
+57:  /** Arbitrary metadata forwarded to downstream providers */
+61:export interface CapabilityResponse {
+63:  capability: string
+64:  provider: string | null
+65:  model: string | null
+66:  /** 'text' | 'image' | 'video' | 'audio' | 'code' | 'video_plan' | 'music_blueprint' | 'markdown' */
+70:  /** Async provider job ID when media is still processing */
+71:  jobId?: string
+72:  /** Live provider job status */
+74:  /** Artifact ID if saveArtifact=true and artifact was persisted */
+75:  artifactId?: string
+76:  fallbackUsed: boolean
+77:  fallbackReason?: string
+78:  /** Non-fatal degradation warning (e.g. blueprint returned instead of real audio) */
+82:  /** Structured error category for adult/specialist routes */
+83:  error_category?: 'missing_key' | 'provider_policy_block' | 'model_not_supported' | 'endpoint_error' | 'guardrail_block' | 'unknown'
+84:  providerAttempts?: Array<{ provider: string; model: string; status: string; error?: string }>
+87:// ── Supported capability set ───────────────────────────────────────────────────
+91:  'image_generation', 'image_edit',
+92:  'video_generation', 'image_to_video',
+93:  'music_generation', 'lyrics_generation',
+94:  'tts', 'stt', 'voice_response',
+95:  'adult_text', 'adult_image', 'adult_video',
+96:  'suggestive_image', 'suggestive_video',
+101:type Capability = (typeof ALL_CAPABILITIES)[number]
+106: * Terms that are unconditionally blocked in adult mode.
+109:const ADULT_BLOCKED_TERMS: readonly string[] = [
+123:const DEFAULT_TOGETHER_ADULT_TEXT_MODEL = 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO'
+124:const DEFAULT_XAI_ADULT_TEXT_MODEL = 'grok-2-latest'
+135:/** Style prefix injected into suggestive image prompts to enforce non-explicit output */
+148:  if (safeMode) return 'safeMode is active — adult content blocked'
+150:  for (const term of ADULT_BLOCKED_TERMS) {
+152:      return `Blocked: content contains prohibited term "${term}"`
+160:    return 'Blocked: real person + sexual content is not permitted'
+167:    return 'Blocked: violence + sexual content is not permitted'
+172:// ── Capability detection ──────────────────────────────────────────────────────
+175: * Detect the most appropriate capability from the request.
+176: * Explicit capability strings take priority; otherwise keyword-based detection
+179:function detectCapability(input: string, explicit?: string): Capability {
+181:    return explicit as Capability
+187:  // Image
+190:    (includesTerm('image') || includesTerm('picture') || includesTerm('photo') || includesTerm('artwork') || includesTerm('illustration'))
+191:  ) return 'image_generation'
+193:  // Video
+196:    includesTerm('video')
+197:  ) return 'video_generation'
+199:  // Image-to-video
+200:  if (includesTerm('image') && includesTerm('video') && (includesTerm('i2v') || includesTerm(' to '))) return 'image_to_video'
+202:  // Music — must be before lyrics so "generate music with lyrics" routes to music
+205:    (includesTerm('music') || includesTerm('song') || includesTerm('track') || includesTerm('beat'))
+206:  ) return 'music_generation'
+212:  if ((includesTerm('song') && includesTerm('lyrics')) || includesTerm('songwriting')) return 'lyrics_generation'
+217:    !(includesTerm('image') || includesTerm('picture') || includesTerm('photo') || includesTerm('video'))
+220:  // Voice output (TTS)
+222:    includesTerm('speak') || includesTerm('tts') ||
+225:  ) return 'tts'
+227:  // Voice input (STT)
+229:    includesTerm('transcribe') || includesTerm('stt') ||
+231:    (includesTerm('audio') && includesTerm('to') && includesTerm('text'))
+232:  ) return 'stt'
+269:function outputTypeForCapability(cap: string): string {
+271:    case 'image_generation':
+272:    case 'image_edit':
+273:    case 'adult_image':   return 'image'
+274:    case 'suggestive_image': return 'image'
+275:    case 'video_generation':
+276:    case 'image_to_video':
+277:    case 'adult_video':   return 'video'
+278:    case 'suggestive_video': return 'video'
+279:    case 'music_generation': return 'audio'
+280:    case 'tts':
+281:    case 'voice_response': return 'audio'
+282:    case 'stt':           return 'text'
+292:// ── GenX helpers ──────────────────────────────────────────────────────────────
+294:async function tryGenXChat(
+296:  model: string,
+298:): Promise<{ success: boolean; output: string | null; model: string; error: string | null }> {
+302:  const result = await callGenXChat({ model, messages })
+303:  return { success: result.success, output: result.output, model: result.model, error: result.error }
+306:async function tryGenXMedia(
+308:  type: 'image' | 'video' | 'audio',
+309:  model: string,
+310:): Promise<{ success: boolean; url: string | null; jobId: string | null; status: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'; model: string; error: string | null }> {
+311:  const result = await callGenXMedia({ model, prompt, type })
+312:  return { success: result.success, url: result.url, jobId: result.jobId, status: result.status, model: result.model, error: result.error }
+315:async function trySelectedTextProvider({
+317:  provider,
+318:  model,
+322:  provider: string
+323:  model: string
+325:}): Promise<{ success: boolean; output: string | null; provider: string; model: string; error: string | null }> {
+326:  const normalizedProvider = provider.trim().toLowerCase()
+327:  const selectedModel = model.trim()
+329:  if (!normalizedProvider || normalizedProvider === 'auto') {
+333:      provider: normalizedProvider || 'auto',
+334:      model: selectedModel,
+335:      error: 'No selected text provider was supplied.',
+339:  if (normalizedProvider === 'genx') {
+340:    const result = await tryGenXChat(input, selectedModel, systemPrompt)
+344:      provider: 'genx',
+345:      model: result.model,
+351:    const providerInput = systemPrompt ? `${systemPrompt}\n\n${input}` : input
+352:    const result = await callProvider(normalizedProvider, selectedModel, providerInput, undefined)
+357:        provider: normalizedProvider,
+358:        model: selectedModel,
+366:      provider: normalizedProvider,
+367:      model: selectedModel,
+368:      error: 'Selected provider returned no text output.',
+374:      provider: normalizedProvider,
+375:      model: selectedModel,
+376:      error: err instanceof Error ? err.message : 'Selected provider failed.',
+381:// ── Fallback text chain ───────────────────────────────────────────────────────
+385:const TEXT_FALLBACK_CHAIN: Array<{ key: string; model: string }> = [
+386:  { key: 'gemini',      model: 'gemini-2.0-flash' },
+387:  { key: 'groq',       model: 'llama-3.3-70b-versatile' },
+388:  { key: 'openrouter', model: 'openai/gpt-4o-mini' },
+389:  { key: 'grok',       model: 'grok-2' },
+390:  { key: 'qwen',       model: 'qwen-plus' },
+393:async function tryFallbackText(
+395:  chain = TEXT_FALLBACK_CHAIN,
+396:): Promise<{ success: boolean; output: string | null; provider: string | null; model: string | null; error: string | null }> {
+397:  // In test runtime, skip provider network calls for deterministic behaviour.
+399:    return { success: false, output: null, provider: null, model: null, error: 'Fallback providers disabled in test runtime' }
+401:  for (const { key, model } of chain) {
+403:      const result = await callProvider(key, model, input, undefined)
+405:        return { success: true, output: result.output, provider: key, model, error: null }
+408:      console.warn(`[capability-router] Fallback provider ${key} failed:`, err instanceof Error ? err.message : err)
+411:  return { success: false, output: null, provider: null, model: null, error: 'All fallback text providers failed' }
+419:function validateAdultProviderUrl(raw: string): { ok: true; url: string } | { ok: false; error: string } {
+435:function adultProviderBaseUrl(raw: string): string {
+453:function extractHuggingFaceText(data: unknown): string | null {
+469:  model: string
+474:  const res = await fetch(`${adultProviderBaseUrl(opts.endpoint)}/v1/chat/completions`, {
+478:      model: opts.model,
+497:async function postAdultHuggingFaceRaw(opts: {
+516:    return { output: extractHuggingFaceText(JSON.parse(text)), error: null, status: res.status }
+522:async function tryAdultTextProvider(opts: {
+523:  provider: 'huggingface' | 'together' | 'xai' | 'custom'
+525:  model: string
+528:}): Promise<{ output: string | null; attempt: { provider: string; model: string; status: string; error?: string } }> {
+529:  if (opts.provider === 'huggingface') {
+530:    const modelSpec = getAdultTextModel(opts.model)
+531:    if (!opts.endpoint && modelSpec) {
+535:          provider: 'huggingface',
+536:          model: opts.model,
+538:          error: `${modelSpec.label} requires a Hugging Face private endpoint or local GGUF runtime endpoint.`,
+545:        attempt: { provider: 'huggingface', model: opts.model, status: 'needs_key', error: 'Hugging Face key or endpoint is required.' },
+548:    const endpoint = opts.endpoint ?? `https://api-inference.huggingface.co/models/${opts.model}`
+549:    const validated = validateAdultProviderUrl(endpoint)
+551:      return { output: null, attempt: { provider: 'huggingface', model: opts.model, status: 'test_failed', error: validated.error } }
+553:    const chat = await postAdultOpenAiCompatible({ endpoint: validated.url, apiKey: opts.apiKey, model: opts.model, input: opts.input })
+555:    if (chat.output) return { output: chat.output, attempt: { provider: 'huggingface', model: opts.model, status: 'ready' } }
+556:    const raw = await postAdultHuggingFaceRaw({ endpoint: validated.url, apiKey: opts.apiKey, input: opts.input })
+558:    if (raw.output) return { output: raw.output, attempt: { provider: 'huggingface', model: opts.model, status: 'ready' } }
+562:        provider: 'huggingface',
+563:        model: opts.model,
+565:        error: raw.error ?? chat.error ?? 'Hugging Face endpoint returned no text.',
+570:  if (opts.provider === 'custom' && !opts.endpoint) {
+571:    return { output: null, attempt: { provider: 'custom', model: opts.model, status: 'needs_endpoint', error: 'Custom adult text provider requires endpoint.' } }
+573:  if (!opts.apiKey && opts.provider !== 'custom') {
+574:    const providerName = opts.provider === 'xai' ? 'xAI/Grok' : 'Together AI'
+575:    return { output: null, attempt: { provider: opts.provider, model: opts.model, status: 'needs_key', error: `${providerName} key is required.` } }
+579:    opts.provider === 'together' ? 'https://api.together.xyz'
+580:    : opts.provider === 'xai' ? 'https://api.x.ai'
+582:  const validated = validateAdultProviderUrl(endpoint)
+584:    return { output: null, attempt: { provider: opts.provider, model: opts.model, status: 'test_failed', error: validated.error } }
+586:  const res = await postAdultOpenAiCompatible({ endpoint: validated.url, apiKey: opts.apiKey, model: opts.model, input: opts.input })
+589:    ? { output: res.output, attempt: { provider: opts.provider, model: opts.model, status: 'ready' } }
+593:          provider: opts.provider,
+594:          model: opts.model,
+596:          error: res.error ?? `${opts.provider} returned no text.`,
+601:// ── Artifact saving ───────────────────────────────────────────────────────────
+603:// ── Artifact type mapping ─────────────────────────────────────────────────────
+605:const ARTIFACT_TYPE_MAP: Record<string, 'image' | 'audio' | 'video' | 'code' | 'document'> = {
+606:  image_generation: 'image', image_edit: 'image', adult_image: 'image', suggestive_image: 'image',
+607:  video_generation: 'video', image_to_video: 'video', adult_video: 'video', suggestive_video: 'video',
+608:  video_plan: 'document',
+609:  music_generation: 'audio', tts: 'audio', voice_response: 'audio',
+613:async function maybeSaveArtifact(
+616:  provider: string | null,
+617:  model: string | null,
+623:    const artifactType = ARTIFACT_TYPE_MAP[cap] ?? 'document'
+625:    const artifact = await createArtifact({
+627:      type: artifactType,
+629:      provider: provider ?? undefined,
+630:      model: model ?? undefined,
+634:    return artifact.id
+636:    console.warn('[capability-router] Artifact save failed:', err instanceof Error ? err.message : err)
+645:  provider: string | null,
+646:  model: string | null,
+647:  fallback: boolean,
+648:  artifactSaved: boolean,
+652:    `[capability-router] capability=${cap} provider=${provider ?? 'none'} ` +
+653:    `model=${model ?? 'none'} fallback=${fallback} artifact=${artifactSaved} ` +
+658:// ── App capability permission check ──────────────────────────────────────────
+661: * Check whether an app's AppAgent record allows a given capability.
+664: * Falls back to allowing the request if the DB is unavailable or the agent
+665: * record doesn't exist (so existing apps without an agent record are unaffected).
+667:async function checkAppCapabilityDenied(
+669:  capability: string,
+671:  // In test runtime, skip the DB lookup — no AppAgent record → allow (backward compat).
+675:    const agent = await prisma.appAgent.findUnique({ where: { appSlug: appId } })
+676:    if (!agent) return null   // no agent record → allow (backward compat)
+677:    if (!agent.active) {
+678:      return `App "${appId}" agent is disabled. Contact the platform admin.`
+681:    try { allowed = JSON.parse(agent.allowedCapabilities) as string[] } catch { /* ignore */ }
+683:    if (!allowed.includes(capability)) {
+684:      return `Capability "${capability}" is not enabled for app "${appId}". ` +
+689:    return null   // DB unavailable → allow
+693:// ── Main router ───────────────────────────────────────────────────────────────
+695:export async function executeCapability(
+696:  request: CapabilityRequest,
+697:): Promise<CapabilityResponse> {
+698:  const cap = detectCapability(request.input, request.capability)
+700:  const save = request.saveArtifact ?? false
+702:  // ── App capability permission check ──────────────────────────────────────
+704:  // app's AppAgent record allows this capability.  Skip for internal system calls.
+706:    const denied = await checkAppCapabilityDenied(request.appId, cap)
+711:        capability: cap,
+712:        provider: null,
+713:        model: null,
+714:        outputType: outputTypeForCapability(cap),
+716:        fallbackUsed: false,
+723:  // ── Test-runtime fast exit (no real provider invoked) ────────────────────
+724:  // Prevents real network/provider calls in test environments for calls that
+725:  // have no providerOverride (i.e. system, internal, or app callers without a
+726:  // specific provider mock).  Covers both no-appId system calls and appId calls
+727:  // where AppAgent may not exist (backward-compat allow path).
+729:  // specific provider (providerOverride set) to validate provider logic.
+730:  if (IS_TEST_RUNTIME && !request.providerOverride) {
+
+--- src/lib/routing-engine.ts ---
+LINES: 723
+5: * policy-driven routing engine that reads from the model registry
+7: *   1. App profile gates which providers/models are eligible.
+8: *   2. Model registry supplies capability, cost, and latency metadata.
+16:  type ModelEntry,
+17:  getUsableModels,
+18:  isProviderUsable,
+19:  isProviderDegraded,
+20:  getModelById,
+21:} from '@/lib/model-registry'
+26:  isProviderAllowed,
+27:  isModelAllowed,
+32:import { isProviderWithinBudget } from '@/lib/budget-tracker'
+39:async function isBudgetOk(providerKey: string): Promise<boolean> {
+44:  const cached = budgetCache.get(providerKey)
+46:  const ok = await isProviderWithinBudget(providerKey)
+47:  budgetCache.set(providerKey, ok)
+56: * | direct              | Single model, no validation                    |
+57: * | specialist          | Single model with specialist system prompt      |
+58: * | review              | Primary + validator from a different provider   |
+60: * | retrieval_chain     | Retrieval-augmented generation pipeline         |
+61: * | agent_chain         | Multi-step agent planning pipeline              |
+62: * | multimodal_chain    | Creative / vision / multimodal pipeline         |
+63: * | premium_escalation  | Escalated to a premium-tier model               |
+71:  | 'agent_chain'
+75:/** Cost estimate for the routed model set. */
+78:/** Latency estimate for the primary model. */
+83: * execute a request against one or more models.
+86:  /** The execution pipeline to use. */
+88:  /** Best-fit model for the request. `null` only when no eligible model exists. */
+89:  primaryModel: ModelEntry | null
+91:  secondaryModel: ModelEntry | null
+92:  /** Ordered fallback list (first entry = highest-priority fallback). */
+93:  fallbackModels: ModelEntry[]
+94:  /** Human-readable explanation of why these models were chosen. */
+98:  /** Aggregate cost estimate based on the selected models. */
+100:  /** Latency estimate based on the primary model. */
+120:  /** Whether the request involves vision, image, or other multimodal IO. */
+122:  /** Optional caller-supplied provider preference. */
+123:  preferredProvider?: string
+124:  /** Optional ceiling on model cost tier. */
+125:  maxCostTier?: string
+126:  /** Optional ceiling on model latency tier. */
+130:   * selected model supports the matching capability flag.
+132:   * - `image`      → model must have `supports_image_generation`
+133:   * - `video`      → model must have `supports_video_generation` or `supports_video_planning`
+134:   * - `voice`      → model must have `supports_tts` or `supports_stt` or `supports_voice_interaction`
+135:   * - `embeddings` → model must have `supports_embeddings`
+136:   * - `moderation` → model must have `supports_moderation`
+137:   * - `text`       → model must have `supports_chat` (default, no special check)
+139:  requiredModality?: 'text' | 'image' | 'video' | 'voice' | 'embeddings' | 'moderation'
+179: * Build the eligible model pool for a routing request.
+181: * For text tasks: apply the full profile filter (provider allowlist + model allowlist).
+182: * The model allowlist expresses TEXT model preferences and must not block
+183: * capability-specific models like dall-e-3 or bark.
+185: * For non-text capability requests (image/voice/video/embeddings/moderation):
+186: * apply only the provider allowlist — the model allowlist is a TEXT model preference
+187: * list and is intentionally bypassed so that capability-eligible models are reachable.
+188: * Modality filtering happens immediately after in routeRequest().
+190:function getEligibleModels(profile: AppProfile, requiredModality?: string): ModelEntry[] {
+191:  const usable = getUsableModels()
+193:    // Non-text capability: apply provider gate only, not model allowlist
+194:    return usable.filter((m) => isProviderAllowed(profile, m.provider))
+196:  // Text capability: apply full profile gate (provider + model allowlist)
+198:    (m) => isProviderAllowed(profile, m.provider) && isModelAllowed(profile, m.model_id),
+203: * Filter eligible models to only those that match the required modality.
+206: * - image_generation → models with supports_image_generation ONLY
+207: * - voice → models with supports_tts / supports_stt / supports_voice_interaction ONLY
+208: * - video → models with supports_video_generation / supports_video_planning ONLY
+209: * - text → no additional filter (all chat-capable models qualify)
+211: * If no modality is specified, returns all eligible models.
+213:export function filterByModality(models: ModelEntry[], modality?: 'text' | 'image' | 'video' | 'voice' | 'embeddings' | 'moderation'): ModelEntry[] {
+214:  if (!modality || modality === 'text') return models
+217:    case 'image':
+218:      return models.filter((m) => m.supports_image_generation === true)
+219:    case 'video':
+220:      return models.filter((m) => m.supports_video_generation === true || m.supports_video_planning === true)
+221:    case 'voice':
+222:      return models.filter((m) => m.supports_tts === true || m.supports_stt === true || m.supports_voice_interaction === true)
+224:      return models.filter((m) => m.supports_embeddings === true)
+226:      return models.filter((m) => m.supports_moderation === true)
+228:      return models
+233: * Sort models by app preference, then by cost tier (ascending).
+235: * Models listed in the profile's `preferred_models` array appear first,
+236: * ordered by their position in that array. Remaining models are sorted
+240:function sortByPreferenceAndCost(models: ModelEntry[], profile: AppProfile): ModelEntry[] {
+242:  profile.preferred_models.forEach((id, idx) => preferredSet.set(id, idx))
+244:  return [...models].sort((a, b) => {
+245:    const aPref = preferredSet.get(a.model_id)
+246:    const bPref = preferredSet.get(b.model_id)
+248:    // Preferred models always come first, ordered by profile priority.
+259: * Returns `true` when a model's cost tier is within the allowed ceiling
+262:function withinCostCeiling(model: ModelEntry, profile: AppProfile, maxCostTier?: string): boolean {
+263:  const ceiling = maxCostTier
+264:    ? (COST_TIER_ORDER[maxCostTier] ?? COST_TIER_ORDER.premium)
+266:  return (COST_TIER_ORDER[model.cost_tier] ?? 3) <= ceiling
+270: * Returns `true` when a model's latency tier is within the allowed
+273:function withinLatencyCeiling(model: ModelEntry, profile: AppProfile, maxLatencyTier?: string): boolean {
+277:  return (LATENCY_TIER_ORDER[model.latency_tier] ?? 2) <= ceiling
+280:// ── Model selection ─────────────────────────────────────────────────────
+283: * Select the best primary model for the given context.
+286: *   1. Narrow to eligible, cost-appropriate, latency-appropriate models.
+287: *   2. If the caller specified a preferred provider, boost those first.
+289: *   4. Return the top-ranked model or `null` if nothing is eligible.
+291:export function selectPrimaryModel(
+294:  eligibleModels: ModelEntry[],
+295:): ModelEntry | null {
+296:  let candidates = eligibleModels
+297:    .filter((m) => withinCostCeiling(m, profile, context.maxCostTier))
+300:  // Apply preferred-provider boost by moving those to the front.
+301:  if (context.preferredProvider) {
+302:    const preferred = candidates.filter((m) => m.provider === context.preferredProvider)
+303:    const rest = candidates.filter((m) => m.provider !== context.preferredProvider)
+313: * Filter out models whose providers have exceeded their budget critical threshold.
+314: * Call this before selectPrimaryModel() to enforce per-provider budgets.
+315: * Returns the same list if no budgets are configured or DB is unavailable.
+317:export async function filterByBudget(models: ModelEntry[]): Promise<ModelEntry[]> {
+318:  if (models.length === 0) return models
+319:  const uniqueProviders = [...new Set(models.map(m => m.provider))]
+320:  const results = await Promise.all(uniqueProviders.map(p => isBudgetOk(p)))
+321:  const overBudget = new Set(uniqueProviders.filter((_, i) => !results[i]))
+322:  if (overBudget.size === 0) return models
+323:  // Keep models from providers that are still within budget
+324:  const filtered = models.filter(m => !overBudget.has(m.provider))
+326:  return filtered.length > 0 ? filtered : models
+330: * Select a validator / consensus model from a **different** provider than
+331: * the primary model to ensure independence.
+333: * Falls back to any validator-eligible model if no cross-provider
+336:export function selectValidatorModel(
+339:  eligibleModels: ModelEntry[],
+340:  primaryProvider: string,
+341:): ModelEntry | null {
+342:  // First pass: cross-provider, validator-eligible, within budget.
+343:  const crossProvider = eligibleModels
+344:    .filter((m) => m.provider !== primaryProvider)
+346:    .filter((m) => withinCostCeiling(m, profile, context.maxCostTier))
+348:  const sorted = sortByPreferenceAndCost(crossProvider, profile)
+351:  // Second pass: any validator-eligible model (even same provider).
+352:  const sameProvider = eligibleModels
+354:    .filter((m) => withinCostCeiling(m, profile, context.maxCostTier))
+356:  const sortedFallback = sortByPreferenceAndCost(sameProvider, profile)
+357:  return sortedFallback[0] ?? null
+361: * Build an ordered fallback list excluding models from the given provider.
+363: * The list is sorted by `fallback_priority` (ascending – 1 = first
+366: * Degraded providers are automatically pushed to the end of the list
+369:export function buildFallbackList(
+372:  eligibleModels: ModelEntry[],
+373:  excludeProvider?: string,
+374:): ModelEntry[] {
+375:  const MAX_FALLBACKS = 3
+377:  return eligibleModels
+378:    .filter((m) => !excludeProvider || m.provider !== excludeProvider)
+379:    .filter((m) => withinCostCeiling(m, profile, context.maxCostTier))
+381:      // Demote degraded providers to the end of the fallback list.
+382:      const aDegraded = isProviderDegraded(a.provider) ? 1 : 0
+383:      const bDegraded = isProviderDegraded(b.provider) ? 1 : 0
+385:      return a.fallback_priority - b.fallback_priority
+387:    .slice(0, MAX_FALLBACKS)
+391: * Derive a single cost estimate from the set of models that will be
+394: * Returns the **highest** cost tier across all models (worst-case).
+396:export function estimateCost(models: ModelEntry[]): CostEstimate {
+397:  if (models.length === 0) return 'low'
+400:    ...models.map((m) => COST_TIER_ORDER[m.cost_tier] ?? 0),
+416: * Map a model's latency tier to a routing-level latency estimate.
+418:export function estimateLatency(model: ModelEntry): LatencyEstimate {
+419:  return model.latency_tier as LatencyEstimate
+425: * Route an incoming request to one or more models based on the app
+426: * profile, model registry, and runtime context.
+429: * instead of hand-rolling provider selection.
+433: * const decision = routeRequest({
+444:export async function routeRequest(context: RoutingContext): Promise<RoutingDecision> {
+447:  // Pass requiredModality so non-text capability routing bypasses the text model allowlist
+448:  let eligible = getEligibleModels(profile, context.requiredModality)
+453:      primaryModel: null,
+454:      secondaryModel: null,
+455:      fallbackModels: [],
+456:      reason: `No eligible models found for app "${context.appSlug}". All models are either disabled, from unconfigured/errored/disabled providers, or excluded by the app profile.`,
+457:      warnings: ['No eligible models – check that at least one provider has a valid API key and a healthy or configured status.'],
+464:  // Filter out models whose providers have exceeded their budget critical
+465:  // threshold BEFORE any capability or preference filtering.
+470:      warnings.push(`Budget enforcement removed ${removed} model(s) from over-budget providers.`)
+474:    warnings.push('Budget check failed — proceeding with all eligible models.')
+478:  // When a required modality is specified, filter eligible models to only
+479:  // those that match. If no models match the modality, FAIL immediately.
+482:    if (context.requiredModality === 'image') {
+483:      console.log('[routing-engine] Eligible models for image:', modalityFiltered.map(m => m.model_id))
+488:        primaryModel: null,
+489:        secondaryModel: null,
+490:        fallbackModels: [],
+491:        reason: `No models support the required modality "${context.requiredModality}". ` +
+492:          `image_generation → image model ONLY, voice → audio model ONLY, video → video model ONLY. ` +
+494:        warnings: [`Required modality "${context.requiredModality}" has no eligible models. Configure a provider that supports this modality.`],
+506:    const escalatedModel = getModelById(escalation.escalate_to_provider, escalation.escalate_to_model)
+507:    if (escalatedModel && escalatedModel.enabled && isProviderUsable(escalatedModel.provider)) {
+508:      const fallbacks = buildFallbackList(context, profile, eligible, escalatedModel.provider)
+511:        primaryModel: escalatedModel,
+512:        secondaryModel: null,
+513:        fallbackModels: fallbacks,
+514:        reason: `Escalated to ${escalatedModel.model_name} (${escalatedModel.provider}) per app profile rule: complexity="${context.taskComplexity}", taskType="${context.taskType}".`,
+516:        costEstimate: estimateCost([escalatedModel]),
+517:        latencyEstimate: estimateLatency(escalatedModel),
+521:      `Escalation rule matched (→ ${escalation.escalate_to_provider}/${escalation.escalate_to_model}) but target model is unavailable. Falling through to standard routing.`,
+528:      (m) => m.supports_vision || m.supports_image_generation,
+531:    const primary = sorted[0] ?? selectPrimaryModel(context, profile, eligible)
+532:    const fallbacks = buildFallbackList(context, profile, eligible, primary?.provider)
+535:      warnings.push('No multimodal-capable model found among eligible models; falling back to best available.')
+540:      primaryModel: primary,
+541:      secondaryModel: null,
+542:      fallbackModels: fallbacks,
+544:        ? `Multimodal request routed to ${primary.model_name} (${primary.provider}) which supports vision/image capabilities.`
+545:        : 'Multimodal request but no suitable model found.',
+554:    const primary = selectPrimaryModel(context, profile, eligible)
+555:    const fallbacks = buildFallbackList(context, profile, eligible, primary?.provider)
+559:      primaryModel: primary,
+560:      secondaryModel: null,
+561:      fallbackModels: fallbacks,
+563:        ? `Retrieval-augmented generation via ${primary.model_name} (${primary.provider}).`
+564:        : 'Retrieval chain requested but no eligible model found.',
+575:    const primary = selectPrimaryModel(context, profile, eligible)
+577:      ? selectValidatorModel(context, profile, eligible, primary.provider)
+580:    const involvedModels = [primary, validator].filter(Boolean) as ModelEntry[]
+581:    const fallbacks = buildFallbackList(context, profile, eligible, primary?.provider)
+584:      warnings.push('Validation rule matched but no validator model available; proceeding with primary model only.')
+589:      primaryModel: primary,
+590:      secondaryModel: validator,
+591:      fallbackModels: fallbacks,
+593:        ? `Review mode: ${primary.model_name} generates, ${validator.model_name} validates (taskType="${context.taskType}", complexity="${context.taskComplexity}").`
+594:        : `Review mode requested for taskType="${context.taskType}" but ${!primary ? 'no primary model' : 'no validator'} available.`,
+596:      costEstimate: estimateCost(involvedModels),
+603:    const primary = selectPrimaryModel(context, profile, eligible)
+605:      ? selectValidatorModel(context, profile, eligible, primary.provider)
+608:    const involvedModels = [primary, secondary].filter(Boolean) as ModelEntry[]
+609:    const fallbacks = buildFallbackList(context, profile, eligible, primary?.provider)
+613:      primaryModel: primary,
+614:      secondaryModel: secondary,
+615:      fallbackModels: fallbacks,
+617:        ? `Consensus mode for complex financial task: ${primary.model_name} and ${secondary.model_name} generate independently.`
+618:        : `Consensus mode desired for complex financial task but only ${involvedModels.length} model(s) available.`,
+620:      costEstimate: estimateCost(involvedModels),
+625:  // ── 6. Complexity-based fallback ───────────────────────────────────
+627:  const primary = selectPrimaryModel(context, profile, eligible)
+630:    ? selectValidatorModel(context, profile, eligible, primary.provider)
+633:  const involvedModels = [primary, secondary].filter(Boolean) as ModelEntry[]
+634:  const fallbacks = buildFallbackList(context, profile, eligible, primary?.provider)
+637:    warnings.push(`Mode "${mode}" benefits from a secondary model but none was available.`)
+642:    primaryModel: primary,
+643:    secondaryModel: secondary,
+644:    fallbackModels: fallbacks,
+647:    costEstimate: estimateCost(involvedModels),
+708:  primary: ModelEntry | null,
+709:  secondary: ModelEntry | null,
+713:    return `No eligible model found for "${context.appSlug}" (complexity=${context.taskComplexity}).`
+716:  const base = `${mode} mode for ${context.taskComplexity} "${context.taskType}" task → ${primary.model_name} (${primary.provider})`
+719:    return `${base}, validated by ${secondary.model_name} (${secondary.provider}).`
+
+--- src/lib/live-ai-routing.ts ---
+LINES: 422
+2:  APPROVED_AI_PROVIDERS,
+3:  HUGGING_FACE_TASK_ROUTES,
+4:  isApprovedAIProvider,
+5:  type ApprovedProviderKey,
+7:} from '@/lib/approved-ai-catalog'
+8:import { STATIC_PROVIDER_MODELS, type ProviderModelOption } from '@/lib/ai-model-catalog'
+10:  getModelsForCapability,
+11:  normalizeGovernedCapability,
+12:  validateCapabilitySelection,
+13:  type GovernedCapability,
+14:  type GovernedModel,
+15:} from '@/lib/provider-capability-governance'
+16:import { adultPolicyAllows, normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
+18:export type AiCapability =
+23:  | 'image'
+24:  | 'image_generation'
+25:  | 'image_editing'
+26:  | 'image_to_video'
+27:  | 'video'
+28:  | 'video_generation'
+29:  | 'music_generation'
+30:  | 'song_generation'
+32:  | 'instrumental_music'
+33:  | 'voice_tts'
+34:  | 'voice_stt'
+35:  | 'tts'
+36:  | 'stt'
+37:  | 'voice_selection'
+38:  | 'voice_cloning'
+39:  | 'avatar_video'
+44:  | 'adult_image'
+45:  | 'adult_video'
+46:  | 'adult_voice'
+47:  | 'audio'
+52:  | 'artifacts'
+55:export type ModelStrategy = CostMode | 'custom'
+57:export interface LiveRouteInput {
+58:  capability: AiCapability
+60:  selectedProvider?: string
+61:  selectedModel?: string
+69:export interface LiveRouteResult {
+70:  selectedProvider: ApprovedProviderKey | null
+71:  selectedModel: string | null
+73:  fallbackChain: Array<{ provider: ApprovedProviderKey; model: string; task?: string }>
+76:  blockedReason: string | null
+81:const CAPABILITY_TO_ROLE: Record<AiCapability, string[]> = {
+86:  image: ['vision'],
+87:  image_generation: ['vision'],
+88:  image_editing: ['vision'],
+89:  image_to_video: ['vision'],
+90:  video: ['vision'],
+91:  video_generation: ['vision'],
+92:  music_generation: [],
+93:  song_generation: [],
+95:  instrumental_music: [],
+96:  voice_tts: [],
+97:  voice_stt: [],
+98:  tts: [],
+99:  stt: [],
+100:  voice_selection: [],
+101:  voice_cloning: [],
+102:  avatar_video: ['vision'],
+107:  adult_image: ['vision'],
+108:  adult_video: ['vision'],
+109:  adult_voice: ['chat'],
+110:  audio: [],
+115:  artifacts: ['chat', 'reasoning'],
+131:export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
+136:  'image',
+137:  'image_generation',
+138:  'image_editing',
+139:  'image_to_video',
+140:  'video',
+141:  'video_generation',
+142:  'music_generation',
+143:  'song_generation',
+145:  'instrumental_music',
+146:  'voice_tts',
+147:  'voice_stt',
+148:  'tts',
+149:  'stt',
+150:  'voice_selection',
+151:  'voice_cloning',
+152:  'avatar_video',
+157:  'adult_image',
+158:  'adult_video',
+159:  'adult_voice',
+160:  'audio',
+165:  'artifacts',
+169:export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
+170:  const requestedProvider =
+171:    input.selectedProvider && input.selectedProvider !== 'auto'
+172:      ? input.selectedProvider
+174:  const requestedModel =
+175:    input.selectedModel && input.selectedModel !== 'auto'
+176:      ? input.selectedModel
+181:  const governedCapability = normalizeGovernedCapability(input.capability)
+182:  if (!governedCapability) return blocked(input, costMode, `Unknown capability: ${input.capability}`)
+184:  if (input.capability.startsWith('adult_') && !adultPolicyAllows(adultPolicy, input.capability)) {
+185:    return blocked(input, costMode, 'Adult capability needs an app policy that allows this content type.')
+187:  const governanceValidation = validateCapabilitySelection({
+189:    capability: governedCapability,
+190:    provider: requestedProvider,
+191:    modelId: requestedModel,
+192:    adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
+195:  if (!governanceValidation.allowed && requestedProvider) {
+196:    return blocked(input, costMode, governanceValidation.reason)
+200:    return blocked(input, costMode, 'Estimated spend exceeds the remaining budget.')
+206:  const candidates = modelCandidates(input.capability, costMode, input.requiresMedia)
+208:  if (!selected) return blocked(input, costMode, 'No approved provider/model route is available for this capability.')
+211:    selectedProvider: selected.provider as ApprovedProviderKey,
+212:    selectedModel: selected.modelId,
+213:    selectedTask: selected.provider === 'huggingface' ? selected.modelId : null,
+214:    fallbackChain: candidates.slice(1, 5).map((model) => ({
+215:      provider: model.provider as ApprovedProviderKey,
+216:      model: model.modelId,
+217:      task: model.provider === 'huggingface' ? model.modelId : undefined,
+220:    reason: `${providerName(selected.provider)} matches ${input.capability} with ${costMode} cost routing.`,
+221:    blockedReason: null,
+227:function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
+228:  if (!input.selectedProvider || input.selectedProvider === 'auto') return null
+230:  const validation = validateCapabilitySelection({
+232:    capability: input.capability,
+233:    provider: input.selectedProvider,
+234:    modelId: input.selectedModel,
+235:    adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
+237:  if (!validation.allowed) return blocked(input, input.costMode ?? 'balanced', validation.reason)
+239:  const providerModels = STATIC_PROVIDER_MODELS[input.selectedProvider] ?? []
+240:  const governedCapability = normalizeGovernedCapability(input.capability)
+241:  const governedModels = governedCapability
+242:    ? getModelsForCapability(governedCapability, { provider: input.selectedProvider })
+244:  const selectedModel = input.selectedModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
+245:  const selected = providerModels.find((model) => model.modelId === selectedModel)
+246:  const governedSelected = governedModels.find((model) => model.modelId === selectedModel)
+247:  if (!selected && !governedSelected && input.selectedProvider !== 'huggingface') {
+248:    return blocked(input, input.costMode ?? 'balanced', 'Selected model is not in the approved catalog.')
+251:  const task = input.selectedProvider === 'huggingface'
+252:    ? (HUGGING_FACE_TASK_ROUTES.find((route) => route.id === selectedModel)?.id ?? 'task:text')
+256:    selectedProvider: input.selectedProvider as ApprovedProviderKey,
+257:    selectedModel: selectedModel ?? task,
+259:    fallbackChain: modelCandidates(input.capability, input.costMode ?? 'balanced', input.requiresMedia)
+260:      .filter((model) => model.provider !== input.selectedProvider)
+262:      .map((model) => ({ provider: model.provider as ApprovedProviderKey, model: model.modelId })),
+264:    reason: `${providerName(input.selectedProvider)} was selected for this run.`,
+265:    blockedReason: null,
+271:function isNonTextTaskModel(modelId: string): boolean {
+272:  const id = modelId.toLowerCase()
+275:  return /image|speech-to-text|text-to-speech|embedding|voice|tts|stt|video/.test(id)
+278:function isExactLiveRouteCandidate(model: ProviderModelOption, capability: AiCapability): boolean {
+279:  if (capability === 'chat') {
+280:    if (isNonTextTaskModel(model.modelId)) return false
+281:    return model.roles.some((role) => ['chat', 'reasoning', 'coding'].includes(role))
+282:      && model.modalities.some((modality) => ['text', 'multimodal'].includes(modality))
+285:  if (capability === 'reasoning') {
+286:    if (isNonTextTaskModel(model.modelId)) return false
+287:    return model.roles.includes('reasoning') || model.roles.includes('chat')
+290:  if (capability === 'coding' || capability === 'repo_audit') {
+291:    if (isNonTextTaskModel(model.modelId)) return false
+292:    return model.roles.includes('coding') || model.roles.includes('agent_planning')
+295:  if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing' || capability === 'adult_image') {
+296:    return model.modalities.includes('image') || model.modalities.includes('multimodal')
+299:  if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video' || capability === 'adult_video') {
+300:    return model.modalities.includes('video') || model.modalities.includes('multimodal')
+303:  if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection' || capability === 'voice_cloning' || capability === 'adult_voice') {
+304:    return model.modalities.includes('voice_tts')
+307:  if (capability === 'voice_stt' || capability === 'stt') {
+308:    return model.modalities.includes('voice_stt')
+311:  if (capability === 'embeddings' || capability === 'rag') {
+312:    return model.modalities.includes('embedding') || model.roles.includes('reasoning')
+315:  if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music' || capability === 'audio') {
+316:    return model.modalities.includes('music')
+322:function sortLiveCandidates(models: ProviderModelOption[], costMode: CostMode): ProviderModelOption[] {
+323:  return models.sort((a, b) => {
+324:    const costRank = COST_ORDER[costMode].indexOf(a.costTier) - COST_ORDER[costMode].indexOf(b.costTier)
+326:    return providerRank(a.provider) - providerRank(b.provider)
+330:function modelCandidates(capability: AiCapability, costMode: CostMode, requiresMedia = false): ProviderModelOption[] {
+331:  const governed = governedCandidates(capability)
+332:    .filter((model) => isExactLiveRouteCandidate(model, capability))
+337:  const roles = CAPABILITY_TO_ROLE[capability]
+338:  const entries = Object.values(STATIC_PROVIDER_MODELS)
+340:    .filter((model) => isApprovedAIProvider(model.provider))
+341:    .filter((model) => model.enabled)
+342:    .filter((model) => {
+343:      if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
+344:      if (capability === 'adult_text') return ['genx', 'together', 'huggingface', 'openai'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
+345:      if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
+346:      if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
+347:      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
+348:      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
+349:      if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false
+350:      if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing') return model.modalities.includes('image') || model.modalities.includes('multimodal')
+351:      if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
+352:      return model.roles.some((role) => roles.includes(role))
+356:    entries.filter((model) => isExactLiveRouteCandidate(model, capability)),
+361:function governedCandidates(capability: AiCapability): ProviderModelOption[] {
+362:  const normalized = normalizeGovernedCapability(capability) as GovernedCapability | null
+364:  return getModelsForCapability(normalized)
+365:    .filter((model) => !(['tts', 'adult_voice'].includes(normalized) && model.provider === 'groq'))
+366:    .map(governedModelToProviderOption)
+369:function governedModelToProviderOption(model: GovernedModel): ProviderModelOption {
+370:  const modality = model.capabilities.includes('image_generation') || model.capabilities.includes('image_editing')
+371:    ? 'image'
+372:    : model.capabilities.includes('video_generation') || model.capabilities.includes('image_to_video')
+373:      ? 'video'
+374:      : model.capabilities.includes('tts')
+375:        ? 'voice_tts'
+376:        : model.capabilities.includes('stt')
+377:          ? 'voice_stt'
+378:          : model.capabilities.includes('music_generation')
+379:            ? 'music'
+381:  const role = model.capabilities.includes('coding')
+383:    : model.capabilities.includes('reasoning')
+385:      : model.capabilities.includes('image_generation') || model.capabilities.includes('video_generation')
+389:    provider: model.provider,
+390:    modelId: model.modelId,
+391:    displayName: model.label,
+392:    family: model.providerLabel,
+393:    modalities: [modality as ProviderModelOption['modalities'][number]],
+394:    roles: [role as ProviderModelOption['roles'][number]],
+395:    costTier: model.provider === 'genx' ? 'medium' : 'unknown',
+397:    enabled: model.status !== 'available_not_wired' && model.status !== 'blocked',
+398:    notes: model.notes,
+402:function blocked(input: LiveRouteInput, costMode: CostMode, blockedReason: string): LiveRouteResult {
+404:    selectedProvider: null,
+405:    selectedModel: null,
+407:    fallbackChain: [],
+410:    blockedReason,
+416:function providerRank(provider: string) {
+417:  return APPROVED_AI_PROVIDERS.find((entry) => entry.key === provider)?.sortOrder ?? 99
+420:function providerName(provider: string) {
+421:  return APPROVED_AI_PROVIDERS.find((entry) => entry.key === provider)?.displayName ?? provider
+
+--- src/lib/studio-options.ts ---
+LINES: 97
+1:export const SONG_GENRES = [
+9:export const SONG_DURATIONS = [
+18:export const SONG_VOCALS = ['male', 'female', 'duet', 'group', 'choir', 'instrumental'] as const
+19:export const SONG_MOODS = ['uplifting', 'calm', 'energetic', 'romantic', 'hopeful', 'reflective', 'dark', 'dramatic', 'celebratory', 'spiritual'] as const
+20:export const SONG_LANGUAGES = ['English', 'Afrikaans', 'Zulu', 'Xhosa', 'Spanish', 'French', 'Portuguese', 'German', 'Italian', 'Japanese', 'Korean', 'Instrumental'] as const
+21:export const SONG_STRUCTURES = ['auto', 'intro/verse/chorus/bridge/outro', 'verse/chorus', 'instrumental'] as const
+23:export const AVATAR_STYLES = [
+26:  'educator', 'sales presenter', 'support agent', 'music performer', 'news anchor',
+27:  'fitness coach', 'product demo host', 'custom uploaded image', 'generated image',
+31:export const VOICE_STYLES = [
+33:  'presenter', 'radio host', 'sales voice', 'support voice', 'warm assistant',
+36:  'custom uploaded voice',
+41:  'realistic', 'animated', 'corporate', 'luxury', 'tech', 'music video',
+42:  'vertical short', 'YouTube intro', 'training video', 'app promo', 'brand story',
+45:export const IMAGE_STYLES = [
+48:  'dashboard mockup', 'app screen', 'avatar portrait',
+54:  duration?: string
+55:  genres?: string[]
+56:  combineGenres?: boolean
+62:  avatarStyle?: string
+63:  voiceStyle?: string
+65:  imageStyle?: string
+70:const GENRE_ALIASES: Array<[string, string]> = [
+82:  const genres = SONG_GENRES.filter((genre) => normalized.includes(genre.toLowerCase())) as string[]
+83:  for (const [alias, genre] of GENRE_ALIASES) {
+84:    if (normalized.includes(alias) && !genres.includes(genre)) genres.push(genre)
+89:  const duration = minuteMatch ? String(Math.round(Number(minuteMatch[1]) * 60)) : secondMatch?.[1]
+93:    duration: duration ?? selected.duration,
+94:    genres: genres.length ? genres : selected.genres,
+95:    combineGenres: genres.length > 1 || selected.combineGenres,
+
+--- src/lib/studio-option-libraries.ts ---
+LINES: 1
+
+--- src/lib/studio-route-map.ts ---
+LINES: 121
+5:  'Image',
+6:  'Video',
+7:  'Music / Audio',
+8:  'Voice / TTS',
+9:  'STT / Transcription',
+10:  'Avatar / Talking Video',
+12:  'Artifacts',
+17:export type StudioRouteStatus = 'stream' | 'execute' | 'upload' | 'list' | 'handoff' | 'missing'
+19:export interface StudioRouteConfig {
+21:  capability: string
+22:  route: string | null
+23:  status: StudioRouteStatus
+24:  artifactType?: 'document' | 'image' | 'video' | 'audio' | 'music' | 'transcript' | 'code'
+28:export const STUDIO_ROUTE_MAP: Record<StudioTab, StudioRouteConfig> = {
+31:    capability: 'chat',
+32:    route: '/api/admin/amarktai-assistant/stream',
+34:    artifactType: 'document',
+35:    detail: 'Protected GenX streaming route with dashboard context and memory handoff.',
+39:    capability: 'coding',
+40:    route: '/api/admin/studio/workbench-handoff',
+42:    artifactType: 'code',
+43:    detail: 'Coding prompts are persisted as Workbench handoff artifacts and opened in Workbench.',
+47:    capability: 'research',
+48:    route: '/api/admin/studio/execute',
+50:    artifactType: 'document',
+51:    detail: 'Protected Studio wrapper calls the Research Agent route and stores the result as a research artifact.',
+53:  Image: {
+54:    tab: 'Image',
+55:    capability: 'image_generation',
+56:    route: '/api/admin/studio/execute',
+58:    artifactType: 'image',
+59:    detail: 'Protected Studio wrapper calls the real image generation route and stores returned image metadata/file as an artifact.',
+61:  Video: {
+62:    tab: 'Video',
+63:    capability: 'video_generation',
+64:    route: '/api/admin/studio/execute',
+66:    artifactType: 'video',
+67:    detail: 'Protected Studio wrapper creates a real video job when a supported provider is configured.',
+69:  'Music / Audio': {
+70:    tab: 'Music / Audio',
+71:    capability: 'music_generation',
+72:    route: '/api/admin/studio/execute',
+74:    artifactType: 'music',
+75:    detail: 'Protected Studio wrapper calls the existing music studio route and returns the stored job/artifact.',
+77:  'Voice / TTS': {
+78:    tab: 'Voice / TTS',
+79:    capability: 'tts',
+80:    route: '/api/admin/studio/execute',
+82:    artifactType: 'audio',
+83:    detail: 'Protected Studio wrapper calls the real TTS route and stores returned audio bytes as an artifact.',
+85:  'STT / Transcription': {
+86:    tab: 'STT / Transcription',
+87:    capability: 'stt',
+88:    route: '/api/admin/studio/stt',
+90:    artifactType: 'transcript',
+91:    detail: 'Protected upload route calls the real STT route and stores transcripts as artifacts.',
+93:  'Avatar / Talking Video': {
+94:    tab: 'Avatar / Talking Video',
+95:    capability: 'avatar_video',
+96:    route: '/api/admin/studio/execute',
+98:    artifactType: 'video',
+99:    detail: 'Returns a real avatar job only when an approved lip-sync provider exists; otherwise returns the exact setup blocker.',
+103:    capability: 'adult_text',
+104:    route: '/api/admin/studio/execute',
+106:    artifactType: 'document',
+107:    detail: 'Adult text, image, video, and voice use the same policy-gated provider capability registry and report live provider readiness truthfully.',
+109:  Artifacts: {
+110:    tab: 'Artifacts',
+111:    capability: 'artifacts',
+112:    route: '/api/admin/artifacts',
+114:    artifactType: 'document',
+115:    detail: 'Protected artifact browser lists persisted Studio, research, media, and Workbench outputs.',
+119:export function getStudioRouteConfig(tab: StudioTab): StudioRouteConfig {
+120:  return STUDIO_ROUTE_MAP[tab]
+
+--- src/lib/universal-model-catalog.ts ---
+LINES: 213
+2:  APPROVED_AI_PROVIDERS,
+3:  HUGGING_FACE_TASK_ROUTES,
+4:  type ApprovedProviderKey,
+5:} from '@/lib/approved-ai-catalog'
+7:  GENX_AUDIO_MODELS,
+8:  GENX_IMAGE_MODELS,
+9:  GENX_STT_MODELS,
+10:  GENX_TEXT_MODELS,
+11:  GENX_TTS_MODELS,
+12:  GENX_VIDEO_MODELS,
+13:  listGenXModels,
+14:  type GenXModel,
+15:} from '@/lib/genx-client'
+16:import { getAllProviderModelCatalogs, type ProviderModelOption } from '@/lib/ai-model-catalog'
+18:export type UniversalCapabilityGroup =
+22:  | 'image'
+23:  | 'video'
+24:  | 'music/audio'
+25:  | 'voice/TTS'
+26:  | 'STT'
+34:  | 'adult_image'
+35:  | 'adult_video'
+36:  | 'adult_voice'
+40:export interface UniversalModelRoute {
+41:  provider: ApprovedProviderKey
+42:  modelId: string
+44:  capabilities: UniversalCapabilityGroup[]
+45:  costTier: string
+46:  source: 'genx_live' | 'genx_fallback' | 'static_catalog' | 'huggingface_task'
+52:export interface UniversalModelCatalog {
+53:  providers: typeof APPROVED_AI_PROVIDERS
+54:  models: UniversalModelRoute[]
+55:  grouped: Record<UniversalCapabilityGroup, UniversalModelRoute[]>
+56:  genx: {
+58:    modelCount: number
+67:  'adult_image',
+68:  'adult_video',
+69:  'adult_voice',
+79:export function adultPolicyAllows(policy: string | undefined, capability: string): boolean {
+82:  if (capability === 'adult_text') return ['suggestive', 'adult_text'].includes(normalized)
+83:  if (capability === 'adult_image') return ['suggestive', 'adult_image'].includes(normalized)
+84:  if (capability === 'adult_video') return ['adult_video'].includes(normalized)
+85:  if (capability === 'adult_voice') return ['adult_voice'].includes(normalized)
+89:export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog> {
+90:  const [liveGenx, providerCatalogs] = await Promise.all([
+91:    listGenXModels().catch(() => []),
+92:    getAllProviderModelCatalogs().catch(() => []),
+94:  const genxModels = liveGenx.length ? liveGenx.map(fromGenXLive) : genxFallbackModels()
+95:  const staticModels = providerCatalogs
+96:    .flatMap((catalog) => catalog.models.map((model) => fromStaticModel(model, catalog.configured)))
+97:    .filter((model) => model.provider !== 'genx')
+98:  const hfTasks = HUGGING_FACE_TASK_ROUTES.map((route) => ({
+99:    provider: 'huggingface' as const,
+100:    modelId: route.id,
+101:    displayName: route.taskLabel ?? route.label,
+102:    capabilities: taskCapabilities(route.id),
+103:    costTier: route.costMode,
+104:    source: 'huggingface_task' as const,
+107:  const models = dedupeModels([...genxModels, ...staticModels, ...hfTasks])
+109:    providers: APPROVED_AI_PROVIDERS,
+110:    models,
+111:    grouped: groupModels(models),
+112:    genx: { live: liveGenx.length > 0, modelCount: liveGenx.length || genxModels.length },
+117:function fromGenXLive(model: GenXModel): UniversalModelRoute {
+119:    provider: 'genx',
+120:    modelId: model.id,
+121:    displayName: model.name || model.id,
+122:    capabilities: capabilityGroups(model.capabilities.join(' '), model.category),
+123:    costTier: model.costTier,
+124:    source: 'genx_live',
+126:    supportsAdult: model.supportsAdult || model.capabilities.some((capability) => String(capability).startsWith('adult')),
+130:function fromStaticModel(model: ProviderModelOption, configured: boolean): UniversalModelRoute {
+132:    provider: model.provider as ApprovedProviderKey,
+133:    modelId: model.modelId,
+134:    displayName: model.displayName,
+135:    capabilities: capabilityGroups([...model.roles, ...model.modalities].join(' ')),
+136:    costTier: model.costTier,
+137:    source: 'static_catalog',
+142:function genxFallbackModels(): UniversalModelRoute[] {
+143:  const rows: UniversalModelRoute[] = []
+144:  for (const modelId of GENX_TEXT_MODELS) rows.push(fallback('genx', modelId, ['chat', 'reasoning', 'coding']))
+145:  for (const modelId of GENX_IMAGE_MODELS) rows.push(fallback('genx', modelId, ['image']))
+146:  for (const modelId of GENX_VIDEO_MODELS) rows.push(fallback('genx', modelId, ['video']))
+147:  for (const modelId of GENX_AUDIO_MODELS) rows.push(fallback('genx', modelId, ['music/audio']))
+148:  for (const modelId of GENX_TTS_MODELS) rows.push(fallback('genx', modelId, ['voice/TTS']))
+149:  for (const modelId of GENX_STT_MODELS) rows.push(fallback('genx', modelId, ['STT']))
+153:function fallback(provider: ApprovedProviderKey, modelId: string, capabilities: UniversalCapabilityGroup[]): UniversalModelRoute {
+154:  return { provider, modelId, displayName: modelId, capabilities, costTier: 'unknown', source: 'genx_fallback' }
+157:function capabilityGroups(haystackInput: string, category = ''): UniversalCapabilityGroup[] {
+159:  const groups = new Set<UniversalCapabilityGroup>()
+163:  if (/image|vision/.test(haystack)) groups.add('image')
+164:  if (/video|avatar/.test(haystack)) groups.add('video')
+165:  if (/music|audio|song|lyria/.test(haystack)) groups.add('music/audio')
+166:  if (/tts|voice_tts|text-to-speech|speech/.test(haystack)) groups.add('voice/TTS')
+167:  if (/stt|voice_stt|transcription|speech-to-text/.test(haystack)) groups.add('STT')
+174:function taskCapabilities(taskId: string): UniversalCapabilityGroup[] {
+175:  if (taskId.includes('image')) return ['image']
+176:  if (taskId.includes('video')) return ['video']
+177:  if (taskId.includes('speech-to-text')) return ['STT']
+178:  if (taskId.includes('text-to-speech')) return ['voice/TTS']
+184:function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityGroup, UniversalModelRoute[]> {
+189:    image: [],
+190:    video: [],
+191:    'music/audio': [],
+192:    'voice/TTS': [],
+193:    STT: [],
+196:  } as Record<UniversalCapabilityGroup, UniversalModelRoute[]>
+197:  for (const model of models) {
+198:    for (const capability of model.capabilities) grouped[capability].push(model)
+203:function dedupeModels(models: UniversalModelRoute[]): UniversalModelRoute[] {
+205:  const out: UniversalModelRoute[] = []
+206:  for (const model of models) {
+207:    const key = `${model.provider}:${model.modelId}`
+210:    out.push(model)
+
+--- src/lib/provider-capability-governance.ts ---
+LINES: 348
+1:import { STATIC_PROVIDER_MODELS } from '@/lib/ai-model-catalog'
+2:import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+3:import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+9:  providers: 'approved_configured_providers'
+10:  models: 'approved_configured_models'
+12:  agents: 'backend_orchestration_only'
+25:  providers: 'approved_configured_providers',
+26:  models: 'approved_configured_models',
+28:  agents: 'backend_orchestration_only',
+34:  message: 'This root workspace uses only providers and tools approved by the provider mesh.',
+38:export const LIVE_GENX_MODEL_COUNT = 58
+40:export type GovernedProviderKey = ProviderMeshId
+41:export type GovernedCapability =
+49:  | 'image_generation'
+50:  | 'image_editing'
+51:  | 'image_to_video'
+52:  | 'video_generation'
+53:  | 'music_generation'
+54:  | 'song_generation'
+56:  | 'instrumental_music'
+57:  | 'tts'
+58:  | 'stt'
+59:  | 'voice_selection'
+60:  | 'voice_cloning'
+61:  | 'avatar_video'
+66:  | 'adult_image'
+67:  | 'adult_video'
+68:  | 'adult_voice'
+69:  | 'audio'
+71:  | 'artifacts'
+74:export type CapabilityReadiness =
+79:  | 'blocked'
+81:export type ExecutionMode = 'sync' | 'stream' | 'async_job' | 'internal'
+83:export type GovernedModel = {
+84:  provider: GovernedProviderKey
+85:  providerLabel: string
+86:  modelId: string
+88:  capabilities: GovernedCapability[]
+89:  status: CapabilityReadiness
+90:  route?: string
+94:  artifacts: boolean
+96:  routePresent: boolean
+100:export type ProviderGovernance = {
+101:  provider: GovernedProviderKey
+104:  routePresent: boolean
+108:  liveTestStatus: 'connected' | 'configured' | 'needs_key' | 'needs_live_test' | 'needs_test_route' | 'unsupported'
+112:export type CapabilityGovernance = {
+113:  capability: GovernedCapability
+115:  primaryProvider: GovernedProviderKey | null
+116:  fallbackProviders: GovernedProviderKey[]
+117:  route: string | null
+118:  routeExists: boolean
+122:  artifacts: boolean
+124:  status: CapabilityReadiness
+129:export type CapabilityValidationInput = {
+131:  provider?: string | null
+132:  modelId?: string | null
+133:  capability: string
+140:export type CapabilityValidationResult = {
+142:  capability: GovernedCapability | null
+143:  provider?: GovernedProviderKey
+144:  model?: GovernedModel
+149:export const ROUTE_PRESENT_NOT_APPROVED_PROVIDERS: ProviderGovernance[] = []
+151:export const PROVIDER_GOVERNANCE: ProviderGovernance[] = PROVIDER_MESH.map((node) => ({
+152:  provider: node.id,
+155:  routePresent: true,
+160:  notes: 'Compatibility metadata generated from provider-mesh.ts.',
+163:function roleCapabilities(roles: readonly string[], modalities: readonly string[]): GovernedCapability[] {
+164:  const capabilities = new Set<GovernedCapability>()
+168:  if (modalities.includes('image')) capabilities.add('image_generation')
+169:  if (modalities.includes('video')) capabilities.add('video_generation')
+170:  if (modalities.includes('voice_tts')) capabilities.add('tts')
+171:  if (modalities.includes('voice_stt')) capabilities.add('stt')
+172:  if (modalities.includes('music')) capabilities.add('music_generation')
+177:const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_MODELS).flatMap(
+178:  ([provider, models]) => models.map((model) => {
+179:    const node = PROVIDER_MESH.find((entry) => entry.id === provider)!
+181:      provider: provider as GovernedProviderKey,
+182:      providerLabel: node.displayName,
+183:      modelId: model.modelId,
+184:      label: model.displayName,
+185:      capabilities: roleCapabilities(model.roles, model.modalities),
+187:      route: node.testRoute,
+189:      execution: node.asyncJobs ? 'async_job' as const : 'sync' as const,
+190:      polling: node.asyncJobs,
+191:      artifacts: node.artifactHandling !== 'none',
+193:      routePresent: true,
+194:      notes: model.notes ?? 'Approved provider-mesh model.',
+199:const MEDIA_GOVERNED_MODELS: GovernedModel[] = Object.values(MEDIA_CAPABILITY_ROUTES).flatMap((route) =>
+200:  route.providers.map((entry) => {
+201:    const node = PROVIDER_MESH.find((provider) => provider.id === entry.provider)!
+203:      provider: entry.provider,
+204:      providerLabel: node.displayName,
+205:      modelId: entry.model,
+206:      label: entry.model,
+207:      capabilities: [route.capability],
+209:      route: route.route,
+211:      execution: route.execution === 'upload' ? 'sync' as const : route.execution,
+212:      polling: route.execution === 'async_job',
+213:      artifacts: true,
+215:      routePresent: true,
+216:      notes: `Canonical ${route.capability} execution route.`,
+221:export const GOVERNED_MODELS: GovernedModel[] = [...STATIC_GOVERNED_MODELS]
+222:for (const mediaModel of MEDIA_GOVERNED_MODELS) {
+223:  const existing = GOVERNED_MODELS.find((model) =>
+224:    model.provider === mediaModel.provider && model.modelId === mediaModel.modelId,
+227:    existing.capabilities = [...new Set([...existing.capabilities, ...mediaModel.capabilities])]
+228:    existing.route = mediaModel.route
+229:    existing.execution = mediaModel.execution
+230:    existing.polling = mediaModel.polling
+231:    existing.artifacts = true
+233:    GOVERNED_MODELS.push(mediaModel)
+237:const CAPABILITY_ALIASES: Record<string, GovernedCapability> = {
+238:  image: 'image_generation',
+239:  video: 'video_generation',
+240:  voice_tts: 'tts',
+241:  voice_stt: 'stt',
+242:  song: 'song_generation',
+243:  music: 'music_generation',
+245:  avatar: 'avatar_video',
+248:export function normalizeGovernedCapability(capability: string): GovernedCapability | null {
+249:  const normalized = capability.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_')
+250:  const candidate = CAPABILITY_ALIASES[normalized] ?? normalized
+251:  const known = new Set<GovernedCapability>([
+253:    'image_generation', 'image_editing', 'image_to_video', 'video_generation',
+254:    'music_generation', 'song_generation', 'lyrics_generation', 'instrumental_music',
+255:    'tts', 'stt', 'voice_selection', 'voice_cloning', 'avatar_video', 'embeddings', 'rag', 'moderation',
+256:    'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'app_memory', 'artifacts', 'operations',
+257:    'audio',
+259:  return known.has(candidate as GovernedCapability) ? candidate as GovernedCapability : null
+270:export function getModelsForCapability(
+271:  capability: GovernedCapability,
+272:  options: { approvedOnly?: boolean; routePresentOnly?: boolean; provider?: string } = {},
+273:): GovernedModel[] {
+274:  return GOVERNED_MODELS.filter((model) =>
+275:    model.capabilities.includes(capability)
+276:    && (!options.provider || model.provider === options.provider)
+277:    && (!options.approvedOnly || model.approved)
+278:    && (!options.routePresentOnly || model.routePresent),
+282:export function getCapabilityGovernance(capability: GovernedCapability): CapabilityGovernance {
+283:  const models = getModelsForCapability(capability, { approvedOnly: true, routePresentOnly: true })
+284:  const providers = [...new Set(models.map((model) => model.provider))]
+286:    capability,
+287:    label: capability.replaceAll('_', ' '),
+288:    primaryProvider: providers[0] ?? null,
+289:    fallbackProviders: providers.slice(1),
+290:    route: models[0]?.route ?? null,
+291:    routeExists: models.length > 0,
+292:    requiredEnv: models[0]?.requiredEnv ?? [],
+293:    execution: models[0]?.execution ?? 'internal',
+294:    polling: models.some((model) => model.polling),
+295:    artifacts: models.some((model) => model.artifacts),
+297:    status: models.length ? 'production_ready' : 'unsupported',
+298:    blocker: models.length ? undefined : 'No approved provider-mesh model is wired for this capability.',
+299:    notes: 'Generated from approved provider-mesh model metadata.',
+303:export function getCapabilityGovernanceMatrix() {
+304:  const capabilities = [...new Set(GOVERNED_MODELS.flatMap((model) => model.capabilities))]
+305:  const governedCapabilities = capabilities.map(getCapabilityGovernance)
+308:    providers: PROVIDER_GOVERNANCE,
+309:    models: GOVERNED_MODELS,
+311:    blockedCapabilities: governedCapabilities.filter((capability) => capability.status === 'blocked' || capability.status === 'unsupported'),
+312:    underusedCapabilities: GOVERNED_MODELS.filter((model) => model.status === 'available_not_wired'),
+313:    routePresentNotApprovedProviders: ROUTE_PRESENT_NOT_APPROVED_PROVIDERS,
+317:export function getWorkbenchGovernanceModels(): GovernedModel[] {
+318:  return GOVERNED_MODELS.filter((model) =>
+319:    model.capabilities.some((capability) => capability === 'coding' || capability === 'reasoning'),
+323:export function validateCapabilitySelection(input: CapabilityValidationInput): CapabilityValidationResult {
+324:  const capability = normalizeGovernedCapability(input.capability)
+325:  if (!capability) return { allowed: false, capability: null, reason: 'Unknown capability.', blockers: ['unknown_capability'] }
+326:  if ((capability.startsWith('adult_')) && !input.adultPolicyAllows) {
+327:    return { allowed: false, capability, reason: 'Adult policy does not allow this capability.', blockers: ['adult_policy'] }
+329:  const provider = input.provider ? PROVIDER_MESH.find((node) => node.id === input.provider) : null
+330:  if (input.provider && !provider) {
+331:    return { allowed: false, capability, reason: 'Provider is not approved by the provider mesh.', blockers: ['provider_not_approved'] }
+333:  const models = getModelsForCapability(capability, { approvedOnly: true, routePresentOnly: true })
+334:  const model = input.modelId
+335:    ? models.find((entry) => entry.modelId === input.modelId && (!provider || entry.provider === provider.id))
+336:    : models.find((entry) => !provider || entry.provider === provider.id)
+337:  if (!model) {
+338:    return { allowed: false, capability, reason: 'No approved wired model supports this capability.', blockers: ['missing_route'] }
+342:    capability,
+343:    provider: model.provider,
+344:    model,
+345:    reason: `${model.providerLabel} ${model.modelId} is approved for ${capability}.`,
+
+--- src/lib/media-capability-registry.ts ---
+LINES: 139
+2:  GENX_AUDIO_MODELS,
+3:  GENX_IMAGE_MODELS,
+4:  GENX_STT_MODELS,
+5:  GENX_TTS_MODELS,
+6:  GENX_VIDEO_MODELS,
+7:} from '@/lib/genx-client'
+8:import type { ProviderMeshId } from '@/lib/provider-mesh'
+10:export type FirstClassMediaCapability =
+12:  | 'adult_image'
+13:  | 'adult_video'
+14:  | 'adult_voice'
+15:  | 'image_generation'
+16:  | 'video_generation'
+17:  | 'music_generation'
+18:  | 'tts'
+19:  | 'stt'
+20:  | 'audio'
+22:export type MediaCapabilityRoute = {
+23:  capability: FirstClassMediaCapability
+24:  route: string
+25:  execution: 'sync' | 'async_job' | 'upload'
+26:  artifactType: 'document' | 'image' | 'video' | 'audio' | 'music' | 'transcript'
+27:  providers: ReadonlyArray<{
+28:    provider: ProviderMeshId
+29:    model: string
+33:export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCapabilityRoute> = {
+35:    capability: 'adult_text',
+36:    route: '/api/brain/adult-text',
+38:    artifactType: 'document',
+39:    providers: [
+40:      { provider: 'together', model: 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO' },
+41:      { provider: 'huggingface', model: 'private-adult-text-endpoint' },
+44:  adult_image: {
+45:    capability: 'adult_image',
+46:    route: '/api/brain/adult-image',
+48:    artifactType: 'image',
+49:    providers: [
+50:      { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell-Free' },
+51:      { provider: 'huggingface', model: 'SG161222/RealVisXL_V4.0' },
+54:  adult_video: {
+55:    capability: 'adult_video',
+56:    route: '/api/brain/video-generate',
+57:    execution: 'async_job',
+58:    artifactType: 'video',
+59:    providers: [
+60:      { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
+61:      { provider: 'qwen', model: 'wanx2.1-t2v-turbo' },
+64:  adult_voice: {
+65:    capability: 'adult_voice',
+66:    route: '/api/brain/tts',
+68:    artifactType: 'audio',
+69:    providers: [
+70:      { provider: 'genx', model: GENX_TTS_MODELS[0] },
+71:      { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
+74:  image_generation: {
+75:    capability: 'image_generation',
+76:    route: '/api/brain/image',
+78:    artifactType: 'image',
+79:    providers: [
+80:      { provider: 'genx', model: GENX_IMAGE_MODELS[0] },
+81:      { provider: 'qwen', model: 'wanx-v1' },
+82:      { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell-Free' },
+83:      { provider: 'huggingface', model: 'task:text-to-image' },
+86:  video_generation: {
+87:    capability: 'video_generation',
+88:    route: '/api/brain/video-generate',
+89:    execution: 'async_job',
+90:    artifactType: 'video',
+91:    providers: [
+92:      { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
+93:      { provider: 'qwen', model: 'wanx2.1-t2v-turbo' },
+96:  music_generation: {
+97:    capability: 'music_generation',
+98:    route: '/api/admin/music-studio',
+99:    execution: 'async_job',
+100:    artifactType: 'music',
+101:    providers: [
+102:      { provider: 'genx', model: GENX_AUDIO_MODELS[0] },
+105:  tts: {
+106:    capability: 'tts',
+107:    route: '/api/brain/tts',
+109:    artifactType: 'audio',
+110:    providers: [
+111:      { provider: 'genx', model: GENX_TTS_MODELS[0] },
+112:      { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
+115:  stt: {
+116:    capability: 'stt',
+117:    route: '/api/brain/stt',
+119:    artifactType: 'transcript',
+120:    providers: [
+121:      { provider: 'genx', model: GENX_STT_MODELS[0] },
+122:      { provider: 'groq', model: 'whisper-large-v3-turbo' },
+123:      { provider: 'huggingface', model: 'openai/whisper-large-v3' },
+126:  audio: {
+127:    capability: 'audio',
+128:    route: '/api/admin/music-studio',
+129:    execution: 'async_job',
+130:    artifactType: 'audio',
+131:    providers: [
+132:      { provider: 'genx', model: GENX_AUDIO_MODELS[0] },
+137:export function getMediaCapabilityRoute(capability: string): MediaCapabilityRoute | null {
+138:  return MEDIA_CAPABILITY_ROUTES[capability as FirstClassMediaCapability] ?? null
+
+--- src/lib/genx-client.ts ---
+LINES: 1169
+2: * GenX Client — AmarktAI Network
+4: * GenX is the primary AI execution layer for the AmarktAI Network.
+5: * All AI requests are routed through GenX by default. Direct provider
+6: * routing (openai/groq/gemini/etc.) is only used as a fallback when
+7: * GenX is unavailable or returns an error.
+12: *   jobs:   GET  /api/v1/jobs/:id
+13: *   models: GET  /api/v1/models
+15: * Model selection is policy-driven:
+16: *   best      — highest-capability model in GenX catalog (workspace default)
+17: *   cheap     — lowest-cost model for the capability
+18: *   balanced  — cost/quality tradeoff model
+19: *   fixed     — explicit model ID provided by the caller
+26:export type GenXModelPolicy = 'best' | 'cheap' | 'balanced' | 'fixed'
+28:export type GenXCapability =
+33:  | 'image_generation'
+34:  | 'image_edit'
+35:  | 'image_editing'
+36:  | 'video_generation'
+37:  | 'music_generation'
+39:  | 'tts'
+40:  | 'stt'
+46:  | 'adult_image'
+47:  | 'adult_video'
+49:export type GenXOperationType =
+58:  | 'tts'
+59:  | 'stt'
+61:export interface GenXModel {
+64:  provider?: string
+66:  capabilities: GenXCapability[]
+67:  costTier: 'free' | 'very_low' | 'low' | 'medium' | 'high' | 'premium'
+73:export interface GenXChatMessage {
+78:export interface GenXChatRequest {
+79:  model: string
+80:  messages: GenXChatMessage[]
+87:export interface GenXChatResponse {
+89:  model: string
+101:export interface GenXMediaRequest {
+102:  model: string
+104:  type: 'image' | 'video' | 'audio'
+107:  duration?: number
+113:export interface GenXMediaResponse {
+115:  job_id?: string
+116:  model: string
+117:  type: 'image' | 'video' | 'audio'
+121:  jobId?: string    // present when generation is async
+126:export interface GenXJobStatus {
+130:  result?: GenXMediaResponse
+136:export interface GenXCallResult {
+139:  model: string
+143:  genxUsed: boolean
+146:export interface GenXMediaResult {
+149:  jobId: string | null
+151:  model: string
+156:export interface GenXStatus {
+161:  modelCount?: number
+164:// ── Known GenX model catalog (static fallback when live catalog unavailable) ──
+166:/** Known GenX text / code / reasoning models (static fallback — 21 models aligned with 58-model catalog) */
+167:export const GENX_TEXT_MODELS = [
+172:  'grok-4.2', 'grok-4.2-reasoning', 'grok-4.2-multi-agent', 'grok-4.3',
+176:/** Known GenX image generation models (static fallback — 12 models aligned with 58-model catalog) */
+177:export const GENX_IMAGE_MODELS = [
+178:  'gpt-image-2', 'nano-banana-2', 'nano-banana-pro',
+181:  'genxlm-pro-v1-img', 'genxlm-pro-v1-img-fast',
+184:/** Known GenX video generation models (static fallback — 19 models aligned with 58-model catalog) */
+185:export const GENX_VIDEO_MODELS = [
+186:  'veo-3.1', 'veo-3.1-fast', 'grok-imagine-video',
+196:/** Known GenX music/audio generation models */
+197:export const GENX_AUDIO_MODELS = [
+201:/** Known GenX image-to-video models */
+202:export const GENX_I2V_MODELS = [
+207:/** Known GenX TTS / voice models */
+208:export const GENX_TTS_MODELS = [
+209:  'grok-tts', 'aura-2', 'genxlm-voice-v1',
+212:/** Known GenX STT / transcription models (genxlm-pro-v1-tl is translation, not STT) */
+213:export const GENX_STT_MODELS = [
+214:  'genxlm-pro-v1-tr',
+217:const GENX_DEFAULT_MODELS: Record<GenXOperationType, string> = {
+218:  chat:      GENX_TEXT_MODELS[0],
+219:  generate:  GENX_IMAGE_MODELS[0],
+220:  edit:      GENX_IMAGE_MODELS[0],
+221:  plan:      GENX_TEXT_MODELS[0],
+223:  summarise: GENX_TEXT_MODELS[0],
+224:  classify:  GENX_TEXT_MODELS[0],
+225:  embed:     GENX_TEXT_MODELS[0],
+226:  tts:       GENX_TTS_MODELS[0],
+227:  stt:       GENX_STT_MODELS[0],
+232:const GENX_TIMEOUT  = 60_000 // 60 s
+237: * Whether adult content is supported by the connected GenX deployment.
+238: * Controlled by the GENX_ADULT_CONTENT_SUPPORTED env var.
+241:export const GENX_ADULT_CONTENT_SUPPORTED =
+242:  process.env.GENX_ADULT_CONTENT_SUPPORTED === 'true'
+245: * Discovered endpoint profile — set after probing the GenX deployment.
+249:export interface GenXEndpointProfile {
+251:  /** Path that serves GET /models catalog, e.g. '/api/v1/models' or '/v1/models' */
+252:  catalogPath: string
+262:let _endpointProfile: GenXEndpointProfile | null = null
+270: * Resolve the active GenX API URL and key.
+271: * Priority: DB (IntegrationConfig key='genx') > environment variables.
+272: * This allows the admin to configure GenX via the Settings UI without
+275:export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: string; configured: boolean }> {
+276:  let apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+277:  let apiKey = process.env.GENX_API_KEY ?? ''
+283:    const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+290:    // DB unavailable — fall through to env vars
+303: * Also auto-corrects the GenX dashboard hostname (genx.sh) to the
+304: * API hostname (query.genx.sh) so that accidentally entering the
+312:  if (url.hostname === 'genx.sh') {
+313:    url.hostname = 'query.genx.sh'
+316:    .replace(/\/api\/v1\/models\/?$/, '')
+317:    .replace(/\/v1\/models\/?$/, '')
+347: * Discover working endpoint paths by probing the GenX deployment.
+349: * Catalog candidates:   /api/v1/models  →  /v1/models
+354: * If all catalog probes fail the profile still records the default paths
+357:async function discoverEndpointProfile(baseUrl: string, apiKey: string): Promise<GenXEndpointProfile> {
+361:  // Probe catalog
+362:  let catalogPath = '/api/v1/models'
+363:  if (!await probeEndpoint(`${baseUrl}/api/v1/models`, 'GET', headers)) {
+364:    if (await probeEndpoint(`${baseUrl}/v1/models`, 'GET', headers)) {
+365:      catalogPath = '/v1/models'
+373:  const genProbeBody = JSON.stringify({ model: '__probe__', params: { prompt: 'probe' } })
+381:  return { baseUrl, catalogPath, chatPath, generatePath, probeTime: Date.now() }
+389:async function getEndpointProfile(): Promise<GenXEndpointProfile | null> {
+390:  const { apiUrl, apiKey } = await resolveGenXConfig()
+409:  const { apiKey } = await resolveGenXConfig()
+417:export function getGenXStatus(): GenXStatus {
+418:  const envUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+419:  const envKey = process.env.GENX_API_KEY ?? ''
+425:      error: 'GenX API key is not configured',
+428:  return { configured: true, available: false, apiUrl: normaliseBaseUrl(envUrl), error: 'GenX has not been live-probed in this sync status path' }
+432: * Async version of getGenXStatus that also checks the DB-stored config.
+433: * Used by routes that need accurate status including DB-saved settings.
+435:export async function getGenXStatusAsync(): Promise<GenXStatus> {
+436:  const { apiUrl, apiKey, configured } = await resolveGenXConfig()
+442:      error: 'GenX API key is not configured',
+443:      modelCount: 0,
+450:    const res = await fetch(`${profile.baseUrl}${profile.catalogPath}`, {
+459:        error: `GenX catalog probe failed with HTTP ${res.status}`,
+460:        modelCount: 0,
+464:    const models = extractModelList(data)
+465:    return { configured, available: true, apiUrl, error: null, modelCount: models.length }
+471:      error: error instanceof Error ? error.message : 'GenX catalog probe failed',
+472:      modelCount: 0,
+477:// ── Model Catalog ─────────────────────────────────────────────────────────────
+479:/** In-memory model catalog cache. Refreshed on first call and every 5 minutes. */
+480:let _modelCache: GenXModel[] | null = null
+481:let _modelCacheAge = 0
+482:const MODEL_CACHE_TTL_MS = 5 * 60 * 1000
+497:function normaliseStatus(status: unknown): GenXMediaResult['status'] {
+505:function inferCapabilities(raw: Record<string, unknown>, id: string): GenXCapability[] {
+508:  const provider = asString(raw.provider)?.toLowerCase() ?? ''
+515:    provider,
+519:  const capabilities = new Set<GenXCapability>()
+521:    const normalised = cap.toLowerCase().replace(/\s+/g, '_') as GenXCapability
+526:  if (category === 'image' || type === 'image') capabilities.add('image_generation')
+527:  if (category === 'video' || type === 'video') capabilities.add('video_generation')
+528:  if (category === 'voice' || type === 'voice') capabilities.add('tts')
+529:  if (category === 'audio' || type === 'audio') capabilities.add('music_generation')
+530:  if (category === 'transcription' || type === 'transcription') capabilities.add('stt')
+534:  if (haystack.includes('edit')) capabilities.add('image_edit')
+535:  if (haystack.includes('music') || haystack.includes('lyria') || haystack.includes('song')) capabilities.add('music_generation')
+536:  if (haystack.includes('tts') || haystack.includes('text-to-speech') || haystack.includes('aura')) capabilities.add('tts')
+537:  if (haystack.includes('stt') || haystack.includes('transcription') || haystack.includes('speech-to-text')) capabilities.add('stt')
+543:function normaliseModel(raw: unknown): GenXModel | null {
+545:  const id = asString(raw.id) ?? asString(raw.model) ?? asString(raw.model_id) ?? asString(raw.slug)
+547:  const provider = asString(raw.provider)
+552:    provider,
+555:    costTier: 'medium',
+564:export interface GenXStreamEvent {
+568:  model?: string
+571:function extractModelList(data: unknown): unknown[] {
+574:  const candidates = [data.models, data.data, data.items, data.results]
+581:/** Fetch the GenX model catalog using the discovered catalog endpoint. */
+582:export async function listGenXModels(): Promise<GenXModel[]> {
+587:  if (_modelCache && now - _modelCacheAge < MODEL_CACHE_TTL_MS) return _modelCache
+590:    const res = await fetch(`${profile.baseUrl}${profile.catalogPath}`, {
+592:      signal: AbortSignal.timeout(GENX_TIMEOUT),
+594:    if (!res.ok) return _modelCache ?? []
+596:    const models = extractModelList(data)
+597:      .map(normaliseModel)
+598:      .filter((model): model is GenXModel => model !== null)
+599:    _modelCache = models
+600:    _modelCacheAge = now
+601:    return models
+603:    return _modelCache ?? []
+607:// ── Policy-Driven Model Selection ─────────────────────────────────────────────
+610: * Select the best GenX model for a request based on policy, capability, and operation type.
+613: *   best      — highest-capability model for the requested capability (workspace default)
+614: *   cheap     — lowest cost tier that satisfies the capability
+616: *   fixed     — return the fixedModelId directly (no catalog lookup)
+618:export async function selectGenXModel(
+619:  policy: GenXModelPolicy,
+620:  capability: GenXCapability,
+621:  operationType: GenXOperationType,
+622:  fixedModelId?: string,
+624:  // For 'fixed' policy, return the specified model ID directly
+625:  if (policy === 'fixed' && fixedModelId) return fixedModelId
+627:  const models = await listGenXModels()
+629:  // Filter models that support the requested capability
+630:  const capable = models.filter((m) => {
+631:    if (m.capabilities.includes(capability)) return true
+632:    if (capability === 'code' && m.capabilities.includes('code_generation')) return true
+633:    if (capability === 'code_generation' && m.capabilities.includes('code')) return true
+634:    if (capability === 'image_editing' && m.capabilities.includes('image_edit')) return true
+635:    if (capability === 'image_edit' && m.capabilities.includes('image_editing')) return true
+636:    if (capability === 'adult_image' && (m.supportsAdult || m.capabilities.includes('adult'))) return true
+637:    if (capability === 'adult_video' && (m.supportsAdult || m.capabilities.includes('adult'))) return true
+642:    // GenX catalog unavailable or no model matches — return a sensible default
+643:    // that GenX itself will validate/route
+648:  const COST_ORDER: GenXModel['costTier'][] = ['free', 'very_low', 'low', 'medium', 'high', 'premium']
+654:        const costDiff = COST_ORDER.indexOf(b.costTier) - COST_ORDER.indexOf(a.costTier)
+656:        const LATENCY_ORDER: GenXModel['latencyTier'][] = ['ultra_low', 'low', 'medium', 'high']
+664:        COST_ORDER.indexOf(a.costTier) - COST_ORDER.indexOf(b.costTier),
+671:      const medium = capable.find((m) => m.costTier === 'medium')
+673:      const low = capable.find((m) => m.costTier === 'low')
+684: * Resolve a sensible GenX default model name for an operation type when the
+685: * catalog is unavailable. These are opaque identifiers that GenX itself resolves.
+687:function resolveDefaultByOperation(operationType: GenXOperationType): string {
+688:  return GENX_DEFAULT_MODELS[operationType]
+691:function resolveGenXExecutionModel(model: string | undefined, fallback: string): string {
+692:  if (!model?.trim()) return fallback
+693:  if (!model.startsWith('auto:')) return model
+694:  const alias = model.toLowerCase()
+697:  if (alias === 'auto:image') return GENX_IMAGE_MODELS[0]
+698:  if (alias === 'auto:video') return GENX_VIDEO_MODELS[0]
+699:  if (alias === 'auto:voice-tts') return GENX_TTS_MODELS[0]
+700:  return fallback
+706: * Call GenX chat completions using the discovered chatPath.
+709:export async function callGenXChat(request: GenXChatRequest): Promise<GenXCallResult> {
+713:    model: resolveGenXExecutionModel(request.model, GENX_TEXT_MODELS[0]),
+719:      success: false, output: null, model: resolvedRequest.model,
+721:      latencyMs: 0, error: 'GenX API key is not configured', genxUsed: false,
+732:      signal: AbortSignal.timeout(GENX_TIMEOUT),
+740:      return { success: false, output: null, model: resolvedRequest.model, usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }, latencyMs, error: `GenX error: ${msg}`, genxUsed: true }
+743:    const data = await res.json() as GenXChatResponse
+749:      model: data.model ?? resolvedRequest.model,
+757:      genxUsed: true,
+761:      success: false, output: null, model: resolvedRequest.model,
+764:      error: `GenX request failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+765:      genxUsed: true,
+773: * Stream GenX chat completions through the OpenAI-compatible SSE endpoint.
+776:export async function streamGenXChat(
+777:  request: GenXChatRequest,
+778:  onEvent: (event: GenXStreamEvent) => void,
+780:): Promise<{ success: boolean; output: string; model: string; error: string | null }> {
+783:    model: resolveGenXExecutionModel(request.model, GENX_TEXT_MODELS[0]),
+787:    const error = 'GenX API key is not configured'
+789:    return { success: false, output: '', model: resolvedRequest.model, error }
+803:      const error = `GenX stream error: ${errBody || `HTTP ${res.status}`}`
+805:      return { success: false, output, model: resolvedRequest.model, error }
+826:            model?: string
+832:            onEvent({ type: 'chunk', content: chunk, model: parsed.model ?? resolvedRequest.model })
+835:          // Ignore malformed provider heartbeat lines.
+840:    onEvent({ type: 'done', model: resolvedRequest.model })
+841:    return { success: true, output, model: resolvedRequest.model, error: null }
+845:      : `GenX stream failed: ${err instanceof Error ? err.message : 'unknown error'}`
+847:    return { success: false, output, model: resolvedRequest.model, error }
+852: * Call GenX media generation using the discovered generatePath.
+855:export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMediaResult> {
+857:  const fallbackModel = request.type === 'image'
+858:    ? GENX_IMAGE_MODELS[0]
+
+--- src/lib/provider-config.ts ---
+LINES: 73
+1:import { getMeshCredential } from '@/lib/provider-mesh-status'
+2:import { getProviderMeshNode, type ProviderMeshId } from '@/lib/provider-mesh'
+5:export type CoreProvider =
+6:  | ProviderMeshId
+11:export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
+13:function normalizeProviderKey(provider: string): string {
+14:  if (provider === 'dashscope') return 'qwen'
+15:  if (provider === 'hf') return 'huggingface'
+16:  return provider
+19:function activeProviderId(provider: string): ProviderMeshId | null {
+20:  const normalized = normalizeProviderKey(provider)
+21:  return getProviderMeshNode(normalized) ? normalized as ProviderMeshId : null
+24:export function getIntegrationKey(provider: CoreProvider | string): string {
+25:  return normalizeProviderKey(provider)
+28:export function getEnvKeyForProvider(provider: CoreProvider | string): string | null {
+29:  const id = activeProviderId(provider)
+30:  const node = id ? getProviderMeshNode(id) : null
+38:export async function getProviderKeyWithSource(provider: CoreProvider | string): Promise<{
+40:  source: ProviderKeySource
+42:  const id = activeProviderId(provider)
+48:  const envKey = getEnvKeyForProvider(provider)
+52:export async function getProviderKey(provider: CoreProvider | string): Promise<string | null> {
+53:  return (await getProviderKeyWithSource(provider)).key
+56:export async function isProviderConfigured(provider: CoreProvider | string): Promise<boolean> {
+57:  return Boolean(await getProviderKey(provider))
+67:export async function getMaskedProviderStatus(provider: CoreProvider | string): Promise<{
+71:  const key = await getProviderKey(provider)
+
+===== PROVIDER / MODEL CATALOG ROUTES =====
+
+--- GET /api/admin/ai-model-catalog ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"error":"Unauthorized"}
+
+--- GET /api/admin/provider-universe-truth ---
+HTTP_STATUS=200
+CONTENT_TYPE=application/json
+{"success":true,"truth":{"generatedAt":"2026-06-08T16:44:12.532Z","summary":{"providers":6,"configuredProviders":6,"catalogModels":295,"universalModels":348,"brainDiscoveredModels":360,"brainApprovedModels":33,"brainRoutedModels":33,"liveDiscoveredDisabledModels":277,"discoveredOnlyModels":327,"mediaRoutes":10,"localTools":7,"localToolsOk":6},"providers":[{"key":"genx","displayName":"GenX","configured":true,"keySource":"vault","liveDiscovery":{"supported":true,"status":"not_attempted","liveDiscovered":0,"liveEnabled":0,"liveDisabled":0},"catalog":{"modelCount":3,"staticEnabled":3,"recommendedDefaults":{"workbench":"gpt-5.4-mini","assistant":"gpt-5.4-mini"},"notes":["Primary OpenAI-compatible routing layer across text, code, media, voice, files, and async jobs.","GenX live discovery is handled by the universal GenX catalog path."]},"brain":{"discovered":59,"tested":59,"approved":8,"routed":8},"activeRouting":{"approved":8,"routed":8,"discoveredButNotRouted":51}},{"key":"huggingface","displayName":"Hugging Face","configured":true,"keySource":"vault","liveDiscovery":{"supported":true,"status":"success","liveDiscovered":120,"liveEnabled":0,"liveDisabled":120},"catalog":{"modelCount":125,"staticEnabled":5,"recommendedDefaults":{},"notes":["Model universe for specialist text, embedding, image, video, and speech tasks.","Live discovery found 120 provider models. Live-discovered models remain disabled until explicitly routed."]},"brain":{"discovered":130,"tested":130,"approved":10,"routed":10},"activeRouting":{"approved":10,"routed":10,"discoveredButNotRouted":120}},{"key":"qwen","displayName":"Qwen / DashScope","configured":true,"keySource":"vault","liveDiscovery":{"supported":true,"status":"success","liveDiscovered":142,"liveEnabled":0,"liveDisabled":142},"catalog":{"modelCount":145,"staticEnabled":3,"recommendedDefaults":{"workbench":"qwen-turbo","assistant":"qwen-plus"},"notes":["Low-cost text, reasoning, code, multimodal understanding, and DashScope media routes.","Live discovery found 145 provider models. Live-discovered models remain disabled until explicitly routed."]},"brain":{"discovered":147,"tested":147,"approved":5,"routed":5},"activeRouting":{"approved":5,"routed":5,"discoveredButNotRouted":142}},{"key":"mimo","displayName":"Xiaomi MiMo","configured":true,"keySource":"vault","liveDiscovery":{"supported":false,"status":"not_supported","liveDiscovered":0,"liveEnabled":0,"liveDisabled":0},"catalog":{"modelCount":4,"staticEnabled":4,"recommendedDefaults"
+
+--- GET /api/admin/providers/catalog ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"error":"Unauthorized"}
+
+--- GET /api/admin/provider-governance ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"error":"Unauthorized"}
+
+--- GET /api/admin/ai-routing ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"error":"Unauthorized"}
+
+--- GET /api/admin/settings/status ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"success":false,"error":"Unauthorized"}
+
+--- GET /api/admin/system/capabilities ---
+HTTP_STATUS=401
+CONTENT_TYPE=application/json
+{"error":"Unauthorized"}
+
+===== DATABASE PROVIDERS / APP PROFILES / CAPABILITIES - REDACTED =====
+--- prisma models matching provider/app/agent/job/artifact/capability ---
+aiProvider
+appAgent
+appAgentLearningLog
+appAiProfile
+appBudgetConfig
+appEvent
+appIntegration
+appIntelligenceProfile
+appMetricDefinition
+appMetricPoint
+appStrategyRecord
+artifact
+assistantAvatarConfig
+batchJob
+batchJobItem
+dashboardWidgetConfig
+fineTuneJob
+gitHubConfig
+integrationConfig
+managerAgentLog
+modelRegistryEntry
+musicGenerationJob
+providerBudget
+usageMeter
+videoGenerationJob
+webhookDeliveryRecord
+webhookRegistrationRecord
+workspaceConfig
+--- aiProvider ---
+[]
+--- appAgent ---
+[]
+--- appAgentLearningLog ---
+[]
+--- appBudgetConfig ---
+[]
+--- appIntegration ---
+[]
+--- assistantAvatarConfig ---
+[]
+--- dashboardWidgetConfig ---
+[]
+--- gitHubConfig ---
+[]
+--- integrationConfig ---
+[
+  {
+    "id": 1,
+    "key": "[redacted length=4]",
+    "displayName": "GenX",
+    "apiKey": "[redacted length=37]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"provider\",\"savedAt\":\"2026-06-06T09:49:07.805Z\",\"lastTestStatus\":\"passed\",\"latencyMs\":1586,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:57:24.012Z\",\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"image\",\"video\",\"image_to_video\",\"avatar\",\"music\",\"audio\",\"tts\",\"stt\",\"files\",\"sessions\",\"async_jobs\",\"tools\"],\"lastError\":\"\",\"detail\":\"\",\"modelCount\":60,\"catalogOk\":true,\"chatOk\":false,\"generateOk\":true,\"executionOk\":true}",
+    "createdAt": "2026-06-05T18:13:06.178Z",
+    "updatedAt": "2026-06-06T13:57:24.014Z"
+  },
+  {
+    "id": 6,
+    "key": "[redacted length=13]",
+    "displayName": "Local Crawler",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":738,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:22.480Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available · Scrapy available · Trafilatura available\"}",
+    "createdAt": "2026-06-06T09:55:05.789Z",
+    "updatedAt": "2026-06-06T13:15:22.482Z"
+  },
+  {
+    "id": 7,
+    "key": "[redacted length=7]",
+    "displayName": "Storage",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":24,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:55.908Z\",\"capabilities\":[\"storage\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:12.301Z",
+    "updatedAt": "2026-06-06T13:15:55.910Z"
+  },
+  {
+    "id": 8,
+    "key": "[redacted length=4]",
+    "displayName": "SMTP",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":299,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:58.125Z\",\"capabilities\":[\"email\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:17.885Z",
+    "updatedAt": "2026-06-06T13:15:58.126Z"
+  },
+  {
+    "id": 9,
+    "key": "[redacted length=5]",
+    "displayName": "Redis",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":12,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T12:41:05.444Z\",\"capabilities\":[\"queue\"],\"lastError\":\"\",\"detail\":\"PING/PONG succeeded via ioredis\"}",
+    "createdAt": "2026-06-06T09:55:27.032Z",
+    "updatedAt": "2026-06-06T12:41:05.446Z"
+  },
+  {
+    "id": 12,
+    "key": "[redacted length=6]",
+    "displayName": "Qdrant",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:19:37.951Z\",\"capabilities\":[\"vector_store\"],\"lastError\":\"\",\"detail\":\"Collections endpoint passed.\",\"latencyMs\":34}",
+    "createdAt": "2026-06-06T12:39:07.547Z",
+    "updatedAt": "2026-06-06T13:19:37.953Z"
+  },
+  {
+    "id": 13,
+    "key": "[redacted length=10]",
+    "displayName": "Playwright",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":555,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:32.713Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available\"}",
+    "createdAt": "2026-06-06T12:39:11.770Z",
+    "updatedAt": "2026-06-06T13:15:32.714Z"
+  },
+  {
+    "id": 14,
+    "key": "[redacted length=6]",
+    "displayName": "Scrapy",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":500,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:44.316Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Scrapy available\"}",
+    "createdAt": "2026-06-06T12:39:14.122Z",
+    "updatedAt": "2026-06-06T13:15:44.318Z"
+  },
+  {
+    "id": 15,
+    "key": "[redacted length=11]",
+    "displayName": "Trafilatura",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":640,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:50.947Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Trafilatura available\"}",
+    "createdAt": "2026-06-06T12:39:17.314Z",
+    "updatedAt": "2026-06-06T13:15:50.949Z"
+  },
+  {
+    "id": 16,
+    "key": "[redacted length=6]",
+    "displayName": "ffmpeg",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":80,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:47.153Z\",\"capabilities\":[\"video\",\"audio\"],\"lastError\":\"\",\"detail\":\"ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers\"}",
+    "createdAt": "2026-06-06T12:39:18.781Z",
+    "updatedAt": "2026-06-06T13:15:47.155Z"
+  },
+  {
+    "id": 37,
+    "key": "[redacted length=6]",
+    "displayName": "GitHub",
+    "apiKey": "[redacted length=40]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"tool\",\"savedAt\":\"2026-06-06T14:02:16.967Z\",\"lastTestStatus\":\"passed\",\"username\":\"amarktainetwork-blip\",\"repoCount\":8,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T14:02:20.093Z\",\"latencyMs\":298,\"capabilities\":[\"repo\",\"pull_request\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T14:02:16.968Z",
+    "updatedAt": "2026-06-06T14:02:20.094Z"
+  },
+  {
+    "id": 40,
+    "key": "[redacted length=11]",
+    "displayName": "Hugging Face",
+    "apiKey": "[redacted length=37]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:14:21.058Z\",\"latencyMs\":194,\"capabilities\":[\"text\",\"vision\",\"embeddings\",\"image\",\"video\",\"stt\",\"audio\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:14:16.538Z",
+    "updatedAt": "2026-06-06T17:14:21.060Z"
+  },
+  {
+    "id": 43,
+    "key": "[redacted length=4]",
+    "displayName": "Xiaomi MiMo",
+    "apiKey": "[redacted length=51]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"provider\",\"savedAt\":\"2026-06-06T17:19:37.295Z\",\"lastTestStatus\":\"passed\",\"latencyMs\":1491,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:19:40.204Z\",\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"audio\",\"video\",\"tts\",\"stt\",\"tools\",\"web_search\"],\"lastError\":\"\",\"detail\":\"OpenAI-compatible chat passed.\"}",
+    "createdAt": "2026-06-06T17:19:37.296Z",
+    "updatedAt": "2026-06-06T17:19:40.206Z"
+  },
+  {
+    "id": 45,
+    "key": "[redacted length=4]",
+    "displayName": "Qwen / DashScope",
+    "apiKey": "[redacted length=114]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:23:46.253Z\",\"latencyMs\":987,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"image\",\"video\",\"audio\",\"async_jobs\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:23:42.334Z",
+    "updatedAt": "2026-06-06T17:23:46.254Z"
+  },
+  {
+    "id": 48,
+    "key": "[redacted length=4]",
+    "displayName": "Groq",
+    "apiKey": "[redacted length=56]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:24:01.677Z\",\"latencyMs\":236,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"stt\",\"tts\",\"tools\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:23:57.861Z",
+    "updatedAt": "2026-06-06T17:24:01.679Z"
+  },
+  {
+    "id": 51,
+    "key": "[redacted length=8]",
+    "displayName": "Together AI",
+    "apiKey": "[redacted length=50]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:26:15.041Z\",\"latencyMs\":584,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"embeddings\",\"rerank\",\"image\",\"video\",\"tools\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:26:12.748Z",
+    "updatedAt": "2026-06-06T17:26:15.042Z"
+  }
+]
+--- managerAgentLog ---
+[]
+--- modelRegistryEntry ---
+[]
+--- providerBudget ---
+[]
+--- webhookDeliveryRecord ---
+[]
+--- webhookRegistrationRecord ---
+[]
+--- workspaceConfig ---
+[]
+--- artifact_counts ---
+[
+  {
+    "_count": {
+      "id": 4
+    },
+    "appSlug": "songer-test",
+    "type": "music",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 2
+    },
+    "appSlug": "repo-workbench",
+    "type": "report",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 2
+    },
+    "appSlug": "repo-workbench",
+    "type": "code",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 1
+    },
+    "appSlug": "content-studio",
+    "type": "music",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 1
+    },
+    "appSlug": "amarktai-network",
+    "type": "music",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 1
+    },
+    "appSlug": "amarktai-network",
+    "type": "report",
+    "status": "completed"
+  },
+  {
+    "_count": {
+      "id": 1
+    },
+    "appSlug": "amarktai-network",
+    "type": "image",
+    "status": "completed"
+  }
+]
+
+===== CURRENT PLAYGROUND / STUDIO BLOCKERS =====
+src/app/api/realtime/session/route.ts:54:        error: 'Realtime service not configured',
+src/app/api/realtime/session/route.ts:72:        error: 'OpenAI provider not configured',
+src/app/api/realtime/health/route.ts:77:        : 'OpenAI provider not configured or unhealthy',
+src/app/api/guardrails/route.ts:23:      blockedCategories: result.blockedCategories,
+src/app/api/admin/media-studio/models/route.ts:55:  const blocker = genx.available ? null : genx.configured ? 'GenX is configured but unreachable.' : 'GenX is not configured.'
+src/app/api/admin/ai-routing/route.ts:52:    const adultBlocked = route.capability.startsWith('adult_') && adultGate.status !== 'ready'
+src/app/api/admin/ai-routing/route.ts:58:      status: available.length > 0 && !adultBlocked ? 'available' : 'needs_setup',
+src/app/api/admin/ai-routing/route.ts:60:      blocker: adultBlocked
+src/app/api/admin/ai-routing/route.ts:63:          ? 'Provider missing or no provider has passed its live test.'
+src/app/api/admin/ai-routing/smart/route.ts:91:        enabled: !routed.blockedReason,
+src/app/api/admin/ai-routing/smart/route.ts:93:        blocked: Boolean(safetyBlocker || routed.blockedReason || !configured || decision.avoid),
+src/app/api/admin/ai-routing/smart/route.ts:95:          ?? routed.blockedReason
+src/app/api/admin/ai-routing/smart/route.ts:101:    const selected = candidates.find((candidate) => !candidate.blocked) ?? null
+src/app/api/admin/ai-routing/smart/route.ts:104:      ...(!selected && !safetyBlocker ? [`No tested provider is available for ${canonicalCapability}.`] : []),
+src/app/api/admin/ai-routing/smart/route.ts:133:    if (candidate.blocked) {
+src/app/api/admin/ai-routing/smart/route.ts:147:      ? { ...candidate, blocked: true, blocker: `Provider intelligence: ${decision.reason}` }
+src/app/api/admin/ai-routing/smart/route.ts:151:  const selected = basePlan.blockers.length > 0 ? null : candidates.find((candidate) => !candidate.blocked) ?? null
+src/app/api/admin/global-adult-mode/route.ts:14: * blocked regardless of adult mode state.
+src/app/api/admin/global-adult-mode/route.ts:31:    blockedCategories: gate?.blockedCategories ?? ['minors', 'age_ambiguous', 'non_consensual', 'sexual_violence', 'real_person_sexual_deepfakes', 'explicit_sex_acts', 'visible_genitals', 'illegal_content', 'self_harm'],
+src/app/api/admin/global-adult-mode/route.ts:37:    note: 'When enabled, any app with safeMode=false will have adultMode treated as true. CSAM, violence, and self-harm are always blocked.',
+src/app/api/admin/global-adult-mode/route.ts:65:    note: 'When enabled, any app with safeMode=false will have adultMode treated as true. CSAM, violence, and self-harm are always blocked.',
+src/app/api/admin/repo-workbench/repos/route.ts:22:  const github = config?.configured ? await listGitHubRepos() : { repos: [], error: 'GitHub token not configured' }
+src/app/api/admin/repo-workbench/github/status/route.ts:9:  const validation = config?.configured ? await validateGitHubToken() : { valid: false, username: null, error: 'GitHub token not configured' }
+src/app/api/admin/repo-workbench/github/prs/route.ts:12:    if (!token) return NextResponse.json({ success: false, prs: [], blocker: 'GitHub token not configured' }, { status: 503 })
+src/app/api/admin/repo-workbench/[workspaceId]/run-check/route.ts:3:import { runAvailablePackageCheck, type AvailablePackageCheck } from '@/lib/repo-workbench'
+src/app/api/admin/repo-workbench/[workspaceId]/run-check/route.ts:15:    const result = await runAvailablePackageCheck(workspaceId, command as AvailablePackageCheck)
+src/app/api/admin/ai-partner/chat/route.ts:177:          { error: `GenX not configured: ${genxStatus.error ?? 'unknown'}`, code: 'provider_not_configured' },
+src/app/api/admin/ai-partner/chat/route.ts:205:          error: `Provider "${requestedProvider}" is not configured. Add an API key via Admin → AI Providers.`,
+src/app/api/admin/ai-partner/chat/route.ts:231:    if (!key) continue // not configured — skip silently
+src/app/api/admin/ai-partner/chat/route.ts:251:  // No provider available
+src/app/api/admin/conversation/stream/route.ts:55:    if (candidate.blocked) {
+src/app/api/admin/conversation/stream/route.ts:60:    candidates.push(decision.avoid ? { ...candidate, blocked: true, blocker: `Provider intelligence: ${decision.reason}` } : candidate)
+src/app/api/admin/conversation/stream/route.ts:63:  const selected = candidates.find((candidate) => !candidate.blocked) ?? null
+src/app/api/admin/conversation/stream/route.ts:109:            message: 'No provider route available',
+src/app/api/admin/settings/test-genx/route.ts:110:      error: 'GenX API key is not configured',
+src/app/api/admin/settings/test-adult/route.ts:255:      else if (errCat === 'provider_policy_block') errMsg += ' — provider safety policy blocked the test prompt'
+src/app/api/admin/settings/test-adult/route.ts:572:      else if (errCat === 'provider_policy_block') errMsg += ' — xAI safety policy blocked the test prompt; adult access may not be enabled for this key'
+src/app/api/admin/settings/test-redis/route.ts:22:      error: 'REDIS_URL is not configured',
+src/app/api/admin/settings/test-smtp/route.ts:26:      error: 'SMTP_HOST is not configured',
+src/app/api/admin/voice-login/route.ts:99:    return NextResponse.json({ error: 'Voice login service temporarily unavailable' }, { status: 503 })
+src/app/api/admin/voice-login/route.ts:137:    // DB unavailable — continue with env-var admin identity
+src/app/api/admin/approvals/route.ts:6: * Falls back to local VPS JSON store if DB is unavailable.
+src/app/api/admin/artifacts/route.ts:121:  // Local VPS fallback — always return empty array (not blocked)
+src/app/api/admin/studio/execute/route.ts:231:      jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: config.detail, blocker: config.detail, route: config,
+src/app/api/admin/studio/execute/route.ts:252:  if (route.blockedReason) {
+src/app/api/admin/studio/execute/route.ts:255:      jobStatus: 'blocked', artifactId: null, storageUrl: null,
+src/app/api/admin/studio/execute/route.ts:256:      error: route.blockedReason, blocker: route.blockedReason, route,
+src/app/api/admin/studio/execute/route.ts:281:        return NextResponse.json({ success: false, executed: false, error: 'Hugging Face image generation is task-based and is not wired to this image execution route yet.', route }, { status: 409 })
+src/app/api/admin/app-agents/[slug]/crawl/route.ts:25:      error: 'Firecrawl is not configured',
+src/app/api/admin/app-agents/[slug]/crawl/route.ts:38:    return NextResponse.json({ error: 'App URL not configured for this agent. Set it in the agent setup.' }, { status: 422 })
+src/app/api/admin/amarktai-assistant/chat/route.ts:87:  if (route.blockedReason || !route.selectedProvider || !route.selectedModel) {
+src/app/api/admin/amarktai-assistant/chat/route.ts:90:      error: route.blockedReason ?? 'No approved route is available for this assistant request',
+src/app/api/admin/amarktai-assistant/chat/route.ts:91:      blocker: route.blockedReason ?? 'No approved route is available for this assistant request',
+src/app/api/admin/amarktai-assistant/context/route.ts:18:    getRepoWorkbenchStatus().catch((error) => ({ status: error instanceof Error ? error.message : 'unavailable' })),
+src/app/api/admin/amarktai-assistant/tts/route.ts:25:  if (route.blockedReason || !route.selectedProvider || !route.selectedModel) {
+src/app/api/admin/amarktai-assistant/tts/route.ts:26:    return NextResponse.json({ success: false, status: route.blockedReason ?? 'Needs key/test', route }, { status: 409 })
+src/app/api/admin/runtime-truth/route.ts:31:      { success: false, error: message, blocker: 'Runtime truth unavailable', nextAction: 'Check server logs' },
+src/app/api/admin/app-ai-package/route.ts:52:  status: z.enum(['draft', 'ready', 'needs_configuration', 'blocked']),
+src/app/api/admin/app-safety/route.ts:11: *  2. CSAM / violence / self-harm are ALWAYS blocked regardless of mode.
+src/app/api/admin/app-safety/route.ts:39:    note: 'CSAM, violence, and self-harm content is ALWAYS blocked regardless of adult mode setting.',
+src/app/api/admin/app-safety/route.ts:108:    note: 'CSAM, violence, and self-harm content is ALWAYS blocked regardless of adult mode setting.',
+src/app/api/admin/app-profiles/route.ts:33:      // DB unavailable — return in-memory only
+src/app/api/admin/apps/intelligence/route.ts:184:      'FIRECRAWL_API_KEY is not configured. Set it via Admin → Settings → Service Integrations. ' +
+src/app/api/admin/music-studio/route.ts:159:          jobStatus: 'needs_setup',
+src/app/api/admin/multimodal/route.ts:103:          ? 'Adult 18+ content is gated per-app. CSAM/violence/self-harm always blocked.'
+src/app/api/admin/deploy/direct-vps/route.ts:97:      `SSH host: ${sshHost ?? 'NOT CONFIGURED — deploy script generated only'}`,
+src/app/api/admin/deploy/direct-vps/route.ts:124:      logLines.push(`VPS_SSH_HOST not configured — deploy script generated for manual execution.`)
+src/app/api/admin/deploy/direct-vps/route.ts:127:      deployError = 'VPS_SSH_HOST not configured. Script generated for manual use.'
+src/app/api/admin/brain/test/route.ts:168: * available / unavailable before any execution request is made.
+src/app/api/admin/brain/test/route.ts:223:  // unavailable — causing a false 503 before the request reaches orchestrate().
+src/app/api/admin/brain/test/route.ts:229:  // incorrectly returns all capabilities as unavailable. We bypass that 503 below.
+src/app/api/admin/brain/test/route.ts:279:    const reason = capabilityRoutes.missingCapabilities[0] ?? 'Capability unavailable'
+src/app/api/admin/brain/test/route.ts:372:            error: `Voice synthesis service unavailable: ${fetchErr instanceof Error ? fetchErr.message : 'connection failed'}. Configure a TTS provider in Admin → AI Providers.`,
+src/app/api/admin/brain/test/route.ts:439:            code: 'image_service_unavailable',
+src/app/api/admin/brain/test/route.ts:667:  const unavailable = capabilityRoutes.routes.filter(r => !r.available)
+src/app/api/admin/brain/test/route.ts:668:  if (unavailable.length > 0 && !body.providerKey) {
+src/app/api/admin/brain/test/route.ts:674:    const reasons = unavailable.map(r => r.missingMessage ?? 'Capability unavailable').filter(Boolean)
+src/app/api/admin/voice/options/route.ts:45:          ? `${voice.provider} is not configured in Settings.`
+src/app/api/admin/voice/preview/route.ts:62:        ? `${choice.provider} is not configured or not reachable.`
+src/app/api/admin/geo/route.ts:5: * Truthfully reports degraded state when external geocoding is not configured.
+src/app/api/admin/geo/route.ts:37:        : 'Geo subsystem requires MAPBOX_TOKEN, GOOGLE_MAPS_KEY, or GEO_PROVIDER_KEY to be configured. Location features are unavailable.',
+src/app/api/admin/geo/route.ts:43:      return NextResponse.json({ events: [], note: 'Geo provider not configured', status: 'not_configured' })
+src/app/api/admin/geo/route.ts:63:      { error: 'Geo subsystem is not configured. Set MAPBOX_TOKEN, GOOGLE_MAPS_KEY, or GEO_PROVIDER_KEY.' },
+src/app/api/admin/command/route.ts:92:    return { executed: false, error: `No tested connection currently provides ${String(route.selectedCapability).replaceAll('_', ' ')}.` }
+src/app/api/admin/research/opportunity/route.ts:6: * Falls back to local VPS store if artifact-store unavailable.
+src/app/api/admin/research/url/route.ts:46:      warning = 'Playwright/Trafilatura unavailable; used local fetch extraction.'
+src/app/api/admin/research/jobs/route.ts:6: * Also includes local VPS research jobs when DB/artifact-store unavailable.
+src/app/api/admin/jobs/route.ts:31:        // Redis may be unavailable
+src/app/api/admin/quick-access/route.ts:43:      // DB unavailable — fall through to env-var check below
+src/app/api/admin/app-builder/projects/route.ts:30:    return NextResponse.json({ error: error instanceof Error ? error.message : 'Project storage unavailable' }, { status: 503 })
+src/app/api/admin/integrations-status/route.ts:37:        error: qdrantUrl ? null : 'QDRANT_URL not configured',
+src/app/api/admin/integrations-status/route.ts:47:        error: redisUrl ? null : 'REDIS_URL not configured',
+src/app/api/admin/system/live-readiness/route.ts:177:      repo.workspaceRoot ? `Workspace root: ${repo.workspaceRoot}` : 'Workspace root unavailable.',
+src/app/api/admin/system/live-readiness/route.ts:250:      storage.configured && storage.writable ? null : (storage.error ?? ((storage.missingSetup ?? []).join('; ') || 'Artifact storage is not configured/writable.')),
+src/app/api/admin/system/live-readiness/route.ts:256:      queue.backendAvailable ? `Queue backend available; counts=${JSON.stringify(queue.counts)}` : 'Redis/BullMQ queue unavailable; inline/non-queue flows may still run.',
+src/app/api/admin/system/live-readiness/route.ts:262:    check('webdock', 'Webdock optional status', webdockKey ? 'OPTIONAL' : 'OPTIONAL', webdockKey ? 'Webdock key configured.' : 'Webdock not configured; VPS metrics can use local fallback where available.', null),
+src/app/api/brain/image/route.ts:356:    // ── No provider available — structured failure, never falls back to text ──
+src/app/api/brain/image/route.ts:358:    const rejectionReasons: string[] = ['genx: not configured or returned no image'];
+src/app/api/brain/suggestive-video/route.ts:13: * reports suggestive_video_generation as unavailable (no BACKEND_ROUTE_EXISTS
+src/app/api/brain/suggestive-video/route.ts:191:          error: validation.reason ?? 'Script blocked by safety filter.',
+src/app/api/brain/suggestive-video/route.ts:192:          prompt_blocked: true,
+src/app/api/brain/suggestive-video/route.ts:211:        'no provider integration is wired for video generation.',
+src/app/api/brain/image-edit/route.ts:256:    // ── No provider available ────────────────────────────────────────────
+src/app/api/brain/adult-image/route.ts:52:      return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
+src/app/api/brain/adult-image/route.ts:61:        jobStatus: 'blocked',
+src/app/api/brain/adult-image/route.ts:71:        jobStatus: 'blocked',
+src/app/api/brain/adult-image/route.ts:72:        error: `Prompt blocked by policy: ${scan.categories.join(', ')}.`,
+src/app/api/brain/adult-image/route.ts:81:        jobStatus: 'blocked',
+src/app/api/brain/adult-image/route.ts:160:      jobStatus: 'needs_setup',
+src/app/api/brain/adult-image/route.ts:161:      error: 'No tested adult image provider returned a real image. Configure Together or Hugging Face.',
+src/app/api/brain/stt/route.ts:25: * STRICT RULE: Never fakes success. Returns error if no provider configured.
+src/app/api/brain/stt/route.ts:29:  const unavailable = (
+src/app/api/brain/stt/route.ts:30:    reason: 'provider_not_configured' | 'all_providers_unavailable' | 'invalid_request' | 'transcription_failed',
+src/app/api/brain/stt/route.ts:50:      return unavailable('invalid_request', 'Content-Type must be multipart/form-data with an audio file', 400);
+src/app/api/brain/stt/route.ts:57:      return unavailable('invalid_request', 'An audio file is required in the "file" field', 400);
+src/app/api/brain/stt/route.ts:102:        return unavailable('provider_not_configured', 'GenX STT requested but GenX is not configured or returned no transcript. Add GENX_API_URL/GENX_API_KEY.', 503, 'genx');
+src/app/api/brain/stt/route.ts:110:        return unavailable('provider_not_configured', 'Groq STT requested but no Groq API key is configured. Add it via Admin → AI Providers.', 503, 'groq');
+src/app/api/brain/stt/route.ts:115:        return unavailable('provider_not_configured', 'OpenAI STT requested but no OpenAI API key is configured. Add it via Admin → AI Providers.', 503, 'openai');
+src/app/api/brain/stt/route.ts:120:        return unavailable('provider_not_configured', 'Gemini STT requested but no Gemini API key is configured. Add it via Admin → AI Providers.', 503, 'gemini');
+src/app/api/brain/stt/route.ts:125:        return unavailable('provider_not_configured', 'Hugging Face STT requested but no Hugging Face API key is configured. Add it via Admin → AI Providers.', 503, 'huggingface');
+src/app/api/brain/stt/route.ts:130:        return unavailable('provider_not_configured', 'Qwen STT requested but no Qwen/DashScope API key is configured. Add it via Admin → AI Providers.', 503, 'qwen');
+src/app/api/brain/stt/route.ts:135:      // OpenAI is not configured. Gemini, Qwen, and Hugging Face are last-resort options.
+src/app/api/brain/stt/route.ts:147:        return unavailable(
+src/app/api/brain/stt/route.ts:148:          'all_providers_unavailable',
+src/app/api/brain/stt/route.ts:149:          'Voice input is currently unavailable: no STT provider is configured. Add an API key via Admin → AI Providers (OpenAI, Groq, Gemini, Qwen, or Hugging Face).',
+src/app/api/brain/stt/route.ts:174:          return unavailable('transcription_failed', `Groq transcription failed: ${err}`, response.status, 'groq');
+src/app/api/brain/stt/route.ts:216:        return unavailable('transcription_failed', `Gemini transcription failed: ${err}`, response.status, 'gemini');
+src/app/api/brain/stt/route.ts:250:        return unavailable('transcription_failed', `Hugging Face transcription failed: ${err}`, response.status, 'huggingface');
+src/app/api/brain/stt/route.ts:304:        return unavailable('transcription_failed', `Qwen Audio transcription failed: ${err}`, response.status, 'qwen');
+src/app/api/brain/stt/route.ts:336:      return unavailable('transcription_failed', `OpenAI transcription failed: ${err}`, response.status, 'openai');
+src/app/api/brain/stt/route.ts:350:    return unavailable('transcription_failed', `Internal server error: ${String(err)}`, 500);
+src/app/api/brain/stream/route.ts:95:      { error: 'Input blocked by safety filter', traceId, categories: inputFilter.categories },
+src/app/api/brain/stream/route.ts:150:            send({ type: 'error', message: 'Provider anthropic is not configured — add an API key via Admin → AI Providers.' })
+src/app/api/brain/stream/route.ts:198:            send({ type: 'error', message: 'Provider gemini is not configured — add an API key via Admin → AI Providers.' })
+src/app/api/brain/stream/route.ts:238:            send({ type: 'error', message: 'Provider cohere is not configured — add an API key via Admin → AI Providers.' })
+src/app/api/brain/stream/route.ts:309:          send({ type: 'error', message: `Provider ${resolvedProvider} is not configured — add an API key via Admin → AI Providers.` })
+src/app/api/brain/relay/route.ts:35:import { scanContent, blockedExplanation, loadAppSafetyConfigFromDB } from '@/lib/content-filter'
+src/app/api/brain/relay/route.ts:83:        error: 'Input blocked by safety filter',
+src/app/api/brain/relay/route.ts:86:        message: blockedExplanation(inputFilter.categories),
+src/app/api/brain/video-generate/[jobId]/route.ts:133:      jobStatus: 'blocked', artifactId: null, storageUrl: null, error: 'jobId is required', blocker: 'jobId is required',
+src/app/api/brain/video-generate/[jobId]/route.ts:191:    const message = error instanceof Error ? error.message : 'Provider polling temporarily unavailable.'
+src/app/api/brain/video-generate/route.ts:57:    jobStatus: 'blocked', artifactId: null, storageUrl: null, error: 'Invalid request',
+src/app/api/brain/video-generate/route.ts:70:        jobStatus: 'blocked', artifactId: null, storageUrl: null, error, blocker: error,
+src/app/api/brain/video-generate/route.ts:75:      const error = `Prompt blocked by policy: ${scan.categories.join(', ')}.`
+src/app/api/brain/video-generate/route.ts:78:        jobStatus: 'blocked', artifactId: null, storageUrl: null, error, blocker: error,
+src/app/api/brain/video-generate/route.ts:128:      jobStatus: 'needs_setup',
+src/app/api/brain/video-generate/route.ts:134:      error: 'No tested approved video provider could start a real job.',
+src/app/api/brain/video-generate/route.ts:135:      blocker: 'No tested approved video provider could start a real job.',
+src/app/api/brain/suggestive-video-gen/route.ts:6: * CURRENT STATE: BLOCKED — no working video provider for this capability.
+src/app/api/brain/suggestive-video-gen/route.ts:94:          promptBlocked: true,
+src/app/api/brain/suggestive-video-gen/route.ts:114:        availabilityLevel: 'BLOCKED',
+src/app/api/brain/execute/route.ts:44: *   503 — missing provider / key / model (service unavailable)
+src/app/api/brain/execute/route.ts:54:  // Missing provider / no provider at all → 503
+src/app/api/brain/suggestive-image/route.ts:124:          error: validation.reason ?? 'Prompt blocked by safety filter.',
+src/app/api/brain/suggestive-image/route.ts:125:          prompt_blocked: true,
+src/app/api/brain/suggestive-image/route.ts:172:        // OpenAI unavailable — fall through to HuggingFace
+src/app/api/brain/suggestive-image/route.ts:256:        // HuggingFace unavailable
+src/app/api/brain/suggestive-image/route.ts:378:    // ── No provider available ───────────────────────────────────────────
+src/app/api/brain/avatar-video/route.ts:12:      jobStatus: 'blocked',
+src/app/api/brain/avatar-video/route.ts:26:    : 'avatar video provider unavailable'
+src/app/api/brain/avatar-video/route.ts:34:    jobStatus: 'needs_setup',
+src/app/api/brain/request/route.ts:13:import { scanContent, blockedExplanation, loadAppSafetyConfigFromDB, getAppSafetyConfig } from '@/lib/content-filter'
+src/app/api/brain/request/route.ts:28:const SETTINGS_BLOCKED_CAPABILITIES = new Set([
+src/app/api/brain/request/route.ts:91:  // ── Fast pre-auth content scan (always-blocked categories only) ───────
+src/app/api/brain/request/route.ts:110:        errors: ['Input blocked by safety filter'],
+src/app/api/brain/request/route.ts:112:        message: blockedExplanation(preAuthFilter.categories),
+src/app/api/brain/request/route.ts:200:    const missing = capabilityResolution.routeResult.missingCapabilities[0] ?? 'Capability is unavailable'
+src/app/api/brain/request/route.ts:201:    const blockedByPolicy = capabilityResolution.routeResult.routes.some(
+src/app/api/brain/request/route.ts:202:      (route) => !route.available && SETTINGS_BLOCKED_CAPABILITIES.has(route.capability),
+src/app/api/brain/request/route.ts:211:          statusCode: blockedByPolicy ? 403 : 503,
+src/app/api/brain/request/route.ts:217:      { status: blockedByPolicy ? 403 : 503 },
+src/app/api/brain/request/route.ts:294:    // Retrieval engine unavailable — proceed without context
+src/app/api/brain/request/route.ts:312:    // Federated memory unavailable — proceed without it
+src/app/api/brain/request/route.ts:424:  // Return 503 when orchestration produced no output AND no provider was routed.
+src/app/api/brain/request/route.ts:425:  // This catches all "no provider available" scenarios regardless of error message format.
+src/app/api/brain/request/route.ts:447:      if (outputModeration.blocked) {
+src/app/api/brain/request/route.ts:462:            errors: ['Content blocked by safety filter'],
+src/app/api/brain/request/route.ts:464:            message: blockedExplanation(outputModeration.contentFilter.categories),
+src/app/api/brain/request/route.ts:492:            errors: ['Content blocked by safety filter'],
+src/app/api/brain/request/route.ts:494:            message: blockedExplanation(filterResult.categories),
+src/app/api/brain/moderation/route.ts:94:    // ── No provider available ──────────────────────────────────────────
+src/app/api/brain/research/route.ts:215:    // ── No provider available ───────────────────────────────────────────
+src/app/api/brain/video/route.ts:16: * integrated — no provider SDK processes the scenes into rendered
+src/app/api/brain/video/route.ts:18: * as unavailable.
+src/app/api/brain/adult-text/route.ts:4:  blockedExplanation,
+src/app/api/brain/adult-text/route.ts:192:      return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', error: 'prompt or message is required.' }), { status: 400 })
+src/app/api/brain/adult-text/route.ts:201:        jobStatus: 'blocked',
+src/app/api/brain/adult-text/route.ts:210:        ? blockedExplanation(inputScan.categories)
+src/app/api/brain/adult-text/route.ts:212:      return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', status: 'policy_refused', error }), { status: 422 })
+src/app/api/brain/adult-text/route.ts:220:        jobStatus: 'blocked',
+src/app/api/brain/adult-text/route.ts:248:          jobStatus: 'blocked',
+src/app/api/brain/adult-text/route.ts:250:          error: outputScan.flagged ? blockedExplanation(outputScan.categories) : 'Provider output violated adult safety policy.',
+src/app/api/brain/adult-text/route.ts:295:      jobStatus: 'needs_setup',
+src/app/api/brain/adult-text/route.ts:296:      status: 'needs_setup',
+src/app/api/brain/adult-text/route.ts:297:      error: 'No tested adult text provider returned output. Configure Together or a Hugging Face private endpoint.',
+src/app/api/brain/tts/route.ts:53:      return NextResponse.json(result({ success: false, capability, traceId, jobStatus: 'blocked', error: 'text is required.' }), { status: 400 })
+src/app/api/brain/tts/route.ts:64:          jobStatus: 'blocked',
+src/app/api/brain/tts/route.ts:74:          jobStatus: 'blocked',
+src/app/api/brain/tts/route.ts:75:          error: `Text blocked by policy: ${scan.categories.join(', ')}.`,
+src/app/api/brain/tts/route.ts:88:        jobStatus: 'blocked',
+src/app/api/brain/tts/route.ts:97:        jobStatus: 'blocked',
+src/app/api/brain/tts/route.ts:238:      jobStatus: 'needs_setup',
+src/app/api/brain/tts/route.ts:239:      error: `No tested ${capability} provider returned real audio.`,
+src/app/api/brain/agent/dispatch/route.ts:85:        error: audit.reasons[0] ?? `Agent ${agentType} requires a provider that is not configured`,
+src/app/api/brain/agent/dispatch/route.ts:123:    // Queue unavailable — fall through to synchronous
+src/app/api/brain/embeddings/route.ts:198:    // ── No provider available ──────────────────────────────────────────
+src/app/api/system/health-deep/route.ts:39:  let redisStatus: 'ok' | 'unavailable' | 'error' = 'unavailable'
+src/app/api/system/health-deep/route.ts:107:  if (redisStatus === 'unavailable') healthScore -= 5
+src/lib/self-healing.ts:31:  | 'model_unavailable'
+src/lib/self-healing.ts:373: * Safe to call from tests — fails silently if the DB is unavailable.
+src/lib/semantic-cache.ts:9: * Gracefully degrades when infrastructure is unavailable.
+src/lib/semantic-cache.ts:123:  } catch { /* Vector store unavailable — miss */ }
+src/lib/circuit-breaker.ts:252:    throw new Error(`Circuit breaker OPEN for ${circuitKey}. Service unavailable.`)
+src/lib/provider-intelligence.ts:155:  if (!matching.length) return { avoid: false, reason: 'No provider-result history yet.' }
+src/lib/graphiti-client.ts:12: * Requires GRAPHITI_API_URL env var. Degrades gracefully if unavailable.
+src/lib/graphiti-client.ts:59:    return { available: false, configured: false, error: 'GRAPHITI_API_URL not configured' }
+src/lib/graphiti-client.ts:65:    error: apiKey ? null : 'GRAPHITI_API_KEY not configured',
+src/lib/orchestrator.ts:471:      reason: 'No providers available',
+src/lib/orchestrator.ts:627:    // Budget DB unavailable — proceed with all providers
+src/lib/orchestrator.ts:739:          `[orchestrator] GenX not available (${genxStatus.error ?? 'not configured'}) — routing via provider vault. task=${taskType}`,
+src/lib/orchestrator.ts:854:        `Provider override "${providerOverride}" is not configured or usable — using routed provider instead`,
+src/lib/orchestrator.ts:869:  // 6. No providers at all
+src/lib/platform-settings-truth.ts:66:            ? 'Optional connection is not configured'
+src/lib/repo-workbench.ts:163:    throw new Error('Path traversal blocked')
+src/lib/repo-workbench.ts:170:  if (normalized.split('/').some((part) => part === '..')) throw new Error('Path traversal blocked')
+src/lib/repo-workbench.ts:1025:export async function runAvailablePackageCheck(workspaceId: string, command: AvailablePackageCheck) {
+src/lib/repo-workbench.ts:1243:  if (isSecretPath(filePath)) throw new Error('Editing secret/env files is blocked in Repo Workbench')
+src/lib/coding-agent.ts:5: * using a real AI provider. Falls back to scaffold templates when no provider
+src/lib/coding-agent.ts:147: * Returns null when no provider is configured (triggers scaffold fallback).
+src/lib/coding-agent.ts:176:    // DB unavailable — fall through to scaffold
+src/lib/coding-agent.ts:910: * code. Falls back to scaffold templates when no provider is configured so
+src/lib/coding-agent.ts:948:  // ── Fallback to pure scaffold when AI unavailable / parse failed ──────
+src/lib/vector-store.ts:11: * When QDRANT_URL is not configured, operations degrade gracefully to
+src/lib/universal-provider-call.ts:182:    throw new Error(`Provider "${request.providerKey}" is not configured. Add ${config.envVars.join(' or ')} in Settings.`)
+src/lib/universal-provider-call.ts:284:    if (!opened) throw new Error(`Provider "${request.providerKey}" is not configured for universal calls.`)
+src/lib/litellm-client.ts:13: * Requires LITELLM_API_URL env var. Falls back to direct provider calls if unavailable.
+src/lib/litellm-client.ts:65:    return { available: false, proxyUrl: null, error: 'LITELLM_API_URL not configured' }
+src/lib/litellm-client.ts:140: * Call LiteLLM proxy for model routing. Falls back gracefully if proxy unavailable.
+src/lib/litellm-client.ts:154:      error: 'LiteLLM proxy not configured',
+src/lib/capability-engine.ts:413:  blockedProviders?: string[];
+src/lib/capability-engine.ts:452:    // Backend route guard: if no execution route exists, capability is unavailable
+src/lib/capability-engine.ts:468:        'Realtime voice service not configured: set REALTIME_SERVICE_URL to the running WebSocket service (see services/realtime/). ' +
+src/lib/capability-engine.ts:517:    if (request.blockedProviders && request.blockedProviders.length > 0) {
+src/lib/capability-engine.ts:519:        (m) => !request.blockedProviders!.includes(m.provider),
+src/lib/capability-engine.ts:581:// If a route does not exist, the capability must show UNAVAILABLE regardless
+src/lib/capability-engine.ts:603:  adult_18plus_image:        true,   // /api/brain/adult-image (Hugging Face — adultMode gated, ALWAYS_BLOCKED enforced)
+src/lib/capability-engine.ts:645:      providerStatuses.push(`${provider}: not configured`);
+src/lib/capability-engine.ts:656:      return `No provider configured: ${req.label} requires a provider such as ${suggestions}. Status: ${providerStatuses.join('; ')}.`;
+src/lib/capability-engine.ts:658:    return `No provider configured: configure a supported provider (${suggestions}) to enable ${req.label}.`;
+src/lib/capability-engine.ts:704: * availability. A capability in this set is 'blocked by settings' when the required
+src/lib/capability-engine.ts:706: * required). This is distinct from UNAVAILABLE (no provider/route) and is exposed
+src/lib/capability-engine.ts:707: * as the `blockedBySettings` field on CapabilityStatusEntry for clean UI rendering.
+src/lib/capability-engine.ts:721:// Phase 1 — AVAILABLE / PARTIAL / BLOCKED availability levels
+src/lib/capability-engine.ts:731: *  BLOCKED   — no backend route, no provider, or settings-gated without the
+src/lib/capability-engine.ts:737:export type CapabilityAvailabilityLevel = 'AVAILABLE' | 'PARTIAL' | 'BLOCKED';
+src/lib/capability-engine.ts:741: * When the primary capability is unavailable but the fallback is available,
+src/lib/capability-engine.ts:742: * the capability is marked PARTIAL rather than BLOCKED.
+src/lib/capability-engine.ts:759:  return 'BLOCKED';
+src/lib/capability-engine.ts:770:  blockedBySettings: boolean;
+src/lib/capability-engine.ts:782:    blockedBySettings: !route.available && SETTINGS_GATED_CAPABILITIES.has(route.capability),
+
+===== BUILD + HEALTH =====
+├ ƒ /api/contact                                             673 B         103 kB
+├ ƒ /api/emotions                                            673 B         103 kB
+├ ƒ /api/fine-tune                                           673 B         103 kB
+├ ƒ /api/guardrails                                          673 B         103 kB
+├ ƒ /api/health                                              673 B         103 kB
+├ ƒ /api/health/ping                                         673 B         103 kB
+├ ƒ /api/integrations/events                                 673 B         103 kB
+├ ƒ /api/integrations/heartbeat                              673 B         103 kB
+├ ƒ /api/integrations/metrics                                673 B         103 kB
+├ ƒ /api/integrations/vps-resources                          673 B         103 kB
+├ ƒ /api/prompts                                             673 B         103 kB
+├ ƒ /api/rag                                                 673 B         103 kB
+├ ƒ /api/realtime/health                                     673 B         103 kB
+├ ƒ /api/realtime/session                                    673 B         103 kB
+├ ƒ /api/system/events                                       673 B         103 kB
+├ ƒ /api/system/health-deep                                  673 B         103 kB
+├ ƒ /api/tools                                               673 B         103 kB
+├ ƒ /api/voice/stt                                           673 B         103 kB
+├ ƒ /api/voice/tts                                           673 B         103 kB
+├ ƒ /api/waitlist                                            673 B         103 kB
+├ ƒ /api/webhooks                                            673 B         103 kB
+├ ƒ /api/workflows                                           673 B         103 kB
+├ ○ /apps                                                    673 B         103 kB
+├ ○ /contact                                               3.62 kB         109 kB
+├ ○ /network-apps                                          2.28 kB         108 kB
+├ ○ /platform                                              2.28 kB         108 kB
+├ ○ /privacy                                               2.27 kB         108 kB
+├ ○ /terms                                                 2.27 kB         108 kB
+└ ○ /voice-access                                            673 B         103 kB
++ First Load JS shared by all                               102 kB
+  ├ chunks/1255-5c680abb9db89955.js                        46.2 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js                    54.2 kB
+  └ other shared chunks (total)                            1.95 kB
+
+
+ƒ Middleware                                               38.3 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+{"status":"ok","timestamp":"2026-06-08T16:46:10.937Z","version":"1.0.0","db":"ok","latencyMs":105}
+
+================================================================
+ END AUDIT
+================================================================

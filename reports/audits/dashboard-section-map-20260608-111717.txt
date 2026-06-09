@@ -1,0 +1,1328 @@
+================================================================
+ AMARKTAI DASHBOARD SECTION MAP
+================================================================
+Mon Jun  8 11:17:17 UTC 2026
+/var/www/amarktai-audit/Amarktai-Network-2
+amarktainetw
+
+===== GIT STATE =====
+phase1-ai-brain-router
+4867993 fix: make outputs media library live and artifact-aware
+ebc3d61 fix: preserve vocal song options in studio music generation
+e6a14b4 fix: serve media artifacts with browser-ready MIME types
+ea0d4da fix: persist authenticated GenX media artifacts locally
+876b146 fix: normalize studio media routing and prove music jobs
+25eb342 fix: bridge assistant stream route to working chat execution
+4ec9e37 feat: stabilize AI brain and provider universe truth
+03da8ae Merge pull request #83 from amarktainetwork-blip/fix-live-media-execution-artifacts-jobs
+823f1eb Fix live media job and artifact contracts
+54f6f54 Merge pull request #82 from amarktainetwork-blip/standalone-core-media-dashboard-fix
+?? reports/
+ahead/behind origin/main:
+0	7
+
+===== DASHBOARD PAGE FILES =====
+src/app/admin/dashboard/agents/page.tsx
+src/app/admin/dashboard/app-builder/page.tsx
+src/app/admin/dashboard/apps-agents/page.tsx
+src/app/admin/dashboard/command/page.tsx
+src/app/admin/dashboard/memory-learning/page.tsx
+src/app/admin/dashboard/memory/page.tsx
+src/app/admin/dashboard/network-apps/page.tsx
+src/app/admin/dashboard/operations/page.tsx
+src/app/admin/dashboard/outputs/page.tsx
+src/app/admin/dashboard/page.tsx
+src/app/admin/dashboard/settings/page.tsx
+src/app/admin/dashboard/studio/page.tsx
+src/app/admin/dashboard/system/page.tsx
+src/app/admin/dashboard/workbench/page.tsx
+src/app/admin/dashboard/workspace/page.tsx
+
+===== DASHBOARD LAYOUT / NAV FILES =====
+src/app/admin/dashboard/agents/page.tsx
+src/app/admin/dashboard/app-builder/page.tsx
+src/app/admin/dashboard/apps-agents/page.tsx
+src/app/admin/dashboard/command/page.tsx
+src/app/admin/dashboard/layout.tsx
+src/app/admin/dashboard/memory-learning/page.tsx
+src/app/admin/dashboard/memory/page.tsx
+src/app/admin/dashboard/network-apps/page.tsx
+src/app/admin/dashboard/operations/page.tsx
+src/app/admin/dashboard/outputs/page.tsx
+src/app/admin/dashboard/page.tsx
+src/app/admin/dashboard/settings/page.tsx
+src/app/admin/dashboard/studio/page.tsx
+src/app/admin/dashboard/system/page.tsx
+src/app/admin/dashboard/workbench/page.tsx
+src/app/admin/dashboard/workspace/page.tsx
+
+===== DASHBOARD NAV TERMS =====
+src/app/admin/dashboard/layout.tsx:5:import { usePathname, useRouter } from 'next/navigation'
+src/app/admin/dashboard/layout.tsx:8:import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+src/app/admin/dashboard/layout.tsx:54:  const sidebar = (
+src/app/admin/dashboard/layout.tsx:58:        <Link href="/admin/dashboard" className="group block">
+src/app/admin/dashboard/layout.tsx:69:              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Command OS</p>
+src/app/admin/dashboard/layout.tsx:75:      {/* System vitals strip */}
+src/app/admin/dashboard/layout.tsx:87:      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Dashboard navigation">
+src/app/admin/dashboard/layout.tsx:94:                href={item.href}
+src/app/admin/dashboard/layout.tsx:114:      </nav>
+src/app/admin/dashboard/layout.tsx:143:        {sidebar}
+src/app/admin/dashboard/layout.tsx:154:                aria-label="Open navigation"
+src/app/admin/dashboard/layout.tsx:172:        {/* Mobile nav overlay */}
+src/app/admin/dashboard/layout.tsx:175:            <button className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />
+src/app/admin/dashboard/layout.tsx:177:              {sidebar}
+src/app/admin/dashboard/workspace/page.tsx:1:import CommandCenter from '@/components/dashboard/CommandCenter'
+src/app/admin/dashboard/workspace/page.tsx:3:export default function WorkspacePage() {
+src/app/admin/dashboard/workspace/page.tsx:4:  return <CommandCenter />
+src/app/admin/dashboard/settings/page.tsx:5:import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
+src/app/admin/dashboard/settings/page.tsx:7:type SettingsTruth = {
+src/app/admin/dashboard/settings/page.tsx:8:  entries: SettingsTruthEntry[]
+src/app/admin/dashboard/settings/page.tsx:12:export default function SettingsPage() {
+src/app/admin/dashboard/settings/page.tsx:13:  const [truth, setTruth] = useState<SettingsTruth | null>(null)
+src/app/admin/dashboard/settings/page.tsx:29:        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Settings</p>
+src/app/admin/dashboard/settings/page.tsx:49:function ConnectionCard({ entry, refresh }: { entry: SettingsTruthEntry; refresh: () => Promise<void> }) {
+src/app/admin/dashboard/page.tsx:2:import { ArrowRight, Command, Library, ShieldCheck } from 'lucide-react'
+src/app/admin/dashboard/page.tsx:5:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+src/app/admin/dashboard/page.tsx:8:type CommandJob = { id: string; prompt: string; status: string; route?: { intent?: string; surface?: string }; createdAt: string }
+src/app/admin/dashboard/page.tsx:12:  const jobs = listRecords<CommandJob>('jobs/command-jobs.json').slice(-5).reverse()
+src/app/admin/dashboard/page.tsx:13:  const runtime = await getDashboardRuntimeTruth().catch(() => null)
+src/app/admin/dashboard/page.tsx:16:    ...(!runtime ? ['Runtime readiness could not be checked. Open System for details.'] : []),
+src/app/admin/dashboard/page.tsx:17:    ...(runtime && runtime.blockers.length > 0 ? ['Some live capabilities still need setup. Open Settings for the exact actions.'] : []),
+src/app/admin/dashboard/page.tsx:29:          <Link href="/admin/dashboard/workspace" className="group rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/15">
+src/app/admin/dashboard/page.tsx:30:            <Command className="h-7 w-7 text-cyan-300" />
+src/app/admin/dashboard/page.tsx:31:            <p className="mt-4 text-lg font-black text-white">Open Workspace</p>
+src/app/admin/dashboard/page.tsx:46:        <Metric icon={<Command />} label="Active workspace jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
+src/app/admin/dashboard/page.tsx:52:        <Panel title="Current jobs" empty="No workspace jobs yet. Open Workspace to start one.">
+src/app/admin/dashboard/page.tsx:59:              <p className="mt-1 text-xs text-slate-400">{job.route?.surface ? `${job.route.surface} work` : 'Command work'}</p>
+src/app/admin/dashboard/studio/page.tsx:8:import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
+src/app/admin/dashboard/studio/page.tsx:10:type StudioMode = {
+src/app/admin/dashboard/studio/page.tsx:12:  tab: StudioTab
+src/app/admin/dashboard/studio/page.tsx:18:const studioModes: StudioMode[] = [
+src/app/admin/dashboard/studio/page.tsx:70:type StudioResultDetails = {
+src/app/admin/dashboard/studio/page.tsx:80:export default function StudioPage() {
+src/app/admin/dashboard/studio/page.tsx:81:  const [mode, setMode] = useState<StudioMode>(studioModes[0])
+src/app/admin/dashboard/studio/page.tsx:87:  const [provider, setProvider] = useState('auto')
+src/app/admin/dashboard/studio/page.tsx:98:  const [mediaSize, setMediaSize] = useState('1024x1024')
+src/app/admin/dashboard/studio/page.tsx:112:  const [lastResult, setLastResult] = useState<StudioResultDetails | null>(null)
+src/app/admin/dashboard/studio/page.tsx:151:  const executionProvider = selectedModel?.provider ?? provider
+src/app/admin/dashboard/studio/page.tsx:154:  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
+src/app/admin/dashboard/studio/page.tsx:155:  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
+src/app/admin/dashboard/studio/page.tsx:181:          providerOverride: executionProvider,
+src/app/admin/dashboard/studio/page.tsx:188:      if (!response.ok || !response.body) throw new Error('Studio stream failed')
+src/app/admin/dashboard/studio/page.tsx:214:      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+src/app/admin/dashboard/studio/page.tsx:221:  async function runStudioAction() {
+src/app/admin/dashboard/studio/page.tsx:255:      if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Studio execution failed')
+src/app/admin/dashboard/studio/page.tsx:265:        const finalJob = await pollStudioJob(pollUrl)
+src/app/admin/dashboard/studio/page.tsx:280:        { role: 'assistant', content: summarizeStudioResult(effectiveData) },
+src/app/admin/dashboard/studio/page.tsx:282:      setLastResult(extractStudioDetails(effectiveData, {
+src/app/admin/dashboard/studio/page.tsx:283:        provider: executionProvider,
+src/app/admin/dashboard/studio/page.tsx:288:        ? 'Workbench handoff saved'
+src/app/admin/dashboard/studio/page.tsx:296:      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+src/app/admin/dashboard/studio/page.tsx:315:      form.append('provider', executionProvider)
+src/app/admin/dashboard/studio/page.tsx:324:        { role: 'assistant', content: String(data.result?.transcript ?? summarizeStudioResult(data)) },
+src/app/admin/dashboard/studio/page.tsx:326:      setLastResult(extractStudioDetails(data, {
+src/app/admin/dashboard/studio/page.tsx:327:        provider: executionProvider,
+src/app/admin/dashboard/studio/page.tsx:342:  async function saveMemory() {
+src/app/admin/dashboard/studio/page.tsx:350:    setStatus('Memory saved')
+src/app/admin/dashboard/studio/page.tsx:353:  async function pollStudioJob(pollUrl: string) {
+src/app/admin/dashboard/studio/page.tsx:375:            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Command Center / Studio</p>
+src/app/admin/dashboard/studio/page.tsx:382:            <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
+src/app/admin/dashboard/studio/page.tsx:420:            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-400/80">Command</p>
+src/app/admin/dashboard/studio/page.tsx:432:                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="dark-select">
+src/app/admin/dashboard/studio/page.tsx:566:                onClick={runStudioAction}
+src/app/admin/dashboard/studio/page.tsx:578:            <button onClick={saveMemory} disabled={!conversation.length} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/50 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-400 transition hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40">
+src/app/admin/dashboard/studio/page.tsx:587:              <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+src/app/admin/dashboard/studio/page.tsx:609:              <DarkField label="Provider">
+src/app/admin/dashboard/studio/page.tsx:610:                <select value={provider} onChange={(event) => setProvider(event.target.value)} className="dark-select">
+src/app/admin/dashboard/studio/page.tsx:635:              <RouteFact label="Media provider mesh" value="Available capabilities require a canonical route and a provider that passed its live test." />
+src/app/admin/dashboard/studio/page.tsx:637:              <RouteFact label="Dashboard context" value="Assistant context, memory, and Workbench handoff are available to protected routes." />
+src/app/admin/dashboard/studio/page.tsx:656:              <RouteFact label="Provider" value={providerLabel(executionProvider)} />
+src/app/admin/dashboard/studio/page.tsx:668:              <ResultWorkspace
+src/app/admin/dashboard/studio/page.tsx:692:                  <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-400 hover:bg-cyan-500/15">
+src/app/admin/dashboard/studio/page.tsx:693:                    Open in Workbench <ArrowRight className="h-3 w-3" />
+src/app/admin/dashboard/studio/page.tsx:703:              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+src/app/admin/dashboard/studio/page.tsx:706:              <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
+src/app/admin/dashboard/studio/page.tsx:717:function ResultWorkspace({ mode, conversation, audioPreview, latestArtifact, lastPayload, streaming }: {
+src/app/admin/dashboard/studio/page.tsx:718:  mode: StudioMode
+src/app/admin/dashboard/studio/page.tsx:833:function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
+src/app/admin/dashboard/studio/page.tsx:844:function placeholderForMode(mode: StudioMode) {
+src/app/admin/dashboard/studio/page.tsx:846:  if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
+src/app/admin/dashboard/studio/page.tsx:854:function resultIntroForMode(mode: StudioMode) {
+src/app/admin/dashboard/studio/page.tsx:863:  if (mode.capability === 'coding') return 'Workbench handoff status appears here, with the next repo action available after saving.'
+src/app/admin/dashboard/studio/page.tsx:867:function actionLabelForMode(mode: StudioMode) {
+src/app/admin/dashboard/studio/page.tsx:868:  if (mode.capability === 'coding') return 'Send to Workbench'
+src/app/admin/dashboard/studio/page.tsx:876:function summarizeStudioResult(data: Record<string, unknown>) {
+src/app/admin/dashboard/studio/page.tsx:877:  if (typeof data.workbenchUrl === 'string') return `Workbench task saved.\n${data.workbenchUrl}`
+src/app/admin/dashboard/studio/page.tsx:893:function extractStudioDetails(data: Record<string, unknown>, fallback: { provider: string; model?: string; jobStatus?: string }): StudioResultDetails {
+src/app/admin/dashboard/studio/page.tsx:897:  const provider = String(data.provider ?? result?.provider ?? route?.selectedProvider ?? fallback.provider ?? 'auto')
+src/app/admin/dashboard/studio/page.tsx:905:    routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and model router'),
+src/app/admin/dashboard/studio/page.tsx:909:    nextAction: blocker ? 'Resolve blocker in Settings or provider configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
+src/app/admin/dashboard/studio/page.tsx:923:  return <a href={url} className="mt-2 inline-block text-xs font-black text-cyan-400 hover:text-cyan-300">Open/download artifact</a>
+src/app/admin/dashboard/operations/page.tsx:4:import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
+src/app/admin/dashboard/operations/page.tsx:5:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+src/app/admin/dashboard/operations/page.tsx:7:import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+src/app/admin/dashboard/operations/page.tsx:10:export default async function OperationsPage() {
+src/app/admin/dashboard/operations/page.tsx:14:    getSystemRuntimeStatus().catch(() => null),
+src/app/admin/dashboard/operations/page.tsx:15:    getDashboardRuntimeTruth().catch(() => null),
+src/app/admin/dashboard/operations/page.tsx:16:    getPlatformSettingsTruth().catch(() => null),
+src/app/admin/dashboard/operations/page.tsx:22:  const approvedProviderKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
+src/app/admin/dashboard/operations/page.tsx:24:    .filter((provider) => approvedProviderKeys.has(provider.key as never))
+src/app/admin/dashboard/operations/page.tsx:26:  const missingProviders = providerRows.filter((provider) => provider.status !== 'ok' && provider.status !== 'Connected')
+src/app/admin/dashboard/operations/page.tsx:30:    ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
+src/app/admin/dashboard/operations/page.tsx:51:    'broken Studio execution',
+src/app/admin/dashboard/operations/page.tsx:52:    'broken Workbench PR flow',
+src/app/admin/dashboard/operations/page.tsx:66:        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Operations</p>
+src/app/admin/dashboard/operations/page.tsx:69:          Provider tests, Studio readiness, Workbench readiness, jobs, artifacts, and cost tracking in one go-live view.
+src/app/admin/dashboard/operations/page.tsx:105:          <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
+src/app/admin/dashboard/operations/page.tsx:123:      {/* Studio + Workbench readiness */}
+src/app/admin/dashboard/operations/page.tsx:128:              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Studio</p>
+src/app/admin/dashboard/operations/page.tsx:129:              <h3 className="mt-1 text-base font-black text-slate-100">{studioReady ? 'Studio ready' : 'Studio blocked'}</h3>
+src/app/admin/dashboard/operations/page.tsx:149:              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Workbench</p>
+src/app/admin/dashboard/operations/page.tsx:150:              <h3 className="mt-1 text-base font-black text-slate-100">{workbenchReady ? 'Workbench ready' : 'Workbench blocked'}</h3>
+src/app/admin/dashboard/operations/page.tsx:187:          <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+src/app/admin/dashboard/operations/page.tsx:188:          <OpsRow label="Scrapy" value={research?.scrapy.status ?? 'Unavailable'} />
+src/app/admin/dashboard/operations/page.tsx:189:          <OpsRow label="Trafilatura" value={research?.trafilatura.status ?? 'Unavailable'} />
+src/app/admin/dashboard/operations/page.tsx:206:          <OpsRow label="Provider usage" value={Object.keys(costs?.byProvider ?? {}).join(', ') || 'No runs yet'} />
+src/app/admin/dashboard/operations/page.tsx:213:          <OpsRow label="Workbench jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('workbench')).length)} />
+src/app/admin/dashboard/operations/page.tsx:214:          <OpsRow label="Studio jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('studio')).length)} />
+src/app/admin/dashboard/operations/page.tsx:218:      {/* Provider health */}
+src/app/admin/dashboard/operations/page.tsx:220:        <h3 className="text-base font-black text-slate-100">Provider health truth</h3>
+src/app/admin/dashboard/operations/page.tsx:231:          {!providerRows.length && <p className="text-sm font-semibold text-slate-500">Runtime provider truth unavailable.</p>}
+src/app/admin/dashboard/workbench/page.tsx:10:type WorkbenchModel = { provider: string; modelId: string; displayName: string }
+src/app/admin/dashboard/workbench/page.tsx:11:type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
+src/app/admin/dashboard/workbench/page.tsx:13:type PersistedWorkbenchJob = {
+src/app/admin/dashboard/workbench/page.tsx:16:  workspace?: Workspace
+src/app/admin/dashboard/workbench/page.tsx:34:export default function WorkbenchPage() {
+src/app/admin/dashboard/workbench/page.tsx:38:  const [governedWorkbenchModels, setGovernedWorkbenchModels] = useState<WorkbenchModel[]>([])
+src/app/admin/dashboard/workbench/page.tsx:44:  const [workspace, setWorkspace] = useState<Workspace | null>(null)
+src/app/admin/dashboard/workbench/page.tsx:64:  const codingModels = useMemo<WorkbenchModel[]>(() => {
+src/app/admin/dashboard/workbench/page.tsx:65:    if (governedWorkbenchModels.length) return governedWorkbenchModels
+src/app/admin/dashboard/workbench/page.tsx:67:  }, [catalog, governedWorkbenchModels])
+src/app/admin/dashboard/workbench/page.tsx:72:  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+src/app/admin/dashboard/workbench/page.tsx:102:  const rehydrateJob = useCallback((job: PersistedWorkbenchJob | null | undefined) => {
+src/app/admin/dashboard/workbench/page.tsx:107:    setWorkspace(job.workspace)
+src/app/admin/dashboard/workbench/page.tsx:140:        rehydrateJob(latestData.job as PersistedWorkbenchJob)
+src/app/admin/dashboard/workbench/page.tsx:154:      setGovernedWorkbenchModels(governed)
+src/app/admin/dashboard/workbench/page.tsx:158:  async function ensureWorkspace() {
+src/app/admin/dashboard/workbench/page.tsx:167:    const nextWorkspace = data.workspace as Workspace
+src/app/admin/dashboard/workbench/page.tsx:168:    setWorkspace(nextWorkspace)
+src/app/admin/dashboard/workbench/page.tsx:169:    return nextWorkspace
+src/app/admin/dashboard/workbench/page.tsx:186:    const activeWorkspace = await ensureWorkspace()
+src/app/admin/dashboard/workbench/page.tsx:187:    const plan = await call('Generate plan', `/api/admin/repo-workbench/${activeWorkspace.id}/plan`, {
+src/app/admin/dashboard/workbench/page.tsx:204:    const activeWorkspace = await ensureWorkspace()
+src/app/admin/dashboard/workbench/page.tsx:206:    const patch = await call('Generate patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
+src/app/admin/dashboard/workbench/page.tsx:260:      body: JSON.stringify({ patchId, message: prompt.slice(0, 180) || 'AmarktAI Workbench update', branchName: `amarktai/${Date.now()}`, confirm: true }),
+src/app/admin/dashboard/workbench/page.tsx:278:      body: JSON.stringify({ title: prompt.slice(0, 90) || 'AmarktAI Workbench update', body: `Generated by AmarktAI Workbench.\n\nPrompt:\n${prompt}`, confirm: true }),
+src/app/admin/dashboard/workbench/page.tsx:335:            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Workbench</p>
+src/app/admin/dashboard/workbench/page.tsx:338:              Prompt → Plan → Patch → Checks → Commit → PR → Deploy. The Workbench orchestrates each step with approval gates.
+src/app/admin/dashboard/workbench/page.tsx:358:                setWorkspace(null)
+src/app/admin/dashboard/workbench/page.tsx:392:              placeholder="Describe the change. The Workbench will plan, prepare a patch, and wait for your approval."
+src/app/admin/dashboard/workbench/page.tsx:450:              <a href={log.pr} className="mt-3 inline-block w-full rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-center text-xs font-black text-cyan-300 hover:bg-cyan-500/15">
+src/app/admin/dashboard/workbench/page.tsx:647:function statusForPersistedJob(job: PersistedWorkbenchJob): Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'> {
+src/app/admin/dashboard/workbench/page.tsx:663:function getPrimaryWorkbenchAction(
+src/app/admin/dashboard/memory-learning/page.tsx:2:import MemoryActions from '@/components/dashboard/MemoryActions'
+src/app/admin/dashboard/memory-learning/page.tsx:4:type MemoryRecord = { id: string; appSlug?: string; memoryType?: string; content?: string; createdAt?: string }
+src/app/admin/dashboard/memory-learning/page.tsx:8:export default function MemoryLearningPage() {
+src/app/admin/dashboard/memory-learning/page.tsx:9:  const memory = listRecords<MemoryRecord>(LOCAL_STORE_FILES.memory)
+src/app/admin/dashboard/memory-learning/page.tsx:17:        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Memory</p>
+src/app/admin/dashboard/memory-learning/page.tsx:50:      <MemoryActions appSlugs={appSlugs} />
+src/app/admin/dashboard/network-apps/page.tsx:3:export default function NetworkAppsPage() {
+src/app/admin/dashboard/network-apps/page.tsx:7:        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Network Apps</p>
+src/app/admin/dashboard/command/page.tsx:1:import { redirect } from 'next/navigation'
+src/app/admin/dashboard/command/page.tsx:3:export default function CommandPage() {
+src/app/admin/dashboard/agents/page.tsx:1:import { redirect } from 'next/navigation'
+src/app/admin/dashboard/agents/page.tsx:3:export default function AgentsPage() {
+src/app/admin/dashboard/apps-agents/page.tsx:1:import { redirect } from 'next/navigation'
+src/app/admin/dashboard/apps-agents/page.tsx:3:export default function LegacyAppsAgentsPage() {
+src/app/admin/dashboard/outputs/page.tsx:29:export default async function OutputsPage() {
+src/app/admin/dashboard/outputs/page.tsx:50:        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Outputs</p>
+src/app/admin/dashboard/outputs/page.tsx:94:                  <Meta label="Provider" value={artifact.provider || 'local'} />
+src/app/admin/dashboard/outputs/page.tsx:100:                  <a href={url} download className="mt-3 inline-block text-xs font-black text-cyan-300">
+src/app/admin/dashboard/outputs/page.tsx:206:  if (!value) return 'Creation time unavailable'
+src/app/admin/dashboard/app-builder/page.tsx:9:export default function AppBuilderPage() {
+src/app/admin/dashboard/app-builder/page.tsx:33:        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">App Builder</p>
+src/app/admin/dashboard/app-builder/page.tsx:55:            <Link href={`/admin/dashboard/workspace${idea.trim() ? `?prompt=${encodeURIComponent(`Help me clarify and plan this standalone app idea without creating or integrating an app yet:\n\n${idea}`)}` : ''}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-200 hover:bg-cyan-400/15">
+src/app/admin/dashboard/app-builder/page.tsx:65:          <p className="mt-2 text-sm leading-6 text-slate-400">A plan becomes build work only after it is reviewed and sent to Repo Workbench. Future app registry and handoff contracts remain intentionally unwired in this release.</p>
+src/app/admin/dashboard/system/page.tsx:2:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+src/app/admin/dashboard/system/page.tsx:4:export default async function SystemPage() {
+src/app/admin/dashboard/system/page.tsx:5:  const [vps, runtime] = await Promise.all([getVpsSnapshot().catch(() => null), getDashboardRuntimeTruth().catch(() => null)])
+src/app/admin/dashboard/system/page.tsx:11:        <h1 className="mt-2 text-3xl font-black text-white">System, operations, VPS, queues, logs, and runtime diagnostics.</h1>
+src/app/admin/dashboard/system/page.tsx:16:        <Metric label="Memory used" value={vps ? `${vps.host.memory.usedPercent}%` : 'Unknown'} />
+src/app/admin/login/page.tsx:4:import { useRouter } from 'next/navigation'
+src/app/admin/voice-login/page.tsx:8:import { useRouter } from 'next/navigation'
+src/components/dashboard/CommandCenter.tsx:18:  type StudioCommandOptions,
+src/components/dashboard/CommandCenter.tsx:23:type CommandJob = {
+src/components/dashboard/CommandCenter.tsx:37:    options?: StudioCommandOptions
+src/components/dashboard/CommandCenter.tsx:38:    selectedProviders?: string[]
+src/components/dashboard/CommandCenter.tsx:66:export default function CommandCenter() {
+src/components/dashboard/CommandCenter.tsx:68:  const [jobs, setJobs] = useState<CommandJob[]>([])
+src/components/dashboard/CommandCenter.tsx:69:  const [active, setActive] = useState<CommandJob | null>(null)
+src/components/dashboard/CommandCenter.tsx:74:  const [options, setOptions] = useState<StudioCommandOptions>({
+src/components/dashboard/CommandCenter.tsx:105:      if (!response.ok) throw new Error(data.error || 'Command routing failed')
+src/components/dashboard/CommandCenter.tsx:116:    if (active.route.surface === 'Workbench') return '/admin/dashboard/workbench'
+src/components/dashboard/CommandCenter.tsx:117:    if (active.route.surface === 'System') return '/admin/dashboard/system'
+src/components/dashboard/CommandCenter.tsx:118:    if (active.route.surface === 'Network Apps') return '/admin/dashboard/workspace'
+src/components/dashboard/CommandCenter.tsx:126:          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Workspace</p>
+src/components/dashboard/CommandCenter.tsx:149:                {active.execution?.imageUrl && <a href={active.execution.imageUrl} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-slate-950">Open image <ArrowRight className="h-4 w-4" /></a>}
+src/components/dashboard/CommandCenter.tsx:150:                {attachedHref.startsWith('/admin') && <Link href={attachedHref} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2 text-xs font-black text-slate-950">Open attached workspace <ArrowRight className="h-4 w-4" /></Link>}
+src/components/dashboard/CommandCenter.tsx:193:          <SummaryLink href="/admin/dashboard/outputs" label="Recent outputs" />
+src/components/dashboard/CommandCenter.tsx:194:          <SummaryLink href="/admin/dashboard/network-apps" label="Connected apps" />
+src/components/dashboard/CommandCenter.tsx:199:          {advanced && <div className="mt-4 space-y-2 text-xs leading-5 text-slate-400"><p>Provider overrides, deployment controls, merge controls, and model selection stay here.</p><p>Connected route: {active?.route.selectedProviders?.join(' → ') || 'Resolved after live connection checks.'}</p></div>}
+src/components/dashboard/CommandCenter.tsx:206:function CapabilityControls({ capability, options, setOptions }: { capability: Capability; options: StudioCommandOptions; setOptions: React.Dispatch<React.SetStateAction<StudioCommandOptions>> }) {
+src/components/dashboard/CommandCenter.tsx:207:  const update = (patch: Partial<StudioCommandOptions>) => setOptions((current) => ({ ...current, ...patch }))
+src/components/dashboard/CommandCenter.tsx:253:  return <Link href={href} className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-3 text-xs font-black text-slate-300 hover:border-cyan-400/30 hover:text-cyan-200">{label}<ArrowRight className="mt-3 h-4 w-4" /></Link>
+src/components/dashboard/CommandCenter.tsx:262:  return title.replace('Studio plan ready', 'Creative plan ready').replace('Workbench plan ready', 'Repository plan ready')
+src/components/dashboard/MemoryActions.tsx:6:export default function MemoryActions({ appSlugs }: { appSlugs: string[] }) {
+src/components/dashboard/MemoryActions.tsx:11:  async function exportMemory() {
+src/components/dashboard/MemoryActions.tsx:24:    setMessage('Memory export downloaded.')
+src/components/dashboard/MemoryActions.tsx:28:  async function clearMemory() {
+src/components/dashboard/MemoryActions.tsx:40:      <button onClick={exportMemory} disabled={busy !== null} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 text-left disabled:opacity-50">
+src/components/dashboard/MemoryActions.tsx:44:      <button onClick={clearMemory} disabled={busy !== null} className="rounded-2xl border border-red-400/20 bg-red-400/5 p-4 text-left disabled:opacity-50">
+src/components/AudioRecorder.tsx:6: * Captures audio from the user's microphone using the MediaRecorder API.
+src/components/AudioRecorder.tsx:49:  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+src/components/AudioRecorder.tsx:58:      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+src/components/AudioRecorder.tsx:60:      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+src/components/public/IntelligenceFabric.tsx:23:  { label: 'Apps', detail: 'connected modules', lane: 'input', x: 0.56, y: 0.3, accent: '96,165,250' },
+src/components/public/IntelligenceFabric.tsx:24:  { label: 'Media', detail: 'creative work', lane: 'input', x: 0.56, y: 0.62, accent: '94,234,212' },
+src/components/public/IntelligenceFabric.tsx:26:  { label: 'Agents', detail: 'coordinated work', lane: 'core', x: 0.7, y: 0.65, accent: '167,139,250' },
+src/components/public/IntelligenceFabric.tsx:27:  { label: 'Memory', detail: 'shared context', lane: 'output', x: 0.87, y: 0.31, accent: '94,234,212' },
+src/components/public/IntelligenceFabric.tsx:123:    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+src/components/public/PublicShell.tsx:6:import { usePathname } from 'next/navigation'
+src/components/public/PublicShell.tsx:8:import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
+src/components/public/PublicShell.tsx:12:  const [menu, setMenu] = useState(false)
+src/components/public/PublicShell.tsx:21:          <Link href="/" className="font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-white" aria-label="Amarktai Network home">
+src/components/public/PublicShell.tsx:24:          <nav className="hidden items-center gap-1 md:flex" aria-label="Public navigation">
+src/components/public/PublicShell.tsx:28:                <Link key={item.href} href={item.href} className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition ${active ? 'bg-cyan-300/12 text-cyan-100 ring-1 ring-cyan-300/25' : 'text-slate-200 hover:bg-white/5 hover:text-white'}`}>
+src/components/public/PublicShell.tsx:33:          </nav>
+src/components/public/PublicShell.tsx:34:          <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-100 md:hidden" onClick={() => setMenu((open) => !open)} aria-expanded={menu} aria-controls="mobile-public-navigation" aria-label="Toggle navigation">
+src/components/public/PublicShell.tsx:35:            {menu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+src/components/public/PublicShell.tsx:38:        {menu && (
+src/components/public/PublicShell.tsx:39:          <nav id="mobile-public-navigation" className="border-t border-white/10 bg-slate-950/95 px-5 py-4 md:hidden" aria-label="Mobile public navigation">
+src/components/public/PublicShell.tsx:40:            <div className="grid gap-1">{PUBLIC_NAV_ITEMS.map((item) => <Link key={item.href} href={item.href} className="rounded-lg px-3 py-3 text-sm font-bold text-slate-100 hover:bg-white/5">{item.label}</Link>)}</div>
+src/components/public/PublicShell.tsx:41:          </nav>
+src/components/public/PublicShell.tsx:52:            <Link href="/platform" className="hover:text-white">Platform</Link>
+src/components/public/PublicShell.tsx:53:            <Link href="/network-apps" className="hover:text-white">Network Apps</Link>
+src/components/public/PublicShell.tsx:54:            <Link href="/contact" className="hover:text-white">Contact</Link>
+src/components/public/PublicShell.tsx:55:            <Link href="/privacy" className="hover:text-white">Privacy</Link>
+src/components/public/PublicShell.tsx:56:            <Link href="/terms" className="hover:text-white">Terms</Link>
+
+===== TOP-LEVEL DASHBOARD PAGE SUMMARY =====
+
+--- src/app/admin/dashboard/page.tsx ---
+LINES: 88
+1:import Link from 'next/link'
+2:import { ArrowRight, Command, Library, ShieldCheck } from 'lucide-react'
+3:import { PRODUCT_POSITIONING } from '@/lib/product-contract'
+4:import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+5:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+7:type Artifact = { id: string; title?: string; type?: string; createdAt?: string }
+8:type CommandJob = { id: string; prompt: string; status: string; route?: { intent?: string; surface?: string }; createdAt: string }
+11:  const artifacts = listRecords<Artifact>(LOCAL_STORE_FILES.artifacts).slice(-5).reverse()
+12:  const jobs = listRecords<CommandJob>('jobs/command-jobs.json').slice(-5).reverse()
+13:  const runtime = await getDashboardRuntimeTruth().catch(() => null)
+14:  const ready = Boolean(runtime && runtime.blockers.length === 0)
+16:    ...(!runtime ? ['Runtime readiness could not be checked. Open System for details.'] : []),
+17:    ...(runtime && runtime.blockers.length > 0 ? ['Some live capabilities still need setup. Open Settings for the exact actions.'] : []),
+26:            <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white lg:text-5xl">One intelligent command layer for the whole network.</h1>
+27:            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{PRODUCT_POSITIONING}</p>
+29:          <Link href="/admin/dashboard/workspace" className="group rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/15">
+46:        <Metric icon={<Command />} label="Active workspace jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
+47:        <Metric icon={<Library />} label="Recent outputs" value={String(artifacts.length)} />
+52:        <Panel title="Current jobs" empty="No workspace jobs yet. Open Workspace to start one.">
+53:          {jobs.map((job) => (
+54:            <div key={job.id} className="rounded-xl border border-slate-700/40 bg-slate-950/45 p-3">
+56:                <p className="truncate text-sm font-bold text-slate-200">{job.prompt}</p>
+57:                <Status value={job.status} />
+59:              <p className="mt-1 text-xs text-slate-400">{job.route?.surface ? `${job.route.surface} work` : 'Command work'}</p>
+63:        <Panel title="Recent outputs" empty="Generated media, reports, builds, diffs, and PRs appear here.">
+64:          {artifacts.map((artifact) => (
+65:            <div key={artifact.id} className="rounded-xl border border-slate-700/40 bg-slate-950/45 p-3">
+66:              <p className="text-sm font-bold text-slate-200">{artifact.title || artifact.id}</p>
+67:              <p className="mt-1 text-xs text-slate-500">{artifact.type || 'artifact'}</p>
+80:function Panel({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
+82:  return <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><h2 className="font-black text-white">{title}</h2><div className="mt-4 space-y-2">{hasChildren ? children : <p className="text-sm text-slate-400">{empty}</p>}</div></section>
+85:function Status({ value }: { value: string }) {
+
+--- src/app/admin/dashboard/command/page.tsx ---
+LINES: 5
+1:import { redirect } from 'next/navigation'
+
+--- src/app/admin/dashboard/studio/page.tsx ---
+LINES: 952
+3:import Link from 'next/link'
+4:import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+5:import { ArrowRight, Loader2, Play, Save, Send, Sparkles, Upload, X } from 'lucide-react'
+6:import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+7:import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+8:import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
+48:  voice?: Array<{ provider: string; label: string; status: string }>
+53:  status: 'available' | 'needs_setup'
+55:  providers?: Array<{ provider: string; model: string }>
+57:type ArtifactSummary = {
+59:  title?: string
+62:  provider?: string
+67:  createdAt?: string
+71:  provider: string
+75:  artifactStatus: string
+76:  jobStatus: string
+87:  const [provider, setProvider] = useState('auto')
+94:  const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
+95:  const [audioPreview, setAudioPreview] = useState('')
+101:  const [status, setStatus] = useState('')
+102:  const [jobStatus, setJobStatus] = useState('')
+117:    Promise.all([
+118:      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
+119:      fetch('/api/admin/amarktai-assistant/context').then((response) => response.json()).catch(() => null),
+120:      fetch('/api/admin/ai-routing').then((response) => response.json()).catch(() => null),
+128:  const loadArtifacts = useCallback(async () => {
+129:    const response = await fetch(`/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}&limit=30`)
+131:    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
+135:    loadArtifacts().catch(() => null)
+136:  }, [loadArtifacts])
+148:    return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
+150:  const selectedModel = modelOptions.find((model) => model.modelId === modelId)
+151:  const executionProvider = selectedModel?.provider ?? provider
+152:  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+154:  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
+155:  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
+156:  const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)
+157:  const activeJobState = hasRealJob
+160:      : jobStatus || (executing || streaming ? 'processing' : lastResult?.blocker ? 'blocked' : 'completed')
+162:  const latestArtifact = artifacts[0]
+170:    setStatus('Streaming')
+171:    setJobStatus('processing')
+175:      const response = await fetch('/api/admin/amarktai-assistant/stream', {
+181:          providerOverride: executionProvider,
+199:          const parsed = JSON.parse(data) as { content?: string; status?: string }
+200:          if (parsed.status) setStatus(parsed.status)
+211:      setStatus('Saved to conversation memory')
+212:      setJobStatus('completed')
+214:      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+215:      setJobStatus('failed')
+221:  async function runStudioAction() {
+223:      setStatus(modeBlocker)
+224:      setJobStatus('blocked')
+232:    setAudioPreview('')
+233:    setJobStatus('queued')
+234:    setStatus('Running real backend route')
+236:      const endpoint = tab === 'Coding' ? '/api/admin/studio/workbench-handoff' : '/api/admin/studio/execute'
+237:      const response = await fetch(endpoint, {
+242:          prompt: message,
+244:          provider: selectedModel?.provider ?? provider,
+245:          model: selectedModel?.modelId === 'auto' ? undefined : selectedModel?.modelId ?? modelId,
+256:      if (typeof data.audioBase64 === 'string') setAudioPreview(data.audioBase64)
+264:        setJobStatus(String(data.jobStatus ?? data.status ?? data.result?.status ?? 'pending'))
+265:        const finalJob = await pollStudioJob(pollUrl)
+266:        if (finalJob) {
+267:          effectiveData = finalJob
+268:          setLastPayload(finalJob)
+270:        if (finalJob?.status || finalJob?.jobStatus) setJobStatus(String(finalJob.status ?? finalJob.jobStatus))
+271:        if (finalJob && !extractResultUrl(finalJob) && !['failed', 'blocked'].includes(String(finalJob.status ?? finalJob.jobStatus))) {
+272:          setStatus('Job created, output pending')
+275:        setJobStatus(data.artifact?.id || data.audioBase64 ? 'completed' : 'processing')
+283:        provider: executionProvider,
+285:        jobStatus: String(effectiveData.jobStatus ?? effectiveData.status ?? (effectiveData.result as Record<string, unknown> | undefined)?.status ?? ''),
+287:      setStatus(effectiveData.workbenchUrl
+288:        ? 'Workbench handoff saved'
+289:        : effectiveData.artifactId
+290:          ? `Artifact saved: ${String(effectiveData.artifactId)}`
+292:            ? 'Job created, output pending'
+294:      await loadArtifacts().catch(() => null)
+296:      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+297:      setJobStatus('failed')
+305:      setStatus('Select an audio file first')
+309:    setStatus('Uploading to STT route')
+310:    setJobStatus('processing')
+312:      const form = new FormData()
+313:      form.append('file', uploadFile)
+314:      form.append('appSlug', appSlug)
+315:      form.append('provider', executionProvider)
+316:      if (executionModel) form.append('model', executionModel)
+317:      const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
+327:        provider: executionProvider,
+329:        jobStatus: 'completed',
+331:      setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
+332:      setJobStatus('completed')
+333:      await loadArtifacts().catch(() => null)
+335:      setStatus(error instanceof Error ? error.message : 'STT request failed')
+336:      setJobStatus('failed')
+342:  async function saveMemory() {
+345:    await fetch('/api/admin/memory', {
+348:      body: JSON.stringify({ appSlug, scope: 'studio', memoryType: 'conversation', content: latest, key: `studio:${tab}`, importance: 0.7 }),
+350:    setStatus('Memory saved')
+353:  async function pollStudioJob(pollUrl: string) {
+355:      const response = await fetch(pollUrl).catch(() => null)
+357:      const statusText = String(data?.status ?? data?.job?.status ?? 'processing')
+358:      setJobStatus(statusText)
+359:      if (['completed', 'succeeded', 'failed', 'blocked'].includes(statusText)) {
+360:        await loadArtifacts().catch(() => null)
+363:      await new Promise((resolve) => window.setTimeout(resolve, 2000))
+365:    setJobStatus('processing')
+376:            <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Root AI operating workspace.</h1>
+382:            <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
+396:                <button
+403:                      : capabilityReadiness.find((entry) => entry.capability === item.capability)?.status === 'needs_setup'
+411:                      {capabilityReadiness.find((entry) => entry.capability === item.capability)?.status === 'available' ? 'Available' : 'Needs setup'}
+414:                </button>
+421:            <textarea
+425:              placeholder={placeholderForMode(mode)}
+432:                  <select value={mediaSize} onChange={(event) => setMediaSize(event.target.value)} className="dark-select">
+437:                  </select>
+444:                {/* Genre multi-selector — up to 5 */}
+
+--- src/app/admin/dashboard/outputs/page.tsx ---
+LINES: 209
+1:import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+2:import { listArtifacts, type ArtifactRecord } from '@/lib/artifact-store'
+3:import Image from 'next/image'
+9:type LocalArtifact = {
+12:  title?: string
+16:  status?: string
+17:  provider?: string
+19:  createdAt?: string
+30:  const localArtifacts = listRecords<LocalArtifact>(LOCAL_STORE_FILES.artifacts)
+31:  const databaseArtifacts = await listArtifacts({ limit: 200 })
+32:    .then((result) => result.artifacts)
+35:  const merged = new Map<string, LocalArtifact | ArtifactRecord>()
+37:  for (const artifact of [...localArtifacts, ...databaseArtifacts]) {
+38:    if (!artifact?.id) continue
+39:    merged.set(artifact.id, artifact)
+42:  const artifacts = Array.from(merged.values())
+43:    .filter((artifact) => artifact.status !== 'failed' && artifact.status !== 'processing')
+44:    .filter(isDisplayableArtifact)
+45:    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+51:        <h1 className="mt-2 text-3xl font-black text-white">Real artifacts, in one library.</h1>
+53:          Generated media, transcripts, reports, patches, and repository outputs appear here from the live artifact store.
+56:          Showing {artifacts.length} completed artifact{artifacts.length === 1 ? '' : 's'}.
+60:      {!artifacts.length ? (
+63:          <p className="mt-2 text-sm text-slate-500">Completed, persisted artifacts will appear after a successful run.</p>
+67:          {artifacts.map((artifact) => {
+68:            const url = getArtifactUrl(artifact)
+69:            const type = String(artifact.type || 'artifact')
+70:            const appSlug = getStringField(artifact, 'appSlug') || 'workspace'
+71:            const mimeType = getStringField(artifact, 'mimeType') || getStringMetadata(artifact, 'mimeType') || 'unknown MIME'
+72:            const fileSize = getNumberField(artifact, 'fileSizeBytes')
+75:              <article key={artifact.id} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+78:                    <p className="font-black text-white">{artifact.title || artifact.id}</p>
+80:                      {type}{artifact.subType ? ` / ${artifact.subType}` : ''}
+84:                    {artifact.status || 'saved'}
+88:                <ArtifactPreview artifact={artifact} url={url} />
+93:                  <Meta label="Size" value={formatBytes(fileSize)} />
+94:                  <Meta label="Provider" value={artifact.provider || 'local'} />
+95:                  <Meta label="Model" value={artifact.model || 'unknown'} />
+96:                  <Meta label="Created" value={formatCreatedAt(artifact.createdAt)} />
+100:                  <a href={url} download className="mt-3 inline-block text-xs font-black text-cyan-300">
+101:                    Open or download artifact
+124:function ArtifactPreview({ artifact, url }: { artifact: LocalArtifact | ArtifactRecord; url: string }) {
+125:  const type = String(artifact.type ?? '')
+133:        alt={artifact.title || 'Generated image'}
+139:    return <audio controls preload="metadata" src={url} className="mt-4 w-full" />
+142:    return <video controls preload="metadata" src={url} className="mt-4 aspect-video w-full rounded-xl border border-slate-700 bg-black" />
+146:      <p className="mt-4 line-clamp-5 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs leading-5 text-slate-400">
+147:        {artifact.description || textFromMetadata(artifact)}
+154:function getArtifactUrl(artifact: LocalArtifact | ArtifactRecord) {
+155:  if (artifact.storageUrl) return artifact.storageUrl
+156:  if ('contentUrl' in artifact && artifact.contentUrl) return artifact.contentUrl
+157:  if ('url' in artifact && artifact.url) return artifact.url
+158:  if (artifact.metadata && typeof artifact.metadata === 'object') {
+160:      const value = artifact.metadata[key]
+167:function isDisplayableArtifact(artifact: LocalArtifact | ArtifactRecord) {
+168:  const type = String(artifact.type ?? '')
+169:  if (['image', 'audio', 'music', 'video'].includes(type)) return Boolean(getArtifactUrl(artifact))
+170:  return Boolean(artifact.id && type)
+173:function textFromMetadata(artifact: LocalArtifact | ArtifactRecord) {
+174:  const metadata = artifact.metadata
+175:  if (!metadata || typeof metadata !== 'object') return 'Saved text artifact'
+180:  return 'Saved text artifact'
+183:function getStringField(artifact: LocalArtifact | ArtifactRecord, key: keyof LocalArtifact) {
+184:  const value = artifact[key as keyof typeof artifact]
+188:function getStringMetadata(artifact: LocalArtifact | ArtifactRecord, key: string) {
+189:  const value = artifact.metadata?.[key]
+193:function getNumberField(artifact: LocalArtifact | ArtifactRecord, key: keyof LocalArtifact) {
+194:  const value = artifact[key as keyof typeof artifact]
+198:function formatBytes(value: number) {
+205:function formatCreatedAt(value: Date | string | undefined) {
+
+--- src/app/admin/dashboard/workbench/page.tsx ---
+LINES: 707
+3:import { useCallback, useEffect, useMemo, useState } from 'react'
+4:import { CheckCircle2, ChevronDown, GitPullRequest, Loader2, Play, ShieldCheck } from 'lucide-react'
+5:import { type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+6:import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+8:type Repo = { full_name: string; default_branch: string; private?: boolean }
+10:type WorkbenchModel = { provider: string; modelId: string; displayName: string }
+11:type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
+13:type PersistedWorkbenchJob = {
+20:  patch?: { id: string; diffText?: string; status?: string; branchName?: string; commitSha?: string | null; prUrl?: string | null }
+22:  status?: string
+24:type StepId = 'Planning' | 'Files selected' | 'Patch prepared' | 'Checks running' | 'Commit ready' | 'PR ready' | 'Deploy ready'
+26:const timeline: StepId[] = ['Planning', 'Files selected', 'Patch prepared', 'Checks running', 'Commit ready', 'PR ready', 'Deploy ready']
+43:  const [prompt, setPrompt] = useState('')
+46:  const [currentJobId, setCurrentJobId] = useState('')
+48:  const [prNumber, setPrNumber] = useState<number | null>(null)
+53:  const [stepStatus, setStepStatus] = useState<Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>>({
+55:    'Files selected': 'waiting',
+56:    'Patch prepared': 'waiting',
+57:    'Checks running': 'waiting',
+58:    'Commit ready': 'waiting',
+59:    'PR ready': 'waiting',
+60:    'Deploy ready': 'waiting',
+68:  const selectedModel = codingModels.find((model) => model.modelId === modelId)
+69:  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+71:  const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+72:  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+74:  const updateStep = (step: StepId, status: 'waiting' | 'active' | 'done' | 'needs-approval') => {
+75:    setStepStatus((current) => ({ ...current, [step]: status }))
+78:  const call = useCallback(async (label: string, url: string, init?: RequestInit): Promise<ApiResult> => {
+82:      const response = await fetch(url, init)
+97:    const data = await call('Load branches', `/api/admin/repo-workbench/github/branches?repo=${encodeURIComponent(nextRepo)}`)
+102:  const rehydrateJob = useCallback((job: PersistedWorkbenchJob | null | undefined) => {
+103:    if (!job?.workspace) return
+104:    const fullName = `${job.workspace.owner}/${job.workspace.repo}`
+105:    setCurrentJobId(job.id)
+106:    setTaskId(job.id)
+107:    setWorkspace(job.workspace)
+109:    setBranch(job.workspace.branch || 'auto')
+110:    setPrompt(job.userRequest ?? '')
+111:    setPatchId(job.patch?.id ?? '')
+112:    setChecksPassed(Boolean(job.logs))
+113:    const prUrl = job.patch?.prUrl ?? ''
+114:    const match = prUrl.match(/\/pull\/(\d+)/)
+115:    setPrNumber(match ? Number(match[1]) : null)
+117:      plan: asText(job.plan ?? {}),
+118:      files: asText(job.changedFiles ?? []),
+119:      diff: String(job.patch?.diffText ?? ''),
+120:      checks: job.logs ? String(job.logs) : '',
+121:      commit: job.patch?.commitSha ? asText({ branch: job.patch.branchName, commitSha: job.patch.commitSha }) : '',
+122:      pr: prUrl,
+124:    setStepStatus(statusForPersistedJob(job))
+130:    const incomingPrompt = params.get('prompt')
+131:    if (incomingPrompt) setPrompt(incomingPrompt)
+132:    Promise.all([
+133:      call('Load repos', '/api/admin/repo-workbench/github/repos').catch(() => null),
+134:      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
+135:      incomingPrompt ? Promise.resolve(null) : fetch('/api/admin/repo-workbench/jobs/latest').then((response) => response.json()).catch(() => null),
+139:      if (latestData?.job) {
+140:        rehydrateJob(latestData.job as PersistedWorkbenchJob)
+148:        ? modelData.governance.workbenchModels.map((model: { provider: string; modelId: string; label?: string; displayName?: string }) => ({
+149:          provider: model.provider,
+156:  }, [call, loadBranches, rehydrateJob])
+160:    const selectedRepo = repos.find((repo) => repo.full_name === repoFullName)
+161:    const selectedBranch = branch === 'auto' ? selectedRepo?.default_branch ?? 'main' : branch
+162:    const data = await call('Import repo', '/api/admin/repo-workbench/import', {
+165:      body: JSON.stringify({ repoFullName, branch: selectedBranch }),
+174:      request: prompt,
+176:      provider: selectedModel?.provider ?? 'auto',
+184:    if (!prompt.trim() || !repoFullName) return
+187:    const plan = await call('Generate plan', `/api/admin/repo-workbench/${activeWorkspace.id}/plan`, {
+195:    setCurrentJobId(nextTaskId)
+198:    updateStep('Files selected', 'done')
+199:    updateStep('Patch prepared', 'waiting')
+202:  async function generatePatch() {
+203:    if (!prompt.trim() || !repoFullName) return
+205:    updateStep('Patch prepared', 'active')
+206:    const patch = await call('Generate patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
+209:      body: JSON.stringify({ ...payload(), taskId: taskId || currentJobId || undefined }),
+211:    const proposed = patch.patch as { id?: string; diffText?: string; filesAffected?: string[] } | undefined
+212:    setPatchId(String(proposed?.id ?? patch.patchId ?? ''))
+215:      files: asText(proposed?.filesAffected ?? patch.filesAffected ?? patch.changedFiles ?? []),
+216:      diff: String(proposed?.diffText ?? patch.diffText ?? ''),
+218:    updateStep('Patch prepared', 'needs-approval')
+221:  async function approveChanges() {
+223:    updateStep('Patch prepared', 'active')
+224:    const applied = await call('Apply approved changes', `/api/admin/repo-workbench/${workspace.id}/apply-patch`, {
+230:    updateStep('Patch prepared', 'done')
+231:    updateStep('Checks running', 'needs-approval')
+234:  async function runChecks() {
+236:    updateStep('Checks running', 'active')
+237:    const checks = await call('Detect checks', `/api/admin/repo-workbench/${workspace.id}/checks`)
+241:      const result = await call(`Run ${command}`, `/api/admin/repo-workbench/${workspace.id}/run-check`, {
+250:    updateStep('Checks running', 'done')
+251:    updateStep('Commit ready', 'needs-approval')
+254:  async function commitAndPush() {
+256:    updateStep('Commit ready', 'active')
+257:    const commit = await call('Commit and prepare push', `/api/admin/repo-workbench/${workspace.id}/commit`, {
+260:      body: JSON.stringify({ patchId, message: prompt.slice(0, 180) || 'AmarktAI Workbench update', branchName: `amarktai/${Date.now()}`, confirm: true }),
+262:    const push = await call('Push approved branch', `/api/admin/repo-workbench/${workspace.id}/push`, {
+267:    setLog((current) => ({ ...current, commit: asText({ commit, push }) }))
+268:    updateStep('Commit ready', 'done')
+269:    updateStep('PR ready', 'needs-approval')
+272:  async function createPr() {
+274:    updateStep('PR ready', 'active')
+275:    const pr = await call('Create PR', `/api/admin/repo-workbench/${workspace.id}/pr`, {
+278:      body: JSON.stringify({ title: prompt.slice(0, 90) || 'AmarktAI Workbench update', body: `Generated by AmarktAI Workbench.\n\nPrompt:\n${prompt}`, confirm: true }),
+280:    const prUrl = String(pr.prUrl ?? '')
+281:    const match = prUrl.match(/\/pull\/(\d+)/)
+282:    setPrNumber(match ? Number(match[1]) : null)
+283:    setLog((current) => ({ ...current, pr: asText(pr.prUrl ?? pr) }))
+284:    updateStep('PR ready', 'done')
+285:    updateStep('Deploy ready', 'needs-approval')
+288:  async function mergePr() {
+289:    if (!workspace || !prNumber) return
+290:    const data = await call('Merge', `/api/admin/repo-workbench/${workspace.id}/merge`, {
+293:      body: JSON.stringify({ prNumber, confirm: true }),
+295:    setLog((current) => ({ ...current, pr: `${current.pr ?? ''}\n\n${asText(data)}` }))
+298:  async function deploy() {
+300:    const confirmation = `DEPLOY ${workspace.owner}/${workspace.repo}`
+301:    const data = await call('Deploy', `/api/admin/repo-workbench/${workspace.id}/deploy`, {
+
+--- src/app/admin/dashboard/app-builder/page.tsx ---
+LINES: 70
+3:import Link from 'next/link'
+4:import { useEffect, useState } from 'react'
+5:import { ArrowRight, Blocks, ClipboardList } from 'lucide-react'
+14:    const saved = window.localStorage.getItem(DRAFT_KEY) ?? ''
+15:    setIdea(saved)
+16:    setStarted(Boolean(saved))
+34:        <h1 className="mt-2 text-3xl font-black text-white">Turn an idea into an approved build plan.</h1>
+35:        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">Clarify the problem, users, constraints, data, and success criteria. This workspace saves a planning draft only; it does not create fake apps, agents, or integrations.</p>
+36:        <button onClick={startNewPlan} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">
+39:        </button>
+45:          <textarea
+54:            <p className="text-xs text-slate-500">{idea.trim() ? 'Draft saved in this browser.' : started ? 'New plan ready for input.' : 'No app plan started yet.'}</p>
+55:            <Link href={`/admin/dashboard/workspace${idea.trim() ? `?prompt=${encodeURIComponent(`Help me clarify and plan this standalone app idea without creating or integrating an app yet:\n\n${idea}`)}` : ''}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-200 hover:bg-cyan-400/15">
+64:          <h2 className="mt-4 font-black text-white">Honest planning state</h2>
+
+--- src/app/admin/dashboard/network-apps/page.tsx ---
+LINES: 13
+1:import { NETWORK_APPS_EMPTY_MESSAGE } from '@/lib/network-apps-registry'
+8:        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">No connected apps</h1>
+
+--- src/app/admin/dashboard/apps-agents/page.tsx ---
+LINES: 5
+1:import { redirect } from 'next/navigation'
+
+--- src/app/admin/dashboard/settings/page.tsx ---
+LINES: 152
+3:import { useCallback, useEffect, useState } from 'react'
+4:import { CheckCircle2, Eye, EyeOff, Loader2, Save, TestTube2 } from 'lucide-react'
+5:import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
+9:  connectedCount: number
+18:    const response = await fetch('/api/admin/settings/status', { cache: 'no-store' })
+30:        <h1 className="mt-2 text-3xl font-black text-white">Connect capabilities once.</h1>
+32:          Add a key, save it, then run a live test. A connection turns green only after the provider or local service responds successfully.
+36:          {truth?.connectedCount ?? 0} live connections
+42:          <ConnectionCard key={entry.key} entry={entry} refresh={refresh} />
+49:function ConnectionCard({ entry, refresh }: { entry: SettingsTruthEntry; refresh: () => Promise<void> }) {
+52:  const [busy, setBusy] = useState<'save' | 'test' | null>(null)
+55:  async function save() {
+57:    setBusy('save')
+59:    const response = await fetch('/api/admin/settings/key', {
+64:        type: entry.kind === 'provider' ? 'provider' : 'tool',
+70:    setMessage(response.ok ? `Saved ${data.masked ?? ''}. Run the live test.` : data.error ?? 'Save failed.')
+81:    const response = await fetch(entry.testRoute, {
+92:  const statusStyle = entry.connected
+94:    : entry.status === 'Failed'
+102:          <h2 className="font-black text-white">{entry.label}</h2>
+104:            {entry.optional ? 'Optional connection.' : 'Platform connection.'} Unlocks {entry.unlocks}.
+107:        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black ${statusStyle}`}>{entry.status}</span>
+121:            <input
+127:              className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2.5 pr-10 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50"
+129:            <button type="button" onClick={() => setShow((current) => !current)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500" aria-label={show ? 'Hide value' : 'Show value'}>
+131:            </button>
+133:          <button onClick={save} disabled={busy !== null || !value.trim()} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-black text-slate-200 disabled:opacity-40">
+134:            {busy === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
+135:          </button>
+146:        <button onClick={test} disabled={busy !== null || (!entry.configured && entry.requiresSecret)} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40">
+148:        </button>
+
+--- src/app/admin/dashboard/system/page.tsx ---
+LINES: 53
+1:import { getVpsSnapshot } from '@/lib/vps-monitor'
+2:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+5:  const [vps, runtime] = await Promise.all([getVpsSnapshot().catch(() => null), getDashboardRuntimeTruth().catch(() => null)])
+11:        <h1 className="mt-2 text-3xl font-black text-white">System, operations, VPS, queues, logs, and runtime diagnostics.</h1>
+12:        <p className="mt-2 text-sm leading-6 text-slate-400">Technical detail stays here, outside the normal product workflow. Destructive repairs, restarts, merges, and deployments remain approval-gated.</p>
+18:        <Metric label="Queue" value={vps?.queue.healthy ? 'Ready' : 'Needs attention'} />
+21:        <Panel title="Services">{serviceRows.map(([name, value]) => <Row key={name} label={name} value={formatService(value)} />)}</Panel>
+22:        <Panel title="Runtime truth">{(runtime?.providers ?? []).slice(0, 14).map((provider) => <Row key={provider.key} label={provider.displayName} value={provider.connected ? 'Connected' : provider.reason} />)}</Panel>
+27:          {(runtime?.blockers ?? []).map((blocker) => <Row key={blocker} label="Action" value={blocker} />)}
+28:          {!runtime?.blockers?.length && <p className="text-sm text-slate-400">No runtime blockers reported.</p>}
+35:function formatService(value: unknown) {
+39:  if (typeof value === 'object' && value && 'status' in value) return String((value as { status?: unknown }).status)
+47:function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+48:  return <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><h2 className="font-black text-white">{title}</h2><div className="mt-4 space-y-2">{children}</div></section>
+
+--- src/app/admin/dashboard/operations/page.tsx ---
+LINES: 295
+1:import { listRecords, LOCAL_STORE_FILES, getStorageRoot, checkWritable } from '@/lib/local-json-store'
+2:import { getCostSummary } from '@/lib/cost-tracking'
+3:import { getResearchToolStatus } from '@/lib/research-tools'
+4:import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
+5:import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+6:import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
+7:import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+8:import { getCapabilityGovernanceMatrix, ROOT_WORKSPACE } from '@/lib/provider-capability-governance'
+11:  const [costs, research, system, runtime, settingsTruth] = await Promise.all([
+13:    getResearchToolStatus().catch(() => null),
+14:    getSystemRuntimeStatus().catch(() => null),
+15:    getDashboardRuntimeTruth().catch(() => null),
+16:    getPlatformSettingsTruth().catch(() => null),
+18:  const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
+19:  const approvals = listRecords(LOCAL_STORE_FILES.approvals)
+20:  const jobs = listRecords(LOCAL_STORE_FILES.jobs)
+21:  const storage = checkWritable(LOCAL_STORE_FILES.artifacts)
+22:  const approvedProviderKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
+23:  const providerRows = (runtime?.providers ?? [])
+24:    .filter((provider) => approvedProviderKeys.has(provider.key as never))
+25:    .map((provider) => ({ name: provider.displayName, status: provider.configured ? provider.status : 'Needs key' }))
+26:  const missingProviders = providerRows.filter((provider) => provider.status !== 'ok' && provider.status !== 'Connected')
+29:    ...(system?.vps.status === 'ok' ? [] : ['VPS/Webdock status needs verification']),
+30:    ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
+33:  const toolStatus = (key: string) => settingsTruth?.tools.find((tool) => tool.key === key)?.status ?? 'Needs key'
+34:  const providerCount = providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length
+35:  const studioReady = storage.writable && providerCount > 0
+36:  const workbenchReady = storage.writable && (toolStatus('github') === 'Connected' || settingsTruth?.tools.find((t) => t.key === 'github')?.configured)
+39:    ...(providerCount === 0 ? ['No AI provider connected'] : []),
+43:    ...(toolStatus('github') !== 'Connected' ? ['GitHub not connected'] : []),
+48:    'broken protected API',
+52:    'broken Workbench PR flow',
+56:  const optionalItems = ['Avatar/talking video backend route', 'Automated memory promotion scheduler', 'Extra providers', 'SMTP enhancements']
+67:        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Runtime command center.</h2>
+69:          Provider tests, Studio readiness, Workbench readiness, jobs, artifacts, and cost tracking in one go-live view.
+79:              This panel reports runtime truth from storage, provider health, VPS checks, jobs, artifacts, approvals, and research services. It does not mark unknown routes green.
+87:          <ReadinessList title="Blocking" items={liveBlockers.length ? liveBlockers : ['No runtime blockers detected by this dashboard pass.']} tone={liveBlockers.length ? 'warn' : 'ok'} />
+88:          <ReadinessList title="Optional" items={optionalItems} />
+89:          <ReadinessList title="Live-tested surfaces" items={[
+91:            system?.vps.status === 'ok' ? 'VPS status ok' : 'VPS status pending',
+92:            `${providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length} providers connected`,
+101:          {ROOT_WORKSPACE.message} Route-present providers that are not approved are visible, but not executable by default.
+104:          <ReadinessList title="Blocked by governance" items={governanceBlockers.length ? governanceBlockers : ['No governance blockers reported.']} tone={governanceBlockers.length ? 'warn' : 'ok'} />
+105:          <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
+106:          <ReadinessList title="Available, not wired" items={governance.underusedCapabilities.map((model) => `${model.provider}/${model.modelId}: ${model.capabilities.join(', ')}`).slice(0, 8)} />
+117:        <OpsMetric label="VPS / Webdock" value={system?.vps.status ?? 'Needs key'} status={system?.vps.status === 'ok' ? 'ok' : 'warn'} />
+118:        <OpsMetric label="Storage" value={storage.writable ? 'Writable' : 'Needs test'} status={storage.writable ? 'ok' : 'warn'} />
+120:        <OpsMetric label="Pending Approvals" value={String(approvals.length)} status={approvals.length > 0 ? 'warn' : 'ok'} />
+136:            {providerCount} provider{providerCount !== 1 ? 's' : ''} connected · Storage {storage.writable ? 'writable' : 'not writable'}
+157:            GitHub {toolStatus('github')} · Storage {storage.writable ? 'writable' : 'not writable'}
+170:        <OpsPanel title="Storage / artifacts">
+171:          <OpsRow label="Webdock" value={system?.vps.status ?? 'Needs key/test'} />
+173:          <OpsRow label="Artifacts" value={String(artifacts.length)} />
+178:              <OpsRow label="Artifacts path" value={LOCAL_STORE_FILES.artifacts} mono />
+179:              <OpsRow label="Job logs" value="logs/*.log" mono />
+182:          {(system?.services ?? []).map((service) => <OpsRow key={service.name} label={service.name} value={service.status} />)}
+186:        <OpsPanel title="Research stack">
+187:          <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+188:          <OpsRow label="Scrapy" value={research?.scrapy.status ?? 'Unavailable'} />
+189:          <OpsRow label="Trafilatura" value={research?.trafilatura.status ?? 'Unavailable'} />
+190:          <OpsRow label="Qdrant" value={research?.qdrant.status ?? 'Needs setup'} />
+193:        <OpsPanel title="Required services">
+194:          <OpsRow label="GitHub" value={toolStatus('github')} />
+195:          <OpsRow label="Redis" value={toolStatus('redis')} />
+196:          <OpsRow label="Playwright" value={toolStatus('playwright')} />
+197:          <OpsRow label="Webdock" value={toolStatus('webdock')} />
+198:          <OpsRow label="Storage" value={settingsTruth?.storage.status ?? (storage.writable ? 'Connected' : 'Failed')} />
+202:        <OpsPanel title="Costs / usage">
+204:          <OpsRow label="Artifacts" value={String(artifacts.length)} />
+205:          <OpsRow label="Jobs" value={String(jobs.length)} />
+206:          <OpsRow label="Provider usage" value={Object.keys(costs?.byProvider ?? {}).join(', ') || 'No runs yet'} />
+207:          <OpsRow label="App usage" value={Object.keys(costs?.byApp ?? {}).join(', ') || 'No runs yet'} />
+209:        <OpsPanel title="Redis / jobs">
+210:          <OpsRow label="Active jobs" value={String(jobs.filter((job) => ['pending', 'processing', 'running'].includes(String((job as { status?: unknown }).status))).length)} />
+211:          <OpsRow label="Recent failed jobs" value={String(jobs.filter((job) => String((job as { status?: unknown }).status).includes('fail')).slice(-10).length)} />
+212:          <OpsRow label="Recent artifacts" value={String(artifacts.slice(-10).length)} />
+213:          <OpsRow label="Workbench jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('workbench')).length)} />
+214:          <OpsRow label="Studio jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('studio')).length)} />
+218:      {/* Provider health */}
+220:        <h3 className="text-base font-black text-slate-100">Provider health truth</h3>
+222:          Only approved providers shown. Status derived from runtime key resolution — not static claims.
+225:          {providerRows.map(({ name, status }) => (
+228:              <p className={['mt-1 text-xs font-semibold', status === 'ok' || status === 'Connected' ? 'text-emerald-400' : status === 'Needs key' ? 'text-amber-400' : 'text-slate-500'].join(' ')}>{status}</p>
+231:          {!providerRows.length && <p className="text-sm font-semibold text-slate-500">Runtime provider truth unavailable.</p>}
+235:      {/* Recent expensive runs */}
+237:        <h3 className="text-base font-black text-slate-100">Recent expensive runs</h3>
+239:          {(costs?.recentExpensiveRuns ?? []).map((run) => (
+240:            <div key={run.id} className="rounded-xl border border-slate-700/40 bg-slate-800/50 px-3 py-2.5 text-sm font-semibold text-slate-400">
+241:              <span className="text-cyan-400">${run.estimatedCostUsd.toFixed(4)}</span> — {run.appSlug} — {run.agentId ?? 'operator'} — {run.provider}/{run.model}
+244:          {!costs?.recentExpensiveRuns?.length && (
+245:            <p className="text-sm font-semibold text-slate-500">No cost runs recorded yet.</p>
+253:function OpsMetric({ label, value, status }: { label: string; value: string; status?: 'ok' | 'warn' | 'error' }) {
+254:  const color = status === 'ok' ? 'text-emerald-400' : status === 'warn' ? 'text-amber-400' : status === 'error' ? 'text-red-400' : 'text-slate-200'
+258:      <p className={['mt-2 truncate text-lg font-black', color].join(' ')}>{value}</p>
+263:function OpsPanel({ title, children }: { title: string; children: React.ReactNode }) {
+266:      <h3 className="text-sm font-black text-slate-200">{title}</h3>
+283:function ReadinessList({ title, items, tone = 'neutral' }: { title: string; items: string[]; tone?: 'neutral' | 'warn' | 'ok' }) {
+287:      <p className={['text-xs font-black', color].join(' ')}>{title}</p>
+
+--- src/app/admin/dashboard/memory/page.tsx ---
+LINES: 1
+
+--- src/app/admin/dashboard/memory-learning/page.tsx ---
+LINES: 70
+1:import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+2:import MemoryActions from '@/components/dashboard/MemoryActions'
+4:type MemoryRecord = { id: string; appSlug?: string; memoryType?: string; content?: string; createdAt?: string }
+5:type ArtifactRecord = { id: string; title?: string; type?: string; appSlug?: string }
+6:type LearningLog = { id: string; agentId?: string; summary?: string; createdAt?: string }
+11:  const artifacts = listRecords<ArtifactRecord>(LOCAL_STORE_FILES.artifacts)
+18:        <h1 className="mt-2 text-3xl font-black text-white">What Amarktai Network remembers.</h1>
+20:          Useful context, app outcomes, and saved decisions remain available for later work. Nothing is invented when no memory has been written.
+27:        <Metric label="Linked outputs" value={String(artifacts.length)} />
+31:        <Panel title="What can be remembered">
+33:            'Your preferences and working context',
+34:            'Context for each connected app',
+39:        <Panel title="Recent memory writes">
+43:              <p className="mt-2 text-sm leading-6 text-slate-300">{entry.content || 'Saved context'}</p>
+46:          {!memory.length && <p className="text-sm text-slate-400">No memory yet. Saved outcomes and app context will appear here.</p>}
+52:      <Panel title="Recent learned outcomes">
+64:function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+65:  return <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><h2 className="font-black text-white">{title}</h2><div className="mt-4 space-y-2">{children}</div></section>
+
+===== PACKAGE / LIBRARY STATE =====
+{
+  "name": "amarktai-network",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:push": "prisma db push",
+    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/space-grotesk": "^5.2.10",
+    "@hookform/resolvers": "^5.2.2",
+    "@prisma/client": "^5.22.0",
+    "@qdrant/js-client-rest": "^1.17.0",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-label": "^2.1.8",
+    "@radix-ui/react-popover": "^1.1.15",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
+    "bullmq": "^5.73.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.37.0",
+    "ioredis": "^5.10.1",
+    "iron-session": "^8.0.4",
+    "lucide-react": "^0.577.0",
+    "next": "^15.5.19",
+    "nodemailer": "^8.0.5",
+    "playwright": "^1.60.0",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hook-form": "^7.71.2",
+    "recharts": "^3.8.0",
+    "sentiment": "^5.0.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/nodemailer": "^8.0.0",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/sentiment": "^5.0.4",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "^15.5.19",
+    "postcss": "^8.5.12",
+    "prisma": "^5.22.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5",
+    "vitest": "^4.1.1"
+  },
+  "overrides": {
+    "postcss": "$postcss"
+  }
+}
+
+===== INSTALLED DIRECT DEPENDENCIES =====
+dependencies:
+@fontsource-variable/inter
+@fontsource-variable/space-grotesk
+@hookform/resolvers
+@prisma/client
+@qdrant/js-client-rest
+@radix-ui/react-dialog
+@radix-ui/react-dropdown-menu
+@radix-ui/react-label
+@radix-ui/react-popover
+@radix-ui/react-select
+@radix-ui/react-separator
+@radix-ui/react-slot
+@radix-ui/react-switch
+@radix-ui/react-tabs
+@radix-ui/react-tooltip
+@types/bcryptjs
+bcryptjs
+bullmq
+class-variance-authority
+clsx
+date-fns
+framer-motion
+ioredis
+iron-session
+lucide-react
+next
+nodemailer
+playwright
+react
+react-dom
+react-hook-form
+recharts
+sentiment
+socket.io
+socket.io-client
+tailwind-merge
+zod
+
+devDependencies:
+@types/node
+@types/nodemailer
+@types/react
+@types/react-dom
+@types/sentiment
+@vitejs/plugin-react
+eslint
+eslint-config-next
+postcss
+prisma
+tailwindcss
+typescript
+vitest
+
+===== OPEN-SOURCE / AGENT / MEDIA LIBRARY SEARCH =====
+package.json:48:    "playwright": "^1.60.0",
+src/components/public/PublicShell.tsx:49:            <p className="mt-3 max-w-xl text-sm leading-7 text-slate-300">The AI operating system for connected digital businesses.</p>
+src/app/page.tsx:18:            <p className="mt-6 text-xl font-bold leading-8 text-slate-100 sm:text-2xl">The AI operating system for connected digital businesses.</p>
+src/app/page.tsx:29:        <p className="max-w-3xl text-lg leading-8 text-slate-600">It chooses the right agents, models, tools, and workflow, then keeps the work, approvals, outputs, and next step together.</p>
+src/app/admin/dashboard/studio/page.tsx:384:            <DarkMetric label="GenX" value={catalog?.genx.live ? 'Live' : 'Fallback'} accent={catalog?.genx.live} />
+src/app/admin/dashboard/operations/page.tsx:36:  const workbenchReady = storage.writable && (toolStatus('github') === 'Connected' || settingsTruth?.tools.find((t) => t.key === 'github')?.configured)
+src/app/admin/dashboard/operations/page.tsx:43:    ...(toolStatus('github') !== 'Connected' ? ['GitHub not connected'] : []),
+src/app/admin/dashboard/operations/page.tsx:157:            GitHub {toolStatus('github')} · Storage {storage.writable ? 'writable' : 'not writable'}
+src/app/admin/dashboard/operations/page.tsx:187:          <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+src/app/admin/dashboard/operations/page.tsx:194:          <OpsRow label="GitHub" value={toolStatus('github')} />
+src/app/admin/dashboard/operations/page.tsx:196:          <OpsRow label="Playwright" value={toolStatus('playwright')} />
+src/app/admin/dashboard/workbench/page.tsx:97:    const data = await call('Load branches', `/api/admin/repo-workbench/github/branches?repo=${encodeURIComponent(nextRepo)}`)
+src/app/admin/dashboard/workbench/page.tsx:133:      call('Load repos', '/api/admin/repo-workbench/github/repos').catch(() => null),
+src/app/platform/page.tsx:11:  ['Outputs', 'Media, research, app builds, reports, repository diffs, and pull requests stay together.', Library],
+src/app/about/page.tsx:23:            Connected digital work needs clear control before it needs more complexity.
+src/app/api/fine-tune/route.ts:9:  provider: 'openai' | 'together' | 'qwen'
+src/app/api/fine-tune/route.ts:69:      const supportedProviders = ['openai', 'together', 'qwen']
+src/app/api/fine-tune/route.ts:143:      supportedProviders: ['openai', 'together', 'qwen'],
+src/app/api/fine-tune/route.ts:146:        together: ['meta-llama/Llama-3-8b', 'mistralai/Mixtral-8x7B-v0.1'],
+src/app/api/fine-tune/route.ts:147:        qwen: ['qwen-turbo', 'qwen-plus'],
+src/app/api/admin/media-studio/models/route.ts:10:} from '@/lib/genx-client'
+src/app/api/admin/media-studio/models/route.ts:51:  const genx = await getGenXStatusAsync()
+src/app/api/admin/media-studio/models/route.ts:54:  const liveModels = genx.available ? await listGenXModels().catch(() => []) : []
+src/app/api/admin/media-studio/models/route.ts:55:  const blocker = genx.available ? null : genx.configured ? 'GenX is configured but unreachable.' : 'GenX is not configured.'
+src/app/api/admin/media-studio/models/route.ts:82:    return found.length ? found : staticModels(fallback, category, genx.available, blocker)
+src/app/api/admin/media-studio/models/route.ts:102:  if (configuredProviders.has('huggingface')) {
+src/app/api/admin/media-studio/models/route.ts:106:  if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
+src/app/api/admin/media-studio/models/route.ts:107:  if (configuredProviders.has('qwen')) {
+src/app/api/admin/media-studio/models/route.ts:108:    image.push(directModel('qwen-image', 'Qwen Image', 'Qwen / DashScope', 'image', 'low'))
+src/app/api/admin/media-studio/models/route.ts:110:    voice.push(directModel('qwen-tts', 'Qwen TTS', 'Qwen / DashScope', 'voice', 'low'))
+src/app/api/admin/media-studio/models/route.ts:117:    genx: {
+src/app/api/admin/media-studio/models/route.ts:118:      configured: genx.configured,
+src/app/api/admin/media-studio/models/route.ts:119:      available: genx.available,
+src/app/api/admin/media-studio/models/route.ts:120:      modelCount: genx.modelCount ?? liveModels.length,
+src/app/api/admin/ai-routing/smart/route.ts:89:        costTier: 'genx',
+src/app/api/admin/provider-capability-test/route.ts:33:  if (provider === 'huggingface') {
+src/app/api/admin/provider-capability-test/route.ts:44:  if (provider === 'qwen' && ['text_to_image', 'image_text_to_image'].includes(capabilityId)) {
+src/app/api/admin/provider-capability-test/route.ts:48:  if ((provider === 'minimax' || provider === 'mimo') && capabilityId === 'text_to_speech') {
+src/app/api/admin/repo-workbench/safe-test/route.ts:17:    const { stdout, stderr } = await execFileAsync('git', args, {
+src/app/api/admin/repo-workbench/safe-test/route.ts:23:    return { ok: true, command: `git ${args.join(' ')}`, output: redactSecretsFromLogs(`${stdout}${stderr}`.trim()) }
+src/app/api/admin/repo-workbench/safe-test/route.ts:28:      command: `git ${args.join(' ')}`,
+src/app/api/admin/repo-workbench/safe-test/route.ts:56:  if (!status.gitInstalled || !status.workspaceWritable) {
+src/app/api/admin/repo-workbench/safe-test/route.ts:118:        description: 'Local guided healthcheck flow for Repo Workbench git operations.',
+src/app/api/admin/repo-workbench/safe-test/route.ts:120:        model: 'safe-local-git',
+src/app/api/admin/repo-workbench/import/route.ts:12:    const repoUrl = body.repoUrl || (body.repoFullName ? `https://github.com/${body.repoFullName}` : '')
+src/app/api/admin/repo-workbench/status/route.ts:14:        gitInstalled: false,
+src/app/api/admin/repo-workbench/status/route.ts:16:        githubTokenConfigured: false,
+src/app/api/admin/repo-workbench/status/route.ts:18:        genxAvailable: false,
+src/app/api/admin/repo-workbench/repos/route.ts:4:import { getGitHubConfig, listGitHubRepos } from '@/lib/github-integration'
+src/app/api/admin/repo-workbench/repos/route.ts:22:  const github = config?.configured ? await listGitHubRepos() : { repos: [], error: 'GitHub token not configured' }
+src/app/api/admin/repo-workbench/repos/route.ts:25:    github: {
+src/app/api/admin/repo-workbench/repos/route.ts:26:      connected: !!config?.configured && !github.error,
+src/app/api/admin/repo-workbench/repos/route.ts:28:      error: github.error,
+src/app/api/admin/repo-workbench/repos/route.ts:29:      repos: github.repos,
+src/app/api/admin/repo-workbench/github/branches/route.ts:3:import { listBranches } from '@/lib/github-integration'
+src/app/api/admin/repo-workbench/github/status/route.ts:3:import { getGitHubConfig, validateGitHubToken } from '@/lib/github-integration'
+src/app/api/admin/repo-workbench/github/repos/route.ts:3:import { listGitHubRepos } from '@/lib/github-integration'
+src/app/api/admin/repo-workbench/github/prs/route.ts:13:    const res = await fetch(`https://api.github.com/repos/${repoFullName}/pulls?state=open&per_page=50`, {
+src/app/api/admin/repo-workbench/github/prs/route.ts:14:      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+src/app/api/admin/ai-partner/chat/route.ts:4:import { getGenXStatusAsync, callGenXChat, type GenXChatMessage } from '@/lib/genx-client'
+src/app/api/admin/ai-partner/chat/route.ts:49:  { key: 'groq',      baseUrl: 'https://api.groq.com/openai', defaultModel: 'llama-3.3-70b-versatile' },
+src/app/api/admin/ai-partner/chat/route.ts:52:  { key: 'together',  baseUrl: 'https://api.together.xyz',    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
+src/app/api/admin/ai-partner/chat/route.ts:53:  { key: 'qwen',      baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode', defaultModel: 'qwen-plus' },
+src/app/api/admin/ai-partner/chat/route.ts:151:  if (requestedProvider === 'auto' || requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:153:      const genxStatus = await getGenXStatusAsync()
+src/app/api/admin/ai-partner/chat/route.ts:154:      if (genxStatus.available) {
+src/app/api/admin/ai-partner/chat/route.ts:155:        const genxMessages: GenXChatMessage[] = []
+src/app/api/admin/ai-partner/chat/route.ts:156:        if (systemPrompt.trim()) genxMessages.push({ role: 'system', content: systemPrompt })
+src/app/api/admin/ai-partner/chat/route.ts:157:        for (const m of messages) genxMessages.push({ role: m.role, content: m.content })
+src/app/api/admin/ai-partner/chat/route.ts:159:        const genxResult = await callGenXChat({
+src/app/api/admin/ai-partner/chat/route.ts:160:          model: 'genx/default-chat',
+src/app/api/admin/ai-partner/chat/route.ts:161:          messages: genxMessages,
+src/app/api/admin/ai-partner/chat/route.ts:165:        if (genxResult.success && genxResult.output) {
+src/app/api/admin/ai-partner/chat/route.ts:166:          return NextResponse.json({ reply: genxResult.output, provider: 'genx', model: genxResult.model })
+src/app/api/admin/ai-partner/chat/route.ts:168:        if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:170:            { error: genxResult.error ?? 'GenX call returned empty output', code: 'provider_error' },
+src/app/api/admin/ai-partner/chat/route.ts:174:        errors.push(`genx: ${genxResult.error ?? 'empty reply'}`)
+src/app/api/admin/ai-partner/chat/route.ts:175:      } else if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:177:          { error: `GenX not configured: ${genxStatus.error ?? 'unknown'}`, code: 'provider_not_configured' },
+src/app/api/admin/ai-partner/chat/route.ts:181:    } catch (genxErr) {
+src/app/api/admin/ai-partner/chat/route.ts:182:      if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:184:          { error: `GenX error: ${genxErr instanceof Error ? genxErr.message : 'unknown'}`, code: 'provider_error' },
+src/app/api/admin/ai-partner/chat/route.ts:188:      errors.push(`genx: ${genxErr instanceof Error ? genxErr.message : 'error'}`)
+src/app/api/admin/ai-partner/chat/route.ts:193:    // Non-auto explicit provider (genx was already handled above).
+src/app/api/admin/conversation/stream/route.ts:6:import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
+src/app/api/admin/conversation/stream/route.ts:31:function genxPolicy(costPreference: string): GenXModelPolicy {
+src/app/api/admin/conversation/stream/route.ts:37:function genxCapability(capability: string): { capability: GenXCapability; operation: GenXOperationType } {
+src/app/api/admin/conversation/stream/route.ts:123:        if (plan.selected.provider === 'genx') {
+src/app/api/admin/conversation/stream/route.ts:124:          const mapped = genxCapability(payload.capability)
+src/app/api/admin/conversation/stream/route.ts:125:          const selectedModel = await selectGenXModel(genxPolicy(payload.costPreference), mapped.capability, mapped.operation)
+src/app/api/admin/conversation/stream/route.ts:129:            provider: 'genx',
+src/app/api/admin/conversation/stream/route.ts:154:            controller.enqueue(sse('error', { message: result.error ?? 'GenX stream failed', provider: 'genx', model: result.model }))
+src/app/api/admin/conversation/stream/route.ts:160:            provider: 'genx',
+src/app/api/admin/workspace/run/route.ts:5:import type { GenXModelPolicy, GenXCapability, GenXOperationType } from '@/lib/genx-client'
+src/app/api/admin/workspace/run/route.ts:86:        genxUsed: false,
+src/app/api/admin/workspace/config/route.ts:4:import type { GenXModelPolicy } from '@/lib/genx-client'
+src/app/api/admin/settings/test-huggingface/route.ts:2: * POST /api/admin/settings/test-huggingface
+src/app/api/admin/settings/test-huggingface/route.ts:25:  const key = inlineKey || await getProviderKey('huggingface') || ''
+src/app/api/admin/settings/test-huggingface/route.ts:33:    const res = await fetch('https://huggingface.co/api/whoami-v2', {
+src/app/api/admin/settings/test-huggingface/route.ts:48:        where: { key: 'huggingface' },
+src/app/api/admin/settings/test-huggingface/route.ts:49:        create: { key: 'huggingface', displayName: 'Hugging Face', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-genx/route.ts:2: * POST /api/admin/settings/test-genx
+src/app/api/admin/settings/test-genx/route.ts:29: *   - Auto-correct the dashboard hostname (genx.sh) to the API hostname
+src/app/api/admin/settings/test-genx/route.ts:30: *     (query.genx.sh) — entering the sign-up URL instead of the API URL
+src/app/api/admin/settings/test-genx/route.ts:43:  if (url.hostname === 'genx.sh') {
+src/app/api/admin/settings/test-genx/route.ts:44:    url.hostname = 'query.genx.sh'
+src/app/api/admin/settings/test-genx/route.ts:92:      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+src/app/api/admin/settings/test-genx/route.ts:103:  if (!apiUrl) apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+src/app/api/admin/settings/test-genx/route.ts:198:        model: 'genx/default-chat',
+src/app/api/admin/settings/test-genx/route.ts:254:  const { invalidateEndpointProfile } = await import('@/lib/genx-client')
+src/app/api/admin/settings/test-genx/route.ts:262:      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+src/app/api/admin/settings/test-genx/route.ts:266:        where: { key: 'genx' },
+src/app/api/admin/settings/test-genx/route.ts:281:          key: 'genx',
+src/app/api/admin/settings/test-adult/route.ts:28:type ProviderType = 'together' | 'huggingface' | 'xai' | 'custom'
+src/app/api/admin/settings/test-adult/route.ts:105:        if (!providerType) providerType = (notes.providerType || 'together') as ProviderType
+src/app/api/admin/settings/test-adult/route.ts:122:    if (!providerType) providerType = 'together'
+src/app/api/admin/settings/test-adult/route.ts:124:      together: 'together',
+src/app/api/admin/settings/test-adult/route.ts:125:      huggingface: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:190:  if (!providerType) providerType = 'together'
+src/app/api/admin/settings/test-adult/route.ts:193:  if (providerType === 'together') {
+src/app/api/admin/settings/test-adult/route.ts:196:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:197:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:212:      const res = await fetch('https://api.together.xyz/v1/images/generations', {
+src/app/api/admin/settings/test-adult/route.ts:237:          provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:243:          mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:260:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:266:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:280:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:286:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:295:  if (providerType === 'huggingface') {
+src/app/api/admin/settings/test-adult/route.ts:303:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:309:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:317:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:323:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:336:          : { url: new URL(`https://api-inference.huggingface.co/models/${testModel}`), error: null }
+src/app/api/admin/settings/test-adult/route.ts:339:            provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:345:            mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:373:            provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:379:            mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:390:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:396:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:403:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:409:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:419:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:425:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:434:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:440:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:471:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:477:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:488:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:494:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:501:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:507:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:703:    message: `Unknown provider type: ${providerType}. Supported: xai, together, huggingface, custom`,
+src/app/api/admin/settings/reset-approved-keys/route.ts:21:  'genx',
+src/app/api/admin/settings/reset-approved-keys/route.ts:22:  'github',
+src/app/api/admin/settings/reset-approved-keys/route.ts:26:  'qwen',
+src/app/api/admin/settings/reset-approved-keys/route.ts:29:  'groq',
+src/app/api/admin/settings/reset-approved-keys/route.ts:30:  'together',
+src/app/api/admin/settings/reset-approved-keys/route.ts:31:  'huggingface',
+src/app/api/admin/settings/test-groq/route.ts:2: * POST /api/admin/settings/test-groq
+src/app/api/admin/settings/test-groq/route.ts:25:  const key = inlineKey || await getProviderKey('groq') || ''
+src/app/api/admin/settings/test-groq/route.ts:33:    const res = await fetch('https://api.groq.com/openai/v1/models', {
+src/app/api/admin/settings/test-groq/route.ts:49:        where: { key: 'groq' },
+src/app/api/admin/settings/test-groq/route.ts:50:        create: { key: 'groq', displayName: 'Groq', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-provider/route.ts:11:  if (id === 'genx') return (await (await import('@/app/api/admin/settings/test-genx/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:12:  if (id === 'huggingface') return (await (await import('@/app/api/admin/settings/test-huggingface/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:13:  if (id === 'qwen') return (await (await import('@/app/api/admin/settings/test-qwen/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:14:  if (id === 'groq') return (await (await import('@/app/api/admin/settings/test-groq/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:15:  if (id === 'together') return (await (await import('@/app/api/admin/settings/test-together/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:16:  if (id === 'github') return (await (await import('@/app/api/admin/settings/test-github/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:23:  if (id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage') {
+src/app/api/admin/settings/test-provider/route.ts:31:  if (id === 'mimo') {
+src/app/api/admin/settings/test-provider/route.ts:32:    const response = await fetch(`${process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1'}/chat/completions`, {
+src/app/api/admin/settings/test-provider/route.ts:35:      body: JSON.stringify({ model: process.env.MIMO_TEST_MODEL || 'mimo-v2.5', messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
+src/app/api/admin/settings/test-provider/route.ts:61:  const localRuntime = ['local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'storage'].includes(node.id)
+src/app/api/admin/settings/test-together/route.ts:2: * POST /api/admin/settings/test-together
+src/app/api/admin/settings/test-together/route.ts:25:  const key = inlineKey || await getProviderKey('together') || ''
+src/app/api/admin/settings/test-together/route.ts:33:    const res = await fetch('https://api.together.xyz/v1/models', {
+src/app/api/admin/settings/test-together/route.ts:49:        where: { key: 'together' },
+src/app/api/admin/settings/test-together/route.ts:50:        create: { key: 'together', displayName: 'Together AI', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-qwen/route.ts:2: * POST /api/admin/settings/test-qwen
+src/app/api/admin/settings/test-qwen/route.ts:25:  const key = inlineKey || await getProviderKey('qwen') || ''
+src/app/api/admin/settings/test-qwen/route.ts:41:        model: 'qwen-turbo',
+src/app/api/admin/settings/test-qwen/route.ts:56:        where: { key: 'qwen' },
+src/app/api/admin/settings/test-qwen/route.ts:57:        create: { key: 'qwen', displayName: 'Qwen / DashScope', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-github/route.ts:2: * POST /api/admin/settings/test-github
+src/app/api/admin/settings/test-github/route.ts:30:      const row = await prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } })
+src/app/api/admin/settings/test-github/route.ts:34:  if (!token) token = await getProviderKey('github') ?? ''
+src/app/api/admin/settings/test-github/route.ts:46:    const userRes = await fetch('https://api.github.com/user', {
+src/app/api/admin/settings/test-github/route.ts:49:          Accept: 'application/vnd.github+json',
+src/app/api/admin/settings/test-github/route.ts:79:        const row = await prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } })
+src/app/api/admin/settings/test-github/route.ts:81:          await prisma.gitHubConfig.update({
+src/app/api/admin/settings/test-github/route.ts:89:        const integration = await prisma.integrationConfig.findUnique({ where: { key: 'github' } })
+src/app/api/admin/settings/test-github/route.ts:93:          where: { key: 'github' },
+src/app/api/admin/settings/test-github/route.ts:105:            key: 'github',
+src/app/api/admin/settings/integrations/route.ts:19:const GENX_KEY         = 'genx'
+src/app/api/admin/settings/integrations/route.ts:91:  const [genxRow, storageRow, adultRow, githubRow, webdockRow, firecrawlRow, qdrantRow, mem0Row, posthogRow] = await Promise.all([
+src/app/api/admin/settings/integrations/route.ts:95:    prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } }).catch(() => null),
+src/app/api/admin/settings/integrations/route.ts:104:  const genxKey = decryptConfig(genxRow)
+src/app/api/admin/settings/integrations/route.ts:105:  const genxUrl = genxRow?.apiUrl || process.env.GENX_API_URL || ''
+src/app/api/admin/settings/integrations/route.ts:106:  const genxConfigured = !!(genxKey || process.env.GENX_API_KEY) && !!genxUrl
+src/app/api/admin/settings/integrations/route.ts:109:  const resolvedGitHub = await getProviderKeyWithSource('github')
+src/app/api/admin/settings/integrations/route.ts:110:  const ghToken = githubRow?.accessToken || resolvedGitHub.key || ''
+src/app/api/admin/settings/integrations/route.ts:133:    genx: {
+src/app/api/admin/settings/integrations/route.ts:134:      configured: genxConfigured,
+src/app/api/admin/settings/integrations/route.ts:135:      maskedKey: maskKey(genxKey || (process.env.GENX_API_KEY ?? '')),
+src/app/api/admin/settings/integrations/route.ts:136:      apiUrl: genxUrl,
+src/app/api/admin/settings/integrations/route.ts:137:      source: genxRow?.apiKey ? 'database' : (process.env.GENX_API_KEY ? 'env' : 'none'),
+src/app/api/admin/settings/integrations/route.ts:138:      updatedAt: genxRow?.updatedAt?.toISOString() ?? null,
+src/app/api/admin/settings/integrations/route.ts:140:    github: {
+src/app/api/admin/settings/integrations/route.ts:143:      username: githubRow?.username || null,
+src/app/api/admin/settings/integrations/route.ts:144:      defaultOwner: githubRow?.defaultOwner || '',
+src/app/api/admin/settings/integrations/route.ts:145:      lastValidatedAt: githubRow?.lastValidatedAt?.toISOString() ?? null,
+src/app/api/admin/settings/integrations/route.ts:146:      source: githubRow?.accessToken ? 'legacy_settings' : resolvedGitHub.source,
+src/app/api/admin/settings/integrations/route.ts:160:      providerType: adultNotes.providerType || 'together',
+src/app/api/admin/settings/integrations/route.ts:206:  genx: z.object({
+src/app/api/admin/settings/integrations/route.ts:210:  github: z.object({
+src/app/api/admin/settings/integrations/route.ts:225:    providerType: z.enum(['together', 'huggingface', 'xai', 'custom']).optional(),
+src/app/api/admin/settings/integrations/route.ts:274:  if (data.genx) {
+src/app/api/admin/settings/integrations/route.ts:279:        ...(data.genx.apiKey ? { apiKey: data.genx.apiKey } : {}),
+src/app/api/admin/settings/integrations/route.ts:280:        ...(data.genx.apiUrl !== undefined ? { apiUrl: data.genx.apiUrl } : {}),
+src/app/api/admin/settings/integrations/route.ts:286:  if (data.github) {
+src/app/api/admin/settings/integrations/route.ts:287:    const existing = await prisma.gitHubConfig.findFirst({ orderBy: { id: 'desc' } }).catch(() => null)
+src/app/api/admin/settings/integrations/route.ts:288:    if (data.github.token) {
+src/app/api/admin/settings/integrations/route.ts:291:      let defaultOwner = data.github.defaultOwner ?? existing?.defaultOwner ?? ''
+src/app/api/admin/settings/integrations/route.ts:293:        const res = await fetch('https://api.github.com/user', {
+src/app/api/admin/settings/integrations/route.ts:295:            Authorization: `Bearer ${data.github.token}`,
+src/app/api/admin/settings/integrations/route.ts:296:            Accept: 'application/vnd.github+json',
+src/app/api/admin/settings/integrations/route.ts:310:          prisma.gitHubConfig.update({
+src/app/api/admin/settings/integrations/route.ts:313:              accessToken: data.github.token,
+src/app/api/admin/settings/integrations/route.ts:322:          prisma.gitHubConfig.create({
+src/app/api/admin/settings/integrations/route.ts:324:              accessToken: data.github.token,
+src/app/api/admin/settings/integrations/route.ts:335:          key: 'github',
+src/app/api/admin/settings/integrations/route.ts:337:          apiKey: data.github.token,
+src/app/api/admin/settings/integrations/route.ts:346:    } else if (data.github.defaultOwner !== undefined && existing) {
+src/app/api/admin/settings/integrations/route.ts:348:        prisma.gitHubConfig.update({
+src/app/api/admin/settings/integrations/route.ts:350:          data: { defaultOwner: data.github.defaultOwner },
+src/app/api/admin/artifacts/route.ts:167:      'api.together.xyz',
+src/app/api/admin/labs/route.ts:12:import { pushProjectToGitHub } from '@/lib/github-integration'
+src/app/api/admin/studio/execute/route.ts:280:      if (route.selectedProvider === 'huggingface') {
+src/app/api/admin/studio/execute/route.ts:304:        && String(data.provider ?? route.selectedProvider) === 'genx'
+src/app/api/admin/studio/execute/route.ts:344:      const provider = route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
+src/app/api/admin/studio/execute/route.ts:346:        : 'genx'
+src/app/api/admin/studio/execute/route.ts:412:      const provider = ['genx', 'huggingface'].includes(String(route.selectedProvider))
+src/app/api/admin/amarktai-assistant/context/route.ts:43:      { provider: 'genx', label: 'GenX voice', status: process.env.GENX_API_KEY ? 'Configured' : 'Needs key/test' },
+src/app/api/admin/amarktai-assistant/context/route.ts:44:      { provider: 'groq', label: 'Groq speech', status: process.env.GROQ_API_KEY ? 'Configured' : 'Needs key/test' },
+src/app/api/admin/amarktai-assistant/tts/route.ts:17:  const selectedProvider = body.voiceId && ['minimax', 'genx', 'groq', 'openai'].includes(body.voiceId) ? body.voiceId : 'auto'
+src/app/api/admin/app-ai-package/route.ts:43:  crawler: z.object({ provider: z.enum(['firecrawl', 'crawl4ai', 'playwright', 'manual']), websiteUrl: z.string().optional(), lastCrawledAt: z.string().optional() }).optional(),
+src/app/api/admin/specialist/qwen-wanx-task/route.ts:4:import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
+src/app/api/admin/specialist/huggingface/route.ts:12:  capability: z.string().min(1).default('huggingface_inference'),
+src/app/api/admin/apps/intelligence/route.ts:264:  const cheapFallbacks = ['gemini', 'qwen', 'groq', 'grok', 'openrouter']
+src/app/api/admin/apps/intelligence/route.ts:270:    primary: 'genx',
+src/app/api/admin/apps/intelligence/route.ts:272:    image: hasImage ? 'genx' : '',
+src/app/api/admin/apps/intelligence/route.ts:273:    video: hasVideo ? 'genx' : '',
+src/app/api/admin/apps/intelligence/route.ts:274:    voice: hasVoice ? 'genx' : '',
+src/app/api/admin/apps/intelligence/route.ts:275:    music: hasMusic ? 'genx' : '',
+src/app/api/admin/music-studio/route.ts:17:import { callGenXMedia, GENX_AUDIO_MODELS } from '@/lib/genx-client'
+src/app/api/admin/music-studio/route.ts:183:          success: false, executed: false, capability: 'music_generation', provider: 'genx', model,
+src/app/api/admin/music-studio/route.ts:196:          provider: 'genx',
+src/app/api/admin/music-studio/route.ts:204:          provider: 'genx',
+src/app/api/admin/music-studio/route.ts:227:        provider: 'genx',
+src/app/api/admin/multimodal/route.ts:58:    const hfUsable = isProviderUsable('huggingface')
+src/app/api/admin/genx/status/route.ts:8:} from '@/lib/genx-client'
+src/app/api/admin/genx/status/route.ts:11: * GET /api/admin/genx/status
+src/app/api/admin/ai-model-catalog/route.ts:44:      genxExpectedLiveModels: 58,
+src/app/api/admin/deploy/direct-vps/route.ts:232:    `REPO="https://github.com/${repo}.git"`,
+src/app/api/admin/deploy/direct-vps/route.ts:236:    `if [ -d "$APP_DIR/.git" ]; then`,
+src/app/api/admin/deploy/direct-vps/route.ts:238:    `  git fetch origin`,
+src/app/api/admin/deploy/direct-vps/route.ts:239:    `  git checkout "$BRANCH"`,
+src/app/api/admin/deploy/direct-vps/route.ts:240:    `  git pull origin "$BRANCH"`,
+src/app/api/admin/deploy/direct-vps/route.ts:242:    `  git clone --branch "$BRANCH" "$REPO" "$APP_DIR"`,
+src/app/api/admin/brain/test/route.ts:230:  let genxAvailable = false
+src/app/api/admin/brain/test/route.ts:232:    const { getGenXStatusAsync } = await import('@/lib/genx-client')
+src/app/api/admin/brain/test/route.ts:234:    genxAvailable = gs.available
+src/app/api/admin/brain/test/route.ts:235:  } catch { genxAvailable = false }
+src/app/api/admin/brain/test/route.ts:282:    const genxCanHandle = genxAvailable && !isSpecialist
+src/app/api/admin/brain/test/route.ts:283:    if (!genxCanHandle) {
+src/app/api/admin/brain/test/route.ts:671:    const genxCanHandle = genxAvailable && !isSpecialist
+src/app/api/admin/brain/test/route.ts:672:    if (!genxCanHandle) {
+src/app/api/admin/voice/options/route.ts:4:import { GENX_TTS_MODELS } from '@/lib/genx-client'
+src/app/api/admin/voice/options/route.ts:18:  { id: 'genx:grok-tts:neutral', label: 'AmarktAI Neutral', provider: 'genx', model: 'grok-tts', verified: false, blocker: null },
+src/app/api/admin/voice/options/route.ts:19:  { id: 'genx:aura-2:warm', label: 'AmarktAI Warm', provider: 'genx', model: 'aura-2', verified: false, blocker: null },
+src/app/api/admin/voice/options/route.ts:20:  { id: 'genx:genxlm-voice-v1:premium', label: 'AmarktAI Premium', provider: 'genx', model: 'genxlm-voice-v1', verified: false, blocker: null },
+src/app/api/admin/voice/options/route.ts:32:  if (truth.genx.configured) configuredProviders.add('genx')
+src/app/api/admin/voice/options/route.ts:36:    const genxModelKnown = voice.provider !== 'genx' || GENX_TTS_MODELS.includes(voice.model as (typeof GENX_TTS_MODELS)[number])
+src/app/api/admin/voice/options/route.ts:38:    const verified = providerReady && genxModelKnown && capabilityReady
+src/app/api/admin/voice/preview/route.ts:5:import { GENX_TTS_MODELS } from '@/lib/genx-client'
+src/app/api/admin/voice/preview/route.ts:22:  'genx:grok-tts:neutral': { provider: 'genx', model: 'grok-tts', label: 'AmarktAI Neutral' },
+src/app/api/admin/voice/preview/route.ts:23:  'genx:aura-2:warm': { provider: 'genx', model: 'aura-2', label: 'AmarktAI Warm' },
+src/app/api/admin/voice/preview/route.ts:24:  'genx:genxlm-voice-v1:premium': { provider: 'genx', model: 'genxlm-voice-v1', label: 'AmarktAI Premium' },
+src/app/api/admin/voice/preview/route.ts:32:  if (provider === 'genx') return truth.genx.configured && truth.genx.available
+src/app/api/admin/voice/preview/route.ts:54:  const modelKnown = choice.provider !== 'genx' || GENX_TTS_MODELS.includes(choice.model as (typeof GENX_TTS_MODELS)[number])
+src/app/api/admin/command/route.ts:96:    const providerOverride = route.selectedProviders.find((provider) => ['genx', 'qwen', 'together'].includes(provider))
+src/app/api/admin/command/route.ts:114:    const provider = route.selectedProviders.find((item) => ['genx', 'together', 'qwen', 'huggingface'].includes(item))
+src/app/api/admin/provider-governance/route.ts:34:      keepCore: ['genx', 'github', 'qwen', 'groq', 'together', 'huggingface'],
+src/app/api/admin/integration-keys/route.ts:25:  langgraph:  { displayName: 'LangGraph',  keyEnvVar: 'LANGGRAPH_API_KEY',  urlEnvVar: 'LANGGRAPH_API_URL',  urlPlaceholder: '',                               description: 'Durable workflow orchestration' },
+src/app/api/admin/integration-keys/route.ts:27:  huggingface:{ displayName: 'HuggingFace',keyEnvVar: 'HUGGINGFACE_API_KEY',                                                                                   description: 'Emotion enrichment and open-source models' },
+src/app/api/admin/integrations-status/route.ts:14:import { getLangGraphStatus } from '@/lib/langgraph-client'
+src/app/api/admin/integrations-status/route.ts:43:      langgraph: getLangGraphStatus(),
+
+===== BUILD QUICK CONFIRM =====
+├ ○ /admin/dashboard/agents                                  673 B         103 kB
+├ ○ /admin/dashboard/app-builder                           2.42 kB         108 kB
+├ ○ /admin/dashboard/apps-agents                             673 B         103 kB
+├ ○ /admin/dashboard/command                                 673 B         103 kB
+├ ○ /admin/dashboard/memory                                   2 kB         104 kB
+├ ○ /admin/dashboard/memory-learning                          2 kB         104 kB
+├ ○ /admin/dashboard/network-apps                            673 B         103 kB
+├ ○ /admin/dashboard/operations                              673 B         103 kB
+├ ƒ /admin/dashboard/outputs                               5.47 kB         108 kB
+├ ○ /admin/dashboard/settings                              3.27 kB         106 kB
+├ ○ /admin/dashboard/studio                                11.2 kB         119 kB
+├ ○ /admin/dashboard/system                                  673 B         103 kB
+├ ○ /admin/dashboard/workbench                             7.38 kB         112 kB
+├ ○ /admin/dashboard/workspace                             6.12 kB         112 kB
+
+===== HEALTH QUICK CONFIRM =====
+{"status":"ok","timestamp":"2026-06-08T11:19:00.770Z","version":"1.0.0","db":"ok","latencyMs":24}
+
+================================================================
+ END DASHBOARD SECTION MAP
+================================================================

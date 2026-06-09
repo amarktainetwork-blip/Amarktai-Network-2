@@ -116,21 +116,22 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // ── Vault key fallback ──────────────────────────────────────────────────────
   // When no inline key and no key in the adult_mode integration config, check
   // the provider vault (aiProvider table — shared key store for all features).
-  // This lets users reuse the same Together/HuggingFace/xAI key they already
+  // This lets users reuse the same Together/HuggingFace key they already
   // saved in Admin → AI Providers, without entering it a second time.
   if (!apiKey && mode === 'specialist') {
     if (!providerType) providerType = 'together'
-    const vaultKeyMap: Record<string, CoreProvider> = {
+    const vaultKeyMap: Partial<Record<ProviderType, CoreProvider>> = {
       together: 'together',
       huggingface: 'huggingface',
-      xai: 'xai',
     }
-    // 'custom' has no corresponding vault key — skip vault lookup for it
+    // 'custom' and unapproved legacy provider types have no corresponding approved vault key.
     if (providerType !== 'custom') {
-      const vaultKey = vaultKeyMap[providerType] ?? providerType
-      const resolved = await getProviderKey(vaultKey as CoreProvider).catch(() => null)
-        ?? await getVaultApiKey(vaultKey).catch(() => null)
-      if (resolved) apiKey = resolved
+      const vaultKey = vaultKeyMap[providerType]
+      if (vaultKey) {
+        const resolved = await getProviderKey(vaultKey).catch(() => null)
+          ?? await getVaultApiKey(vaultKey).catch(() => null)
+        if (resolved) apiKey = resolved
+      }
     }
   }
 
