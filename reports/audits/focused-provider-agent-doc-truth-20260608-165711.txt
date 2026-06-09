@@ -1,0 +1,1637 @@
+================================================================
+ FOCUSED PROVIDER / AGENT / DOC TRUTH
+================================================================
+Mon Jun  8 16:57:11 UTC 2026
+/var/www/amarktai-audit/Amarktai-Network-2
+amarktainetw
+
+===== GIT STATE =====
+ M src/app/admin/dashboard/studio/page.tsx
+?? reports/
+bcb047f fix: simplify dashboard foundation and home flow
+4867993 fix: make outputs media library live and artifact-aware
+ebc3d61 fix: preserve vocal song options in studio music generation
+e6a14b4 fix: serve media artifacts with browser-ready MIME types
+ea0d4da fix: persist authenticated GenX media artifacts locally
+876b146 fix: normalize studio media routing and prove music jobs
+25eb342 fix: bridge assistant stream route to working chat execution
+4ec9e37 feat: stabilize AI brain and provider universe truth
+03da8ae Merge pull request #83 from amarktainetwork-blip/fix-live-media-execution-artifacts-jobs
+823f1eb Fix live media job and artifact contracts
+0	8
+
+===== KEY DOC EXTRACTS =====
+
+--- docs/ai/model-stack-research.md ---
+1:# Model Stack Research
+5:## GenX Model Catalogue Summary
+7:GenX is the primary AI gateway. One GenX key unlocks all categories below.
+14:- DeepSeek: R1, V3 (via GenX routing)
+16:### Image Generation
+17:- Recraft v3 (via GenX)
+18:- DALL-E 3 (via GenX)
+19:- Grok Imagine (via GenX)
+20:- Flux family (via GenX)
+22:### Video Generation
+23:- Veo 2 (Google, via GenX)
+24:- Kling (via GenX)
+25:- Seedance (via GenX)
+26:- PixVerse (via GenX)
+27:- Grok Video (via GenX)
+29:### Avatar / Video
+30:- HeyGen (via GenX)
+31:- D-ID (via GenX)
+33:### Voice / TTS
+34:- Grok TTS (via GenX)
+35:- Aura 2 / Deepgram (via GenX)
+36:- GenX LM Voice v1
+37:- OpenAI TTS-1 (via GenX)
+39:### STT / Transcription
+40:- GenX transcription
+41:- Whisper v3 (via GenX)
+42:- Deepgram Nova (via GenX)
+45:- GenX Pro translation
+46:- GPT-4 translate (via GenX)
+48:### Music / Audio
+49:- Lyria (Google, via GenX)
+50:- GenX audio models
+53:- Gemini 2.5 Flash multimodal (via GenX)
+54:- GPT-4o vision (via GenX)
+57:- GenX embeddings
+58:- text-embedding-3 (via GenX)
+62:## Providers NOT Duplicated (Covered by GenX)
+64:These providers do NOT need direct API keys. GenX routes to them.
+66:| Provider | Covered capabilities |
+68:| OpenAI | Text, image (DALL-E), TTS, embeddings, moderation |
+70:| Google / Gemini / Veo / Lyria | Text, image, video, music, multimodal |
+71:| xAI / Grok | Text, image, video, TTS |
+72:| Recraft | Image generation |
+73:| Kling | Video generation |
+74:| Seedance | Video generation |
+75:| PixVerse | Video generation |
+76:| Deepgram Aura | Voice/TTS |
+77:| GenX Pro | Image, translation, transcription |
+78:| GenX Voice | Voice/TTS |
+82:## Optional Fallback Providers
+84:Add direct keys only when GenX is insufficient for the specific use case.
+86:| Provider | Reason | Status |
+88:| Hugging Face | Free/open-source models, local diffusion | Listed — not wired yet |
+89:| Together AI | Cheaper open model route | Listed — not wired yet |
+92:| Qwen / Alibaba | Cheap, multilingual, open-source versions | Listed — not wired yet |
+93:| Xiaomi MiMo | Specialist reasoning fallback | Listed — not wired yet |
+94:| NVIDIA / Nemotron | High-performance open models | Listed — not wired yet |
+97:| Replicate | Image/video/audio fallback | Listed — not wired yet |
+98:| RunPod / Modal | Self-host / adult route not on GenX | Listed — not wired yet |
+99:| ElevenLabs | Specialist TTS fallback | Listed — not wired yet |
+100:| Resemble | Voice cloning fallback | Listed — not wired yet |
+101:| Suno | Music generation fallback | Listed — not wired yet |
+102:| Udio | Music generation fallback | Listed — not wired yet |
+103:| Pika | Video generation fallback | Listed — not wired yet |
+104:| Runway | Video generation fallback | Listed — not wired yet |
+105:| Luma | Video/3D fallback | Listed — not wired yet |
+107:| Crawl4AI / local | Self-host crawler fallback | Listed — not wired yet |
+108:| Skrape.ai | Scraping / crawler fallback | Listed — not wired yet |
+112:## Model Tiers
+115:- Llama 3.3 70B (HuggingFace)
+118:- SDXL (HuggingFace)
+123:- Qwen 2.5 72B
+125:- Mistral Nemo (Together)
+128:- Gemini 2.5 Flash (via GenX)
+129:- GPT-4o mini (via GenX)
+130:- Claude Haiku 3.5 (via GenX)
+131:- Grok 2 fast (via GenX)
+134:- GPT-4.1 / o3 (via GenX)
+135:- Claude Opus 4 / Sonnet 3.7 (via GenX)
+136:- Gemini 2.5 Pro (via GenX)
+137:- Grok 3 (via GenX)
+138:- Veo 2, Kling video (via GenX)
+141:- Grok TTS / Aura 2 (voice, via GenX)
+142:- Whisper v3 (STT, via GenX)
+143:- Recraft v3 (image, via GenX)
+144:- Lyria (music, via GenX)
+145:- text-embedding-3 (embeddings, via GenX)
+149:## Capability Recommendations
+151:| Capability | Recommended | Fallback |
+153:| coding_agent | GPT-4.1 via GenX | DeepSeek V3 |
+154:| chat | Gemini 2.5 Flash via GenX | Claude Haiku |
+155:| reasoning | o3 via GenX | DeepSeek R1 |
+156:| research | Gemini 2.5 Pro via GenX | Firecrawl + GPT-4o |
+157:| image_generation | Recraft v3 via GenX | SDXL via Replicate |
+158:| video_generation | Veo 2 via GenX | Kling via GenX |
+159:| voice_tts | Aura 2 via GenX | ElevenLabs |
+160:| transcription | Deepgram Nova via GenX | Whisper local |
+161:| music_generation | Lyria via GenX | Suno |
+162:| adult_image | RunPod / HuggingFace local ONLY | — |
+164:| embeddings | text-embedding-3 via GenX | local sentence-transformers |
+171:- GenX status API: ✅
+172:- GenX model catalogue: ✅ (fetched from /api/admin/genx/status)
+173:- Repo Workbench coding agent: ✅
+174:- Apps & Agents CRUD: ✅
+175:- Artifacts library: ✅
+179:- Direct fallback provider key storage: ❌ (Settings shows fields, not stored to vault yet for most)
+180:- Per-app model budget enforcement: ❌
+181:- Music generation (real audio): ❌ (blueprint only)
+182:- Video generation API call: ❌ (GenX endpoint wired, quota needed)
+183:- Voice TTS generation call: ❌ (GenX endpoint wired, key needed)
+185:- Command Center NL task routing: ❌
+186:- Per-app agent learning: ❌ (framework exists)
+
+--- docs/adding-a-provider.md ---
+1:# Adding a New AI Provider
+3:This guide explains how to register a new AI provider in the AmarktAI Network.
+5:## 1. Add to the Model Registry
+7:Edit `src/lib/model-registry.ts` and add entries to the `MODEL_REGISTRY` array:
+11:  provider: 'your-provider',
+12:  model_id: 'your-model-name',
+13:  display_name: 'Your Model Display Name',
+17:  roles: ['chat', 'code'] as ModelRole[],
+20:    supports_image_generation: false,
+31:1. Navigate to **Admin Dashboard → AI Providers**
+32:2. Click the provider card
+34:   - **API Key** — your provider's authentication key
+36:   - **Default Model** — the primary model to use
+37:   - **Fallback Model** — backup model for failures
+42:Edit `src/lib/providers.ts` and add a case to `runProviderHealthCheck()`:
+45:case 'your-provider': {
+46:  const res = await fetch('https://api.your-provider.com/v1/models', {
+62:['your-model-name', { inputPer1k: 0.001, outputPer1k: 0.002 }],
+65:## 5. Update the Provider Catalogue
+67:If the new provider should appear in the admin UI, add it to the
+68:`PROVIDER_CATALOGUE` array in `src/app/admin/dashboard/ai-providers/page.tsx`.
+74:curl -X POST http://localhost:3000/api/admin/providers/your-provider/health-check
+79:  -d '{"appId":"your-app","appSecret":"secret","prompt":"Hello","provider":"your-provider"}'
+
+--- docs/registering-models.md ---
+1:# Registering New Models
+3:This guide explains how to add new AI models to the AmarktAI Network registry.
+5:## Model Registry Structure
+7:Models are defined in `src/lib/model-registry.ts` in the `MODEL_REGISTRY` array.
+13:| `provider`         | string   | Provider key (e.g. `openai`, `groq`)                 |
+14:| `model_id`         | string   | Unique model identifier                              |
+20:| `capabilities`     | object   | Boolean capability flags                             |
+21:| `enabled`          | boolean  | Whether the model is active                          |
+23:### Model Roles
+30:- `image_generation` — Image creation (DALL-E, etc.)
+31:- `tts` — Text-to-speech synthesis
+32:- `voice_interaction` — Voice-based interactions
+33:- `vision` — Image understanding
+41:  supports_image_generation: boolean,
+45:  supports_tts: boolean,
+46:  supports_voice_interaction: boolean,
+50:## Example: Adding a New Model
+53:// In MODEL_REGISTRY array:
+55:  provider: 'openai',
+56:  model_id: 'gpt-5',
+61:  roles: ['chat', 'code', 'reasoning', 'creative'] as ModelRole[],
+64:    supports_image_generation: false,
+73:## Updating the Default Model Map
+75:If you want the new model to be a default for its provider, update
+76:`DEFAULT_MODEL_MAP` in the same file:
+79:export const DEFAULT_MODEL_MAP: Record<string, string> = {
+80:  openai: 'gpt-4o',        // default OpenAI model
+81:  groq: 'llama-3.3-70b-versatile',
+88:After adding a model:
+90:1. The model appears in **Admin Dashboard → Model Registry**
+91:2. Run `npx vitest run src/lib/__tests__/model-registry.test.ts` to validate
+92:3. The routing engine will include it in eligible models for matching apps
+
+--- docs/configuring-app-profiles.md ---
+1:# Configuring App Profiles
+3:App profiles control how the AmarktAI Network routes, escalates, and manages
+13:| **Routing**          | `default_routing_mode`, `allowed_providers`, `allowed_models`, `preferred_models` |
+14:| **Escalation**       | `escalation_rules` — when to upgrade to premium models            |
+16:| **Permissions**      | `agent_permissions`, `multimodal_permissions`                     |
+20:## Routing Modes
+24:| `direct`      | Single model call, no validation                         |
+25:| `specialist`  | Single model with specialist system prompt               |
+26:| `review`      | Primary + validator from a different provider            |
+34:   - **Step 2**: Allowed providers, preferred models, sensitivity settings
+35:   - **Step 3**: Capabilities (vision, voice, image gen, etc.)
+50:    "default_routing_mode": "specialist",
+51:    "allowed_providers": ["openai", "groq", "deepseek"],
+52:    "allowed_models": ["gpt-4o-mini", "llama-3.3-70b-versatile"],
+53:    "preferred_models": ["gpt-4o-mini"],
+58:        "escalate_to_provider": "openai",
+59:        "escalate_to_model": "gpt-4o"
+63:    "agent_permissions": ["chat", "summarise", "agent:planner"],
+75:Escalation rules define when a task should be upgraded to a more powerful model:
+81:  escalate_to_provider: 'openai',            // Target provider
+82:  escalate_to_model: 'gpt-4o'               // Target model
+94:  validator_models: ['gpt-4o', 'o1-mini']   // Models that can validate
+
+--- docs/audits/FULL_PROVIDER_FUNCTION_CAPABILITY_RESEARCH.md ---
+1:# Full Provider Function Capability Research
+5:Scope: audit and report only. No implementation, redesign, provider addition, or provider removal was performed.
+9:AmarktAI Network already has a broad provider stack and a broad route surface, but the stack is not yet governed by one capability truth system. The main go-live risk is not a lack of routes. The risk is capability ambiguity: several providers are present in route code but not in the approved provider catalog, several model capabilities are inferred from local arrays rather than live metadata, and several functions are route-shaped but not live-tested with keys.
+13:- GenX is the intended primary provider/orchestration layer in `src/lib/genx-client.ts`, `src/lib/universal-model-catalog.ts`, and `src/lib/live-ai-routing.ts`.
+14:- The live GenX catalog endpoint `https://query.genx.sh/api/v1/models` returned 58 model IDs during this audit.
+15:- `src/lib/runtime-capability-truth.ts` still has a default GenX model count of 57. This is a source-of-truth bug.
+16:- Official provider docs show current providers can cover most intended functions: chat, coding, reasoning, structured output, function calling, image generation, video generation, music/song generation, TTS, STT, voice cloning/design, web crawling, browser QA, repo PR workflows, runtime health, and storage/artifacts.
+17:- The repo does not yet wire all of those provider capabilities. MiniMax and Qwen are especially underused relative to their official docs.
+18:- Adult text and adult image are route-present and policy-gated in repo code. Adult video, explicit image/video, non-consensual sexual content, minors/age-ambiguous content, deepfake sexualization without consent, genitals, explicit sex acts, coercion, exploitation, violence, degradation, illegal content, and safety bypassing must remain blocked.
+19:- Every key-dependent provider execution claim in this runtime is Not verified - requires live test because local provider keys were absent.
+21:Go-live verdict: not production-ready until capability governance is centralized, live tests are run, and dashboard claims are generated from the same provider/model/function truth used by execution.
+27:- GenX and models: `src/lib/genx-client.ts`, `src/lib/universal-model-catalog.ts`, `src/lib/ai-model-catalog.ts`
+28:- Approved/governed providers: `src/lib/approved-ai-catalog.ts`, `src/lib/ai-provider-governance.ts`, `src/lib/provider-catalog.ts`, `src/lib/provider-config.ts`
+29:- Routing: `src/lib/live-ai-routing.ts`, `src/lib/capability-router.ts`, `src/lib/routing-engine.ts`, `src/lib/ai-routing-policy.ts`
+30:- Runtime truth: `src/lib/runtime-capability-truth.ts`, `src/lib/platform-settings-truth.ts`, `src/lib/readiness-audit.ts`, `src/lib/system-runtime-status.ts`
+31:- Studio routes: `src/app/api/admin/studio/execute/route.ts`, `src/app/api/admin/studio/stt/route.ts`, `src/app/api/admin/studio/workbench-handoff/route.ts`, `src/lib/studio-route-map.ts`
+32:- Media routes: `src/app/api/brain/image/route.ts`, `src/app/api/brain/image-edit/route.ts`, `src/app/api/brain/video-generate/route.ts`, `src/app/api/brain/video-generate/[jobId]/route.ts`, `src/app/api/brain/tts/route.ts`, `src/app/api/brain/stt/route.ts`
+33:- Music/voice routes: `src/app/api/admin/music-studio/route.ts`, `src/app/api/admin/music-studio/jobs/[jobId]/route.ts`, `src/lib/music-studio.ts`, `src/app/api/admin/specialist/minimax-tts/route.ts`, `src/lib/specialist-provider-routes.ts`, `src/app/api/admin/voice/options/route.ts`, `src/app/api/admin/voice/preview/route.ts`
+34:- Adult routes/catalog: `src/lib/adult-model-catalog.ts`, `src/app/api/brain/adult-text/route.ts`, `src/app/api/brain/adult-image/route.ts`, `src/app/api/admin/app-safety/route.ts`
+35:- App OS: `src/lib/app-profiles.ts`, `src/lib/app-ai-package.ts`, `src/lib/app-ai-package-store.ts`, `src/lib/app-agent.ts`, `src/lib/app-budget-enforcement.ts`, `src/lib/app-discovery.ts`, `src/app/api/admin/app-profiles/route.ts`, `src/app/api/admin/app-ai-package/route.ts`, `src/app/api/admin/app-agents/route.ts`, `src/app/api/admin/app-safety/route.ts`, `src/app/api/admin/app-budgets/route.ts`, `src/app/api/admin/app-health/route.ts`
+37:- Dashboard pages: `src/app/admin/dashboard/page.tsx`, `src/app/admin/dashboard/workbench/page.tsx`, `src/app/admin/dashboard/apps-agents/page.tsx`, `src/app/admin/dashboard/memory-learning/page.tsx`, `src/app/admin/dashboard/operations/page.tsx`, `src/app/admin/dashboard/settings/page.tsx`
+41:- `curl.exe -s --max-time 20 https://query.genx.sh/api/v1/models` returned 58 GenX model IDs.
+42:- Local key presence check from the prior governance audit found these absent: `GENX_API_KEY`, `GENX_API_URL`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `TOGETHER_API_KEY`, `HUGGINGFACE_API_KEY`, `HF_TOKEN`, `QWEN_API_KEY`, `DASHSCOPE_API_KEY`, `MINIMAX_API_KEY`, `MIMO_API_KEY`, `GITHUB_TOKEN`, `FIRECRAWL_API_KEY`, `REDIS_URL`, `WEBDOCK_API_TOKEN`, `SMTP_HOST`.
+44:Official provider documentation used:
+46:- OpenAI model, audio, image, structured output, function calling, moderation, and usage policy docs: `https://platform.openai.com/docs/models`, `https://platform.openai.com/docs/guides/audio`, `https://platform.openai.com/docs/guides/image-generation`, `https://platform.openai.com/docs/guides/structured-outputs`, `https://help.openai.com/en/articles/8555517-function-calling-in-the-openai-api`, `https://openai.com/policies/usage-policies/`
+47:- Hugging Face Inference Providers and content policy: `https://huggingface.co/docs/inference-providers/providers/hf-inference`, `https://huggingface.co/content-policy`
+48:- Together AI chat, structured outputs, models, and usage/cost docs: `https://docs.together.ai/docs/chat-overview`, `https://docs.together.ai/docs/json-mode`, `https://docs.together.ai/docs/serverless-models`, `https://docs.together.ai/docs/billing-usage-limits`
+49:- Groq docs and policy: `https://console.groq.com/docs`, `https://console.groq.com/docs/speech-to-text`, `https://console.groq.com/docs/structured-outputs`, `https://console.groq.com/docs/legal/ai-policy`
+50:- Qwen/DashScope/Alibaba Cloud Model Studio docs: `https://www.alibabacloud.com/help/doc-detail/2579562.html`, `https://www.alibabacloud.com/help/en/model-studio/user-guide/model/`, `https://www.alibabacloud.com/help/doc-detail/2979031.html`, `https://www.alibabacloud.com/help/en/model-studio/qwen-tts`, `https://www.alibabacloud.com/help/doc-detail/2989727.html`, `https://www.alibabacloud.com/help/doc-detail/2975034.html`
+51:- MiniMax docs: `https://platform.minimax.io/docs/api-reference/api-overview`, `https://platform.minimax.io/docs/guides/video-generation`, `https://platform.minimax.io/docs/guides/music-generation`, `https://platform.minimax.io/docs/api-reference/voice-cloning-clone`
+52:- xAI/Grok docs: `https://docs.x.ai/developers/model-capabilities/images/generation`, `https://docs.x.ai/developers/models/grok-imagine-image`
+59:## 3. Provider Inventory
+61:| Provider/tool | In requested scope | Repo support | Official capability research | Required key/env | Status |
+63:| GenX | Yes | Primary catalog/client/routing in `genx-client`, `universal-model-catalog`, `live-ai-routing` | Live model list has 58 IDs; endpoint returns IDs only, not full metadata | `GENX_API_URL`, `GENX_API_KEY` | Primary, not live-execution verified |
+64:| Hugging Face | Yes | Approved provider, specialist routes, adult catalog | HF Inference supports ASR and CPU-oriented serverless tasks; dedicated Inference Endpoints needed for heavier/private models | `HUGGINGFACE_API_KEY` or `HF_TOKEN` | Partial and underused |
+65:| Together AI | Yes | Approved provider, text/image catalog, adult route fallback, video route fallback | Official docs cover chat, JSON mode, serverless models, image, embedding, rerank, moderation, function calling and structured outputs on specific models | `TOGETHER_API_KEY` | Partial |
+66:| Groq | Yes | Approved provider, text/TTS/STT routes | Official docs cover chat, STT, TTS, OCR/image recognition, reasoning, content moderation, structured outputs | `GROQ_API_KEY` | Partial |
+67:| OpenAI | Yes | Approved provider, text/TTS/STT/moderation/image paths | Official docs cover text/reasoning/coding, images, audio, moderation, tools/function calling, structured outputs, embeddings, video models | `OPENAI_API_KEY` | Partial |
+68:| Qwen/DashScope | Yes | Approved provider, text catalog, image/video/STT route support | Official docs cover text, visual/image/video, TTS, realtime TTS, STT, realtime STT, voice cloning/design, embeddings | `QWEN_API_KEY`, `DASHSCOPE_API_KEY` | Underused |
+69:| MiniMax/Mimo | Yes | Static catalog and MiniMax TTS specialist route | Official docs cover text, tool calls, speech/TTS, voice cloning/design, video, image, music generation | `MINIMAX_API_KEY`, `MIMO_API_KEY` | Underused |
+70:| xAI/Grok | Route-present | Adult text/image routes reference xAI/Grok; GenX has Grok model IDs | Official xAI docs cover Grok Imagine image API; live GenX list includes Grok text/image/video/TTS IDs | `XAI_API_KEY` or vault `xai`/`grok` | Route-present but not consistently approved |
+71:| Gemini direct | Route-present | TTS/STT route-present; provider governance present; not in approved catalog | Gemini safety docs cover adjustable safety filters; Google model docs cover Gemini APIs, but direct app catalog approval is inconsistent | `GEMINI_API_KEY` via vault/env | Route-present but not consistently approved |
+73:| Firecrawl | Yes | Research status/crawl route references | Official docs support scrape, crawl, map, search, extract, browser/agent features | `FIRECRAWL_API_KEY` | Required for crawl-backed research |
+78:| SMTP/email | Present if env | Settings truth references SMTP | SMTP is a protocol/provider-dependent capability, not a single vendor | `SMTP_HOST` and auth env | Optional/partial |
+80:## 4. Full GenX 58-Model Table
+82:Source: live `https://query.genx.sh/api/v1/models` response plus repo arrays in `src/lib/genx-client.ts`. The live endpoint returned IDs only. Anything beyond ID/category mapping is Not verified - requires live test.
+84:| Model | Capability classification | Repo route support | Should own | Should never own | Status |
+86:| `aura-2` | TTS from `GENX_TTS_MODELS` | `/api/brain/tts` | TTS fallback/voice | Chat, video, coding | Partial, live test required |
+87:| `claude-haiku-4-5` | Text likely from ID, not in fallback array | Generic GenX client only | Chat/fast text if live metadata confirms | Media | Not verified |
+88:| `claude-opus-4-6` | Text/reasoning likely from ID, not in fallback array | Generic GenX client only | Reasoning if live metadata confirms | Media | Not verified |
+89:| `claude-opus-4-7` | Text/reasoning likely from ID, not in fallback array | Generic GenX client only | Reasoning if live metadata confirms | Media | Not verified |
+90:| `claude-sonnet-4-6` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Chat/reasoning/coding | Media | Partial, live test required |
+91:| `gemini-3-flash` | Gemini text via GenX live ID | Generic GenX client | Fast chat/research if verified | Media unless metadata confirms | Not verified |
+92:| `gemini-3.1-flash-lite` | Gemini text via GenX live ID | Generic GenX client | Fast chat if verified | Media unless metadata confirms | Not verified |
+93:| `gemini-3.1-pro` | Text/reasoning in fallback text array | Studio/Workbench text routes | Reasoning/research | Media unless metadata confirms | Partial |
+94:| `genxlm-pro-v1-img` | Image generation in fallback image array | `/api/brain/image` | Image generation | Text/coding/video | Partial |
+95:| `genxlm-pro-v1-img-fast` | Image generation in fallback image array | `/api/brain/image` | Fast image generation | Text/coding/video | Partial |
+96:| `genxlm-pro-v1-tl` | Unknown from repo | No explicit support found | Nothing until metadata known | Production routing | Not verified |
+97:| `genxlm-pro-v1-tr` | STT/transcription in fallback STT array | `/api/brain/stt` | STT | TTS/chat/video | Partial |
+98:| `genxlm-voice-v1` | TTS in fallback TTS array | `/api/brain/tts` | TTS | STT/chat/video | Partial |
+99:| `gpt-5` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Reasoning/coding | Media | Partial |
+100:| `gpt-5-mini` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Balanced chat/coding | Media | Partial |
+101:| `gpt-5-nano` | Text likely from ID, not in fallback array | Generic GenX client | Fast/simple text if verified | Media | Not verified |
+102:| `gpt-5.3-codex` | Coding/text in fallback text array | Workbench/Studio coding | Coding, repo audit | Media | Partial |
+103:| `gpt-5.4` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Reasoning/coding | Media | Partial |
+104:| `gpt-5.4-mini` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Balanced text/coding | Media | Partial |
+105:| `gpt-5.4-pro` | Text/reasoning likely from ID | Generic GenX client | Premium reasoning if verified | Media | Not verified |
+106:| `gpt-5.5` | Text/reasoning/coding in fallback text array | Studio/Workbench text routes | Premium reasoning/coding | Media | Partial |
+107:| `gpt-image-2` | Image generation in fallback image array | `/api/brain/image`, image edit possible | Image generation/editing | Text/coding/video | Partial |
+108:| `grok-4-fast` | Text likely from ID | Generic GenX client | Fast chat if verified | Media | Not verified |
+109:| `grok-4.1-fast-reasoning` | Reasoning/text likely from ID | Generic GenX client | Reasoning if verified | Media | Not verified |
+110:| `grok-4.2` | Text/reasoning in fallback text array | Studio text routes | Chat/reasoning | Media | Partial |
+111:| `grok-4.2-multi-agent` | Multi-agent text by ID; no repo-specific mapping | Generic GenX client | Multi-agent orchestration only if metadata/test confirms | Media | Not verified |
+112:| `grok-4.2-reasoning` | Reasoning/text in fallback text array | Studio text routes | Reasoning | Media | Partial |
+113:| `grok-4.3` | Text/reasoning likely from ID | Generic GenX client | Reasoning if verified | Media | Not verified |
+114:| `grok-imagine` | Image generation in fallback image array | `/api/brain/image` | Image generation | Text/coding | Partial |
+115:| `grok-imagine-pro` | Image generation in fallback image array | `/api/brain/image` | Premium image generation | Text/coding | Partial |
+116:| `grok-imagine-video` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Chat/coding | Partial |
+117:| `grok-tts` | TTS in fallback TTS array | `/api/brain/tts`, voice options | TTS | STT/chat/video | Partial |
+118:| `kling-avatar-v2-pro` | Avatar/talking video by ID | No Studio backend route | Nothing until route exists | Public available avatar claims | Blocked |
+119:| `kling-v2.5-turbo` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Text/coding | Partial |
+120:| `kling-v2.5-turbo-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+121:| `kling-v2.6-pro` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Text/coding | Partial |
+122:| `kling-v2.6-pro-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+123:| `kling-v3-pro` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Text/coding | Partial |
+124:| `kling-v3-pro-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+125:| `lyria-3-clip-preview` | Music/song in fallback audio array | `/api/admin/music-studio` | Short music/song generation | TTS/chat/video | Partial |
+126:| `lyria-3-pro-preview` | Music/song in fallback audio array | `/api/admin/music-studio` | Full music/song generation | TTS/chat/video | Partial |
+127:| `nano-banana-2` | Image generation in fallback image array | `/api/brain/image` | Image generation | Text/coding | Partial |
+128:| `nano-banana-pro` | Image generation in fallback image array | `/api/brain/image` | Premium image generation | Text/coding | Partial |
+129:| `pixverse-v5.5` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Text/coding | Partial |
+130:| `pixverse-v5.5-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+131:| `pixverse-v6` | Video generation in fallback video array | `/api/brain/video-generate` | Video generation | Text/coding | Partial |
+132:| `pixverse-v6-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+133:| `recraft-v4` | Image/vector family in fallback image array | `/api/brain/image` | Image generation | Text/video | Partial |
+134:| `recraft-v4-pro` | Image/vector family in fallback image array | `/api/brain/image` | Premium image generation | Text/video | Partial |
+135:| `recraft-v4-pro-vector` | Vector image by ID | No dedicated vector route found | Vector generation after route exists | Chat/video | Not verified |
+136:| `recraft-v4-vector` | Vector image by ID | No dedicated vector route found | Vector generation after route exists | Chat/video | Not verified |
+137:| `seedance-2` | Video live ID; fallback has `seedance-2.0` | `/api/brain/video-generate` if live catalog used | Video generation | Text/coding | Misconfigured static/live drift |
+138:| `seedance-2-i2v` | I2V live ID; fallback has `seedance-2.0-i2v` | Video route, I2V upload not proven | I2V after route support | Text/coding | Misconfigured static/live drift |
+139:| `seedance-2-r2v` | Reference-to-video by ID | No route-specific support found | R2V only after route exists | Text/coding | Not verified |
+140:| `seedance-v1-fast` | Video generation in fallback video array | `/api/brain/video-generate` | Fast video generation | Text/coding | Partial |
+141:| `seedance-v1-fast-i2v` | Image-to-video in fallback I2V/video arrays | Video route, I2V upload not proven | I2V after route support | Text/coding | Partial |
+142:| `veo-3.1` | Video generation in fallback video array | `/api/brain/video-generate` via GenX | Premium video | Text/coding | Partial |
+143:| `veo-3.1-fast` | Video generation in fallback video array | `/api/brain/video-generate` via GenX | Fast video | Text/coding | Partial |
+145:## 5. Provider-by-Provider Function Table
+147:| Provider | Strong official capabilities | Repo route support | Underused or misconfigured | Should own | Should never own |
+149:| GenX | Live catalog covers text, image, video, music, TTS, STT IDs | Studio/Workbench/media routes | Live endpoint lacks metadata; runtime count drift | Primary orchestration and broad fallback chain | Unsupported/adult claims without route/policy proof |
+150:| Hugging Face | Inference tasks, ASR, embeddings/text ranking, private Inference Endpoints | Specialist route, adult HF catalog, TTS/STT fallback | Heavy media/adult should use private endpoint; serverless mostly CPU-oriented per HF docs | Specialist/private endpoint models, embeddings, STT fallback | Production video through standard HF Inference API |
+151:| Together | Chat, JSON mode, serverless text/image/vision/video/audio/embedding/rerank/moderation categories, function calling on listed models | Text/image catalog, adult text/image fallback | Video route uses image endpoint semantics; model-specific capability not enforced | Open models, structured output fallback, adult text/image where policy allows | Video unless true model/route/test proves it |
+152:| Groq | Fast chat, STT, TTS, structured outputs on select models, content moderation/OCR/image docs | Text/TTS/STT routes | Direct moderation/OCR not fully surfaced in dashboard | Low-latency chat, STT, TTS | Image/video/music |
+153:| OpenAI | Text/coding/reasoning, images/edits, audio/TTS/STT, moderation, embeddings, tools/function calling, structured output, video models | Text/TTS/STT/moderation, static catalog | Current catalog has older `gpt-4o`/task aliases, not latest official model set | General fallback, moderation, embeddings, STT/TTS | Adult image/video or anything policy-disallowed |
+154:| Qwen/DashScope | Text, image/video, speech recognition/synthesis, realtime STT/TTS, voice cloning/design, embeddings | Text catalog, Qwen image task, video route, STT route | TTS/voice cloning/design official capability not fully wired | Qwen text, Wan image/video, STT/TTS after wiring | Adult/media claims without policy/test |
+155:| MiniMax/Mimo | Text/tool calls, speech/TTS, voice clone/design, video, image, music | MiniMax TTS specialist, static text/TTS/STT entries | Video/music/image/voice clone/design not wired; Studio TTS route can bypass MiniMax | TTS, voice clone/design, music/video after wiring | Claims through Studio until route preserved |
+156:| xAI/Grok | Image generation API; GenX has Grok text/image/video/TTS IDs | Adult text/image route-present, GenX IDs | Direct xAI approval/catalog inconsistent | Direct image/adult text-image only if policy/key/live tests pass | Unreviewed adult/deepfake flows |
+157:| Gemini direct | Safety filters and Gemini API capability family | TTS/STT route-present; not approved catalog | Direct Gemini not normalized into provider truth | TTS/STT if approved and tested | Adult/unsafe content; direct video unless route supports |
+159:| Firecrawl | Search, scrape, crawl, map, extract, browser/agent | Research/crawl references | Must connect live status to Settings/Ops | Search/crawl/extract | AI generation |
+162:| Storage | Artifact persistence | Artifact/media/file routes | Writable test required | Artifacts/previews | Provider health |
+171:- Partial: route or provider support exists but needs wiring, keys, tests, or governance.
+172:- Not verified: provider docs/repo suggest support, but no live test in this runtime.
+173:- Unsupported/blocked: no route, not permitted, or must remain disabled.
+175:| Function | Best current owner | Fallback | Repo evidence | Official/API evidence | Current status |
+177:| Chat | GenX text | OpenAI/Groq/Qwen/Together | Studio execute, model catalogs | OpenAI/Together/Groq/Qwen docs | Partial, live key tests required |
+178:| Reasoning | GenX GPT/Gemini/Grok/Claude text | OpenAI reasoning/Groq | `GENX_TEXT_MODELS`, routing roles | OpenAI/Groq/Together model docs | Partial |
+179:| Long-context reasoning | MiniMax/Qwen/Together/OpenAI where available | GenX if metadata confirms | Static model catalog lacks full context truth | Together serverless model table, MiniMax text docs | Not verified |
+180:| Coding | GenX `gpt-5.3-codex` and GPT text | OpenAI/Groq/Qwen | Workbench models/routes | OpenAI models/docs, Qwen/Together docs | Partial |
+181:| Repo audit | Workbench + coding model | OpenAI/GenX | Workbench audit route | GitHub APIs + LLM docs | Partial |
+182:| Code review | Workbench + coding model | OpenAI/GenX | Workbench diff/plan/check routes | GitHub PR/comment APIs, LLM docs | Partial |
+183:| Structured output/JSON | OpenAI/Together/Groq | GenX if passthrough supports | No single governance route proof | Official OpenAI/Together/Groq structured output docs | Partial |
+184:| Function/tool calling | OpenAI/Together/MiniMax | GenX if metadata confirms | Static catalog has limited fields | Official OpenAI function calling, Together/MiniMax docs | Partial |
+185:| Streaming | Studio chat stream | OpenAI/Groq/Together/GenX if tested | stream routes exist | Official chat docs | Partial |
+186:| Multi-agent orchestration | App agents + GenX `grok-4.2-multi-agent` if proven | Local agent registry | app-agent/agent-registry | GenX ID only, not metadata | Partial/not verified |
+194:| Document understanding | OpenAI/Qwen/Gemini/HF if wired | Firecrawl PDF scrape | Not central in current routes | OpenAI model docs, Firecrawl parsers | Partial/not verified |
+195:| Image generation | GenX image | OpenAI/Together/Qwen/HF | brain image, specialist routes | OpenAI image, xAI image, Qwen/Model Studio docs | Partial |
+196:| Image editing | OpenAI/GenX | Qwen/HF if route supports | brain image-edit | OpenAI image edits docs | Partial |
+197:| Image-to-image | GenX/OpenAI/Qwen | HF private endpoint | image-edit route | Official image docs vary by provider | Partial/not verified |
+198:| Image-to-video | GenX I2V models, MiniMax/Qwen | None | GenX I2V arrays, video route lacks upload proof | MiniMax/Qwen docs support I2V | Partial/underwired |
+199:| Video generation | GenX video | Qwen/DashScope/MiniMax if wired | brain video-generate | MiniMax/Qwen/OpenAI model docs; GenX live IDs | Partial |
+200:| Video editing | None | Qwen/MiniMax if official route supports future | No route found | Qwen model docs mention video editing/generation categories | Unsupported/not wired |
+201:| Avatar/talking video | GenX `kling-avatar-v2-pro` if route added | MiniMax subject-reference video maybe | `studio-route-map` says missing | MiniMax video docs subject-reference | Blocked/not wired |
+202:| Audio generation | GenX music/TTS | MiniMax/Qwen/OpenAI | music/tts routes | MiniMax music/speech, OpenAI audio, Qwen speech | Partial |
+203:| Sound effects | None | Not verified via MiniMax/OpenAI audio | No route found | No current route-backed provider proof | Unsupported |
+204:| Music generation | GenX Lyria | MiniMax Music if wired | music-studio, GenX audio array | MiniMax music docs, GenX live Lyria IDs | Partial/underwired |
+205:| Full song generation | GenX Lyria/MiniMax Music | None | music-studio route | MiniMax music docs says complete song with vocals | Partial/not wired for MiniMax |
+206:| Lyrics | Music studio | LLM text | music-studio `lyrics_only` | LLM text providers | Partial |
+207:| Vocals | GenX/MiniMax music if live | None | music-studio | MiniMax music docs | Not verified |
+208:| Instrumental music | GenX/MiniMax music if live | None | music-studio | MiniMax/GenX IDs | Not verified |
+209:| TTS | GenX/OpenAI/Groq | MiniMax/Qwen/HF/Gemini | brain TTS, MiniMax specialist | OpenAI/Groq/Qwen/MiniMax docs | Partial |
+210:| Voice selection | GenX/OpenAI/Groq routes | MiniMax/Qwen if wired | voice options/preview | MiniMax/Qwen docs | Partial |
+211:| Voice cloning/design | MiniMax/Qwen | None | No product route found | MiniMax/Qwen official docs support | Underused/not wired |
+212:| STT/transcription | OpenAI/Groq/GenX/Qwen | HF/Gemini | brain STT, Studio STT | OpenAI/Groq/Qwen/HF docs | Partial |
+213:| Translation | OpenAI/Groq STT translation/Qwen | LLM text | STT route has language, Groq docs translation endpoint | Groq STT docs, Qwen docs | Partial/not verified |
+214:| Dubbing | Qwen/MiniMax pipeline | OpenAI pipeline | No dedicated route found | Qwen S2S/TTS/STT docs; MiniMax speech | Underused/not wired |
+216:## 7. Adult Capability Matrix
+220:- Always blocked: minors/age-ambiguous content, CSAM, real-person sexualization/deepfakes without consent, genitals, explicit sex acts, coercion/exploitation/violence/degradation, illegal content, and safety bypassing.
+221:- Provider-policy claims are conservative. If policy or route is unclear, status is Not verified - requires live test and legal/provider review.
+223:| Adult/companion function | Provider candidates | Repo route support | Policy evidence | Status |
+225:| Flirty/romantic conversation | Adult text route providers: HF private/local, Together, xAI/Grok, custom | `/api/brain/adult-text` | Adult route blocks minors/coercion/degradation; provider policies vary | Partial, live/provider-policy tests required |
+226:| Sexual adult companion text | HF private/local, Together, xAI/Grok/custom only through adult route | `/api/brain/adult-text` | OpenAI/Gemini/Groq policies require strong restrictions; adult route avoids normal GenX safe models | Partial and must be app-policy gated |
+227:| Non-explicit sexy/glamour image | Adult image route through xAI/Together/HF | `/api/brain/adult-image` | HF policy bans non-consensual/underage sexual content; OpenAI bans sexualization of minors and non-consensual intimate imagery | Partial |
+228:| Topless/non-explicit adult image | xAI/Together/HF only if provider policy and app policy allow | `/api/brain/adult-image` | Not verified for each provider/model | Not verified - requires provider policy/live test |
+229:| Non-explicit adult video | None production-ready | No adult video route | Adult video route absent; provider policies not verified | Blocked |
+230:| Adult audio/voice | None production-ready | No adult voice route | Provider policy unclear; no app gate | Blocked |
+231:| Explicit sex image/video/genitals | None | No route allowed | Platform blocked | Blocked |
+232:| Real-person sexual/deepfake without consent | None | No route allowed | OpenAI policy and app policy block | Blocked |
+233:| Degrading/coercive/violent sexual content | None | Adult text route explicitly blocks degradation patterns | Platform blocked | Blocked |
+235:## 8. Music/Song Capability Matrix
+237:| Capability | Provider capability | Repo wiring | Owner recommendation | Status |
+239:| Music generation | GenX `lyria-3-*`; MiniMax official Music Generation | GenX via `music-studio`; MiniMax not wired | GenX first, MiniMax second after route | Partial |
+240:| Full song with vocals | MiniMax docs state complete song with vocals from description/lyrics; GenX Lyria IDs likely music | Music-studio, provider not live-tested | MiniMax should be added to existing route only after approval/wiring | Underused/not verified |
+241:| Lyrics | Any text model; music-studio `lyrics_only` | Wired | GenX/OpenAI/Groq text | Partial |
+242:| Instrumental | GenX/MiniMax likely if model supports parameters | No live proof | GenX/MiniMax after live test | Not verified |
+244:| SFX | No verified provider/route | Missing | Keep unsupported until provider docs/route prove | Unsupported |
+246:## 9. Voice/TTS/STT Capability Matrix
+248:| Capability | Provider support researched | Repo support | Misconfiguration/underuse | Status |
+250:| TTS | GenX, OpenAI, Groq, Qwen, MiniMax, HF, Gemini, ElevenLabs/Deepgram route-present | `/api/brain/tts`, MiniMax specialist | MiniMax not consistently reached by Studio execute; Qwen TTS not wired | Partial |
+251:| Voice selection | OpenAI/Groq/GenX voice IDs; Qwen/MiniMax voices | Voice options/preview | Voice list omits Qwen/MiniMax despite official support | Partial |
+252:| Voice cloning | Qwen and MiniMax docs support | No product route found | Underused | Not wired |
+253:| Voice design | Qwen and MiniMax docs support | No product route found | Underused | Not wired |
+254:| STT | OpenAI/Groq/GenX/Qwen/HF/Gemini | `/api/brain/stt`, `/api/admin/studio/stt` | Needs live provider tests | Partial |
+
+--- docs/audits/FULL_PROVIDER_MODEL_CAPABILITY_GOVERNANCE_AUDIT.md ---
+1:# Full Provider, Model, Capability, Routing, and App-Onboarding Governance Audit
+5:Scope: audit and report only. No UI, dashboard, provider, routing, backend, or configuration changes were made for this audit.
+9:The platform has a large amount of real provider, routing, media, app-onboarding, Workbench, Settings, Operations, memory, and artifact infrastructure in the repo, but it is not yet a single governed source of truth. The highest-risk finding is not absence of code; it is drift between catalogs, routes, dashboard truth, and runtime provider checks.
+13:- GenX is correctly treated as the primary orchestration/provider layer in `src/lib/genx-client.ts`, `src/lib/universal-model-catalog.ts`, and `src/lib/live-ai-routing.ts`.
+14:- The live GenX catalog endpoint `https://query.genx.sh/api/v1/models` returned 58 model IDs during this audit. The repo runtime truth default in `src/lib/runtime-capability-truth.ts` still defaults to 57. This is a factual model-count drift.
+15:- The approved provider catalog in `src/lib/approved-ai-catalog.ts` is narrower than the governance catalog in `src/lib/ai-provider-governance.ts` and narrower than several actual routes. This creates unclear ownership for Gemini, Replicate, ElevenLabs, Deepgram, xAI/Grok, DeepSeek, Mem0, and other entries that appear in code but are not consistently approved.
+16:- Capability filtering exists, but explicit manual selections in `src/lib/live-ai-routing.ts` verify provider/model existence more strongly than they verify requested modality support. This can still allow capability mismatch unless the caller-side model list prevents it.
+17:- Studio has real protected execution routes, artifact creation, and polling for several modalities, but route behavior is uneven by tab. Music, voice, video, and adult support need clearer governance.
+18:- Adult text and adult image have real policy-gated backend routes. Adult video is not production-supported: catalog entries are experimental/private-endpoint only and no production dashboard route proves provider policy, app policy, safeguards, route execution, and polling.
+19:- Music/song generation is present through GenX Lyria models and the music-studio route, but live generation was not verified with a configured key. Music governance should not claim production readiness until live provider tests pass.
+20:- With no provider keys present in the local runtime audited here, all provider execution claims that require keys remain: Not verified — requires live provider test.
+22:Go-live verdict: not ready for full production go-live as a governed multi-provider/app platform until the source-of-truth drift and live provider test gaps below are fixed. Ready for controlled live testing after required keys are added: yes, provided the dashboard truth remains blocker-first and no provider is marked Connected until a live test passes.
+28:- Provider catalogs: `src/lib/approved-ai-catalog.ts`, `src/lib/ai-provider-governance.ts`, `src/lib/ai-model-catalog.ts`, `src/lib/universal-model-catalog.ts`, `src/lib/provider-catalog.ts`, `src/lib/provider-config.ts`
+29:- GenX: `src/lib/genx-client.ts`
+30:- Routing: `src/lib/live-ai-routing.ts`, `src/lib/ai-routing-policy.ts`, `src/lib/capability-router.ts`, `src/lib/routing-engine.ts`, `src/app/api/admin/ai-routing/route.ts`, `src/app/api/admin/ai-routing/smart/route.ts`
+31:- Runtime truth: `src/lib/runtime-capability-truth.ts`, `src/lib/platform-settings-truth.ts`, `src/lib/readiness-audit.ts`, `src/lib/system-runtime-status.ts`
+32:- Studio: `src/app/api/admin/studio/execute/route.ts`, `src/app/api/admin/studio/stt/route.ts`, `src/app/api/admin/studio/workbench-handoff/route.ts`, `src/lib/studio-route-map.ts`, `src/app/admin/dashboard/page.tsx`
+33:- Media: `src/app/api/brain/image/route.ts`, `src/app/api/brain/image-edit/route.ts`, `src/app/api/brain/video-generate/route.ts`, `src/app/api/brain/video-generate/[jobId]/route.ts`, `src/app/api/brain/tts/route.ts`, `src/app/api/brain/stt/route.ts`
+34:- Music/voice: `src/app/api/admin/music-studio/route.ts`, `src/app/api/admin/music-studio/jobs/[jobId]/route.ts`, `src/lib/music-studio.ts`, `src/app/api/admin/specialist/minimax-tts/route.ts`, `src/lib/specialist-provider-routes.ts`, `src/app/api/admin/voice/options/route.ts`, `src/app/api/admin/voice/preview/route.ts`
+35:- Adult: `src/lib/adult-model-catalog.ts`, `src/app/api/brain/adult-text/route.ts`, `src/app/api/brain/adult-image/route.ts`, `src/app/api/admin/app-safety/route.ts`
+37:- App onboarding: `src/lib/app-profiles.ts`, `src/lib/app-ai-package.ts`, `src/lib/app-ai-package-store.ts`, `src/lib/app-agent.ts`, `src/lib/app-budget-enforcement.ts`, `src/lib/app-discovery.ts`, `src/app/api/admin/app-profiles/route.ts`, `src/app/api/admin/app-ai-package/route.ts`, `src/app/api/admin/app-ai-package/recommend/route.ts`, `src/app/api/admin/app-agents/route.ts`, `src/app/api/admin/app-safety/route.ts`, `src/app/api/admin/app-budgets/route.ts`, `src/app/api/admin/app-health/route.ts`
+38:- Dashboard pages: `src/app/admin/dashboard/page.tsx`, `src/app/admin/dashboard/workbench/page.tsx`, `src/app/admin/dashboard/apps-agents/page.tsx`, `src/app/admin/dashboard/memory-learning/page.tsx`, `src/app/admin/dashboard/operations/page.tsx`, `src/app/admin/dashboard/settings/page.tsx`
+42:- `curl.exe -i --max-time 20 https://query.genx.sh/api/v1/models` returned `HTTP/1.1 200 OK`, `Content-Type: application/json`, and a JSON array with 58 model IDs.
+43:- Local environment key presence check returned false for: `GENX_API_KEY`, `GENX_API_URL`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `TOGETHER_API_KEY`, `HUGGINGFACE_API_KEY`, `HF_TOKEN`, `QWEN_API_KEY`, `DASHSCOPE_API_KEY`, `MINIMAX_API_KEY`, `MIMO_API_KEY`, `GITHUB_TOKEN`, `FIRECRAWL_API_KEY`, `REDIS_URL`, `WEBDOCK_API_TOKEN`, `SMTP_HOST`.
+44:- No authenticated live provider generation test was possible in this runtime. Any key-dependent execution claim is: Not verified — requires live provider test.
+46:## 3. Current Provider Inventory
+48:| Provider/tool | Evidence | Current role | Key/config evidence | Governance status |
+50:| GenX | `src/lib/genx-client.ts`, `src/lib/universal-model-catalog.ts`, live `/api/v1/models` | Primary orchestration/provider layer for text, image, video, music, TTS, STT | `GENX_API_URL`, `GENX_API_KEY`; absent locally | Primary, but model-count/catalog drift exists |
+51:| Hugging Face | `src/lib/approved-ai-catalog.ts`, `src/lib/specialist-provider-routes.ts`, adult routes | Specialist HF task routes, adult text/image private endpoint path, fallback TTS/STT | `HUGGINGFACE_API_KEY`/`HF_TOKEN`; absent locally | Approved, but many adult models require private/local endpoint |
+52:| MiniMax / Mimo | `src/lib/ai-model-catalog.ts`, `src/app/api/admin/specialist/minimax-tts/route.ts`, `src/lib/specialist-provider-routes.ts` | TTS specialist and text model catalog entries | `MINIMAX_API_KEY`/`MIMO_API_KEY`; absent locally | Partially wired; Studio TTS route path does not consistently preserve MiniMax selection |
+53:| Qwen / DashScope | `src/lib/ai-model-catalog.ts`, Qwen specialist routes, `src/app/api/brain/stt/route.ts`, video route | Text, image task route, STT via Qwen audio, video via DashScope Wan | `QWEN_API_KEY`/`DASHSCOPE_API_KEY`; absent locally | Approved/partial |
+54:| Together AI | `src/lib/ai-model-catalog.ts`, adult routes, video route | Text, image, adult text/image fallback, video route fallback via image-generation endpoint | `TOGETHER_API_KEY`; absent locally | Approved/partial; video semantics need stricter truth |
+55:| Groq | `src/lib/ai-model-catalog.ts`, `src/app/api/brain/tts/route.ts`, `src/app/api/brain/stt/route.ts` | Fast text, TTS, STT | `GROQ_API_KEY`; absent locally | Approved/partial |
+56:| OpenAI | `src/lib/ai-model-catalog.ts`, TTS/STT/moderation routes | Text, TTS, STT, moderation | `OPENAI_API_KEY`; absent locally | Approved/partial |
+57:| Gemini via GenX | live GenX IDs `gemini-3-flash`, `gemini-3.1-flash-lite`, `gemini-3.1-pro` | GenX-hosted Gemini text/reasoning models | GenX catalog public; execution key absent | Exposed through GenX catalog |
+58:| Gemini direct | `src/lib/ai-provider-governance.ts`, `src/app/api/brain/tts/route.ts`, `src/app/api/brain/stt/route.ts` | Direct TTS/STT routes with Gemini key | `GEMINI_API_KEY` read through vault in routes; not in approved AI catalog | Source-of-truth inconsistency |
+64:| Webdock | `src/app/api/admin/settings/test-webdock/route.ts`, VPS routes | VPS/deployment checks | `WEBDOCK_API_TOKEN`; absent locally | Optional/ops provider unless deployment depends on it |
+66:| Replicate | `src/app/api/brain/video-generate/route.ts`, `src/lib/ai-provider-governance.ts` | Video fallback in route | `REPLICATE_API_KEY`; not target approved provider | Wired but outside requested approved-provider list |
+67:| ElevenLabs/Deepgram | `src/app/api/brain/tts/route.ts`, voice preview routes | TTS providers | service vault/env; not in approved AI catalog | Wired but not consistently approved |
+68:| xAI/Grok direct | adult text/image routes | Adult text/image provider path | `xai`/`grok` vault key | Wired in adult routes, not consistently in approved catalog |
+70:## 4. Current Model Inventory
+72:Model sources:
+74:- Live GenX model IDs from `https://query.genx.sh/api/v1/models`: 58.
+75:- Static GenX fallback arrays in `src/lib/genx-client.ts`: text, image, video, I2V, audio/music, TTS, STT.
+76:- Static non-GenX model catalog in `src/lib/ai-model-catalog.ts`: GenX auto aliases, Hugging Face task routes, Qwen text, MiniMax text/TTS/STT, Groq text, Together text/image, OpenAI text/TTS/moderation.
+77:- Adult specialist model catalog in `src/lib/adult-model-catalog.ts`: adult text/image/video model specs, several marked private endpoint/local/experimental.
+81:- Live GenX returned 58 models.
+82:- `src/lib/runtime-capability-truth.ts` default model count is 57.
+83:- Static GenX fallback names do not exactly match live names: for example live has `seedance-2` and `seedance-2-i2v`, while the fallback array contains `seedance-2.0` and `seedance-2.0-i2v`.
+85:## 5. Full GenX 58-Model Capability Table
+87:Classification source note: the live GenX endpoint returned IDs only, not a full capability metadata object. The capability classification below is backed by repo static arrays in `src/lib/genx-client.ts` where present, model IDs returned by the live endpoint, and route behavior. Tool/function calling, structured output, moderation, adult policy, and streaming support were not exposed in the live ID-only response. Those columns are therefore marked Not verified — requires live provider test unless a repo route explicitly proves behavior.
+89:| GenX model ID | Repo/live classification | Supported by current repo route? | Async/polling | Verification status |
+91:| `aura-2` | TTS (`GENX_TTS_MODELS`) | `/api/brain/tts` via `callGenXMedia` | No route-level poll for TTS | Not verified — requires live provider test |
+92:| `claude-haiku-4-5` | Text/chat/reasoning likely from ID; not in fallback text array | Generic GenX chat/media client only | Not verified | Not verified — requires live provider test |
+93:| `claude-opus-4-6` | Text/chat/reasoning likely from ID; not in fallback text array | Generic GenX chat/media client only | Not verified | Not verified — requires live provider test |
+94:| `claude-opus-4-7` | Text/chat/reasoning likely from ID; not in fallback text array | Generic GenX chat/media client only | Not verified | Not verified — requires live provider test |
+95:| `claude-sonnet-4-6` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Not verified | Not verified — requires live provider test |
+96:| `gemini-3-flash` | Gemini text/reasoning via GenX live ID | Generic GenX route | Not verified | Not verified — requires live provider test |
+97:| `gemini-3.1-flash-lite` | Gemini text/reasoning via GenX live ID | Generic GenX route | Not verified | Not verified — requires live provider test |
+98:| `gemini-3.1-pro` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Not verified | Not verified — requires live provider test |
+99:| `genxlm-pro-v1-img` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image`, Studio image | Possible provider async depending GenX response | Not verified — requires live provider test |
+100:| `genxlm-pro-v1-img-fast` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image`, Studio image | Possible provider async depending GenX response | Not verified — requires live provider test |
+101:| `genxlm-pro-v1-tl` | Unknown from repo; live ID only | No explicit static mapping found | Not verified | Not verified — requires live provider test |
+102:| `genxlm-pro-v1-tr` | STT/transcription (`GENX_STT_MODELS`) | `/api/brain/stt` | No route-level poll | Not verified — requires live provider test |
+103:| `genxlm-voice-v1` | TTS (`GENX_TTS_MODELS`) | `/api/brain/tts` | No route-level poll | Not verified — requires live provider test |
+104:| `gpt-5` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Streaming not verified | Not verified — requires live provider test |
+105:| `gpt-5-mini` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Streaming not verified | Not verified — requires live provider test |
+106:| `gpt-5-nano` | Text/chat/reasoning likely from ID; not in fallback text array | Generic GenX route | Not verified | Not verified — requires live provider test |
+107:| `gpt-5.3-codex` | Coding/text (`GENX_TEXT_MODELS`) | Workbench/Studio coding routing | Not verified | Not verified — requires live provider test |
+108:| `gpt-5.4` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Not verified | Not verified — requires live provider test |
+109:| `gpt-5.4-mini` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Not verified | Not verified — requires live provider test |
+110:| `gpt-5.4-pro` | Text/chat/reasoning likely from ID; not in fallback text array | Generic GenX route | Not verified | Not verified — requires live provider test |
+111:| `gpt-5.5` | Text/chat/reasoning/coding (`GENX_TEXT_MODELS`) | Chat/research/coding routing | Not verified | Not verified — requires live provider test |
+112:| `gpt-image-2` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image`, image edit may use image operation | Possible provider async | Not verified — requires live provider test |
+113:| `grok-4-fast` | Text/chat likely from ID; not in fallback text array | Generic GenX route | Not verified | Not verified — requires live provider test |
+114:| `grok-4.1-fast-reasoning` | Reasoning/text likely from ID | Generic GenX route | Not verified | Not verified — requires live provider test |
+115:| `grok-4.2` | Text/chat/reasoning (`GENX_TEXT_MODELS`) | Chat/research routing | Not verified | Not verified — requires live provider test |
+116:| `grok-4.2-multi-agent` | Text/agent orchestration likely from ID; no repo-specific multi-agent GenX mapping | Generic GenX route | Not verified | Not verified — requires live provider test |
+117:| `grok-4.2-reasoning` | Reasoning/text (`GENX_TEXT_MODELS`) | Chat/reasoning routing | Not verified | Not verified — requires live provider test |
+118:| `grok-4.3` | Text/chat/reasoning likely from ID | Generic GenX route | Not verified | Not verified — requires live provider test |
+119:| `grok-imagine` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image` | Possible provider async | Not verified — requires live provider test |
+120:| `grok-imagine-pro` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image` | Possible provider async | Not verified — requires live provider test |
+121:| `grok-imagine-video` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes, route persists and polls job | Not verified — requires live provider test |
+122:| `grok-tts` | TTS (`GENX_TTS_MODELS`) | `/api/brain/tts`, voice options | No route-level poll | Not verified — requires live provider test |
+123:| `kling-avatar-v2-pro` | Avatar/talking video by ID | Avatar route is absent in `src/lib/studio-route-map.ts` | Not wired | Blocked until backend route exists |
+124:| `kling-v2.5-turbo` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+125:| `kling-v2.5-turbo-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | `/api/brain/video-generate` has text prompt path; I2V route support not proven | Yes for video jobs | Not verified — requires live provider test |
+126:| `kling-v2.6-pro` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+127:| `kling-v2.6-pro-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | I2V support not proven by Studio route | Yes for video jobs | Not verified — requires live provider test |
+128:| `kling-v3-pro` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+129:| `kling-v3-pro-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | I2V support not proven by Studio route | Yes for video jobs | Not verified — requires live provider test |
+130:| `lyria-3-clip-preview` | Music/song generation (`GENX_AUDIO_MODELS`) | `/api/admin/music-studio` via music library | Job route exists | Not verified — requires live provider test |
+131:| `lyria-3-pro-preview` | Music/song generation (`GENX_AUDIO_MODELS`) | `/api/admin/music-studio` via music library | Job route exists | Not verified — requires live provider test |
+132:| `nano-banana-2` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image` | Possible provider async | Not verified — requires live provider test |
+133:| `nano-banana-pro` | Image generation (`GENX_IMAGE_MODELS`) | `/api/brain/image` | Possible provider async | Not verified — requires live provider test |
+134:| `pixverse-v5.5` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+135:| `pixverse-v5.5-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | I2V support not proven by Studio route | Yes for video jobs | Not verified — requires live provider test |
+136:| `pixverse-v6` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+137:| `pixverse-v6-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | I2V support not proven by Studio route | Yes for video jobs | Not verified — requires live provider test |
+138:| `recraft-v4` | Image generation/vector family (`GENX_IMAGE_MODELS`) | Image route; vector artifact route not proven | Possible provider async | Not verified — requires live provider test |
+139:| `recraft-v4-pro` | Image generation/vector family (`GENX_IMAGE_MODELS`) | Image route; vector artifact route not proven | Possible provider async | Not verified — requires live provider test |
+140:| `recraft-v4-pro-vector` | Vector image by ID | No dedicated vector route found | Not verified | Not verified — requires live provider test |
+141:| `recraft-v4-vector` | Vector image by ID | No dedicated vector route found | Not verified | Not verified — requires live provider test |
+142:| `seedance-2` | Video generation live ID; static fallback uses `seedance-2.0` | `/api/brain/video-generate` if live catalog used | Yes | Static/live name drift; live test required |
+143:| `seedance-2-i2v` | Image-to-video live ID; static fallback uses `seedance-2.0-i2v` | I2V support not proven by Studio route | Yes for video jobs | Static/live name drift; live test required |
+144:| `seedance-2-r2v` | Reference-to-video by ID | No route-specific support found | Not verified | Not verified — requires live provider test |
+145:| `seedance-v1-fast` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` | Yes | Not verified — requires live provider test |
+146:| `seedance-v1-fast-i2v` | Image-to-video (`GENX_VIDEO_MODELS`, `GENX_I2V_MODELS`) | I2V support not proven by Studio route | Yes for video jobs | Not verified — requires live provider test |
+147:| `veo-3.1` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` via GenX | Yes | Not verified — requires live provider test |
+148:| `veo-3.1-fast` | Video generation (`GENX_VIDEO_MODELS`) | `/api/brain/video-generate` via GenX | Yes | Not verified — requires live provider test |
+150:GenX capabilities specifically requested:
+152:| Capability | GenX evidence | Current conclusion |
+154:| Chat | Text models in `GENX_TEXT_MODELS` and live text IDs | Wired, not live-tested |
+155:| Reasoning | Text/reasoning model IDs and routing roles | Wired, not live-tested |
+156:| Coding | `gpt-5.3-codex`, `GENX_TEXT_MODELS`, Workbench model use | Wired, not live-tested |
+157:| Research | Studio research uses protected route and text model routing | Partial; Firecrawl-backed crawling separately needs key |
+158:| Image generation | `GENX_IMAGE_MODELS`, image route | Wired, not live-tested |
+159:| Image editing | `GENX_CAPABILITIES` includes image edit/editing; image-edit route exists | Partial; not live-tested |
+160:| Video generation | `GENX_VIDEO_MODELS`, video route | Wired async; not live-tested |
+161:| TTS | `GENX_TTS_MODELS`, TTS route | Wired; not live-tested |
+162:| STT | `GENX_STT_MODELS`, STT route | Wired; not live-tested |
+163:| Music/song | `GENX_AUDIO_MODELS` Lyria models, music studio route | Partial; not live-tested |
+164:| Sound effects | No dedicated SFX route/model field found | Missing/not verified |
+165:| Embeddings | `GENX_CAPABILITIES` includes embeddings, brain embeddings route exists | Partial; not live-tested |
+166:| Moderation | Moderation route exists; GenX-specific moderation model not proven | Partial/not verified |
+167:| Adult text | `GENX_CAPABILITIES` includes adult fields but adult route intentionally does not route normal GenX safe/default chat | Do not claim GenX adult text production support |
+168:| Adult image | `GENX_CAPABILITIES` includes adult image but production adult image route uses xAI/Together/HF | Do not claim GenX adult image support without route/test |
+169:| Adult video | Catalog/policy has experimental entries but no production route | Blocked |
+170:| Tool/function calling | Not exposed by live ID catalog or inspected route metadata | Not verified — requires live provider test |
+171:| Streaming | Chat stream route exists, GenX streaming not proven from catalog | Not verified — requires live provider test |
+172:| Async polling jobs | Video route and music job route support polling | Wired for video/music; provider behavior not live-tested |
+173:| Structured output | Not proven by model catalog metadata | Not verified — requires live provider test |
+175:## 6. Provider-by-Provider Capability Table
+177:| Provider | Chat/reasoning/coding | Research/crawl | Image | Video | Music/song | TTS | STT | Adult text | Adult image | Adult video | Status |
+179:| GenX | Yes in catalog/routes | Research via text; crawl needs Firecrawl | Yes | Yes | Yes via Lyria IDs | Yes | Yes | Not production-proven | Not production-proven | Blocked | Broadest primary, live tests missing |
+180:| Hugging Face | Task routes and adult private endpoint path | Possible specialist tasks | Yes through specialist routes; Studio image wrapper blocks direct HF image | Explicitly blocked for video route | Possible models not proven through current integration | Yes fallback | Yes fallback | Yes only with endpoint/key and policy | Yes only with key/private endpoint and policy | Experimental catalog only | Partial/specialist |
+181:| MiniMax/Mimo | Static text models | No | No | Route mentions MiniMax under Replicate, not MiniMax direct | Governance says post-launch, not wired | Specialist TTS route | Static task STT entry but direct route not proven | No | No | No | TTS partial; music not wired |
+182:| Qwen/DashScope | Yes text | No crawl | Specialist Wanx image route | DashScope Wan video route | No | Not proven | Qwen audio STT route | No | No | No | Partial |
+183:| Together | Yes text | No crawl | Yes | Route fallback uses image endpoint, not true video model catalog | No | No | No | Yes through adult text route | Yes through adult image route | No | Partial |
+184:| Groq | Yes text | No crawl | No | No | No | Yes | Yes | Adult route uses xAI/Grok key, not approved Groq catalog | Adult image route uses xAI/Grok key | No | Partial |
+185:| OpenAI | Yes text | No crawl | Static direct image not in current approved catalog except via task? | No | No | Yes | Yes | Not in adult route chain except custom-compatible | No | No | Partial |
+186:| Gemini direct | Governance/voice routes only | No | No direct route verified | Direct route blocks Gemini video | No | Yes via `/api/brain/tts` | Yes via `/api/brain/stt` | No | No | No | Inconsistent approval |
+187:| GitHub | No model role | Workbench repo operations | No | No | No | No | No | No | No | No | Required for Workbench |
+195:## 7. Capability Ownership Matrix
+197:| Capability | Recommended primary owner from current repo | Fallback owner | Wired? | Dashboard visible? | Real route | Final/async | Polling | Artifacts/previews | Required config | Readiness |
+199:| Chat | GenX text | OpenAI/Groq/Qwen/Together | Yes | Studio | `/api/admin/studio/execute`, chat stream routes | Stream/final | Stream route exists | Chat artifacts/memory partial | GenX or direct key | Partial, not live-tested |
+200:| Reasoning | GenX reasoning/text | OpenAI/Groq/Qwen | Yes | Studio/model selectors | routing + execute route | Final | No | Text artifact possible | Provider key | Partial |
+201:| Coding | GenX `gpt-5.3-codex`/text | OpenAI/Groq | Yes | Studio handoff, Workbench | Workbench routes, Studio handoff | Job/workflow | Workbench job refresh | Diff/check logs | GitHub + model key | Partial |
+202:| Repo audit | Workbench/GitHub | GenX/OpenAI text | Yes | Workbench | `/api/admin/repo-workbench/[workspaceId]/audit` | Workflow | Status routes | Logs/diffs | GitHub token | Not verified live |
+205:| Research | GenX/text + Firecrawl | OpenAI/Groq text | Yes | Studio | `/api/admin/research/assist`, Studio execute | Final/job depending route | Research job route exists | Artifacts saved by Studio route | Firecrawl for crawl | Partial |
+208:| Image generation | GenX image | Together/Qwen/HF specialist | Yes | Studio | `/api/brain/image` via Studio | Final/job depending provider | Studio job polling partial | Image artifact preview | GenX or image provider key | Partial |
+209:| Image editing | GenX image edit | HF/Qwen specialist if route supports | Partial | Studio if tab exists | `/api/brain/image-edit` | Final/job | Not fully proven | Artifact route exists | Provider key | Partial |
+210:| Video generation | GenX video | Qwen/DashScope; route also Replicate/Together | Yes | Studio | `/api/brain/video-generate` | Async | `/api/brain/video-generate/[jobId]` | Video artifact on success | GenX/Qwen/etc | Partial |
+211:| Audio generation | GenX Lyria/music route | None proven | Partial | Studio music/audio | `/api/admin/music-studio` | Async/sync | `/api/admin/music-studio/jobs/[jobId]` | Music artifacts | GenX key | Not live-tested |
+212:| Music/song generation | GenX Lyria | None proven | Partial | Studio music/audio | music-studio route | Async/sync | Yes | Artifacts | GenX key | Not live-tested |
+213:| TTS | GenX TTS or OpenAI/Groq | HF; specialist MiniMax | Yes | Studio/voice | `/api/brain/tts`, MiniMax specialist route | Final audio | No | Audio playback/artifact partial | Provider key | Partial |
+214:| STT/transcription | OpenAI/Groq/GenX/Qwen | HF | Yes | Studio STT | `/api/admin/studio/stt`, `/api/brain/stt` | Final text | No | Transcript artifact | Provider key | Partial |
+215:| Voice selection | Voice options route | Direct TTS params | Partial | Studio | `/api/admin/voice/options`, `/api/admin/voice/preview` | Final audio | No | Preview audio | TTS provider key | Partial |
+216:| Voice cloning/design | ElevenLabs/Deepgram routes mention voices | None | No production app flow found | Not clearly visible | No clone/design route found | N/A | N/A | N/A | External keys | Missing |
+217:| Embeddings | Brain embeddings | OpenAI/HF/GenX depending route | Partial | Not central | `/api/brain/embeddings` | Final | No | Retrieval/memory | Provider key | Partial |
+220:| Adult text | Adult text route | Together/xAI/HF/custom | Yes | Studio adult | `/api/brain/adult-text` | Final | No | Text artifact via Studio if wired | App adult policy + provider key/endpoint | Partial |
+221:| Adult image | Adult image route | xAI/Together/HF | Yes | Studio adult | `/api/brain/adult-image` | Final | No | Image artifact if response saved | App adult policy + provider key | Partial |
+222:| Adult video | None production-ready | Experimental HF catalog only | No | Should stay blocked | No production adult-video route found | N/A | N/A | N/A | Provider policy + app policy + safeguards + route | Blocked |
+223:| App onboarding | App profile/package/agent routes | Manual config | Yes | Apps & Agents | app profile/package/agent/safety/budget routes | Final | No | App memory partial | DB/session | Partial |
+224:| Agent assignment | App agent route | Registry | Partial | Apps & Agents | `/api/admin/app-agents` | Final | No | DB agent | DB | Partial |
+227:| Artifact preview | Dashboard artifact renderer | File route | Yes | Studio/Memory/Ops | `/api/artifacts/file/[...key]`, admin artifacts media | Final | N/A | Image/video/audio/text | Storage URLs | Partial |
+230:| Queues/jobs | Jobs, video/music jobs | Redis if configured | Partial | Ops/Studio | jobs routes | Async | Polling for video/music | Job artifacts | DB/Redis | Partial |
+231:| Provider testing | Settings test routes | health-check-all | Yes | Settings | provider/status/test routes | Final | N/A | Last result fields | Keys | Partial |
+233:## 8. Routing Governance Findings
+237:- `src/lib/live-ai-routing.ts` has a capability taxonomy and maps request capabilities to model roles.
+238:- `src/lib/universal-model-catalog.ts` centralizes live GenX discovery with static provider catalog fallback.
+239:- Studio execution uses route decisions and records selected provider/model/reason where available.
+240:- Workbench model selection avoids sending GenX auto aliases directly by normalizing to executable model IDs in the dashboard code path.
+244:- Manual explicit provider/model selection in `src/lib/live-ai-routing.ts` can accept a provider/model from the catalog without proving the selected model supports the requested capability. Caller-side filtering reduces risk, but backend governance should also enforce capability compatibility.
+245:- `src/lib/runtime-capability-truth.ts` defaults GenX `modelCount` to 57 while the live endpoint returned 58.
+246:- Static GenX fallback video model names differ from live names for Seedance 2.
+247:- `src/lib/studio-route-map.ts` correctly marks avatar/talking video as missing, but `src/lib/runtime-capability-truth.ts` and adult policy code include broader categories such as adult video/voice. The route truth and policy truth should be reconciled.
+248:- Music routing is inconsistent: Studio's capability normalization maps music/audio to `voice_tts` in `src/app/api/admin/studio/execute/route.ts`, while execution calls `/api/admin/music-studio`. This can select a TTS model for a music job unless the UI or music route corrects it.
+249:- TTS governance is inconsistent: `/api/brain/tts` supports GenX, Groq, OpenAI, Gemini, Hugging Face, ElevenLabs, and Deepgram; `/api/admin/specialist/minimax-tts` supports MiniMax/Mimo; but Studio execution currently limits voice/TTS provider preservation to GenX/Groq/OpenAI/HuggingFace or `auto`, so MiniMax/Mimo selection is not consistently honored in the main Studio execute path.
+250:- Direct Gemini appears in TTS/STT routes and provider governance, but not in the approved AI provider catalog.
+
+--- docs/forensic/PHASE_9_SPECIALIST_PROVIDER_ROUTES.md ---
+1:# Phase 9 — Specialist Provider Routes
+4:Branch: `phase-9-specialist-provider-routes`
+8:Begin wiring real specialist provider execution routes so the system does not merely list capabilities.
+12:1. Hugging Face Inference Providers / dedicated endpoint helper.
+13:2. Qwen Wanx text-to-image helper.
+14:3. MiniMax/Mimo TTS helper.
+15:4. Capability tests updated to execute those routes where possible.
+20:### `src/lib/specialist-provider-routes.ts`
+24:- `runHuggingFaceInference()`
+25:- `runQwenWanxImage()`
+26:- `runMiniMaxTts()`
+28:### Hugging Face specialist endpoint
+31:POST /api/admin/specialist/huggingface
+36:- model ID based Inference API calls
+41:This is the first foundation for Hugging Face being a broad model execution layer.
+43:### Qwen Wanx image endpoint
+46:POST /api/admin/specialist/qwen-wanx-image
+51:- text-to-image task creation request through DashScope AIGC endpoint
+52:- configurable model
+55:Important: Qwen Wanx image generation is async. This phase sends the task creation request and returns provider JSON. A later phase should add task polling/result retrieval and artifact storage.
+57:### MiniMax/Mimo TTS endpoint
+60:POST /api/admin/specialist/minimax-tts
+65:- text-to-speech using MiniMax/Mimo key
+66:- optional model
+67:- optional voice ID
+68:- returns audio bytes when provider returns audio payload
+70:May require `MINIMAX_GROUP_ID` or `MIMO_GROUP_ID` depending on the account.
+72:## Capability test update
+77:POST /api/admin/provider-capability-test
+82:| Provider | Capability | Route |
+84:| Hugging Face | any non-text specialist test | `runHuggingFaceInference()` |
+85:| Qwen | `text_to_image`, `image_text_to_image` | `runQwenWanxImage()` |
+86:| MiniMax/Mimo | `text_to_speech` | `runMiniMaxTts()` |
+96:### Hugging Face text/image/audio model test
+99:curl -sS -X POST https://amarktai.com/api/admin/specialist/huggingface \
+103:    "modelId":"hexgrad/Kokoro-82M",
+104:    "capability":"text_to_speech",
+105:    "inputs":"Hello from Hugging Face specialist route."
+112:curl -sS -X POST https://amarktai.com/api/admin/specialist/huggingface \
+116:    "endpointUrl":"https://YOUR-ENDPOINT.endpoints.huggingface.cloud",
+117:    "capability":"custom_endpoint",
+122:### Qwen Wanx image task creation
+125:curl -sS -X POST https://amarktai.com/api/admin/specialist/qwen-wanx-image \
+130:    "model":"wanx2.1-t2i-turbo",
+135:Expected: provider task creation JSON or exact provider error.
+137:### MiniMax/Mimo TTS
+140:curl -sS -X POST https://amarktai.com/api/admin/specialist/minimax-tts \
+144:    "text":"Hello, this is AmarktAI Assistant using MiniMax voice.",
+145:    "model":"speech-2.6-turbo"
+149:### Capability test specialist execution
+152:curl -sS -X POST https://amarktai.com/api/admin/provider-capability-test \
+156:    "provider":"qwen",
+157:    "modelId":"wanx2.1-t2i-turbo",
+158:    "capabilityId":"text_to_image",
+164:curl -sS -X POST https://amarktai.com/api/admin/provider-capability-test \
+168:    "provider":"minimax",
+169:    "modelId":"speech-2.6-turbo",
+170:    "capabilityId":"text_to_speech",
+171:    "prompt":"Hello from MiniMax TTS"
+177:This phase does not complete every specialist provider.
+181:- Qwen Wanx async polling/result retrieval.
+182:- Qwen image-to-video route.
+183:- Qwen Omni voice route.
+184:- MiniMax/Mimo video route.
+185:- MiniMax/Mimo music route.
+186:- Gemini specialist image/video/voice routes.
+188:- Persistent provider capability-test results.
+193:The system now has the first real specialist execution helpers and endpoints. It is no longer only a model catalog for these routes; Hugging Face, Qwen image task creation, and MiniMax/Mimo TTS can be executed and tested through admin APIs.
+
+--- docs/forensic/PHASE_11_PROVIDER_INTELLIGENCE_ROUTING_MEMORY.md ---
+1:# Phase 11 — Provider Intelligence + Routing Memory
+4:Branch: `phase-11-provider-intelligence-routing-memory`
+8:Make provider routing smarter by using real evidence from provider result logs and generated artifacts.
+10:The system should not blindly keep using a provider that repeatedly fails, times out, or performs slowly. This phase adds the first safe routing-memory layer without replacing the main router yet.
+14:### 1. Provider intelligence summaries
+19:src/lib/provider-intelligence.ts
+22:It reads JSONL provider result logs from:
+25:PROVIDER_RESULT_LOG_ROOT=/var/www/amarktai/repo/storage/provider-results
+28:It computes per app/provider/model/capability:
+53:### 2. Provider score endpoint
+58:GET /api/admin/provider-scores
+65:?provider=qwen
+70:This is the first backend for a future Provider Intelligence dashboard.
+90:?provider=minimax
+91:?capability=text-to-speech
+101:### 4. Qwen Wanx task polling
+106:src/lib/qwen-wanx-polling.ts
+112:POST /api/admin/specialist/qwen-wanx-task
+115:It polls a DashScope/Qwen task ID, saves task JSON as an artifact, and logs the provider result.
+117:This moves Qwen Wanx from only task creation toward task result retrieval.
+119:### 5. Smart routing endpoint
+124:POST /api/admin/ai-routing/smart
+127:It wraps the existing route planner, then uses provider intelligence to block providers with repeated bad history.
+133:### Provider scores
+136:curl -sS 'https://amarktai.com/api/admin/provider-scores?appSlug=amarktai-network&days=14' \
+143:curl -sS 'https://amarktai.com/api/admin/provider-scores?appSlug=amarktai-network&provider=qwen&days=14&includeRaw=true' \
+154:### Qwen Wanx task polling
+157:curl -sS -X POST https://amarktai.com/api/admin/specialist/qwen-wanx-task \
+161:    "taskId":"YOUR_QWEN_TASK_ID",
+162:    "model":"wanx2.1-t2i-turbo",
+168:### Smart routing
+171:curl -sS -X POST https://amarktai.com/api/admin/ai-routing/smart \
+175:    "capability":"chat",
+177:    "avoidBadProviders":true,
+184:- `smartRoutingApplied: true`
+186:- selected provider excludes providers with repeated bad score history
+188:## Routing score rule
+190:Smart routing avoids a provider when:
+192:- provider has at least 2 matching samples, and
+195:This is deliberately conservative so one accidental failure does not permanently block a provider.
+201:- database-backed provider scores,
+203:- frontend dashboard for provider scores/artifacts,
+204:- Qwen result file download from returned image URLs,
+206:- app-level provider fallback editor,
+213:1. Provider Intelligence dashboard.
+217:5. Switch AmarktAI Assistant route planning to smart routing after endpoint proves stable.
+221:The system now has routing memory. Provider and artifact logs are no longer just stored; they can be summarized, scored, browsed, and used to avoid repeated failures.
+
+--- docs/forensic/media-studio-golive-audit.md ---
+3:Source: `src/app/admin/dashboard/media-studio/page.tsx` and API routes under `/api/brain/*`, `/api/admin/music-studio`, `/api/admin/artifacts`.
+5:| Tab | UI fields | Model selector | Provider selector | Endpoint called | Job handling | Artifact handling | Error handling | Status | Exact blocker | Fix required |
+7:| Images | prompt | hard-coded `recraft-v3`, `grok-imagine`, `dalle-3` | none | `/api/admin/workspace/run` | none visible | displays URL only; history via artifacts separately | inline error | FAIL/PARTIAL | Uses workspace run, not canonical `/api/brain/image`; only 3 static models; no edit/upload flow here | Wire to `/api/brain/image`, load live model catalog, persist artifact/job, add image edit source flow |
+8:| Video | prompt | none | none | none; button disabled | none | none | amber warning | FAIL | Button disabled; no polling; no GenX video model selector | Wire `/api/brain/video-generate`, `/api/brain/video-generate/[jobId]`, show job/artifact status |
+9:| Voice | text, provider, voice/model, mode, speed | static voice/model list | auto/groq/openai/gemini | `/api/brain/tts` | synchronous blob response | object URL only, not persisted in visible code | inline error | PARTIAL | Batch TTS only; streaming marked pending; provider/model support not loaded from runtime truth | Add voice catalog/status, STT tab, artifact persistence, streaming service gate |
+10:| Music | prompt/style only | none | none | none; button disabled | none | none | disabled warning | FAIL | Music generation disabled; no lyrics/genre/mood/vocal/duration controls | Wire `/api/admin/music-studio` async job route, add full song fields and polling |
+11:| Adult | not a tab | none | none | none | none | none | only env-gated banner | FAIL/MISSING | Prompt requires Adult tab, but `TabId` lacks adult and tab list lacks adult | Add gated Adult tab only after global/app flag and provider test pass |
+16:- Image generation showing only 3 models is insufficient when GenX catalog has many image models.
+17:- Video models are not listed as real selectable options.
+18:- Voice has provider/model/speed, but no language and no live voice catalog.
+19:- Music lacks lyrics, genre, mood, vocal/instrumental, duration, and working generation.
+20:- Adult must remain hidden until enabled and provider test passes; currently it is not a functional tab at all.
+21:- No tab should fake output; current disabled video/music is truthful but not live-ready.
+
+--- docs/forensic/dashboard-ai-system-completion-report.md ---
+15:| Phase 4: AI Engine | DONE | Rewritten with 7 tabs: GenX, Providers, Models, Routing, Budgets, Capabilities, Learning |
+17:| Phase 6: Media Studio | DONE | New media-studio/page.tsx with Images/Video/Voice/Music/History tabs |
+18:| Phase 7: Apps & Agents | DONE | Pre-existing Apps & Agents pages kept, accessible from nav |
+25:| Phase 14: Model Research Document | DONE | docs/ai/model-stack-research.md created |
+26:| Phase 15: Live Readiness | DONE | 9 nav sections, AmarktAI Assistant hidden, no broken buttons, GenX-first |
+44:- `docs/ai/model-stack-research.md`
+58:- `music-studio` → `/admin/dashboard/media-studio`
+59:- `video` → `/admin/dashboard/media-studio`
+60:- `voice` → `/admin/dashboard/media-studio`
+61:- `genx-models` → `/admin/dashboard/ai-engine` (was already redirected)
+62:- `models` → `/admin/dashboard/ai-engine`
+80:| `/admin/dashboard/music-studio` | `/admin/dashboard/media-studio` | redirect() |
+81:| `/admin/dashboard/video` | `/admin/dashboard/media-studio` | redirect() |
+82:| `/admin/dashboard/voice` | `/admin/dashboard/media-studio` | redirect() |
+83:| `/admin/dashboard/models` | `/admin/dashboard/ai-engine` | redirect() |
+99:- Voice Access (not in nav)
+100:- GenX Models standalone page (redirected)
+112:/admin/dashboard/repo-workbench     → Repo Workbench (coding agent)
+114:/admin/dashboard/media-studio       → Media Studio (Images/Video/Voice/Music/History)
+115:/admin/dashboard/apps               → Apps & Agents
+118:/admin/dashboard/app-agents         → Agent list
+119:/admin/dashboard/app-agents/[slug]  → Agent detail
+120:/admin/dashboard/app-agents/new     → Create agent
+128:## 6. Model Stack Summary
+130:### GenX — Wired (via /api/admin/genx/status)
+131:- Text: GPT-4o, Claude, Gemini, Grok, DeepSeek (all via GenX)
+132:- Image: Recraft v3, DALL-E 3, Grok Imagine (via GenX)
+133:- Video: Veo 2, Kling, Seedance, PixVerse (via GenX — key + quota needed)
+134:- Voice: Aura 2, Grok TTS, GenX LM Voice (via GenX — key needed)
+135:- Music: Lyria (via GenX — key needed)
+137:### GenX-Covered Providers (NO direct keys needed)
+140:### Fallback Providers (optional, listed not wired)
+141:Hugging Face, Together AI, DeepSeek, Kimi, Qwen, ElevenLabs, Suno, Udio, Replicate, RunPod, Firecrawl, Crawl4AI
+145:## 7. Capability Status Table
+147:| Capability | Status | Provider/Model | Blocker | Next Step |
+149:| Text / Chat | Ready | GPT-4o via GenX | — | — |
+150:| Coding Agent | Ready | GPT-4.1 via GenX | — | — |
+151:| Image Generation | Needs Setup | Recraft v3 via GenX | GENX_API_KEY | Add GenX key |
+152:| Video Generation | Needs Setup | Veo 2 / Kling via GenX | GENX_API_KEY + video quota | Add GenX key + quota |
+153:| Voice TTS | Needs Setup | Aura 2 / Grok TTS via GenX | GENX_API_KEY | Add GenX key |
+154:| STT / Transcription | Needs Setup | Deepgram Nova via GenX | GENX_API_KEY | Add GenX key |
+155:| Music Generation | Needs Setup | Lyria via GenX | Provider key | Add GenX key |
+156:| Embeddings | Ready | text-embedding-3 via GenX | — | — |
+157:| Adult Image | Blocked | RunPod/HF local | Adult mode disabled | Enable adult mode + configure provider |
+164:1. **GenX API key not configured** — no media generation or advanced AI until GENX_API_KEY added
+166:3. **Per-app budget enforcement** — routing rules exist, enforcement not wired
+167:4. **Command Center NL routing** — UI exists, AI routing not wired
+168:5. **Music/video actual generation** — GenX endpoints wired, need key + quota
+169:6. **Fallback providers** — listed in AI Engine but keys not stored/wired yet
+177:- Command Center natural language task routing
+178:- Per-app budget enforcement in routing layer
+179:- Voice TTS actual API call through GenX
+180:- Video generation actual API call through GenX
+181:- Music generation actual API call through GenX
+182:- Fallback provider key storage + routing wiring
+184:- Per-app agent learning UI
+192:- [ ] Add GENX_API_KEY to production environment
+193:- [ ] Add GENX_API_URL to production environment
+199:- [ ] Verify AI Engine > GenX tab shows connected
+218:- [ ] AI Engine loads, GenX tab shows status
+219:- [ ] AI Engine Providers tab shows 3 groups (GenX, Fallbacks, Covered by GenX)
+222:- [ ] Apps & Agents shows app list and Create App button
+223:- [ ] Artifacts & Jobs shows artifact library
+226:- [ ] Old routes redirect: /workspace → /, /monitor → /system-health, /music-studio → /media-studio
+
+===== LIVE PROVIDER STATUS ROUTES =====
+
+--- /api/admin/settings/status ---
+HTTP_STATUS=401
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+
+--- /api/admin/provider-universe-truth ---
+HTTP_STATUS=200
+{
+  "success": true,
+  "truth": {
+    "generatedAt": "2026-06-08T16:57:14.912Z",
+    "summary": {
+      "providers": 6,
+      "configuredProviders": 6,
+      "catalogModels": 295,
+      "universalModels": 348,
+      "brainDiscoveredModels": 360,
+      "brainApprovedModels": 33,
+      "brainRoutedModels": 33,
+      "liveDiscoveredDisabledModels": 277,
+      "discoveredOnlyModels": 327,
+      "mediaRoutes": 10,
+      "localTools": 7,
+      "localToolsOk": 6
+    },
+    "providers": [
+      {
+        "key": "genx",
+        "displayName": "GenX",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": true,
+          "status": "not_attempted",
+          "liveDiscovered": 0,
+          "liveEnabled": 0,
+          "liveDisabled": 0
+        },
+        "catalog": {
+          "modelCount": 3,
+          "staticEnabled": 3,
+          "recommendedDefaults": {
+            "workbench": "gpt-5.4-mini",
+            "assistant": "gpt-5.4-mini"
+          },
+          "notes": [
+            "Primary OpenAI-compatible routing layer across text, code, media, voice, files, and async jobs.",
+            "GenX live discovery is handled by the universal GenX catalog path."
+          ]
+        },
+        "brain": {
+          "discovered": 59,
+          "tested": 59,
+          "approved": 8,
+          "routed": 8
+        },
+        "activeRouting": {
+          "approved": 8,
+          "routed": 8,
+          "discoveredButNotRouted": 51
+        }
+      },
+      {
+        "key": "huggingface",
+        "displayName": "Hugging Face",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": true,
+          "status": "success",
+          "liveDiscovered": 120,
+          "liveEnabled": 0,
+          "liveDisabled": 120
+        },
+        "catalog": {
+          "modelCount": 125,
+          "staticEnabled": 5,
+          "recommendedDefaults": {},
+          "notes": [
+            "Model universe for specialist text, embedding, image, video, and speech tasks.",
+            "Live discovery found 120 provider models. Live-discovered models remain disabled until explicitly routed."
+          ]
+        },
+        "brain": {
+          "discovered": 130,
+          "tested": 130,
+          "approved": 10,
+          "routed": 10
+        },
+        "activeRouting": {
+          "approved": 10,
+          "routed": 10,
+          "discoveredButNotRouted": 120
+        }
+      },
+      {
+        "key": "qwen",
+        "displayName": "Qwen / DashScope",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": true,
+          "status": "success",
+          "liveDiscovered": 142,
+          "liveEnabled": 0,
+          "liveDisabled": 142
+        },
+        "catalog": {
+          "modelCount": 145,
+          "staticEnabled": 3,
+          "recommendedDefaults": {
+            "workbench": "qwen-turbo",
+            "assistant": "qwen-plus"
+          },
+          "notes": [
+            "Low-cost text, reasoning, code, multimodal understanding, and DashScope media routes.",
+            "Live discovery found 145 provider models. Live-discovered models remain disabled until explicitly routed."
+          ]
+        },
+        "brain": {
+          "discovered": 147,
+          "tested": 147,
+          "approved": 5,
+          "routed": 5
+        },
+        "activeRouting": {
+          "approved": 5,
+          "routed": 5,
+          "discoveredButNotRouted": 142
+        }
+      },
+      {
+        "key": "mimo",
+        "displayName": "Xiaomi MiMo",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": false,
+          "status": "not_supported",
+          "liveDiscovered": 0,
+          "liveEnabled": 0,
+          "liveDisabled": 0
+        },
+        "catalog": {
+          "modelCount": 4,
+          "staticEnabled": 4,
+          "recommendedDefaults": {
+            "workbench": "mimo-v2.5",
+            "assistant": "mimo-v2.5"
+          },
+          "notes": [
+            "Xiaomi MiMo V2.5-compatible reasoning, coding, multimodal, voice, and tool workflows."
+          ]
+        },
+        "brain": {
+          "discovered": 4,
+          "tested": 4,
+          "approved": 4,
+          "routed": 4
+        },
+        "activeRouting": {
+          "approved": 4,
+          "routed": 4,
+          "discoveredButNotRouted": 0
+        }
+      },
+      {
+        "key": "groq",
+        "displayName": "Groq",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": true,
+          "status": "success",
+          "liveDiscovered": 15,
+          "liveEnabled": 0,
+          "liveDisabled": 15
+        },
+        "catalog": {
+          "modelCount": 16,
+          "staticEnabled": 1,
+          "recommendedDefaults": {
+            "workbench": "llama-3.3-70b-versatile",
+            "assistant": "llama-3.3-70b-versatile"
+          },
+          "notes": [
+            "Fast text, reasoning, code triage, speech, vision, and tool execution.",
+            "Live discovery found 16 provider models. Live-discovered models remain disabled until explicitly routed."
+          ]
+        },
+        "brain": {
+          "discovered": 16,
+          "tested": 16,
+          "approved": 2,
+          "routed": 2
+        },
+        "activeRouting": {
+          "approved": 2,
+          "routed": 2,
+          "discoveredButNotRouted": 14
+        }
+      },
+      {
+        "key": "together",
+        "displayName": "Together AI",
+        "configured": true,
+        "keySource": "vault",
+        "liveDiscovery": {
+          "supported": true,
+          "status": "success",
+          "liveDiscovered": 0,
+          "liveEnabled": 0,
+          "liveDisabled": 0
+        },
+        "catalog": {
+          "modelCount": 2,
+          "staticEnabled": 2,
+          "recommendedDefaults": {
+            "workbench": "meta-llama/Llama-3-70b-chat-hf"
+          },
+          "notes": [
+            "OpenAI-compatible text, image, video, vision, embedding, rerank, and tool routes.",
+            "Live discovery found 0 provider models. Live-discovered models remain disabled until explicitly routed."
+          ]
+        },
+        "brain": {
+          "discovered": 4,
+          "tested": 4,
+          "approved": 4,
+          "routed": 4
+        },
+        "activeRouting": {
+          "approved": 4,
+          "routed": 4,
+          "discoveredButNotRouted": 0
+        }
+      }
+    ],
+    "brain": {
+      "counts": {
+        "discovered": 360,
+        "tested": 360,
+        "approved": 33,
+        "routed": 33,
+        "byProvider": {
+          "genx": {
+            "discovered": 59,
+            "tested": 59,
+            "approved": 8,
+            "routed": 8
+          },
+          "huggingface": {
+            "discovered": 130,
+            "tested": 130,
+            "approved": 10,
+            "routed": 10
+          },
+          "qwen": {
+            "dis
+
+--- /api/admin/ai-model-catalog ---
+HTTP_STATUS=401
+{
+  "error": "Unauthorized"
+}
+
+--- /api/admin/providers/catalog ---
+HTTP_STATUS=401
+{
+  "error": "Unauthorized"
+}
+
+--- /api/admin/provider-governance ---
+HTTP_STATUS=401
+{
+  "error": "Unauthorized"
+}
+
+--- /api/admin/system/capabilities ---
+HTTP_STATUS=401
+{
+  "error": "Unauthorized"
+}
+
+===== DB PROVIDER / MIMO / MODEL / APP AGENT SNAPSHOT =====
+Prisma models:
+aiProvider
+appAgent
+appAgentLearningLog
+appAiProfile
+appBudgetConfig
+appEvent
+appIntegration
+appIntelligenceProfile
+appMetricDefinition
+appMetricPoint
+appStrategyRecord
+artifact
+assistantAvatarConfig
+batchJob
+batchJobItem
+dashboardWidgetConfig
+fineTuneJob
+gitHubConfig
+integrationConfig
+managerAgentLog
+modelRegistryEntry
+musicGenerationJob
+providerBudget
+videoGenerationJob
+webhookDeliveryRecord
+webhookRegistrationRecord
+workspaceConfig
+--- aiProvider ---
+[]
+--- appAgent ---
+[]
+--- appAgentLearningLog ---
+[]
+--- appBudgetConfig ---
+[]
+--- appIntegration ---
+[]
+--- assistantAvatarConfig ---
+[]
+--- dashboardWidgetConfig ---
+[]
+--- gitHubConfig ---
+[]
+--- integrationConfig ---
+[
+  {
+    "id": 1,
+    "key": "[redacted length=4]",
+    "displayName": "GenX",
+    "apiKey": "[redacted length=37]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"provider\",\"savedAt\":\"2026-06-06T09:49:07.805Z\",\"lastTestStatus\":\"passed\",\"latencyMs\":1586,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:57:24.012Z\",\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"image\",\"video\",\"image_to_video\",\"avatar\",\"music\",\"audio\",\"tts\",\"stt\",\"files\",\"sessions\",\"async_jobs\",\"tools\"],\"lastError\":\"\",\"detail\":\"\",\"modelCount\":60,\"catalogOk\":true,\"chatOk\":false,\"generateOk\":true,\"executionOk\":true}",
+    "createdAt": "2026-06-05T18:13:06.178Z",
+    "updatedAt": "2026-06-06T13:57:24.014Z"
+  },
+  {
+    "id": 6,
+    "key": "[redacted length=13]",
+    "displayName": "Local Crawler",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":738,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:22.480Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available · Scrapy available · Trafilatura available\"}",
+    "createdAt": "2026-06-06T09:55:05.789Z",
+    "updatedAt": "2026-06-06T13:15:22.482Z"
+  },
+  {
+    "id": 7,
+    "key": "[redacted length=7]",
+    "displayName": "Storage",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":24,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:55.908Z\",\"capabilities\":[\"storage\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:12.301Z",
+    "updatedAt": "2026-06-06T13:15:55.910Z"
+  },
+  {
+    "id": 8,
+    "key": "[redacted length=4]",
+    "displayName": "SMTP",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":299,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:58.125Z\",\"capabilities\":[\"email\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T09:55:17.885Z",
+    "updatedAt": "2026-06-06T13:15:58.126Z"
+  },
+  {
+    "id": 9,
+    "key": "[redacted length=5]",
+    "displayName": "Redis",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":12,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T12:41:05.444Z\",\"capabilities\":[\"queue\"],\"lastError\":\"\",\"detail\":\"PING/PONG succeeded via ioredis\"}",
+    "createdAt": "2026-06-06T09:55:27.032Z",
+    "updatedAt": "2026-06-06T12:41:05.446Z"
+  },
+  {
+    "id": 12,
+    "key": "[redacted length=6]",
+    "displayName": "Qdrant",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:19:37.951Z\",\"capabilities\":[\"vector_store\"],\"lastError\":\"\",\"detail\":\"Collections endpoint passed.\",\"latencyMs\":34}",
+    "createdAt": "2026-06-06T12:39:07.547Z",
+    "updatedAt": "2026-06-06T13:19:37.953Z"
+  },
+  {
+    "id": 13,
+    "key": "[redacted length=10]",
+    "displayName": "Playwright",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":555,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:32.713Z\",\"capabilities\":[\"crawl\",\"render\"],\"lastError\":\"\",\"detail\":\"Playwright available\"}",
+    "createdAt": "2026-06-06T12:39:11.770Z",
+    "updatedAt": "2026-06-06T13:15:32.714Z"
+  },
+  {
+    "id": 14,
+    "key": "[redacted length=6]",
+    "displayName": "Scrapy",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":500,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:44.316Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Scrapy available\"}",
+    "createdAt": "2026-06-06T12:39:14.122Z",
+    "updatedAt": "2026-06-06T13:15:44.318Z"
+  },
+  {
+    "id": 15,
+    "key": "[redacted length=11]",
+    "displayName": "Trafilatura",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":640,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:50.947Z\",\"capabilities\":[\"crawl\"],\"lastError\":\"\",\"detail\":\"Trafilatura available\"}",
+    "createdAt": "2026-06-06T12:39:17.314Z",
+    "updatedAt": "2026-06-06T13:15:50.949Z"
+  },
+  {
+    "id": 16,
+    "key": "[redacted length=6]",
+    "displayName": "ffmpeg",
+    "apiKey": "",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"latencyMs\":80,\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T13:15:47.153Z\",\"capabilities\":[\"video\",\"audio\"],\"lastError\":\"\",\"detail\":\"ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers\"}",
+    "createdAt": "2026-06-06T12:39:18.781Z",
+    "updatedAt": "2026-06-06T13:15:47.155Z"
+  },
+  {
+    "id": 37,
+    "key": "[redacted length=6]",
+    "displayName": "GitHub",
+    "apiKey": "[redacted length=40]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"tool\",\"savedAt\":\"2026-06-06T14:02:16.967Z\",\"lastTestStatus\":\"passed\",\"username\":\"amarktainetwork-blip\",\"repoCount\":8,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T14:02:20.093Z\",\"latencyMs\":298,\"capabilities\":[\"repo\",\"pull_request\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T14:02:16.968Z",
+    "updatedAt": "2026-06-06T14:02:20.094Z"
+  },
+  {
+    "id": 40,
+    "key": "[redacted length=11]",
+    "displayName": "Hugging Face",
+    "apiKey": "[redacted length=37]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:14:21.058Z\",\"latencyMs\":194,\"capabilities\":[\"text\",\"vision\",\"embeddings\",\"image\",\"video\",\"stt\",\"audio\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:14:16.538Z",
+    "updatedAt": "2026-06-06T17:14:21.060Z"
+  },
+  {
+    "id": 43,
+    "key": "[redacted length=4]",
+    "displayName": "Xiaomi MiMo",
+    "apiKey": "[redacted length=51]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"type\":\"provider\",\"savedAt\":\"2026-06-06T17:19:37.295Z\",\"lastTestStatus\":\"passed\",\"latencyMs\":1491,\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:19:40.204Z\",\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"audio\",\"video\",\"tts\",\"stt\",\"tools\",\"web_search\"],\"lastError\":\"\",\"detail\":\"OpenAI-compatible chat passed.\"}",
+    "createdAt": "2026-06-06T17:19:37.296Z",
+    "updatedAt": "2026-06-06T17:19:40.206Z"
+  },
+  {
+    "id": 45,
+    "key": "[redacted length=4]",
+    "displayName": "Qwen / DashScope",
+    "apiKey": "[redacted length=114]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:23:46.253Z\",\"latencyMs\":987,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"image\",\"video\",\"audio\",\"async_jobs\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:23:42.334Z",
+    "updatedAt": "2026-06-06T17:23:46.254Z"
+  },
+  {
+    "id": 48,
+    "key": "[redacted length=4]",
+    "displayName": "Groq",
+    "apiKey": "[redacted length=56]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:24:01.677Z\",\"latencyMs\":236,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"stt\",\"tts\",\"tools\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:23:57.861Z",
+    "updatedAt": "2026-06-06T17:24:01.679Z"
+  },
+  {
+    "id": 51,
+    "key": "[redacted length=8]",
+    "displayName": "Together AI",
+    "apiKey": "[redacted length=50]",
+    "apiUrl": "",
+    "enabled": true,
+    "notes": "{\"lastTestStatus\":\"passed\",\"lastTestPassed\":true,\"lastTestedAt\":\"2026-06-06T17:26:15.041Z\",\"latencyMs\":584,\"capabilities\":[\"text\",\"streaming_text\",\"reasoning\",\"code\",\"vision\",\"embeddings\",\"rerank\",\"image\",\"video\",\"tools\"],\"lastError\":\"\",\"detail\":\"\"}",
+    "createdAt": "2026-06-06T17:26:12.748Z",
+    "updatedAt": "2026-06-06T17:26:15.042Z"
+  }
+]
+--- modelRegistryEntry ---
+[]
+--- providerBudget ---
+[]
+--- webhookDeliveryRecord ---
+[]
+--- webhookRegistrationRecord ---
+[]
+--- workspaceConfig ---
+[]
+
+===== CODE: MIMO + PROVIDER REFERENCES =====
+src/app/page.tsx:29:        <p className="max-w-3xl text-lg leading-8 text-slate-600">It chooses the right agents, models, tools, and workflow, then keeps the work, approvals, outputs, and next step together.</p>
+src/app/platform/page.tsx:11:  ['Outputs', 'Media, research, app builds, reports, repository diffs, and pull requests stay together.', Library],
+src/app/api/fine-tune/route.ts:9:  provider: 'openai' | 'together' | 'qwen'
+src/app/api/fine-tune/route.ts:69:      const supportedProviders = ['openai', 'together', 'qwen']
+src/app/api/fine-tune/route.ts:143:      supportedProviders: ['openai', 'together', 'qwen'],
+src/app/api/fine-tune/route.ts:146:        together: ['meta-llama/Llama-3-8b', 'mistralai/Mixtral-8x7B-v0.1'],
+src/app/api/fine-tune/route.ts:147:        qwen: ['qwen-turbo', 'qwen-plus'],
+src/app/api/admin/media-studio/models/route.ts:4:  GENX_AUDIO_MODELS,
+src/app/api/admin/media-studio/models/route.ts:5:  GENX_IMAGE_MODELS,
+src/app/api/admin/media-studio/models/route.ts:6:  GENX_TTS_MODELS,
+src/app/api/admin/media-studio/models/route.ts:7:  GENX_VIDEO_MODELS,
+src/app/api/admin/media-studio/models/route.ts:8:  getGenXStatusAsync,
+src/app/api/admin/media-studio/models/route.ts:9:  listGenXModels,
+src/app/api/admin/media-studio/models/route.ts:10:} from '@/lib/genx-client'
+src/app/api/admin/media-studio/models/route.ts:35:    provider: 'GenX',
+src/app/api/admin/media-studio/models/route.ts:51:  const genx = await getGenXStatusAsync()
+src/app/api/admin/media-studio/models/route.ts:54:  const liveModels = genx.available ? await listGenXModels().catch(() => []) : []
+src/app/api/admin/media-studio/models/route.ts:55:  const blocker = genx.available ? null : genx.configured ? 'GenX is configured but unreachable.' : 'GenX is not configured.'
+src/app/api/admin/media-studio/models/route.ts:71:        provider: model.provider || 'GenX',
+src/app/api/admin/media-studio/models/route.ts:82:    return found.length ? found : staticModels(fallback, category, genx.available, blocker)
+src/app/api/admin/media-studio/models/route.ts:85:  const image = byCategory('image', GENX_IMAGE_MODELS)
+src/app/api/admin/media-studio/models/route.ts:86:  const video = byCategory('video', GENX_VIDEO_MODELS)
+src/app/api/admin/media-studio/models/route.ts:87:  const voice = byCategory('voice', GENX_TTS_MODELS)
+src/app/api/admin/media-studio/models/route.ts:88:  // Music generation is post-launch regardless of GenX availability
+src/app/api/admin/media-studio/models/route.ts:92:    : GENX_AUDIO_MODELS.map((id) => ({
+src/app/api/admin/media-studio/models/route.ts:95:        provider: 'GenX',
+src/app/api/admin/media-studio/models/route.ts:102:  if (configuredProviders.has('huggingface')) {
+src/app/api/admin/media-studio/models/route.ts:106:  if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
+src/app/api/admin/media-studio/models/route.ts:107:  if (configuredProviders.has('qwen')) {
+src/app/api/admin/media-studio/models/route.ts:108:    image.push(directModel('qwen-image', 'Qwen Image', 'Qwen / DashScope', 'image', 'low'))
+src/app/api/admin/media-studio/models/route.ts:109:    video.push(directModel('wanx2.1-t2v-turbo', 'Wan video', 'Qwen / DashScope', 'video', 'medium'))
+src/app/api/admin/media-studio/models/route.ts:110:    voice.push(directModel('qwen-tts', 'Qwen TTS', 'Qwen / DashScope', 'voice', 'low'))
+src/app/api/admin/media-studio/models/route.ts:117:    genx: {
+src/app/api/admin/media-studio/models/route.ts:118:      configured: genx.configured,
+src/app/api/admin/media-studio/models/route.ts:119:      available: genx.available,
+src/app/api/admin/media-studio/models/route.ts:120:      modelCount: genx.modelCount ?? liveModels.length,
+src/app/api/admin/ai-routing/smart/route.ts:89:        costTier: 'genx',
+src/app/api/admin/provider-capability-test/route.ts:6:import { runHuggingFaceInference, runMiniMaxTts, runQwenWanxImage } from '@/lib/specialist-provider-routes'
+src/app/api/admin/provider-capability-test/route.ts:33:  if (provider === 'huggingface') {
+src/app/api/admin/provider-capability-test/route.ts:34:    const result = await runHuggingFaceInference({
+src/app/api/admin/provider-capability-test/route.ts:44:  if (provider === 'qwen' && ['text_to_image', 'image_text_to_image'].includes(capabilityId)) {
+src/app/api/admin/provider-capability-test/route.ts:45:    return runQwenWanxImage({ prompt, model: modelId ?? 'wanx2.1-t2i-turbo' })
+src/app/api/admin/provider-capability-test/route.ts:48:  if ((provider === 'minimax' || provider === 'mimo') && capabilityId === 'text_to_speech') {
+src/app/api/admin/repo-workbench/status/route.ts:18:        genxAvailable: false,
+src/app/api/admin/ai-partner/chat/route.ts:4:import { getGenXStatusAsync, callGenXChat, type GenXChatMessage } from '@/lib/genx-client'
+src/app/api/admin/ai-partner/chat/route.ts:16: *   1. Groq   — fast, low-latency, cheap
+src/app/api/admin/ai-partner/chat/route.ts:19: *   4. Together AI
+src/app/api/admin/ai-partner/chat/route.ts:20: *   5. Qwen / DashScope
+src/app/api/admin/ai-partner/chat/route.ts:49:  { key: 'groq',      baseUrl: 'https://api.groq.com/openai', defaultModel: 'llama-3.3-70b-versatile' },
+src/app/api/admin/ai-partner/chat/route.ts:52:  { key: 'together',  baseUrl: 'https://api.together.xyz',    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
+src/app/api/admin/ai-partner/chat/route.ts:53:  { key: 'qwen',      baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode', defaultModel: 'qwen-plus' },
+src/app/api/admin/ai-partner/chat/route.ts:93:  // OpenAI-compatible providers (Groq, OpenAI, Together, Qwen, DeepSeek, Mistral)
+src/app/api/admin/ai-partner/chat/route.ts:147:  // Auto-select: try GenX (AI Engine) first, then each vault provider in priority order
+src/app/api/admin/ai-partner/chat/route.ts:150:  // ── GenX primary ────────────────────────────────────────────────────────────
+src/app/api/admin/ai-partner/chat/route.ts:151:  if (requestedProvider === 'auto' || requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:153:      const genxStatus = await getGenXStatusAsync()
+src/app/api/admin/ai-partner/chat/route.ts:154:      if (genxStatus.available) {
+src/app/api/admin/ai-partner/chat/route.ts:155:        const genxMessages: GenXChatMessage[] = []
+src/app/api/admin/ai-partner/chat/route.ts:156:        if (systemPrompt.trim()) genxMessages.push({ role: 'system', content: systemPrompt })
+src/app/api/admin/ai-partner/chat/route.ts:157:        for (const m of messages) genxMessages.push({ role: m.role, content: m.content })
+src/app/api/admin/ai-partner/chat/route.ts:159:        const genxResult = await callGenXChat({
+src/app/api/admin/ai-partner/chat/route.ts:160:          model: 'genx/default-chat',
+src/app/api/admin/ai-partner/chat/route.ts:161:          messages: genxMessages,
+src/app/api/admin/ai-partner/chat/route.ts:165:        if (genxResult.success && genxResult.output) {
+src/app/api/admin/ai-partner/chat/route.ts:166:          return NextResponse.json({ reply: genxResult.output, provider: 'genx', model: genxResult.model })
+src/app/api/admin/ai-partner/chat/route.ts:168:        if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:170:            { error: genxResult.error ?? 'GenX call returned empty output', code: 'provider_error' },
+src/app/api/admin/ai-partner/chat/route.ts:174:        errors.push(`genx: ${genxResult.error ?? 'empty reply'}`)
+src/app/api/admin/ai-partner/chat/route.ts:175:      } else if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:177:          { error: `GenX not configured: ${genxStatus.error ?? 'unknown'}`, code: 'provider_not_configured' },
+src/app/api/admin/ai-partner/chat/route.ts:181:    } catch (genxErr) {
+src/app/api/admin/ai-partner/chat/route.ts:182:      if (requestedProvider === 'genx') {
+src/app/api/admin/ai-partner/chat/route.ts:184:          { error: `GenX error: ${genxErr instanceof Error ? genxErr.message : 'unknown'}`, code: 'provider_error' },
+src/app/api/admin/ai-partner/chat/route.ts:188:      errors.push(`genx: ${genxErr instanceof Error ? genxErr.message : 'error'}`)
+src/app/api/admin/ai-partner/chat/route.ts:193:    // Non-auto explicit provider (genx was already handled above).
+src/app/api/admin/ai-partner/chat/route.ts:256:        'Add at least one API key via Admin → AI Providers (Groq recommended for fast, low-cost chat).',
+src/app/api/admin/conversation/stream/route.ts:6:import { selectGenXModel, streamGenXChat, type GenXCapability, type GenXModelPolicy, type GenXOperationType } from '@/lib/genx-client'
+src/app/api/admin/conversation/stream/route.ts:31:function genxPolicy(costPreference: string): GenXModelPolicy {
+src/app/api/admin/conversation/stream/route.ts:37:function genxCapability(capability: string): { capability: GenXCapability; operation: GenXOperationType } {
+src/app/api/admin/conversation/stream/route.ts:123:        if (plan.selected.provider === 'genx') {
+src/app/api/admin/conversation/stream/route.ts:124:          const mapped = genxCapability(payload.capability)
+src/app/api/admin/conversation/stream/route.ts:125:          const selectedModel = await selectGenXModel(genxPolicy(payload.costPreference), mapped.capability, mapped.operation)
+src/app/api/admin/conversation/stream/route.ts:128:            message: 'Streaming through GenX',
+src/app/api/admin/conversation/stream/route.ts:129:            provider: 'genx',
+src/app/api/admin/conversation/stream/route.ts:133:          const result = await streamGenXChat({
+src/app/api/admin/conversation/stream/route.ts:150:            if (event.type === 'error') controller.enqueue(sse('error', { message: event.error ?? 'GenX stream error' }))
+src/app/api/admin/conversation/stream/route.ts:154:            controller.enqueue(sse('error', { message: result.error ?? 'GenX stream failed', provider: 'genx', model: result.model }))
+src/app/api/admin/conversation/stream/route.ts:160:            provider: 'genx',
+src/app/api/admin/workspace/run/route.ts:5:import type { GenXModelPolicy, GenXCapability, GenXOperationType } from '@/lib/genx-client'
+src/app/api/admin/workspace/run/route.ts:7:const VALID_POLICIES = new Set<GenXModelPolicy>(['best', 'cheap', 'balanced', 'fixed'])
+src/app/api/admin/workspace/run/route.ts:8:const VALID_CAPABILITIES = new Set<GenXCapability>([
+src/app/api/admin/workspace/run/route.ts:12:const VALID_OPERATIONS = new Set<GenXOperationType>([
+src/app/api/admin/workspace/run/route.ts:17: * POST /api/admin/workspace/run — execute a workspace AI task via GenX.
+src/app/api/admin/workspace/run/route.ts:23: *   capability        string? — GenX capability hint (chat | code | reasoning | …)
+src/app/api/admin/workspace/run/route.ts:48:    if (capability !== undefined && !VALID_CAPABILITIES.has(capability as GenXCapability)) {
+src/app/api/admin/workspace/run/route.ts:52:    if (operationType !== undefined && !VALID_OPERATIONS.has(operationType as GenXOperationType)) {
+src/app/api/admin/workspace/run/route.ts:56:    if (policyOverride !== undefined && !VALID_POLICIES.has(policyOverride as GenXModelPolicy)) {
+src/app/api/admin/workspace/run/route.ts:86:        genxUsed: false,
+src/app/api/admin/workspace/run/route.ts:102:      capability:    capability    as GenXCapability    | undefined,
+src/app/api/admin/workspace/run/route.ts:103:      operationType: operationType as GenXOperationType | undefined,
+src/app/api/admin/workspace/run/route.ts:104:      policyOverride: policyOverride as GenXModelPolicy | undefined,
+src/app/api/admin/workspace/config/route.ts:4:import type { GenXModelPolicy } from '@/lib/genx-client'
+src/app/api/admin/workspace/config/route.ts:6:const VALID_POLICIES = new Set<GenXModelPolicy>(['best', 'cheap', 'balanced', 'fixed'])
+src/app/api/admin/workspace/config/route.ts:37:    if (modelPolicy !== undefined && !VALID_POLICIES.has(modelPolicy as GenXModelPolicy)) {
+src/app/api/admin/workspace/config/route.ts:52:      modelPolicy: modelPolicy as GenXModelPolicy | undefined,
+src/app/api/admin/settings/test-huggingface/route.ts:2: * POST /api/admin/settings/test-huggingface
+src/app/api/admin/settings/test-huggingface/route.ts:25:  const key = inlineKey || await getProviderKey('huggingface') || ''
+src/app/api/admin/settings/test-huggingface/route.ts:28:    return NextResponse.json({ success: false, error: 'No Hugging Face token configured', nextAction: 'Add HUGGINGFACE_API_KEY or HF_TOKEN in Settings' })
+src/app/api/admin/settings/test-huggingface/route.ts:33:    const res = await fetch('https://huggingface.co/api/whoami-v2', {
+src/app/api/admin/settings/test-huggingface/route.ts:48:        where: { key: 'huggingface' },
+src/app/api/admin/settings/test-huggingface/route.ts:49:        create: { key: 'huggingface', displayName: 'Hugging Face', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-genx/route.ts:2: * POST /api/admin/settings/test-genx
+src/app/api/admin/settings/test-genx/route.ts:4: * Test the GenX connection using the provided or stored API key.
+src/app/api/admin/settings/test-genx/route.ts:9: *   catalogOk        boolean  — model catalog endpoint responded OK
+src/app/api/admin/settings/test-genx/route.ts:26: * Normalise a GenX base URL:
+src/app/api/admin/settings/test-genx/route.ts:29: *   - Auto-correct the dashboard hostname (genx.sh) to the API hostname
+src/app/api/admin/settings/test-genx/route.ts:30: *     (query.genx.sh) — entering the sign-up URL instead of the API URL
+src/app/api/admin/settings/test-genx/route.ts:43:  if (url.hostname === 'genx.sh') {
+src/app/api/admin/settings/test-genx/route.ts:44:    url.hostname = 'query.genx.sh'
+src/app/api/admin/settings/test-genx/route.ts:92:      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+src/app/api/admin/settings/test-genx/route.ts:102:  if (!apiKey) apiKey = process.env.GENX_API_KEY ?? ''
+src/app/api/admin/settings/test-genx/route.ts:103:  if (!apiUrl) apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+src/app/api/admin/settings/test-genx/route.ts:110:      error: 'GenX API key is not configured',
+src/app/api/admin/settings/test-genx/route.ts:159:  // ── Test 1: Model catalog — try /api/v1/models then /v1/models ────────────
+src/app/api/admin/settings/test-genx/route.ts:198:        model: 'genx/default-chat',
+src/app/api/admin/settings/test-genx/route.ts:254:  const { invalidateEndpointProfile } = await import('@/lib/genx-client')
+src/app/api/admin/settings/test-genx/route.ts:262:      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
+src/app/api/admin/settings/test-genx/route.ts:266:        where: { key: 'genx' },
+src/app/api/admin/settings/test-genx/route.ts:281:          key: 'genx',
+src/app/api/admin/settings/test-genx/route.ts:282:          displayName: 'GenX',
+src/app/api/admin/settings/test-genx/route.ts:322:      ? { error: catalogError || chatError || generateError || 'GenX connection failed' }
+src/app/api/admin/settings/test-adult/route.ts:7: * The AI Engine (GenX) is NEVER used for adult content generation.
+src/app/api/admin/settings/test-adult/route.ts:8: * Only specialist providers are supported: xAI/Grok, Together AI, HuggingFace, Custom.
+src/app/api/admin/settings/test-adult/route.ts:28:type ProviderType = 'together' | 'huggingface' | 'xai' | 'custom'
+src/app/api/admin/settings/test-adult/route.ts:105:        if (!providerType) providerType = (notes.providerType || 'together') as ProviderType
+src/app/api/admin/settings/test-adult/route.ts:119:  // This lets users reuse the same Together/HuggingFace/xAI key they already
+src/app/api/admin/settings/test-adult/route.ts:122:    if (!providerType) providerType = 'together'
+src/app/api/admin/settings/test-adult/route.ts:124:      together: 'together',
+src/app/api/admin/settings/test-adult/route.ts:125:      huggingface: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:190:  if (!providerType) providerType = 'together'
+src/app/api/admin/settings/test-adult/route.ts:192:  // ── Together AI — real generation test ──
+src/app/api/admin/settings/test-adult/route.ts:193:  if (providerType === 'together') {
+src/app/api/admin/settings/test-adult/route.ts:196:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:197:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:201:        message: 'Together AI API key is required. Enter it here or save it via Admin → AI Providers → Together AI.',
+src/app/api/admin/settings/test-adult/route.ts:211:      // lgtm[js/request-forgery] — hardcoded Together AI URL; admin-only endpoint
+src/app/api/admin/settings/test-adult/route.ts:212:      const res = await fetch('https://api.together.xyz/v1/images/generations', {
+src/app/api/admin/settings/test-adult/route.ts:237:          provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:243:          mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:245:            ? `Together AI generation test passed — image returned (${latencyMs}ms)`
+src/app/api/admin/settings/test-adult/route.ts:246:            : `Together AI connected but no image data returned (${latencyMs}ms) — model may not support image output`,
+src/app/api/admin/settings/test-adult/route.ts:253:      let errMsg = `Together AI generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
+src/app/api/admin/settings/test-adult/route.ts:257:      else if (errCat === 'endpoint_error') errMsg += ' — Together AI server error'
+src/app/api/admin/settings/test-adult/route.ts:260:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:266:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:280:        provider: 'together',
+src/app/api/admin/settings/test-adult/route.ts:286:        mode: 'specialist', providerType: 'together',
+src/app/api/admin/settings/test-adult/route.ts:288:        message: `Cannot reach Together AI: ${err instanceof Error ? err.message : 'network error'}`,
+src/app/api/admin/settings/test-adult/route.ts:294:  // ── HuggingFace private endpoint — real generation test ──
+src/app/api/admin/settings/test-adult/route.ts:295:  if (providerType === 'huggingface') {
+src/app/api/admin/settings/test-adult/route.ts:303:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:309:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:311:          message: 'HuggingFace adult text requires either a HuggingFace API key plus a compatible hosted model, or a private/local endpoint for GGUF models.',
+src/app/api/admin/settings/test-adult/route.ts:317:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:323:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:325:          message: `${modelSpec.label} is cataloged from the DavidAU collection, but it is a GGUF model. Configure a HuggingFace private endpoint or local GGUF runtime endpoint before marking it READY.`,
+src/app/api/admin/settings/test-adult/route.ts:336:          : { url: new URL(`https://api-inference.huggingface.co/models/${testModel}`), error: null }
+src/app/api/admin/settings/test-adult/route.ts:339:            provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:345:            mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:373:            provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:379:            mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:382:              ? `HuggingFace adult text test passed (${latencyMs}ms)`
+src/app/api/admin/settings/test-adult/route.ts:383:              : `HuggingFace endpoint connected but returned no generated text (${latencyMs}ms)`,
+src/app/api/admin/settings/test-adult/route.ts:390:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:396:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:398:          message: `HuggingFace adult text test failed (HTTP ${res.status}, ${latencyMs}ms)`,
+src/app/api/admin/settings/test-adult/route.ts:403:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:409:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:411:          message: `Cannot reach HuggingFace adult text endpoint: ${err instanceof Error ? err.message : 'network error'}`,
+src/app/api/admin/settings/test-adult/route.ts:419:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:425:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:427:        message: 'HuggingFace private endpoint URL is required for adult generation. For unrestricted adult content, use a private HuggingFace Inference Endpoint (not the public API).',
+src/app/api/admin/settings/test-adult/route.ts:434:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:440:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:471:          provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:477:          mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:480:            ? `HuggingFace endpoint generation test passed — image returned (${latencyMs}ms)`
+src/app/api/admin/settings/test-adult/route.ts:481:            : `HuggingFace endpoint reachable but returned non-image response (content-type: ${contentType}) — verify model supports image generation`,
+src/app/api/admin/settings/test-adult/route.ts:488:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:494:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:496:        message: `HuggingFace endpoint generation test failed (HTTP ${res.status}, ${latencyMs}ms)`,
+src/app/api/admin/settings/test-adult/route.ts:501:        provider: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:507:        mode: 'specialist', providerType: 'huggingface',
+src/app/api/admin/settings/test-adult/route.ts:509:        message: `Cannot reach HuggingFace endpoint: ${err instanceof Error ? err.message : 'network error'}`,
+src/app/api/admin/settings/test-adult/route.ts:703:    message: `Unknown provider type: ${providerType}. Supported: xai, together, huggingface, custom`,
+src/app/api/admin/settings/reset-approved-keys/route.ts:21:  'genx',
+src/app/api/admin/settings/reset-approved-keys/route.ts:26:  'qwen',
+src/app/api/admin/settings/reset-approved-keys/route.ts:29:  'groq',
+src/app/api/admin/settings/reset-approved-keys/route.ts:30:  'together',
+src/app/api/admin/settings/reset-approved-keys/route.ts:31:  'huggingface',
+src/app/api/admin/settings/test-groq/route.ts:2: * POST /api/admin/settings/test-groq
+src/app/api/admin/settings/test-groq/route.ts:4: * Tests the Groq API key by hitting the models list endpoint.
+src/app/api/admin/settings/test-groq/route.ts:25:  const key = inlineKey || await getProviderKey('groq') || ''
+src/app/api/admin/settings/test-groq/route.ts:28:    return NextResponse.json({ success: false, error: 'No Groq API key configured', nextAction: 'Add GROQ_API_KEY in Settings' })
+src/app/api/admin/settings/test-groq/route.ts:33:    const res = await fetch('https://api.groq.com/openai/v1/models', {
+src/app/api/admin/settings/test-groq/route.ts:40:      const msg = res.status === 401 || res.status === 403 ? 'API key invalid or expired' : `Groq API returned HTTP ${res.status}`
+src/app/api/admin/settings/test-groq/route.ts:41:      return NextResponse.json({ success: false, error: msg, latencyMs, nextAction: 'Check the Groq API key in Settings' })
+src/app/api/admin/settings/test-groq/route.ts:49:        where: { key: 'groq' },
+src/app/api/admin/settings/test-groq/route.ts:50:        create: { key: 'groq', displayName: 'Groq', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-groq/route.ts:59:    return NextResponse.json({ success: false, error: message, latencyMs, nextAction: 'Check network connectivity and Groq API key' })
+src/app/api/admin/settings/test-provider/route.ts:11:  if (id === 'genx') return (await (await import('@/app/api/admin/settings/test-genx/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:12:  if (id === 'huggingface') return (await (await import('@/app/api/admin/settings/test-huggingface/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:13:  if (id === 'qwen') return (await (await import('@/app/api/admin/settings/test-qwen/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:14:  if (id === 'groq') return (await (await import('@/app/api/admin/settings/test-groq/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:15:  if (id === 'together') return (await (await import('@/app/api/admin/settings/test-together/route')).POST(forwarded)).json()
+src/app/api/admin/settings/test-provider/route.ts:31:  if (id === 'mimo') {
+src/app/api/admin/settings/test-provider/route.ts:32:    const response = await fetch(`${process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1'}/chat/completions`, {
+src/app/api/admin/settings/test-provider/route.ts:35:      body: JSON.stringify({ model: process.env.MIMO_TEST_MODEL || 'mimo-v2.5', messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
+src/app/api/admin/settings/test-provider/route.ts:38:    return response.ok ? { success: true, detail: 'OpenAI-compatible chat passed.' } : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
+src/app/api/admin/settings/test-together/route.ts:2: * POST /api/admin/settings/test-together
+src/app/api/admin/settings/test-together/route.ts:4: * Tests the Together AI API key by hitting the models list endpoint.
+src/app/api/admin/settings/test-together/route.ts:25:  const key = inlineKey || await getProviderKey('together') || ''
+src/app/api/admin/settings/test-together/route.ts:28:    return NextResponse.json({ success: false, error: 'No Together AI API key configured', nextAction: 'Add TOGETHER_API_KEY in Settings' })
+src/app/api/admin/settings/test-together/route.ts:33:    const res = await fetch('https://api.together.xyz/v1/models', {
+src/app/api/admin/settings/test-together/route.ts:40:      const msg = res.status === 401 || res.status === 403 ? 'API key invalid or expired' : `Together AI returned HTTP ${res.status}`
+src/app/api/admin/settings/test-together/route.ts:41:      return NextResponse.json({ success: false, error: msg, latencyMs, nextAction: 'Check the Together AI key in Settings' })
+src/app/api/admin/settings/test-together/route.ts:49:        where: { key: 'together' },
+src/app/api/admin/settings/test-together/route.ts:50:        create: { key: 'together', displayName: 'Together AI', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-together/route.ts:59:    return NextResponse.json({ success: false, error: message, latencyMs, nextAction: 'Check network connectivity and Together AI key' })
+src/app/api/admin/settings/test-qwen/route.ts:2: * POST /api/admin/settings/test-qwen
+src/app/api/admin/settings/test-qwen/route.ts:4: * Tests the Qwen/DashScope API key by hitting the models list endpoint.
+src/app/api/admin/settings/test-qwen/route.ts:25:  const key = inlineKey || await getProviderKey('qwen') || ''
+src/app/api/admin/settings/test-qwen/route.ts:28:    return NextResponse.json({ success: false, error: 'No Qwen/DashScope API key configured', nextAction: 'Add QWEN_API_KEY or DASHSCOPE_API_KEY in Settings' })
+src/app/api/admin/settings/test-qwen/route.ts:41:        model: 'qwen-turbo',
+src/app/api/admin/settings/test-qwen/route.ts:50:      const msg = res.status === 401 || res.status === 403 ? 'API key invalid or expired' : `Qwen API returned HTTP ${res.status}`
+src/app/api/admin/settings/test-qwen/route.ts:51:      return NextResponse.json({ success: false, error: msg, latencyMs, nextAction: 'Check the Qwen API key in Settings' })
+src/app/api/admin/settings/test-qwen/route.ts:56:        where: { key: 'qwen' },
+src/app/api/admin/settings/test-qwen/route.ts:57:        create: { key: 'qwen', displayName: 'Qwen / DashScope', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+src/app/api/admin/settings/test-qwen/route.ts:66:    return NextResponse.json({ success: false, error: message, latencyMs, nextAction: 'Check network connectivity and Qwen API key' })
+src/app/api/admin/settings/integrations/route.ts:5: * Covers: GenX, GitHub, Artifact Storage, Adult Mode
+src/app/api/admin/settings/integrations/route.ts:19:const GENX_KEY         = 'genx'
+src/app/api/admin/settings/integrations/route.ts:91:  const [genxRow, storageRow, adultRow, githubRow, webdockRow, firecrawlRow, qdrantRow, mem0Row, posthogRow] = await Promise.all([
+src/app/api/admin/settings/integrations/route.ts:92:    getIntegrationConfig(GENX_KEY),
+src/app/api/admin/settings/integrations/route.ts:103:  // ── GenX ──
+src/app/api/admin/settings/integrations/route.ts:104:  const genxKey = decryptConfig(genxRow)
+src/app/api/admin/settings/integrations/route.ts:105:  const genxUrl = genxRow?.apiUrl || process.env.GENX_API_URL || ''
+src/app/api/admin/settings/integrations/route.ts:106:  const genxConfigured = !!(genxKey || process.env.GENX_API_KEY) && !!genxUrl
+src/app/api/admin/settings/integrations/route.ts:133:    genx: {
+src/app/api/admin/settings/integrations/route.ts:134:      configured: genxConfigured,
+src/app/api/admin/settings/integrations/route.ts:135:      maskedKey: maskKey(genxKey || (process.env.GENX_API_KEY ?? '')),
+src/app/api/admin/settings/integrations/route.ts:136:      apiUrl: genxUrl,
+src/app/api/admin/settings/integrations/route.ts:137:      source: genxRow?.apiKey ? 'database' : (process.env.GENX_API_KEY ? 'env' : 'none'),
+src/app/api/admin/settings/integrations/route.ts:138:      updatedAt: genxRow?.updatedAt?.toISOString() ?? null,
+src/app/api/admin/settings/integrations/route.ts:160:      providerType: adultNotes.providerType || 'together',
+src/app/api/admin/settings/integrations/route.ts:206:  genx: z.object({
+src/app/api/admin/settings/integrations/route.ts:225:    providerType: z.enum(['together', 'huggingface', 'xai', 'custom']).optional(),
+src/app/api/admin/settings/integrations/route.ts:273:  // ── Save GenX ──
+src/app/api/admin/settings/integrations/route.ts:274:  if (data.genx) {
+src/app/api/admin/settings/integrations/route.ts:277:        key: GENX_KEY,
+src/app/api/admin/settings/integrations/route.ts:278:        displayName: 'GenX AI',
+
+===== CURRENT FAKE/HARDCODED BLOCKERS =====
+src/app/api/admin/ai-routing/route.ts:58:      status: available.length > 0 && !adultBlocked ? 'available' : 'needs_setup',
+src/app/api/admin/studio/execute/route.ts:231:      jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: config.detail, blocker: config.detail, route: config,
+src/app/api/admin/studio/execute/route.ts:281:        return NextResponse.json({ success: false, executed: false, error: 'Hugging Face image generation is task-based and is not wired to this image execution route yet.', route }, { status: 409 })
+src/app/api/admin/amarktai-assistant/tts/route.ts:26:    return NextResponse.json({ success: false, status: route.blockedReason ?? 'Needs key/test', route }, { status: 409 })
+src/app/api/admin/music-studio/route.ts:159:          jobStatus: 'needs_setup',
+src/app/api/brain/adult-image/route.ts:160:      jobStatus: 'needs_setup',
+src/app/api/brain/video-generate/route.ts:128:      jobStatus: 'needs_setup',
+src/app/api/brain/video-generate/route.ts:134:      error: 'No tested approved video provider could start a real job.',
+src/app/api/brain/video-generate/route.ts:135:      blocker: 'No tested approved video provider could start a real job.',
+src/app/api/brain/avatar-video/route.ts:26:    : 'avatar video provider unavailable'
+src/app/api/brain/avatar-video/route.ts:34:    jobStatus: 'needs_setup',
+src/app/api/brain/adult-text/route.ts:295:      jobStatus: 'needs_setup',
+src/app/api/brain/adult-text/route.ts:296:      status: 'needs_setup',
+src/app/api/brain/tts/route.ts:89:        error: 'Groq TTS is not an approved working audio execution route.',
+src/app/api/brain/tts/route.ts:238:      jobStatus: 'needs_setup',
+src/lib/__tests__/live-media-execution-contract.test.ts:151:    expect(read('app/api/brain/avatar-video/route.ts')).toContain('avatar video provider unavailable')
+src/lib/__tests__/live-media-execution-contract.test.ts:157:    expect(read('app/api/brain/tts/route.ts')).toContain('Groq TTS is not an approved working audio execution route.')
+src/lib/__tests__/standalone-core-media-dashboard-fix.test.ts:90:    expect(route).toContain('avatar video provider unavailable')
+src/lib/__tests__/adult-text-route.test.ts:71:    expect(data.status).toBe('needs_setup')
+src/lib/tool-registry.ts:47:    entry({ id: 'repo.patch', label: 'Repo patch', category: 'repo', enabled: Boolean(repo?.canPatch), wired: true, permission: 'write', approvalRequired: true, requiredConfig: ['ai_provider', 'workspace'], endpoint: '/api/admin/repo-workbench/[workspaceId]/patch', lastError: repo?.canPatch ? null : repo?.blockers?.join('; ') ?? 'Coding model/provider unavailable.' }),
+src/lib/agent-registry.ts:238:      status: route.blockedReason ? 'unavailable' : 'available',
+src/lib/agent-registry.ts:244:      unavailableReason: route.blockedReason,
+src/lib/monetization-engine.ts:364:  if (!sub) return true // No subscription = free tier; don't hard-block (soft limit)
+src/lib/capability-router.ts:1630:        : 'Primary provider unavailable',
+
+===== BUILD + HEALTH =====
+├ ƒ /api/health/ping                                         673 B         103 kB
+├ ƒ /api/integrations/events                                 673 B         103 kB
+├ ƒ /api/integrations/heartbeat                              673 B         103 kB
+├ ƒ /api/integrations/metrics                                673 B         103 kB
+├ ƒ /api/integrations/vps-resources                          673 B         103 kB
+├ ƒ /api/prompts                                             673 B         103 kB
+├ ƒ /api/rag                                                 673 B         103 kB
+├ ƒ /api/realtime/health                                     673 B         103 kB
+├ ƒ /api/realtime/session                                    673 B         103 kB
+├ ƒ /api/system/events                                       673 B         103 kB
+├ ƒ /api/system/health-deep                                  673 B         103 kB
+├ ƒ /api/tools                                               673 B         103 kB
+├ ƒ /api/voice/stt                                           673 B         103 kB
+├ ƒ /api/voice/tts                                           673 B         103 kB
+├ ƒ /api/waitlist                                            673 B         103 kB
+├ ƒ /api/webhooks                                            673 B         103 kB
+├ ƒ /api/workflows                                           673 B         103 kB
+├ ○ /apps                                                    673 B         103 kB
+├ ○ /contact                                               3.62 kB         109 kB
+├ ○ /network-apps                                          2.28 kB         108 kB
+├ ○ /platform                                              2.28 kB         108 kB
+├ ○ /privacy                                               2.27 kB         108 kB
+├ ○ /terms                                                 2.27 kB         108 kB
+└ ○ /voice-access                                            673 B         103 kB
++ First Load JS shared by all                               102 kB
+  ├ chunks/1255-5c680abb9db89955.js                        46.2 kB
+  ├ chunks/4bd1b696-f785427dddbba9fb.js                    54.2 kB
+  └ other shared chunks (total)                            1.95 kB
+
+
+ƒ Middleware                                               38.3 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
+{"status":"ok","timestamp":"2026-06-08T16:59:14.087Z","version":"1.0.0","db":"ok","latencyMs":84}
+
+================================================================
+ END FOCUSED TRUTH
+================================================================
