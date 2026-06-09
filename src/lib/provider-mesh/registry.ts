@@ -19,7 +19,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'premium',
     strengths: ['premium reasoning', 'premium media', 'Kling Avatar', 'Lyria music', 'Veo/Kling/Seedance/PixVerse video', 'Recraft/Nano/Grok image'],
     bestFor: ['reasoning', 'code', 'image_generation', 'video_generation', 'avatar_video', 'music_generation', 'tts', 'stt'],
-    avoidFor: ['cheap app chat', 'high-volume low-risk drafts'] as CapabilityKey[],
+    avoidFor: ['chat', 'streaming_text'],
     vaultKeyAliases: ['genx', 'GenX', 'GENX_API_KEY'],
   },
   {
@@ -29,7 +29,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'cheap',
     strengths: ['task breadth', 'open-source models', 'private endpoints', 'image/audio/video/text fallback'],
     bestFor: ['image_generation', 'image_editing', 'video_generation', 'stt', 'tts', 'embeddings', 'rerank', 'rag'],
-    avoidFor: ['premium final render without model proof'] as CapabilityKey[],
+    avoidFor: ['avatar_video', 'long_video_pipeline'],
     vaultKeyAliases: ['huggingface', 'Hugging Face', 'HF_TOKEN', 'HUGGINGFACE_API_KEY'],
   },
   {
@@ -39,7 +39,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'balanced',
     strengths: ['image/video/voice', 'multimodal', 'coding', 'ASR/TTS', 'embeddings/rerank'],
     bestFor: ['reasoning', 'code', 'image_generation', 'image_editing', 'video_generation', 'voice_design', 'voice_clone', 'tts', 'stt', 'embeddings', 'rerank'],
-    avoidFor: [] as CapabilityKey[],
+    avoidFor: [],
     vaultKeyAliases: ['qwen', 'Qwen / DashScope', 'DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
   },
   {
@@ -49,7 +49,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'balanced',
     strengths: ['1M context planning', 'structured output', 'function calls', 'web search', 'ASR', 'TTS', 'voice clone/design'],
     bestFor: ['reasoning', 'research', 'marketing_automation', 'voice_design', 'voice_clone', 'tts', 'stt', 'self_learning'],
-    avoidFor: ['premium final video render'] as CapabilityKey[],
+    avoidFor: ['video_generation', 'image_to_video', 'long_video_pipeline', 'avatar_video'],
     vaultKeyAliases: ['mimo', 'Xiaomi MiMo', 'MIMO_API_KEY', 'MINIMAX_API_KEY'],
   },
   {
@@ -59,7 +59,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'cheap',
     strengths: ['cheap text', 'image fallback', 'embeddings', 'rerank', 'open model variety'],
     bestFor: ['chat', 'streaming_text', 'image_generation', 'embeddings', 'rerank', 'research'],
-    avoidFor: ['premium final avatar/video'] as CapabilityKey[],
+    avoidFor: ['avatar_video', 'long_video_pipeline'],
     vaultKeyAliases: ['together', 'Together AI', 'TOGETHER_API_KEY'],
   },
   {
@@ -69,7 +69,7 @@ export const PROVIDERS: ProviderDefinition[] = [
     defaultCostClass: 'cheap',
     strengths: ['very fast text', 'STT', 'draft variations', 'low latency'],
     bestFor: ['chat', 'streaming_text', 'stt', 'research', 'lyrics_generation'],
-    avoidFor: ['premium media generation'] as CapabilityKey[],
+    avoidFor: ['image_generation', 'image_editing', 'image_to_video', 'video_generation', 'long_video_pipeline', 'music_generation', 'audio_generation', 'tts', 'voice_design', 'voice_clone', 'avatar_image', 'avatar_video'],
     vaultKeyAliases: ['groq', 'Groq', 'GROQ_API_KEY'],
   },
 ]

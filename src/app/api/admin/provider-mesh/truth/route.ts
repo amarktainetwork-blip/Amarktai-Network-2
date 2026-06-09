@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { buildProviderMeshTruth, createRoutePlanPreview } from '@/lib/provider-mesh'
-import type { AppCostProfile, CapabilityKey } from '@/lib/provider-mesh'
+import { buildProviderMeshTruth, createRoutePlanPreview } from '@/lib/provider-mesh/registry'
+import type { AppCostProfile, CapabilityKey } from '@/lib/provider-mesh/types'
 
 export const dynamic = 'force-dynamic'
 
