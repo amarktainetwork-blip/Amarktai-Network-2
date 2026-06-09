@@ -1,59 +1,21 @@
 import { getMeshCredential } from '@/lib/provider-mesh-status'
 import { getProviderMeshNode, type ProviderMeshId } from '@/lib/provider-mesh'
-import { getServiceKey, isUsableServiceKey } from '@/lib/service-vault'
+import { isUsableServiceKey } from '@/lib/service-vault'
 
 export type CoreProvider =
   | ProviderMeshId
   | 'dashscope'
   | 'hf'
-  | 'xai'
-  | 'grok'
-  | 'minimax'
-  | 'deepseek'
-  | 'gemini'
-  | 'firecrawl'
-  | 'replicate'
-  | 'elevenlabs'
-  | 'deepgram'
-  | 'openrouter'
-  | 'moonshot'
-  | 'zhipu'
-  | 'mem0'
-  | 'webdock'
 
 export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
 
-const PROVIDER_ENV_ALIASES: Record<string, string[]> = {
-  genx: ['GENX_API_KEY'],
-  github: ['GITHUB_PAT', 'GITHUB_TOKEN'],
-  qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
-  dashscope: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
-  huggingface: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
-  hf: ['HF_TOKEN', 'HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN'],
-  mimo: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
-  minimax: ['MINIMAX_API_KEY'],
-  groq: ['GROQ_API_KEY'],
-  together: ['TOGETHER_API_KEY'],
-  xai: ['XAI_API_KEY', 'GROK_API_KEY'],
-  grok: ['GROK_API_KEY', 'XAI_API_KEY'],
-  deepseek: ['DEEPSEEK_API_KEY'],
-  gemini: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
-  firecrawl: ['FIRECRAWL_API_KEY'],
-  replicate: ['REPLICATE_API_TOKEN', 'REPLICATE_API_KEY'],
-  elevenlabs: ['ELEVENLABS_API_KEY'],
-  deepgram: ['DEEPGRAM_API_KEY'],
-  openrouter: ['OPENROUTER_API_KEY'],
-  moonshot: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'],
-  zhipu: ['ZHIPU_API_KEY'],
-  mem0: ['MEM0_API_KEY'],
-  webdock: ['WEBDOCK_API_TOKEN', 'WEBDOCK_API_KEY'],
+const COMPATIBLE_PROVIDER_ALIASES: Record<string, ProviderMeshId> = {
+  dashscope: 'qwen',
+  hf: 'huggingface',
 }
 
 function normalizeProviderKey(provider: string): string {
-  if (provider === 'dashscope') return 'qwen'
-  if (provider === 'hf') return 'huggingface'
-  if (provider === 'grok') return 'xai'
-  return provider
+  return COMPATIBLE_PROVIDER_ALIASES[provider] ?? provider
 }
 
 function activeProviderId(provider: string): ProviderMeshId | null {
@@ -63,13 +25,21 @@ function activeProviderId(provider: string): ProviderMeshId | null {
 
 function envAliasesForProvider(provider: string): string[] {
   const normalized = normalizeProviderKey(provider)
-  const aliases = new Set<string>()
-
-  for (const alias of PROVIDER_ENV_ALIASES[provider] ?? []) aliases.add(alias)
-  for (const alias of PROVIDER_ENV_ALIASES[normalized] ?? []) aliases.add(alias)
-
   const node = getProviderMeshNode(normalized)
-  for (const alias of node?.envAliases ?? []) aliases.add(alias)
+  if (!node) return []
+
+  const aliases = new Set<string>(node.envAliases)
+
+  if (provider === 'dashscope') {
+    aliases.add('DASHSCOPE_API_KEY')
+    aliases.add('QWEN_API_KEY')
+  }
+
+  if (provider === 'hf') {
+    aliases.add('HF_TOKEN')
+    aliases.add('HUGGINGFACE_API_KEY')
+    aliases.add('HUGGINGFACEHUB_API_TOKEN')
+  }
 
   return [...aliases]
 }
@@ -82,10 +52,21 @@ function isAcceptableEnvKey(value: string | null | undefined): value is string {
   return isUsableServiceKey(trimmed)
 }
 
+/**
+ * Returns the canonical integration key for approved providers and supported aliases.
+ *
+ * This is intentionally locked to provider-mesh.
+ * Unapproved direct providers are returned as their raw key for display-only compatibility,
+ * but getProviderKey/getProviderKeyWithSource will not resolve keys for them.
+ */
 export function getIntegrationKey(provider: CoreProvider | string): string {
   return normalizeProviderKey(provider)
 }
 
+/**
+ * Environment fallback is only allowed for provider-mesh entries and supported aliases.
+ * This prevents stale direct providers from appearing configured through env variables.
+ */
 export function getEnvKeyForProvider(provider: CoreProvider | string): string | null {
   for (const envVar of envAliasesForProvider(provider)) {
     const value = process.env[envVar]
@@ -98,26 +79,19 @@ export async function getProviderKeyWithSource(provider: CoreProvider | string):
   key: string | null
   source: ProviderKeySource
 }> {
-  const normalized = normalizeProviderKey(provider)
-  const envKey = getEnvKeyForProvider(provider)
   const id = activeProviderId(provider)
+  const envKey = getEnvKeyForProvider(provider)
 
-  if (id) {
-    const key = await getMeshCredential(id)
-    if (isUsableServiceKey(key)) {
-      const trimmed = key.trim()
-      return { key: trimmed, source: envKey === trimmed ? 'env' : 'vault' }
-    }
-
-    if (envKey) return { key: envKey, source: 'env' }
-
+  if (!id) {
     return { key: null, source: 'missing' }
   }
 
-  const aliases = envAliasesForProvider(provider)
-  const vaultKey = await getServiceKey(normalized, aliases[0] ?? '').catch(() => null)
+  const key = await getMeshCredential(id).catch(() => null)
+  if (isUsableServiceKey(key)) {
+    const trimmed = key.trim()
+    return { key: trimmed, source: envKey === trimmed ? 'env' : 'vault' }
+  }
 
-  if (isUsableServiceKey(vaultKey)) return { key: vaultKey.trim(), source: 'vault' }
   if (envKey) return { key: envKey, source: 'env' }
 
   return { key: null, source: 'missing' }
