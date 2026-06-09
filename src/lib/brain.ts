@@ -223,6 +223,17 @@ function isQwenWanxModel(modelId: string): boolean {
   return QWEN_WANX_MODEL_PREFIXES.some(prefix => modelId.startsWith(prefix))
 }
 
+function trimTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
+}
+
+function openAiCompatibleEndpoint(baseUrl: string, path: string): string {
+  const base = trimTrailingSlash(baseUrl)
+  const cleanPath = path.replace(/^\/+/, '')
+  if (base.endsWith('/v1')) return `${base}/${cleanPath.replace(/^v1\//, '')}`
+  return `${base}/v1/${cleanPath.replace(/^v1\//, '')}`
+}
+
 /**
  * Call an AI provider via the single provider vault.
  * Reads API key + base URL from the vault — never from the request.
@@ -350,7 +361,7 @@ export async function callProvider(
         // Together AI image-generation models (FLUX, Stable Diffusion) use
         // /v1/images/generations, not /v1/chat/completions.
         if (providerKey === 'together' && isTogetherImageModel(resolvedModel)) {
-          const imgRes = await fetch(`${base}/v1/images/generations`, {
+          const imgRes = await fetch(openAiCompatibleEndpoint(base, 'images/generations'), {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -370,7 +381,7 @@ export async function callProvider(
         }
         // Image models require the images/generations endpoint, not chat/completions
         if (providerKey === 'openai' && OPENAI_IMAGE_MODELS.has(resolvedModel)) {
-          const imgRes = await fetch(`${base}/v1/images/generations`, {
+          const imgRes = await fetch(openAiCompatibleEndpoint(base, 'images/generations'), {
             method: 'POST',
             headers,
             body: JSON.stringify({
@@ -389,7 +400,7 @@ export async function callProvider(
           const imageUrl = imgData?.data?.[0]?.url ?? imgData?.data?.[0]?.b64_json ?? null
           return { ok: true, output: imageUrl, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
         }
-        const res = await fetch(`${base}/v1/chat/completions`, {
+        const res = await fetch(openAiCompatibleEndpoint(base, 'chat/completions'), {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -580,7 +591,7 @@ export async function callProvider(
       // ── Mistral AI (OpenAI-compatible) ─────────────────────────────────────
       case 'mistral': {
         const base = meshNode.baseUrl || 'https://api.mistral.ai'
-        const res = await fetch(`${base}/v1/chat/completions`, {
+        const res = await fetch(openAiCompatibleEndpoint(base, 'chat/completions'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

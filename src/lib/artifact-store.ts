@@ -146,11 +146,33 @@ function isPublicHttpsUrl(raw: string): boolean {
   }
 }
 
+async function externalArtifactHeaders(url: string): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {}
+
+  let host = ''
+  try {
+    host = new URL(url).hostname.toLowerCase()
+  } catch {
+    return headers
+  }
+
+  if (host === 'query.genx.sh' || host.endsWith('.genx.sh')) {
+    const { getProviderKey } = await import('@/lib/provider-config')
+    const key = await getProviderKey('genx')
+    if (key?.trim()) {
+      headers.Authorization = `Bearer ${key.trim()}`
+    }
+  }
+
+  return headers
+}
+
 async function fetchExternalArtifact(url: string): Promise<{ content: Buffer; mimeType?: string }> {
   if (!isPublicHttpsUrl(url)) {
     throw new Error('External artifact URLs must be public HTTPS URLs before they can be persisted.')
   }
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
+  const headers = await externalArtifactHeaders(url)
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) })
   if (!res.ok) {
     throw new Error(`External artifact fetch failed with HTTP ${res.status}`)
   }

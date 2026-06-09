@@ -16,6 +16,15 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
   txt: 'text/plain; charset=utf-8',
   json: 'application/json; charset=utf-8',
   pdf: 'application/pdf',
+  mpeg: 'audio/mpeg',
+  mpga: 'audio/mpeg',
+  m4a: 'audio/mp4',
+  oga: 'audio/ogg',
+  flac: 'audio/flac',
+  aac: 'audio/aac',
+  m4v: 'video/mp4',
+  mov: 'video/quicktime',
+  svg: 'image/svg+xml',
 }
 
 function guessContentType(path: string): string {

@@ -1,0 +1,2847 @@
+================================================================
+ AMARKTAI DASHBOARD DESIGN FOUNDATION MAP
+================================================================
+Mon Jun  8 11:24:39 UTC 2026
+/var/www/amarktai-audit/Amarktai-Network-2
+amarktainetw
+
+===== GIT STATE =====
+phase1-ai-brain-router
+4867993 fix: make outputs media library live and artifact-aware
+ebc3d61 fix: preserve vocal song options in studio music generation
+e6a14b4 fix: serve media artifacts with browser-ready MIME types
+ea0d4da fix: persist authenticated GenX media artifacts locally
+876b146 fix: normalize studio media routing and prove music jobs
+25eb342 fix: bridge assistant stream route to working chat execution
+4ec9e37 feat: stabilize AI brain and provider universe truth
+03da8ae Merge pull request #83 from amarktainetwork-blip/fix-live-media-execution-artifacts-jobs
+?? reports/
+0	7
+
+===== PUBLIC / MAIN PAGE DESIGN FILES =====
+
+--- src/app/page.tsx ---
+LINES: 114
+import Link from 'next/link'
+import { ArrowRight, Boxes, BrainCircuit, CheckCircle2, Command, Film, GitPullRequest, Layers3, Rocket, Wrench } from 'lucide-react'
+import PublicShell from '@/components/public/PublicShell'
+import IntelligenceFabric from '@/components/public/IntelligenceFabric'
+import BrandName from '@/components/BrandName'
+import { NETWORK_APPS } from '@/lib/network-apps-registry'
+
+export default function HomePage() {
+  return (
+    <PublicShell>
+      <section className="relative min-h-[720px] overflow-hidden bg-[#03050a]">
+        <div className="absolute inset-0 opacity-95"><IntelligenceFabric className="h-full w-full" /></div>
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,5,10,.97)_0%,rgba(3,5,10,.78)_38%,rgba(3,5,10,.16)_72%,rgba(3,5,10,.03)_100%),linear-gradient(180deg,transparent_65%,#03050a)]" />
+        <div className="relative z-10 mx-auto flex min-h-[720px] max-w-7xl items-center px-5 py-20 lg:px-8">
+          <div className="max-w-3xl [text-shadow:0_2px_24px_rgba(0,0,0,.9)]">
+            <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">One intelligent command layer</p>
+            <h1 className="mt-5 text-5xl font-black leading-[.96] tracking-[-0.05em] text-white sm:text-6xl lg:text-8xl"><BrandName /></h1>
+            <p className="mt-6 text-xl font-bold leading-8 text-slate-100 sm:text-2xl">The AI operating system for connected digital businesses.</p>
+            <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200">Plan, build, launch, monitor, and improve apps, agents, media, workflows, and business modules from one intelligent command layer.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950">Open Command <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/platform" className="rounded-xl border border-white/20 bg-slate-950/55 px-5 py-3 text-sm font-black text-white backdrop-blur-md">Explore the platform</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <LightSection eyebrow="What Amarktai Network is" title="Tell Amarktai Network what you want to create, fix, launch, or monitor.">
+        <p className="max-w-3xl text-lg leading-8 text-slate-600">It chooses the right agents, models, tools, and workflow, then keeps the work, approvals, outputs, and next step together.</p>
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <LightCard icon={<Command />} title="Describe the outcome" body="Use natural language instead of learning a different control panel for every capability." />
+          <LightCard icon={<Layers3 />} title="Coordinate the work" body="Creative, repository, app, research, and operating tasks move through one clear flow." />
+          <LightCard icon={<CheckCircle2 />} title="See what is true" body="Connected means a live test passed. Missing setup stays clear without fake green lights." />
+        </div>
+      </LightSection>
+
+      <section className="bg-cyan-50 py-20 text-slate-950 lg:py-28">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">One command window</p>
+            <h2 className="mt-4 text-4xl font-black tracking-tight lg:text-6xl">Start with what you want done.</h2>
+            <p className="mt-5 text-base leading-8 text-slate-600">Amarktai Network asks only for missing information, selects tested capabilities, and starts the right job or guarded workspace.</p>
+          </div>
+          <div className="rounded-3xl border border-cyan-200 bg-white p-5 shadow-[0_30px_90px_rgba(8,145,178,.14)]">
+            <div className="rounded-2xl bg-slate-950 p-5 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Command</p>
+              <p className="mt-5 text-lg font-bold">Create a 3 minute rock, pop, and rasta song with female vocals.</p>
+              <div className="mt-6 grid gap-2 sm:grid-cols-3">
+                {['Intent understood', 'Live provider selected', 'Song job started'].map((item) => <div key={item} className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs font-bold text-slate-300">{item}</div>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <LightSection eyebrow="From idea to operation" title="Plan, build, launch, monitor, and improve.">
+        <div className="grid gap-4 md:grid-cols-5">
+          {[
+            ['Plan', BrainCircuit],
+            ['Build', Wrench],
+            ['Launch', Rocket],
+            ['Monitor', Boxes],
+            ['Improve', CheckCircle2],
+          ].map(([label, Icon]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><Icon className="h-6 w-6 text-cyan-600" /><p className="mt-6 font-black">{String(label)}</p></div>)}
+        </div>
+      </LightSection>
+
+      <section className="bg-slate-100 py-20 text-slate-950 lg:py-28">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">Connected apps</p>
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-6xl">Your apps share memory, outputs, and learning.</h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {NETWORK_APPS.slice(0, 6).map((app) => <div key={app.slug} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-center justify-between gap-3"><h3 className="font-black">{app.displayName}</h3><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black">{app.status}</span></div><p className="mt-3 text-sm leading-6 text-slate-600">{app.purpose}</p></div>)}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#050a12] py-20 text-white lg:py-28">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Create media, apps, and workflows</p>
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-6xl">Media, apps, workflows, and repository fixes from the same command layer.</h2>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            <DarkCard icon={<Film />} title="Media" body="Create songs, images, movies, avatars, and voices with real provider jobs and saved outputs." />
+            <DarkCard icon={<GitPullRequest />} title="Repositories" body="Audit code, prepare a fix, review a diff, run checks, and create a pull request with approval." />
+            <DarkCard icon={<Rocket />} title="Apps and workflows" body="Plan and build apps, coordinate automations, and hand off deployment through guarded steps." />
+          </div>
+        </div>
+      </section>
+
+      <LightSection eyebrow="Runtime truth" title="Setup details stay where they belong.">
+        <p className="max-w-3xl text-lg leading-8 text-slate-600">Add your keys once, test them, and the connected capabilities become available across Command, media, repository work, App Builder, Network Apps, and Outputs. Technical diagnostics remain in Settings and System.</p>
+      </LightSection>
+
+      <section className="bg-cyan-300 py-20 text-slate-950">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div><p className="text-sm font-black uppercase tracking-[0.16em]">Amarktai Network</p><h2 className="mt-3 text-4xl font-black tracking-tight">One command layer. Connected work. Honest results.</h2></div>
+          <Link href="/admin/login" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Open private access <ArrowRight className="h-4 w-4" /></Link>
+        </div>
+      </section>
+    </PublicShell>
+  )
+}
+
+function LightSection({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
+  return <section className="bg-white py-20 text-slate-950 lg:py-28"><div className="mx-auto max-w-7xl px-5 lg:px-8"><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-4 max-w-5xl text-4xl font-black tracking-tight lg:text-6xl">{title}</h2><div className="mt-8">{children}</div></div></section>
+}
+
+function LightCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="h-6 w-6 text-cyan-600">{icon}</div><h3 className="mt-6 text-xl font-black">{title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{body}</p></article>
+}
+
+function DarkCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return <article className="rounded-2xl border border-white/10 bg-white/5 p-6"><div className="h-6 w-6 text-cyan-300">{icon}</div><h3 className="mt-6 text-xl font-black">{title}</h3><p className="mt-3 text-sm leading-7 text-slate-300">{body}</p></article>
+}
+
+--- src/app/layout.tsx ---
+LINES: 46
+import type { Metadata } from 'next'
+import localFont from 'next/font/local'
+import './globals.css'
+
+const geistSans = localFont({
+  src: './fonts/GeistVF.woff',
+  variable: '--font-geist-sans',
+  weight: '100 900',
+  display: 'swap',
+})
+
+const geistMono = localFont({
+  src: './fonts/GeistMonoVF.woff',
+  variable: '--font-geist-mono',
+  weight: '100 900',
+  display: 'swap',
+})
+
+export const metadata: Metadata = {
+  title: 'AmarktAI Network | Private AI Operations Architecture',
+  description:
+    'AmarktAI Network is a private AI operations platform for model routing, agent coordination, persistent memory, artifacts, approvals, and governed deployment workflows.',
+  keywords: [
+    'AI operations architecture',
+    'AI orchestration',
+    'model routing',
+    'agent coordination',
+    'AI operating system',
+    'deployment governance',
+    'AmarktAI Network',
+  ],
+  authors: [{ name: 'AmarktAI Network' }],
+  robots: 'index, follow',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body suppressHydrationWarning>{children}</body>
+    </html>
+  )
+}
+
+--- src/components/public/PublicShell.tsx ---
+LINES: 63
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { Menu, X } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import BrandName from '@/components/BrandName'
+import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
+
+export default function PublicShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const [menu, setMenu] = useState(false)
+
+  useEffect(() => setMenu(false), [pathname])
+
+  return (
+    <div className="min-h-screen overflow-x-clip bg-[var(--amarkt-obsidian)] text-[var(--amarkt-platinum)]">
+      <div className="pointer-events-none fixed inset-0 public-field" />
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(5,10,18,0.88)] shadow-[0_12px_40px_rgba(0,0,0,.35)] backdrop-blur-2xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
+          <Link href="/" className="font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-white" aria-label="Amarktai Network home">
+            <BrandName />
+          </Link>
+          <nav className="hidden items-center gap-1 md:flex" aria-label="Public navigation">
+            {PUBLIC_NAV_ITEMS.map((item) => {
+              const active = item.href === '/' ? pathname === '/' : pathname === item.href
+              return (
+                <Link key={item.href} href={item.href} className={`rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition ${active ? 'bg-cyan-300/12 text-cyan-100 ring-1 ring-cyan-300/25' : 'text-slate-200 hover:bg-white/5 hover:text-white'}`}>
+                  {item.label}
+                </Link>
+              )
+            })}
+          </nav>
+          <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-slate-100 md:hidden" onClick={() => setMenu((open) => !open)} aria-expanded={menu} aria-controls="mobile-public-navigation" aria-label="Toggle navigation">
+            {menu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+          </button>
+        </div>
+        {menu && (
+          <nav id="mobile-public-navigation" className="border-t border-white/10 bg-slate-950/95 px-5 py-4 md:hidden" aria-label="Mobile public navigation">
+            <div className="grid gap-1">{PUBLIC_NAV_ITEMS.map((item) => <Link key={item.href} href={item.href} className="rounded-lg px-3 py-3 text-sm font-bold text-slate-100 hover:bg-white/5">{item.label}</Link>)}</div>
+          </nav>
+        )}
+      </header>
+      <main className="relative z-10">{children}</main>
+      <footer className="relative z-10 border-t border-white/10 bg-[rgba(3,5,10,0.96)]">
+        <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 lg:grid-cols-[1fr_auto] lg:px-8">
+          <div>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-slate-200"><BrandName /></p>
+            <p className="mt-3 max-w-xl text-sm leading-7 text-slate-300">The AI operating system for connected digital businesses.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-3 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-300 sm:grid-cols-3">
+            <Link href="/platform" className="hover:text-white">Platform</Link>
+            <Link href="/network-apps" className="hover:text-white">Network Apps</Link>
+            <Link href="/contact" className="hover:text-white">Contact</Link>
+            <Link href="/privacy" className="hover:text-white">Privacy</Link>
+            <Link href="/terms" className="hover:text-white">Terms</Link>
+          </div>
+        </div>
+        <div className="border-t border-white/10 px-5 py-4 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-400 lg:px-8">2026 Amarktai Network</div>
+      </footer>
+    </div>
+  )
+}
+
+--- src/components/public/IntelligenceFabric.tsx ---
+LINES: 290
+'use client'
+
+import { useEffect, useRef } from 'react'
+
+type NodeSpec = {
+  label: string
+  detail: string
+  lane: 'input' | 'core' | 'output'
+  x: number
+  y: number
+  accent: string
+}
+
+type Stream = {
+  from: number
+  to: number
+  progress: number
+  speed: number
+  offset: number
+}
+
+const NODES: NodeSpec[] = [
+  { label: 'Apps', detail: 'connected modules', lane: 'input', x: 0.56, y: 0.3, accent: '96,165,250' },
+  { label: 'Media', detail: 'creative work', lane: 'input', x: 0.56, y: 0.62, accent: '94,234,212' },
+  { label: 'Core OS', detail: 'one command layer', lane: 'core', x: 0.7, y: 0.39, accent: '96,165,250' },
+  { label: 'Agents', detail: 'coordinated work', lane: 'core', x: 0.7, y: 0.65, accent: '167,139,250' },
+  { label: 'Memory', detail: 'shared context', lane: 'output', x: 0.87, y: 0.31, accent: '94,234,212' },
+  { label: 'Runtime Truth', detail: 'verified status', lane: 'output', x: 0.87, y: 0.62, accent: '125,211,252' },
+]
+
+const EDGES = [
+  [0, 2], [1, 2], [2, 3], [2, 4], [3, 4], [3, 5], [4, 5],
+]
+
+const TELEMETRY = ['plan', 'build', 'launch', 'monitor', 'improve']
+
+function project(x: number, y: number, depth: number) {
+  const scale = 1 + depth * 0.035
+  return { x: x * scale, y: y * scale, scale }
+}
+
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const radius = Math.min(r, w / 2, h / 2)
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + w - radius, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius)
+  ctx.lineTo(x + w, y + h - radius)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h)
+  ctx.lineTo(x + radius, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+}
+
+function nodePosition(node: NodeSpec, width: number, height: number, compact: boolean) {
+  const x = node.x * width
+  const y = node.y * height
+  if (!compact) return { x, y }
+
+  if (node.lane === 'input') return { x: width * 0.16, y }
+  if (node.lane === 'output') return { x: width * 0.84, y }
+  return { x: width * (0.38 + (node.x - 0.42) * 0.85), y }
+}
+
+function drawNode(
+  ctx: CanvasRenderingContext2D,
+  node: NodeSpec,
+  x: number,
+  y: number,
+  elapsed: number,
+  compact: boolean,
+) {
+  const w = compact ? (node.lane === 'core' ? 116 : 94) : node.lane === 'core' ? 150 : 126
+  const h = compact ? 44 : 56
+  const pulse = node.lane === 'core' ? 0.12 + 0.08 * Math.sin(elapsed * 1.2 + x * 0.01) : 0.04
+
+  const boxX = x - w / 2
+  const boxY = y - h / 2
+  roundedRect(ctx, boxX, boxY, w, h, 7)
+  ctx.fillStyle = `rgba(7, 12, 24, ${node.lane === 'core' ? 0.9 : 0.78})`
+  ctx.fill()
+  ctx.strokeStyle = `rgba(${node.accent}, ${0.24 + pulse})`
+  ctx.lineWidth = node.lane === 'core' ? 1.2 : 1
+  ctx.stroke()
+
+  ctx.fillStyle = `rgba(${node.accent}, 0.76)`
+  ctx.fillRect(boxX + 12, boxY + 10, compact ? 22 : 28, 1)
+
+  ctx.fillStyle = node.lane === 'core' ? 'rgba(248,252,255,1)' : 'rgba(235,244,255,0.96)'
+  ctx.font = `600 ${compact ? 9 : 11}px Inter, system-ui, sans-serif`
+  ctx.textAlign = 'left'
+  ctx.fillText(node.label, boxX + 12, boxY + (compact ? 27 : 32))
+
+  if (!compact) {
+    ctx.fillStyle = `rgba(${node.accent}, 0.82)`
+    ctx.font = '400 9px Inter, system-ui, sans-serif'
+    ctx.fillText(node.detail, boxX + 12, boxY + 46)
+  }
+}
+
+function drawLine(ctx: CanvasRenderingContext2D, ax: number, ay: number, bx: number, by: number, alpha: number) {
+  ctx.beginPath()
+  ctx.moveTo(ax, ay)
+  const midX = (ax + bx) / 2
+  ctx.bezierCurveTo(midX, ay, midX, by, bx, by)
+  ctx.strokeStyle = `rgba(138, 164, 205, ${alpha})`
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
+export default function IntelligenceFabric({ className = '' }: { className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let isMobile = window.innerWidth < 720
+    let raf = 0
+    let width = 0
+    let height = 0
+    let last = performance.now()
+    const start = last
+
+    const streams: Stream[] = reduced
+      ? []
+      : EDGES.flatMap(([from, to], index) => [
+          { from, to, progress: (index * 0.13) % 1, speed: 0.1 + (index % 4) * 0.018, offset: index * 0.5 },
+          { from, to, progress: (index * 0.21 + 0.48) % 1, speed: 0.08 + (index % 3) * 0.02, offset: index * 0.7 },
+        ])
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect()
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      width = Math.max(1, rect.width)
+      height = Math.max(1, rect.height)
+      canvas.width = Math.round(width * dpr)
+      canvas.height = Math.round(height * dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      isMobile = width < 720
+    }
+
+    resize()
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+
+    const draw = (now: number) => {
+      const elapsed = (now - start) / 1000
+      const dt = Math.min(50, now - last) / 1000
+      last = now
+
+      ctx.clearRect(0, 0, width, height)
+
+      const bg = ctx.createLinearGradient(0, 0, width, height)
+      bg.addColorStop(0, '#05070c')
+      bg.addColorStop(0.45, '#07101a')
+      bg.addColorStop(1, '#020306')
+      ctx.fillStyle = bg
+      ctx.fillRect(0, 0, width, height)
+
+      const grid = isMobile ? 42 : 54
+      ctx.strokeStyle = 'rgba(157, 174, 205, 0.055)'
+      ctx.lineWidth = 1
+      for (let x = 0; x < width; x += grid) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, height)
+        ctx.stroke()
+      }
+      for (let y = 0; y < height; y += grid) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+
+      const positions = NODES.map((node, index) => {
+        const base = nodePosition(node, width, height, isMobile)
+        const depth = node.lane === 'core' ? Math.sin(elapsed * 0.35 + index) : 0
+        const p = project(base.x - width / 2, base.y - height / 2, depth)
+        return { x: p.x + width / 2, y: p.y + height / 2 }
+      })
+
+      ctx.fillStyle = 'rgba(7, 13, 25, 0.72)'
+      roundedRect(ctx, isMobile ? width * 0.3 : width * 0.5, height * 0.22, isMobile ? width * 0.4 : width * 0.42, height * 0.48, 10)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(144, 168, 214, 0.16)'
+      ctx.stroke()
+
+      ctx.fillStyle = 'rgba(210,228,255,0.82)'
+      ctx.font = '600 9px ui-monospace, SFMono-Regular, Consolas, monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText('AMARKTAI NETWORK', width * (isMobile ? 0.5 : 0.71), height * 0.24)
+
+      for (const [from, to] of EDGES) {
+        const a = positions[from]
+        const b = positions[to]
+        drawLine(ctx, a.x, a.y, b.x, b.y, 0.14)
+      }
+
+      for (const stream of streams) {
+        const a = positions[stream.from]
+        const b = positions[stream.to]
+        stream.progress = (stream.progress + stream.speed * dt) % 1
+        const t = stream.progress
+        const midX = (a.x + b.x) / 2
+        const x1 = a.x + (midX - a.x) * t
+        const y1 = a.y + (a.y - a.y) * t
+        const x2 = midX + (b.x - midX) * t
+        const y2 = a.y + (b.y - a.y) * t
+        const x = t < 0.5 ? x1 : x2
+        const y = t < 0.5 ? y1 : y2
+        const alpha = Math.sin(t * Math.PI)
+        ctx.beginPath()
+        ctx.arc(x, y, isMobile ? 2.2 : 3, 0, Math.PI * 2)
+        ctx.fillStyle = `rgba(185, 214, 255, ${0.2 + alpha * 0.6})`
+        ctx.fill()
+      }
+
+      if (!isMobile) {
+        NODES.forEach((node, index) => {
+          const pos = positions[index]
+          drawNode(ctx, node, pos.x, pos.y, elapsed, false)
+        })
+      }
+
+      const coreX = width * (isMobile ? 0.5 : 0.7)
+      const coreY = height * 0.48
+      ctx.beginPath()
+      ctx.arc(coreX, coreY, isMobile ? 26 : 34, 0, Math.PI * 2)
+      ctx.strokeStyle = `rgba(196, 181, 253, ${0.34 + 0.12 * Math.sin(elapsed * 1.4)})`
+      ctx.lineWidth = 1.4
+      ctx.stroke()
+      ctx.beginPath()
+      ctx.arc(coreX, coreY, isMobile ? 11 : 15, 0, Math.PI * 2)
+      ctx.fillStyle = 'rgba(220,230,255,0.86)'
+      ctx.fill()
+
+      const bandY = isMobile ? 22 : 30
+      const step = width / TELEMETRY.length
+      TELEMETRY.forEach((label, index) => {
+        const active = Math.floor(elapsed * 1.1) % TELEMETRY.length === index
+        ctx.fillStyle = active ? 'rgba(96,165,250,0.22)' : 'rgba(255,255,255,0.09)'
+        roundedRect(ctx, index * step + 5, bandY - 13, step - 10, 24, 5)
+        ctx.fill()
+        ctx.fillStyle = active ? 'rgba(225,246,255,1)' : 'rgba(214,230,250,0.9)'
+        ctx.font = `600 ${isMobile ? 8 : 10}px ui-monospace, SFMono-Regular, Consolas, monospace`
+        ctx.textAlign = 'center'
+        ctx.fillText(label.toUpperCase(), index * step + step / 2, bandY + 3)
+      })
+
+      const vignette = ctx.createLinearGradient(0, 0, 0, height)
+      vignette.addColorStop(0, 'rgba(0,0,0,0.18)')
+      vignette.addColorStop(0.5, 'rgba(0,0,0,0)')
+
+--- src/lib/public-nav.ts ---
+LINES: 7
+export const PUBLIC_NAV_ITEMS = [
+  { href: '/', label: 'Home' },
+  { href: '/platform', label: 'Platform' },
+  { href: '/network-apps', label: 'Network Apps' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/admin/login', label: 'Login' },
+] as const
+
+--- src/lib/product-contract.ts ---
+LINES: 123
+import { PROVIDER_MESH } from '@/lib/provider-mesh'
+
+export const PRODUCT_POSITIONING =
+  'Amarktai Network is the core AI operating system that plans, builds, monitors, repairs, and operates connected work from one intelligent workspace.'
+
+export type CommandIntent =
+  | 'create_song'
+  | 'create_movie'
+  | 'create_avatar'
+  | 'create_voice'
+  | 'create_image'
+  | 'research_topic'
+  | 'crawl_site'
+  | 'build_new_app'
+  | 'audit_repo'
+  | 'fix_repo'
+  | 'create_pr'
+  | 'deploy_app'
+  | 'monitor_vps'
+  | 'check_system'
+  | 'check_app_status'
+  | 'repair_connected_app'
+  | 'create_marketing_campaign'
+  | 'run_crypto_analysis'
+  | 'automate_workflow'
+  | 'ask_question'
+  | 'generate_file'
+  | 'explain_status'
+
+export type ProductSurface =
+  | 'Workspace'
+  | 'Studio'
+  | 'Workbench'
+  | 'App Builder'
+  | 'Network Apps'
+  | 'System'
+  | 'Command'
+
+export type AppReadiness = 'Live' | 'In build' | 'Planned' | 'Needs setup' | 'Blocked'
+
+export interface NetworkAppDefinition {
+  slug: string
+  displayName: string
+  status: AppReadiness
+  purpose: string
+  capabilities: string[]
+  requiredProviders: string[]
+  requiredAgents: string[]
+  routes: string[]
+  setupActions: string[]
+  lastActivity: string | null
+  readinessState: string
+  sharedMemoryNamespace: string
+  eventsEmitted: string[]
+  eventsConsumed: string[]
+  repairActions: string[]
+  openHref: string
+}
+
+export const NETWORK_APPS: readonly NetworkAppDefinition[] = []
+
+export interface ProviderContract {
+  name: string
+  key: string
+  envAliases: string[]
+  baseUrl: string
+  authMethod: string
+  capabilities: string[]
+  asyncJobs: boolean
+  polling: boolean
+  webhooks: boolean
+  artifacts: boolean
+  defaultRoute: string
+  status: 'primary' | 'specialist' | 'infrastructure'
+  testRoute: string
+  userFacingVisibility: 'settings' | 'system'
+}
+
+export const PROVIDER_CONTRACTS: readonly ProviderContract[] = PROVIDER_MESH.map((node) => ({
+  name: node.displayName,
+  key: node.id,
+  envAliases: [...node.envAliases],
+  baseUrl: node.baseUrl,
+  authMethod: node.authMethod,
+  capabilities: [...node.capabilities],
+  asyncJobs: node.asyncJobs,
+  polling: node.asyncJobs,
+  webhooks: node.id === 'github',
+  artifacts: node.artifactHandling !== 'none',
+  defaultRoute: node.id === 'genx' ? 'Primary approved AI route' : `${node.displayName} capability route`,
+  status: node.id === 'genx' ? 'primary' : node.kind === 'provider' ? 'specialist' : 'infrastructure',
+  testRoute: node.testRoute,
+  userFacingVisibility: node.kind === 'provider' ? 'settings' : 'system',
+}))
+
+export const REQUIRED_AGENT_NAMES = [
+  'Network Orchestrator Agent',
+  'Command Router Agent',
+  'Repo Audit Agent',
+  'Coding Agent',
+  'Code Review Agent',
+  'Deployment Agent',
+  'Product Architect Agent',
+  'UX/UI Designer Agent',
+  'Frontend Builder Agent',
+  'Backend Builder Agent',
+  'App Builder Agent',
+  'Media Director Agent',
+  'Song Producer Agent',
+  'Movie Director Agent',
+  'Avatar Producer Agent',
+  'Voice Producer Agent',
+  'Research Agent',
+  'Marketing Agent',
+  'Crypto/Trading Agent',
+  'Automation Agent',
+  'Memory/Learning Agent',
+  'Runtime Truth Agent',
+  'Security Agent',
+  'Repair Agent',
+  'GitHub Agent',
+  'VPS Monitor Agent',
+] as const
+
+--- src/app/globals.css ---
+LINES: 140
+@import '@fontsource-variable/inter';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --amarkt-obsidian: #03050a;
+  --amarkt-black: #05070c;
+  --amarkt-graphite: #0b111a;
+  --amarkt-panel: #0e1520;
+  --amarkt-line: rgba(226, 233, 247, 0.1);
+  --amarkt-line-strong: rgba(226, 233, 247, 0.16);
+  --amarkt-platinum: #edf2fb;
+  --amarkt-soft: #c9d4e6;
+  --amarkt-muted: #a9b5c7;
+  --amarkt-dim: #8290a6;
+  --amarkt-blue: #64a7ff;
+  --amarkt-violet: #a78bfa;
+  --amarkt-teal: #5eead4;
+  --amarkt-warm: #f5c76b;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--amarkt-obsidian);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--amarkt-obsidian);
+  color: var(--amarkt-platinum);
+  font-family: var(--font-geist-sans), 'Inter Variable', Inter, ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: 'ss01' on, 'cv05' on;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  color-scheme: dark;
+}
+
+::selection {
+  background: rgba(100, 167, 255, 0.28);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 212, 230, 0.16);
+}
+
+.public-field {
+  background:
+    linear-gradient(rgba(237, 242, 251, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 242, 251, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(100, 167, 255, 0.08), transparent 34%, rgba(3, 5, 10, 0.72));
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+  mask-image: linear-gradient(180deg, black, transparent 82%);
+}
+
+.architecture-band {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0)),
+    var(--amarkt-black);
+}
+
+.section-line {
+  background: linear-gradient(90deg, transparent, rgba(100, 167, 255, 0.28), rgba(94, 234, 212, 0.14), transparent);
+}
+
+.panel-grid {
+  background:
+    linear-gradient(rgba(237, 242, 251, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237, 242, 251, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.premium-panel {
+  border: 1px solid var(--amarkt-line);
+  background: linear-gradient(180deg, rgba(14, 21, 32, 0.86), rgba(7, 11, 18, 0.92));
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.text-pretty {
+  text-wrap: pretty;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+--- tailwind.config.ts ---
+LINES: 54
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
+  content: [
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: '#050810',
+        'bg-secondary': '#0a0f1a',
+        'bg-card': '#0f1628',
+        'bg-surface': '#141d35',
+        accent: {
+          blue: '#3b82f6',
+          cyan: '#22d3ee',
+          violet: '#8b5cf6',
+        },
+      },
+      fontFamily: {
+        sans: ['var(--font-geist-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        heading: ["'Space Grotesk Variable'", 'var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-geist-mono)', 'monospace'],
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+      },
+      animation: {
+        'float': 'float 6s ease-in-out infinite',
+        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fade-in 0.5s ease-out forwards',
+        'slide-up': 'slide-up 0.5s ease-out forwards',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        'fade-in': {
+          from: { opacity: '0' },
+          to: { opacity: '1' },
+        },
+        'slide-up': {
+          from: { opacity: '0', transform: 'translateY(16px)' },
+          to: { opacity: '1', transform: 'translateY(0px)' },
+        },
+      },
+    },
+  },
+  plugins: [],
+}
+export default config
+
+--- tailwind.config.js ---
+MISSING
+
+===== DASHBOARD SHELL / NAV FILES =====
+
+--- src/app/admin/dashboard/layout.tsx ---
+LINES: 198
+'use client'
+
+import '@fontsource-variable/inter'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { Activity, ChevronRight, LogOut, Menu, Network, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+import BrandName from '@/components/BrandName'
+
+type HeaderStatus = {
+  appStatus: string
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [status, setStatus] = useState<HeaderStatus>({ appStatus: 'Checking readiness' })
+  const [pulse, setPulse] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    fetch('/api/admin/settings/status').then((res) => res.json()).catch(() => null).then((response) => {
+      if (!mounted) return
+      const truth = response?.truth
+      const connected = Number(truth?.connectedCount ?? 0)
+      const storageConnected = Boolean(truth?.storage?.connected)
+      setStatus({
+        appStatus: storageConnected ? `${connected} connections ready` : 'Storage needs setup',
+      })
+      setPulse(true)
+    })
+    return () => { mounted = false }
+  }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => setPulse((p) => !p), 3000)
+    return () => clearInterval(id)
+  }, [])
+
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/admin/logout', { method: 'POST' })
+    router.push('/admin/login')
+  }, [router])
+
+  const isActive = (href: string) => {
+    if (href === '/admin/dashboard') return pathname === href
+    return pathname === href || pathname.startsWith(`${href}/`)
+  }
+
+  const activeItem = DASHBOARD_NAV_ITEMS.find((item) => isActive(item.href)) ?? DASHBOARD_NAV_ITEMS[0]
+
+  const sidebar = (
+    <div className="flex h-full flex-col">
+      {/* Logo / Brand */}
+      <div className="px-5 py-6">
+        <Link href="/admin/dashboard" className="group block">
+          <div className="flex items-center gap-3">
+            <div className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-700 bg-slate-900 shadow-[0_0_28px_rgba(14,165,233,0.18)]">
+              <Network className="h-5 w-5 text-sky-300" />
+              <span
+                className="absolute inset-0 rounded-xl ring-1 ring-cyan-400/40 transition-all duration-700"
+                style={{ boxShadow: pulse ? '0 0 16px 2px rgba(34,211,238,0.25)' : 'none' }}
+              />
+            </div>
+            <div>
+              <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Command OS</p>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* System vitals strip */}
+      <div className="mx-4 mb-4 rounded-xl border border-slate-700/50 bg-slate-800/40 px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <span
+            className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)] transition-opacity duration-700"
+            style={{ opacity: pulse ? 1 : 0.4 }}
+          />
+          <p className="truncate text-[10px] font-bold text-slate-300">{status.appStatus}</p>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Dashboard navigation">
+        <div className="space-y-1">
+          {DASHBOARD_NAV_ITEMS.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={[
+                  'group flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all duration-200',
+                  active
+                    ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.08)]'
+                    : 'border-transparent text-slate-500 hover:border-slate-700/60 hover:bg-slate-800/50 hover:text-slate-300',
+                ].join(' ')}
+              >
+                <span className="flex min-w-0 items-center gap-3">
+                  <item.icon
+                    className={['h-4 w-4 shrink-0 transition-colors', active ? 'text-cyan-400' : 'text-slate-600 group-hover:text-cyan-400/70'].join(' ')}
+                  />
+                  <span className="truncate font-semibold">{item.label}</span>
+                </span>
+                {active && <ChevronRight className="h-3.5 w-3.5 text-cyan-500/70" />}
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4">
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/50 px-3 py-2.5 text-xs font-bold text-slate-500 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div
+      className="flex min-h-screen bg-[#030712] text-slate-100"
+      style={{ fontFamily: "'Inter Variable','Inter',system-ui,-apple-system,sans-serif" }}
+    >
+      {/* Runtime background field */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-cyan-950/20 blur-[120px]" />
+        <div className="absolute -right-64 top-1/3 h-[500px] w-[500px] rounded-full bg-indigo-950/25 blur-[120px]" />
+        <div className="absolute bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-sky-950/15 blur-[100px]" />
+      </div>
+
+      {/* Sidebar - desktop */}
+      <aside className="relative hidden w-64 shrink-0 border-r border-slate-800/60 bg-slate-950/80 backdrop-blur-2xl lg:block">
+        {sidebar}
+      </aside>
+
+      <div className="relative flex min-w-0 flex-1 flex-col">
+        {/* Header */}
+        <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/70 backdrop-blur-2xl">
+          <div className="flex min-h-16 items-center justify-between gap-3 px-4 lg:px-7">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                className="rounded-lg border border-slate-700/60 bg-slate-800/60 p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-200 lg:hidden"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label="Open navigation"
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300"><BrandName /></p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-base font-black tracking-tight text-slate-100">{activeItem.label}</h1>
+                </div>
+              </div>
+            </div>
+
+            <div className="hidden items-center gap-2 lg:flex">
+              <StatusChip icon={<Activity className="h-3.5 w-3.5" />} label={status.appStatus} />
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile nav overlay */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 lg:hidden">
+            <button className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />
+            <aside className="absolute inset-y-0 left-0 w-72 max-w-[86vw] border-r border-slate-800/60 bg-slate-950/95 backdrop-blur-2xl">
+              {sidebar}
+            </aside>
+          </div>
+        )}
+
+        {/* Main content */}
+        <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 lg:px-7">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
+
+function StatusChip({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 px-2.5 py-1.5">
+      <span className="text-cyan-400">{icon}</span>
+      <p className="max-w-44 truncate text-[11px] font-bold text-slate-300">{label}</p>
+    </div>
+  )
+}
+
+--- src/lib/dashboard-nav.ts ---
+LINES: 27
+import { Blocks, Library, Settings2, Shield, Sparkles, Wrench } from 'lucide-react'
+import type { ComponentType, SVGProps } from 'react'
+
+export type DashboardSectionId =
+  | 'app-builder'
+  | 'repo-workbench'
+  | 'media-studio'
+  | 'outputs'
+  | 'settings'
+  | 'advanced-admin'
+
+export type DashboardNavItem = {
+  id: DashboardSectionId
+  href: string
+  label: string
+  description: string
+  icon: ComponentType<SVGProps<SVGSVGElement>>
+}
+
+export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
+  { id: 'app-builder', href: '/admin/dashboard/app-builder', label: 'App Builder', description: 'Clarify ideas and prepare approved future build plans.', icon: Blocks },
+  { id: 'repo-workbench', href: '/admin/dashboard/workbench', label: 'Repo Workbench', description: 'Import, audit, patch, test, commit, push, and create PRs.', icon: Wrench },
+  { id: 'media-studio', href: '/admin/dashboard/studio', label: 'Media Studio / Playground', description: 'Generate and inspect real media through connected providers.', icon: Sparkles },
+  { id: 'outputs', href: '/admin/dashboard/outputs', label: 'Outputs', description: 'Media, reports, app builds, diffs, PRs, and artifacts.', icon: Library },
+  { id: 'settings', href: '/admin/dashboard/settings', label: 'Settings', description: 'Keys, connections, storage, queues, and service setup.', icon: Settings2 },
+  { id: 'advanced-admin', href: '/admin/dashboard/system', label: 'Advanced Admin', description: 'System, operations, VPS, queues, logs, and diagnostics.', icon: Shield },
+] as const
+
+--- src/app/admin/dashboard/page.tsx ---
+LINES: 88
+import Link from 'next/link'
+import { ArrowRight, Command, Library, ShieldCheck } from 'lucide-react'
+import { PRODUCT_POSITIONING } from '@/lib/product-contract'
+import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+
+type Artifact = { id: string; title?: string; type?: string; createdAt?: string }
+type CommandJob = { id: string; prompt: string; status: string; route?: { intent?: string; surface?: string }; createdAt: string }
+
+export default async function OverviewPage() {
+  const artifacts = listRecords<Artifact>(LOCAL_STORE_FILES.artifacts).slice(-5).reverse()
+  const jobs = listRecords<CommandJob>('jobs/command-jobs.json').slice(-5).reverse()
+  const runtime = await getDashboardRuntimeTruth().catch(() => null)
+  const ready = Boolean(runtime && runtime.blockers.length === 0)
+  const warnings = [
+    ...(!runtime ? ['Runtime readiness could not be checked. Open System for details.'] : []),
+    ...(runtime && runtime.blockers.length > 0 ? ['Some live capabilities still need setup. Open Settings for the exact actions.'] : []),
+  ]
+
+  return (
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-3xl border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(8,20,34,.96),rgba(4,9,18,.92))] p-6 shadow-[0_20px_80px_rgba(8,145,178,.08)] lg:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Overview</p>
+        <div className="mt-3 grid gap-6 xl:grid-cols-[1fr_360px] xl:items-end">
+          <div>
+            <h1 className="max-w-4xl text-3xl font-black tracking-tight text-white lg:text-5xl">One intelligent command layer for the whole network.</h1>
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-300">{PRODUCT_POSITIONING}</p>
+          </div>
+          <Link href="/admin/dashboard/workspace" className="group rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-5 transition hover:bg-cyan-400/15">
+            <Command className="h-7 w-7 text-cyan-300" />
+            <p className="mt-4 text-lg font-black text-white">Open Workspace</p>
+            <p className="mt-1 text-sm leading-6 text-slate-300">Describe the outcome. Amarktai chooses the right capability and shows the next step.</p>
+            <span className="mt-4 inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] text-cyan-300">Start <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></span>
+          </Link>
+        </div>
+      </section>
+
+      {warnings.length > 0 && (
+        <section className="rounded-2xl border border-amber-400/20 bg-amber-400/8 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-300">Action needed</p>
+          {warnings.map((warning) => <p key={warning} className="mt-2 text-sm text-amber-100/80">{warning}</p>)}
+        </section>
+      )}
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Metric icon={<Command />} label="Active workspace jobs" value={String(jobs.filter((job) => job.status !== 'completed').length)} />
+        <Metric icon={<Library />} label="Recent outputs" value={String(artifacts.length)} />
+        <Metric icon={<ShieldCheck />} label="Readiness" value={ready ? 'Ready' : 'Needs setup'} />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Panel title="Current jobs" empty="No workspace jobs yet. Open Workspace to start one.">
+          {jobs.map((job) => (
+            <div key={job.id} className="rounded-xl border border-slate-700/40 bg-slate-950/45 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="truncate text-sm font-bold text-slate-200">{job.prompt}</p>
+                <Status value={job.status} />
+              </div>
+              <p className="mt-1 text-xs text-slate-400">{job.route?.surface ? `${job.route.surface} work` : 'Command work'}</p>
+            </div>
+          ))}
+        </Panel>
+        <Panel title="Recent outputs" empty="Generated media, reports, builds, diffs, and PRs appear here.">
+          {artifacts.map((artifact) => (
+            <div key={artifact.id} className="rounded-xl border border-slate-700/40 bg-slate-950/45 p-3">
+              <p className="text-sm font-bold text-slate-200">{artifact.title || artifact.id}</p>
+              <p className="mt-1 text-xs text-slate-500">{artifact.type || 'artifact'}</p>
+            </div>
+          ))}
+        </Panel>
+      </section>
+    </div>
+  )
+}
+
+function Metric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4"><div className="h-5 w-5 text-cyan-300">{icon}</div><p className="mt-4 text-xs font-bold text-slate-400">{label}</p><p className="mt-1 text-xl font-black text-white">{value}</p></div>
+}
+
+function Panel({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
+  const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children)
+  return <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><h2 className="font-black text-white">{title}</h2><div className="mt-4 space-y-2">{hasChildren ? children : <p className="text-sm text-slate-400">{empty}</p>}</div></section>
+}
+
+function Status({ value }: { value: string }) {
+  const ready = value === 'ready' || value === 'completed'
+  return <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${ready ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/20 bg-amber-400/10 text-amber-300'}`}>{value}</span>
+}
+
+--- src/app/admin/dashboard/studio/page.tsx ---
+LINES: 952
+'use client'
+
+import Link from 'next/link'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, Loader2, Play, Save, Send, Sparkles, Upload, X } from 'lucide-react'
+import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
+
+type StudioMode = {
+  label: string
+  tab: StudioTab
+  capability: string
+  adultMode?: 'text' | 'image' | 'video' | 'voice'
+  blocker?: string
+}
+
+const studioModes: StudioMode[] = [
+  { label: 'Chat', tab: 'Chat', capability: 'chat' },
+  { label: 'Research', tab: 'Research', capability: 'research' },
+  { label: 'Image', tab: 'Image', capability: 'image_generation' },
+  { label: 'Video', tab: 'Video', capability: 'video_generation' },
+  { label: 'Music / Song', tab: 'Music / Audio', capability: 'music_generation' },
+  { label: 'Voice / TTS', tab: 'Voice / TTS', capability: 'tts' },
+  { label: 'Avatar Video', tab: 'Avatar / Talking Video', capability: 'avatar_video' },
+  { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
+  { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
+  { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
+  { label: 'Adult Video', tab: 'Adult', capability: 'adult_video', adultMode: 'video' },
+  { label: 'Adult Voice', tab: 'Adult', capability: 'adult_voice', adultMode: 'voice' },
+  { label: 'Coding Handoff', tab: 'Coding', capability: 'coding' },
+]
+
+const MUSIC_GENRES = [
+  'pop', 'rock', 'rap', 'hip hop', 'rnb', 'soul', 'jazz', 'blues', 'gospel',
+  'reggae/rasta', 'amapiano', 'afrobeat', 'edm', 'trap', 'cinematic', 'ambient',
+  'orchestral', 'country', 'acoustic', 'metal', 'lo-fi', 'house', 'techno',
+  'drum & bass', 'dancehall', 'experimental',
+] as const
+type MusicGenre = typeof MUSIC_GENRES[number]
+
+const VOICE_TYPES = ['male', 'female', 'deep', 'calm', 'emotional', 'narrator', 'assistant', 'seductive', 'cinematic', 'robotic'] as const
+type VoiceType = typeof VOICE_TYPES[number]
+
+type AssistantContext = {
+  workbench?: Record<string, unknown>
+  costs?: Record<string, unknown>
+  voice?: Array<{ provider: string; label: string; status: string }>
+  modelCatalog?: unknown[]
+}
+type CapabilityReadiness = {
+  capability: string
+  status: 'available' | 'needs_setup'
+  blocker?: string | null
+  providers?: Array<{ provider: string; model: string }>
+}
+type ArtifactSummary = {
+  id: string
+  title?: string
+  type?: string
+  subType?: string
+  provider?: string
+  model?: string
+  storageUrl?: string
+  contentUrl?: string
+  url?: string
+  createdAt?: string
+  metadata?: Record<string, unknown>
+}
+type StudioResultDetails = {
+  provider: string
+  model: string
+  routeReason: string
+  blocker: string
+  artifactStatus: string
+  jobStatus: string
+  nextAction: string
+}
+
+export default function StudioPage() {
+  const [mode, setMode] = useState<StudioMode>(studioModes[0])
+  const tab = mode.tab
+  const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
+  const [context, setContext] = useState<AssistantContext | null>(null)
+  const [capabilityReadiness, setCapabilityReadiness] = useState<CapabilityReadiness[]>([])
+  const [modelId, setModelId] = useState('auto')
+  const [provider, setProvider] = useState('auto')
+  const [costMode, setCostMode] = useState<CostMode>('balanced')
+  const [voice, setVoice] = useState('auto')
+  const [appSlug] = useState('amarktai-network')
+  const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
+  const [message, setMessage] = useState('')
+  const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+  const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
+  const [audioPreview, setAudioPreview] = useState('')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [adultMode, setAdultMode] = useState<'text' | 'image' | 'video' | 'voice'>('text')
+  const [mediaSize, setMediaSize] = useState('1024x1024')
+  const [streaming, setStreaming] = useState(false)
+  const [executing, setExecuting] = useState(false)
+  const [status, setStatus] = useState('')
+  const [jobStatus, setJobStatus] = useState('')
+  // Music controls
+  const [musicGenres, setMusicGenres] = useState<MusicGenre[]>([])
+  const [musicTempo, setMusicTempo] = useState('medium')
+  const [musicMood, setMusicMood] = useState('')
+  const [musicVocals, setMusicVocals] = useState<'instrumental' | 'male' | 'female' | 'duet'>('female')
+  const [musicExplicit, setMusicExplicit] = useState(false)
+  const [musicLanguage, setMusicLanguage] = useState('english')
+  // Voice/TTS controls
+  const [voiceType, setVoiceType] = useState<VoiceType>('female')
+  const [lastResult, setLastResult] = useState<StudioResultDetails | null>(null)
+  const [lastPayload, setLastPayload] = useState<Record<string, unknown> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
+      fetch('/api/admin/amarktai-assistant/context').then((response) => response.json()).catch(() => null),
+      fetch('/api/admin/ai-routing').then((response) => response.json()).catch(() => null),
+    ]).then(([modelData, contextData, routingData]) => {
+      setCatalog(modelData?.universal ?? null)
+      setContext(contextData ?? null)
+      setCapabilityReadiness(Array.isArray(routingData?.mediaCapabilities) ? routingData.mediaCapabilities : [])
+    })
+  }, [])
+
+  const loadArtifacts = useCallback(async () => {
+    const response = await fetch(`/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}&limit=30`)
+    const data = await response.json().catch(() => ({}))
+    setArtifacts(Array.isArray(data.artifacts) ? data.artifacts as ArtifactSummary[] : [])
+  }, [appSlug])
+
+  useEffect(() => {
+    loadArtifacts().catch(() => null)
+  }, [loadArtifacts])
+
+  useEffect(() => {
+    if (mode.adultMode) setAdultMode(mode.adultMode)
+  }, [mode])
+
+  const tabTruth = STUDIO_ROUTE_MAP[tab]
+  const modelOptions = useMemo(() => {
+    if (!catalog) return []
+    if (mode.capability.startsWith('adult_')) {
+      return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
+    }
+    return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
+  }, [catalog, mode])
+  const selectedModel = modelOptions.find((model) => model.modelId === modelId)
+  const executionProvider = selectedModel?.provider ?? provider
+  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+  const activeCapability = capabilityReadiness.find((entry) => entry.capability === mode.capability)
+  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
+  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
+  const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)
+  const activeJobState = hasRealJob
+      ? modeBlocker
+      ? 'blocked'
+      : jobStatus || (executing || streaming ? 'processing' : lastResult?.blocker ? 'blocked' : 'completed')
+    : ''
+  const latestArtifact = artifacts[0]
+
+  async function sendMessage() {
+    if (!message.trim() || modeBlocker) return
+    const nextUser = { role: 'user' as const, content: message }
+    setConversation((current) => [...current, nextUser, { role: 'assistant', content: '' }])
+    setMessage('')
+    setStreaming(true)
+    setStatus('Streaming')
+    setJobStatus('processing')
+    const controller = new AbortController()
+    abortRef.current = controller
+    try {
+      const response = await fetch('/api/admin/amarktai-assistant/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          capability: mode.capability,
+          providerOverride: executionProvider,
+          modelOverride: executionModel,
+          costMode,
+          metadata: { appSlug, adultPolicy, dashboardContext: true, studioTab: tab },
+        }),
+        signal: controller.signal,
+      })
+      if (!response.ok || !response.body) throw new Error('Studio stream failed')
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data:')) continue
+          const data = line.slice(5).trim()
+          if (!data || data === '[DONE]') continue
+          const parsed = JSON.parse(data) as { content?: string; status?: string }
+          if (parsed.status) setStatus(parsed.status)
+          if (parsed.content) {
+            setConversation((current) => {
+              const copy = [...current]
+              const last = copy[copy.length - 1]
+              if (last?.role === 'assistant') copy[copy.length - 1] = { ...last, content: `${last.content}${parsed.content}` }
+              return copy
+            })
+          }
+        }
+      }
+      setStatus('Saved to conversation memory')
+      setJobStatus('completed')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Studio request failed')
+      setJobStatus('failed')
+    } finally {
+      setStreaming(false)
+    }
+  }
+
+
+--- src/app/admin/dashboard/workbench/page.tsx ---
+LINES: 707
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CheckCircle2, ChevronDown, GitPullRequest, Loader2, Play, ShieldCheck } from 'lucide-react'
+import { type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
+import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+
+type Repo = { full_name: string; default_branch: string; private?: boolean }
+type Branch = { name: string; sha: string; isDefault?: boolean }
+type WorkbenchModel = { provider: string; modelId: string; displayName: string }
+type Workspace = { id: string; owner: string; repo: string; branch: string; currentCommit?: string; status?: string }
+type ApiResult = Record<string, unknown> & { success?: boolean; error?: string; blocker?: string }
+type PersistedWorkbenchJob = {
+  id: string
+  workspaceId: string
+  workspace?: Workspace
+  userRequest?: string
+  plan?: unknown
+  changedFiles?: unknown
+  patch?: { id: string; diffText?: string; status?: string; branchName?: string; commitSha?: string | null; prUrl?: string | null }
+  logs?: string
+  status?: string
+}
+type StepId = 'Planning' | 'Files selected' | 'Patch prepared' | 'Checks running' | 'Commit ready' | 'PR ready' | 'Deploy ready'
+
+const timeline: StepId[] = ['Planning', 'Files selected', 'Patch prepared', 'Checks running', 'Commit ready', 'PR ready', 'Deploy ready']
+
+function asText(value: unknown): string {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  return JSON.stringify(value, null, 2)
+}
+
+export default function WorkbenchPage() {
+  const [repos, setRepos] = useState<Repo[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
+  const [governedWorkbenchModels, setGovernedWorkbenchModels] = useState<WorkbenchModel[]>([])
+  const [repoFullName, setRepoFullName] = useState('')
+  const [branch, setBranch] = useState('auto')
+  const [modelId, setModelId] = useState('auto')
+  const [costMode, setCostMode] = useState<CostMode>('balanced')
+  const [prompt, setPrompt] = useState('')
+  const [workspace, setWorkspace] = useState<Workspace | null>(null)
+  const [taskId, setTaskId] = useState('')
+  const [currentJobId, setCurrentJobId] = useState('')
+  const [patchId, setPatchId] = useState('')
+  const [prNumber, setPrNumber] = useState<number | null>(null)
+  const [checksPassed, setChecksPassed] = useState(false)
+  const [loading, setLoading] = useState('')
+  const [error, setError] = useState('')
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [stepStatus, setStepStatus] = useState<Record<StepId, 'waiting' | 'active' | 'done' | 'needs-approval'>>({
+    Planning: 'waiting',
+    'Files selected': 'waiting',
+    'Patch prepared': 'waiting',
+    'Checks running': 'waiting',
+    'Commit ready': 'waiting',
+    'PR ready': 'waiting',
+    'Deploy ready': 'waiting',
+  })
+  const [log, setLog] = useState<Record<string, string>>({})
+
+  const codingModels = useMemo<WorkbenchModel[]>(() => {
+    if (governedWorkbenchModels.length) return governedWorkbenchModels
+    return catalog?.grouped.coding ?? catalog?.models ?? []
+  }, [catalog, governedWorkbenchModels])
+  const selectedModel = codingModels.find((model) => model.modelId === modelId)
+  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
+  const hasPlan = Boolean(taskId || log.plan)
+  const nextAction = getNextAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+  const primaryAction = getPrimaryWorkbenchAction(stepStatus, Boolean(repoFullName), Boolean(prompt), hasPlan, Boolean(patchId), checksPassed, Boolean(prNumber))
+
+  const updateStep = (step: StepId, status: 'waiting' | 'active' | 'done' | 'needs-approval') => {
+    setStepStatus((current) => ({ ...current, [step]: status }))
+  }
+
+  const call = useCallback(async (label: string, url: string, init?: RequestInit): Promise<ApiResult> => {
+    setLoading(label)
+    setError('')
+    try {
+      const response = await fetch(url, init)
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || data.success === false) throw new Error(data.error ?? data.blocker ?? `${label} failed`)
+      return data
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `${label} failed`
+      setError(message)
+      throw err
+    } finally {
+      setLoading('')
+    }
+  }, [])
+
+  const loadBranches = useCallback(async (nextRepo: string) => {
+    if (!nextRepo) return
+    const data = await call('Load branches', `/api/admin/repo-workbench/github/branches?repo=${encodeURIComponent(nextRepo)}`)
+    const nextBranches = Array.isArray(data.branches) ? data.branches as Branch[] : []
+    setBranches(nextBranches)
+  }, [call])
+
+  const rehydrateJob = useCallback((job: PersistedWorkbenchJob | null | undefined) => {
+    if (!job?.workspace) return
+    const fullName = `${job.workspace.owner}/${job.workspace.repo}`
+    setCurrentJobId(job.id)
+    setTaskId(job.id)
+    setWorkspace(job.workspace)
+    setRepoFullName(fullName)
+    setBranch(job.workspace.branch || 'auto')
+    setPrompt(job.userRequest ?? '')
+    setPatchId(job.patch?.id ?? '')
+    setChecksPassed(Boolean(job.logs))
+    const prUrl = job.patch?.prUrl ?? ''
+    const match = prUrl.match(/\/pull\/(\d+)/)
+    setPrNumber(match ? Number(match[1]) : null)
+    setLog({
+      plan: asText(job.plan ?? {}),
+      files: asText(job.changedFiles ?? []),
+      diff: String(job.patch?.diffText ?? ''),
+      checks: job.logs ? String(job.logs) : '',
+      commit: job.patch?.commitSha ? asText({ branch: job.patch.branchName, commitSha: job.patch.commitSha }) : '',
+      pr: prUrl,
+    })
+    setStepStatus(statusForPersistedJob(job))
+    loadBranches(fullName).catch(() => null)
+  }, [loadBranches])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const incomingPrompt = params.get('prompt')
+    if (incomingPrompt) setPrompt(incomingPrompt)
+    Promise.all([
+      call('Load repos', '/api/admin/repo-workbench/github/repos').catch(() => null),
+      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
+      incomingPrompt ? Promise.resolve(null) : fetch('/api/admin/repo-workbench/jobs/latest').then((response) => response.json()).catch(() => null),
+    ]).then(([repoData, modelData, latestData]) => {
+      const nextRepos = Array.isArray(repoData?.repos) ? repoData!.repos as Repo[] : []
+      setRepos(nextRepos)
+      if (latestData?.job) {
+        rehydrateJob(latestData.job as PersistedWorkbenchJob)
+      } else if (nextRepos[0]) {
+        setRepoFullName(nextRepos[0].full_name)
+        setBranch('auto')
+        loadBranches(nextRepos[0].full_name).catch(() => null)
+      }
+      setCatalog(modelData?.universal ?? null)
+      const governed = Array.isArray(modelData?.governance?.workbenchModels)
+        ? modelData.governance.workbenchModels.map((model: { provider: string; modelId: string; label?: string; displayName?: string }) => ({
+          provider: model.provider,
+          modelId: model.modelId,
+          displayName: model.displayName ?? model.label ?? model.modelId,
+        }))
+        : []
+      setGovernedWorkbenchModels(governed)
+    })
+  }, [call, loadBranches, rehydrateJob])
+
+  async function ensureWorkspace() {
+    if (workspace) return workspace
+    const selectedRepo = repos.find((repo) => repo.full_name === repoFullName)
+    const selectedBranch = branch === 'auto' ? selectedRepo?.default_branch ?? 'main' : branch
+    const data = await call('Import repo', '/api/admin/repo-workbench/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ repoFullName, branch: selectedBranch }),
+    })
+    const nextWorkspace = data.workspace as Workspace
+    setWorkspace(nextWorkspace)
+    return nextWorkspace
+  }
+
+  function payload() {
+    return {
+      request: prompt,
+      modelId: executionModel,
+      provider: selectedModel?.provider ?? 'auto',
+      costMode,
+      taskType: 'auto',
+      scope: 'auto',
+    }
+  }
+
+  async function startWork() {
+    if (!prompt.trim() || !repoFullName) return
+    updateStep('Planning', 'active')
+    const activeWorkspace = await ensureWorkspace()
+    const plan = await call('Generate plan', `/api/admin/repo-workbench/${activeWorkspace.id}/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload()),
+    })
+    const task = plan.task as { id?: string } | undefined
+    const nextTaskId = String(task?.id ?? plan.taskId ?? '')
+    setTaskId(nextTaskId)
+    setCurrentJobId(nextTaskId)
+    setLog((current) => ({ ...current, plan: asText(plan.plan ?? plan.planJson ?? plan.task ?? plan) }))
+    updateStep('Planning', 'done')
+    updateStep('Files selected', 'done')
+    updateStep('Patch prepared', 'waiting')
+  }
+
+  async function generatePatch() {
+    if (!prompt.trim() || !repoFullName) return
+    const activeWorkspace = await ensureWorkspace()
+    updateStep('Patch prepared', 'active')
+    const patch = await call('Generate patch', `/api/admin/repo-workbench/${activeWorkspace.id}/patch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload(), taskId: taskId || currentJobId || undefined }),
+    })
+    const proposed = patch.patch as { id?: string; diffText?: string; filesAffected?: string[] } | undefined
+    setPatchId(String(proposed?.id ?? patch.patchId ?? ''))
+    setLog((current) => ({
+      ...current,
+      files: asText(proposed?.filesAffected ?? patch.filesAffected ?? patch.changedFiles ?? []),
+      diff: String(proposed?.diffText ?? patch.diffText ?? ''),
+    }))
+    updateStep('Patch prepared', 'needs-approval')
+  }
+
+
+--- src/app/admin/dashboard/outputs/page.tsx ---
+LINES: 209
+import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import { listArtifacts, type ArtifactRecord } from '@/lib/artifact-store'
+import Image from 'next/image'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+export const fetchCache = 'force-no-store'
+
+type LocalArtifact = {
+  id: string
+  appSlug?: string
+  title?: string
+  description?: string
+  type?: string
+  subType?: string
+  status?: string
+  provider?: string
+  model?: string
+  createdAt?: string
+  storagePath?: string
+  storageUrl?: string
+  contentUrl?: string
+  url?: string
+  mimeType?: string
+  fileSizeBytes?: number
+  metadata?: Record<string, unknown>
+}
+
+export default async function OutputsPage() {
+  const localArtifacts = listRecords<LocalArtifact>(LOCAL_STORE_FILES.artifacts)
+  const databaseArtifacts = await listArtifacts({ limit: 200 })
+    .then((result) => result.artifacts)
+    .catch(() => [])
+
+  const merged = new Map<string, LocalArtifact | ArtifactRecord>()
+
+  for (const artifact of [...localArtifacts, ...databaseArtifacts]) {
+    if (!artifact?.id) continue
+    merged.set(artifact.id, artifact)
+  }
+
+  const artifacts = Array.from(merged.values())
+    .filter((artifact) => artifact.status !== 'failed' && artifact.status !== 'processing')
+    .filter(isDisplayableArtifact)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Outputs</p>
+        <h1 className="mt-2 text-3xl font-black text-white">Real artifacts, in one library.</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Generated media, transcripts, reports, patches, and repository outputs appear here from the live artifact store.
+        </p>
+        <p className="mt-3 text-xs font-bold text-slate-500">
+          Showing {artifacts.length} completed artifact{artifacts.length === 1 ? '' : 's'}.
+        </p>
+      </section>
+
+      {!artifacts.length ? (
+        <section className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/40 p-12 text-center">
+          <p className="font-black text-slate-300">No real outputs yet.</p>
+          <p className="mt-2 text-sm text-slate-500">Completed, persisted artifacts will appear after a successful run.</p>
+        </section>
+      ) : (
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {artifacts.map((artifact) => {
+            const url = getArtifactUrl(artifact)
+            const type = String(artifact.type || 'artifact')
+            const appSlug = getStringField(artifact, 'appSlug') || 'workspace'
+            const mimeType = getStringField(artifact, 'mimeType') || getStringMetadata(artifact, 'mimeType') || 'unknown MIME'
+            const fileSize = getNumberField(artifact, 'fileSizeBytes')
+
+            return (
+              <article key={artifact.id} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-white">{artifact.title || artifact.id}</p>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.12em] text-cyan-300">
+                      {type}{artifact.subType ? ` / ${artifact.subType}` : ''}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] font-black text-slate-400">
+                    {artifact.status || 'saved'}
+                  </span>
+                </div>
+
+                <ArtifactPreview artifact={artifact} url={url} />
+
+                <dl className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/50 p-3 text-xs">
+                  <Meta label="App" value={appSlug} />
+                  <Meta label="MIME" value={mimeType} />
+                  <Meta label="Size" value={formatBytes(fileSize)} />
+                  <Meta label="Provider" value={artifact.provider || 'local'} />
+                  <Meta label="Model" value={artifact.model || 'unknown'} />
+                  <Meta label="Created" value={formatCreatedAt(artifact.createdAt)} />
+                </dl>
+
+                {url ? (
+                  <a href={url} download className="mt-3 inline-block text-xs font-black text-cyan-300">
+                    Open or download artifact
+                  </a>
+                ) : (
+                  <p className="mt-3 text-xs font-bold text-amber-300">No playable storage URL found.</p>
+                )}
+              </article>
+            )
+          })}
+        </section>
+      )}
+    </div>
+  )
+}
+
+function Meta({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="font-black uppercase tracking-[0.14em] text-slate-600">{label}</dt>
+      <dd className="mt-1 break-words font-bold text-slate-300">{value}</dd>
+    </div>
+  )
+}
+
+function ArtifactPreview({ artifact, url }: { artifact: LocalArtifact | ArtifactRecord; url: string }) {
+  const type = String(artifact.type ?? '')
+  if (type === 'image' && url) {
+    return (
+      <Image
+        unoptimized
+        width={960}
+        height={540}
+        src={url}
+        alt={artifact.title || 'Generated image'}
+        className="mt-4 aspect-video w-full rounded-xl border border-slate-700 object-cover"
+      />
+    )
+  }
+  if ((type === 'audio' || type === 'music') && url) {
+    return <audio controls preload="metadata" src={url} className="mt-4 w-full" />
+  }
+  if (type === 'video' && url) {
+    return <video controls preload="metadata" src={url} className="mt-4 aspect-video w-full rounded-xl border border-slate-700 bg-black" />
+  }
+  if (['transcript', 'report', 'document', 'code'].includes(type)) {
+    return (
+      <p className="mt-4 line-clamp-5 whitespace-pre-wrap rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs leading-5 text-slate-400">
+        {artifact.description || textFromMetadata(artifact)}
+      </p>
+    )
+  }
+  return null
+}
+
+function getArtifactUrl(artifact: LocalArtifact | ArtifactRecord) {
+  if (artifact.storageUrl) return artifact.storageUrl
+  if ('contentUrl' in artifact && artifact.contentUrl) return artifact.contentUrl
+  if ('url' in artifact && artifact.url) return artifact.url
+  if (artifact.metadata && typeof artifact.metadata === 'object') {
+    for (const key of ['mediaUrl', 'resultUrl', 'imageUrl', 'audioUrl', 'musicUrl', 'videoUrl']) {
+      const value = artifact.metadata[key]
+      if (typeof value === 'string' && value) return value
+    }
+  }
+  return ''
+}
+
+function isDisplayableArtifact(artifact: LocalArtifact | ArtifactRecord) {
+  const type = String(artifact.type ?? '')
+  if (['image', 'audio', 'music', 'video'].includes(type)) return Boolean(getArtifactUrl(artifact))
+  return Boolean(artifact.id && type)
+}
+
+function textFromMetadata(artifact: LocalArtifact | ArtifactRecord) {
+  const metadata = artifact.metadata
+  if (!metadata || typeof metadata !== 'object') return 'Saved text artifact'
+  for (const key of ['text', 'transcript', 'summary', 'content']) {
+    const value = metadata[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return 'Saved text artifact'
+}
+
+function getStringField(artifact: LocalArtifact | ArtifactRecord, key: keyof LocalArtifact) {
+  const value = artifact[key as keyof typeof artifact]
+  return typeof value === 'string' ? value : ''
+}
+
+function getStringMetadata(artifact: LocalArtifact | ArtifactRecord, key: string) {
+  const value = artifact.metadata?.[key]
+  return typeof value === 'string' ? value : ''
+}
+
+function getNumberField(artifact: LocalArtifact | ArtifactRecord, key: keyof LocalArtifact) {
+  const value = artifact[key as keyof typeof artifact]
+  return typeof value === 'number' ? value : 0
+}
+
+function formatBytes(value: number) {
+  if (!value || value < 0) return 'unknown'
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatCreatedAt(value: Date | string | undefined) {
+  if (!value) return 'Creation time unavailable'
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString()
+}
+
+--- src/app/admin/dashboard/settings/page.tsx ---
+LINES: 152
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import { CheckCircle2, Eye, EyeOff, Loader2, Save, TestTube2 } from 'lucide-react'
+import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
+
+type SettingsTruth = {
+  entries: SettingsTruthEntry[]
+  connectedCount: number
+}
+
+export default function SettingsPage() {
+  const [truth, setTruth] = useState<SettingsTruth | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    const response = await fetch('/api/admin/settings/status', { cache: 'no-store' })
+    const data = await response.json().catch(() => ({}))
+    setTruth(response.ok ? data.truth ?? null : null)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { void refresh() }, [refresh])
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(8,20,34,.96),rgba(4,9,18,.92))] p-6 lg:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Settings</p>
+        <h1 className="mt-2 text-3xl font-black text-white">Connect capabilities once.</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
+          Add a key, save it, then run a live test. A connection turns green only after the provider or local service responds successfully.
+        </p>
+        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2 text-xs font-bold text-slate-300">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
+          {truth?.connectedCount ?? 0} live connections
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        {(truth?.entries ?? []).map((entry) => (
+          <ConnectionCard key={entry.key} entry={entry} refresh={refresh} />
+        ))}
+      </section>
+    </div>
+  )
+}
+
+function ConnectionCard({ entry, refresh }: { entry: SettingsTruthEntry; refresh: () => Promise<void> }) {
+  const [value, setValue] = useState('')
+  const [show, setShow] = useState(false)
+  const [busy, setBusy] = useState<'save' | 'test' | null>(null)
+  const [message, setMessage] = useState('')
+
+  async function save() {
+    if (!value.trim()) return
+    setBusy('save')
+    setMessage('')
+    const response = await fetch('/api/admin/settings/key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        key: entry.key,
+        type: entry.kind === 'provider' ? 'provider' : 'tool',
+        label: entry.label,
+        value: value.trim(),
+      }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setMessage(response.ok ? `Saved ${data.masked ?? ''}. Run the live test.` : data.error ?? 'Save failed.')
+    if (response.ok) {
+      setValue('')
+      await refresh()
+    }
+    setBusy(null)
+  }
+
+  async function test() {
+    setBusy('test')
+    setMessage('')
+    const response = await fetch(entry.testRoute, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: entry.key }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setMessage(data.success ? data.detail || 'Live test passed.' : data.error || 'Live test failed.')
+    await refresh()
+    setBusy(null)
+  }
+
+  const statusStyle = entry.connected
+    ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300'
+    : entry.status === 'Failed'
+      ? 'border-red-400/25 bg-red-400/10 text-red-300'
+      : 'border-amber-400/25 bg-amber-400/10 text-amber-300'
+
+  return (
+    <article className="rounded-2xl border border-slate-700/50 bg-slate-900/65 p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-black text-white">{entry.label}</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-400">
+            {entry.optional ? 'Optional connection.' : 'Platform connection.'} Unlocks {entry.unlocks}.
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black ${statusStyle}`}>{entry.status}</span>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {entry.capabilities.map((capability) => (
+          <span key={capability} className="rounded-full border border-slate-700 bg-slate-950/50 px-2 py-1 text-[10px] font-bold text-slate-400">
+            {capability.replaceAll('_', ' ')}
+          </span>
+        ))}
+      </div>
+
+      {entry.requiresSecret && (
+        <div className="mt-4 flex gap-2">
+          <div className="relative flex-1">
+            <input
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              type={show ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder={entry.envVars.join(' or ')}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2.5 pr-10 text-sm text-white outline-none placeholder:text-slate-600 focus:border-cyan-400/50"
+            />
+            <button type="button" onClick={() => setShow((current) => !current)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500" aria-label={show ? 'Hide value' : 'Show value'}>
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <button onClick={save} disabled={busy !== null || !value.trim()} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-black text-slate-200 disabled:opacity-40">
+            {busy === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save
+          </button>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-slate-400">{entry.lastTestResult}</p>
+          <p className="mt-1 text-[11px] text-slate-500">{entry.lastTestedAt ? new Date(entry.lastTestedAt).toLocaleString() : entry.blocker}</p>
+          {entry.error && <p className="mt-1 text-xs font-semibold text-red-300">{entry.error}</p>}
+          {message && <p className="mt-1 text-xs font-semibold text-cyan-200">{message}</p>}
+        </div>
+        <button onClick={test} disabled={busy !== null || (!entry.configured && entry.requiresSecret)} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-cyan-300 px-3 py-2 text-xs font-black text-slate-950 disabled:opacity-40">
+          {busy === 'test' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TestTube2 className="h-4 w-4" />} Test
+        </button>
+      </div>
+    </article>
+  )
+}
+
+--- src/app/admin/dashboard/system/page.tsx ---
+LINES: 53
+import { getVpsSnapshot } from '@/lib/vps-monitor'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+
+export default async function SystemPage() {
+  const [vps, runtime] = await Promise.all([getVpsSnapshot().catch(() => null), getDashboardRuntimeTruth().catch(() => null)])
+  const serviceRows = vps ? Object.entries(vps.services) : []
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Advanced Admin</p>
+        <h1 className="mt-2 text-3xl font-black text-white">System, operations, VPS, queues, logs, and runtime diagnostics.</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">Technical detail stays here, outside the normal product workflow. Destructive repairs, restarts, merges, and deployments remain approval-gated.</p>
+      </section>
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <Metric label="Host" value={vps?.host.hostname || 'Unknown'} />
+        <Metric label="Memory used" value={vps ? `${vps.host.memory.usedPercent}%` : 'Unknown'} />
+        <Metric label="Uptime" value={vps ? `${Math.floor(vps.host.uptimeSeconds / 3600)} hours` : 'Unknown'} />
+        <Metric label="Queue" value={vps?.queue.healthy ? 'Ready' : 'Needs attention'} />
+      </section>
+      <section className="grid gap-4 xl:grid-cols-2">
+        <Panel title="Services">{serviceRows.map(([name, value]) => <Row key={name} label={name} value={formatService(value)} />)}</Panel>
+        <Panel title="Runtime truth">{(runtime?.providers ?? []).slice(0, 14).map((provider) => <Row key={provider.key} label={provider.displayName} value={provider.connected ? 'Connected' : provider.reason} />)}</Panel>
+      </section>
+      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5">
+        <summary className="cursor-pointer text-sm font-black text-slate-300">Raw diagnostics</summary>
+        <div className="mt-4 grid gap-2 md:grid-cols-2">
+          {(runtime?.blockers ?? []).map((blocker) => <Row key={blocker} label="Action" value={blocker} />)}
+          {!runtime?.blockers?.length && <p className="text-sm text-slate-400">No runtime blockers reported.</p>}
+        </div>
+      </details>
+    </div>
+  )
+}
+
+function formatService(value: unknown) {
+  if (!value) return 'Unknown'
+  if (typeof value === 'string') return value
+  if (typeof value === 'object' && value && 'available' in value) return (value as { available: boolean; output?: string }).available ? ((value as { output?: string }).output || 'Available').split('\n')[0] : 'Needs attention'
+  if (typeof value === 'object' && value && 'status' in value) return String((value as { status?: unknown }).status)
+  return 'Checked'
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4"><p className="text-xs font-bold text-slate-500">{label}</p><p className="mt-2 text-xl font-black text-white">{value}</p></div>
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5"><h2 className="font-black text-white">{title}</h2><div className="mt-4 space-y-2">{children}</div></section>
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-2 text-xs last:border-0"><span className="font-bold text-slate-500">{label}</span><span className="max-w-[65%] text-right font-bold text-slate-300">{value}</span></div>
+}
+
+--- src/app/admin/dashboard/operations/page.tsx ---
+LINES: 295
+import { listRecords, LOCAL_STORE_FILES, getStorageRoot, checkWritable } from '@/lib/local-json-store'
+import { getCostSummary } from '@/lib/cost-tracking'
+import { getResearchToolStatus } from '@/lib/research-tools'
+import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
+import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
+import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+import { getCapabilityGovernanceMatrix, ROOT_WORKSPACE } from '@/lib/provider-capability-governance'
+
+export default async function OperationsPage() {
+  const [costs, research, system, runtime, settingsTruth] = await Promise.all([
+    getCostSummary().catch(() => null),
+    getResearchToolStatus().catch(() => null),
+    getSystemRuntimeStatus().catch(() => null),
+    getDashboardRuntimeTruth().catch(() => null),
+    getPlatformSettingsTruth().catch(() => null),
+  ])
+  const artifacts = listRecords(LOCAL_STORE_FILES.artifacts)
+  const approvals = listRecords(LOCAL_STORE_FILES.approvals)
+  const jobs = listRecords(LOCAL_STORE_FILES.jobs)
+  const storage = checkWritable(LOCAL_STORE_FILES.artifacts)
+  const approvedProviderKeys = new Set(APPROVED_AI_PROVIDERS.map((provider) => provider.key))
+  const providerRows = (runtime?.providers ?? [])
+    .filter((provider) => approvedProviderKeys.has(provider.key as never))
+    .map((provider) => ({ name: provider.displayName, status: provider.configured ? provider.status : 'Needs key' }))
+  const missingProviders = providerRows.filter((provider) => provider.status !== 'ok' && provider.status !== 'Connected')
+  const liveBlockers = [
+    ...(!storage.writable ? ['Storage is not writable'] : []),
+    ...(system?.vps.status === 'ok' ? [] : ['VPS/Webdock status needs verification']),
+    ...(missingProviders.length ? [`Provider tests pending: ${missingProviders.map((provider) => provider.name).join(', ')}`] : []),
+    ...(research?.localCrawler.available ? [] : ['Local crawler stack needs Playwright/Trafilatura setup']),
+  ]
+  const toolStatus = (key: string) => settingsTruth?.tools.find((tool) => tool.key === key)?.status ?? 'Needs key'
+  const providerCount = providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length
+  const studioReady = storage.writable && providerCount > 0
+  const workbenchReady = storage.writable && (toolStatus('github') === 'Connected' || settingsTruth?.tools.find((t) => t.key === 'github')?.configured)
+  const studioBlockers = [
+    ...(!storage.writable ? ['Storage not writable'] : []),
+    ...(providerCount === 0 ? ['No AI provider connected'] : []),
+  ]
+  const workbenchBlockers = [
+    ...(!storage.writable ? ['Storage not writable'] : []),
+    ...(toolStatus('github') !== 'Connected' ? ['GitHub not connected'] : []),
+  ]
+  const requiredBlockerCategories = [
+    'missing required key',
+    'failed live test',
+    'broken protected API',
+    'broken storage',
+    'broken GitHub',
+    'broken Studio execution',
+    'broken Workbench PR flow',
+    'broken static assets',
+    'build/lint/test failure',
+  ]
+  const optionalItems = ['Avatar/talking video backend route', 'Automated memory promotion scheduler', 'Extra providers', 'SMTP enhancements']
+  const goLiveCandidate = liveBlockers.length === 0
+  const governance = getCapabilityGovernanceMatrix()
+  const governanceBlockers = governance.blockedCapabilities.map((capability) => `${capability.label}: ${capability.blocker ?? capability.notes}`)
+
+  return (
+    <div className="space-y-5">
+      {/* Hero */}
+      <section className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl lg:p-7">
+        <div className="pointer-events-none absolute right-0 top-0 h-48 w-72 rounded-bl-[6rem] bg-gradient-to-br from-indigo-500/8 via-cyan-500/6 to-transparent blur-3xl" />
+        <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-400/80">Operations</p>
+        <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-100 lg:text-3xl">Runtime command center.</h2>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+          Provider tests, Studio readiness, Workbench readiness, jobs, artifacts, and cost tracking in one go-live view.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-400/80">Go-live readiness</p>
+            <h3 className="mt-1 text-xl font-black text-slate-100">{goLiveCandidate ? 'Ready for live testing' : 'Blocked before go-live'}</h3>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
+              This panel reports runtime truth from storage, provider health, VPS checks, jobs, artifacts, approvals, and research services. It does not mark unknown routes green.
+            </p>
+          </div>
+          <span className={['rounded-full border px-3 py-1 text-xs font-black', goLiveCandidate ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+            Can go live: {goLiveCandidate ? 'yes' : 'no'}
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <ReadinessList title="Blocking" items={liveBlockers.length ? liveBlockers : ['No runtime blockers detected by this dashboard pass.']} tone={liveBlockers.length ? 'warn' : 'ok'} />
+          <ReadinessList title="Optional" items={optionalItems} />
+          <ReadinessList title="Live-tested surfaces" items={[
+            storage.writable ? 'Storage writable' : 'Storage needs test',
+            system?.vps.status === 'ok' ? 'VPS status ok' : 'VPS status pending',
+            `${providerRows.filter((provider) => provider.status === 'ok' || provider.status === 'Connected').length} providers connected`,
+          ]} />
+        </div>
+      </section>
+
+      <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <summary className="cursor-pointer text-sm font-black text-slate-200">Advanced governance/debug</summary>
+        <h3 className="text-base font-black text-slate-100">Governance blockers and route truth</h3>
+        <p className="mt-1.5 text-xs leading-5 text-slate-500">
+          {ROOT_WORKSPACE.message} Route-present providers that are not approved are visible, but not executable by default.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          <ReadinessList title="Blocked by governance" items={governanceBlockers.length ? governanceBlockers : ['No governance blockers reported.']} tone={governanceBlockers.length ? 'warn' : 'ok'} />
+          <ReadinessList title="Route-present, not approved" items={governance.routePresentNotApprovedProviders.map((provider) => `${provider.label}: ${provider.notes}`)} />
+          <ReadinessList title="Available, not wired" items={governance.underusedCapabilities.map((model) => `${model.provider}/${model.modelId}: ${model.capabilities.join(', ')}`).slice(0, 8)} />
+        </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          {requiredBlockerCategories.map((category) => (
+            <div key={category} className="rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-bold text-slate-400">{category}</div>
+          ))}
+        </div>
+      </details>
+
+      {/* Top metrics */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <OpsMetric label="VPS / Webdock" value={system?.vps.status ?? 'Needs key'} status={system?.vps.status === 'ok' ? 'ok' : 'warn'} />
+        <OpsMetric label="Storage" value={storage.writable ? 'Writable' : 'Needs test'} status={storage.writable ? 'ok' : 'warn'} />
+        <OpsMetric label="Month spend" value={`$${(costs?.monthSpendUsd ?? 0).toFixed(2)}`} />
+        <OpsMetric label="Pending Approvals" value={String(approvals.length)} status={approvals.length > 0 ? 'warn' : 'ok'} />
+      </section>
+
+      {/* Studio + Workbench readiness */}
+      <section className="grid gap-4 sm:grid-cols-2">
+        <div className={['rounded-2xl border p-5 backdrop-blur-xl', studioReady ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5'].join(' ')}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Studio</p>
+              <h3 className="mt-1 text-base font-black text-slate-100">{studioReady ? 'Studio ready' : 'Studio blocked'}</h3>
+            </div>
+            <span className={['rounded-full border px-2.5 py-1 text-xs font-black', studioReady ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+              {studioReady ? 'Ready' : 'Blocked'}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            {providerCount} provider{providerCount !== 1 ? 's' : ''} connected · Storage {storage.writable ? 'writable' : 'not writable'}
+          </p>
+          {studioBlockers.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {studioBlockers.map((blocker) => (
+                <p key={blocker} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-1.5 text-xs font-semibold text-amber-300">{blocker}</p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className={['rounded-2xl border p-5 backdrop-blur-xl', workbenchReady ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-amber-500/20 bg-amber-500/5'].join(' ')}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Workbench</p>
+              <h3 className="mt-1 text-base font-black text-slate-100">{workbenchReady ? 'Workbench ready' : 'Workbench blocked'}</h3>
+            </div>
+            <span className={['rounded-full border px-2.5 py-1 text-xs font-black', workbenchReady ? 'border-emerald-500/20 bg-emerald-500/8 text-emerald-300' : 'border-amber-500/20 bg-amber-500/8 text-amber-300'].join(' ')}>
+              {workbenchReady ? 'Ready' : 'Blocked'}
+            </span>
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            GitHub {toolStatus('github')} · Storage {storage.writable ? 'writable' : 'not writable'}
+          </p>
+          {workbenchBlockers.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {workbenchBlockers.map((blocker) => (
+                <p key={blocker} className="rounded-lg border border-amber-500/20 bg-amber-500/8 px-2.5 py-1.5 text-xs font-semibold text-amber-300">{blocker}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-3">
+        <OpsPanel title="Storage / artifacts">
+          <OpsRow label="Webdock" value={system?.vps.status ?? 'Needs key/test'} />
+          <OpsRow label="Storage" value={storage.writable ? 'Writable' : 'Needs test'} />
+          <OpsRow label="Artifacts" value={String(artifacts.length)} />
+          <details className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-3">
+            <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.14em] text-slate-500">Advanced file paths</summary>
+            <div className="mt-3 space-y-2">
+              <OpsRow label="Storage root" value={getStorageRoot()} mono />
+              <OpsRow label="Artifacts path" value={LOCAL_STORE_FILES.artifacts} mono />
+              <OpsRow label="Job logs" value="logs/*.log" mono />
+            </div>
+          </details>
+          {(system?.services ?? []).map((service) => <OpsRow key={service.name} label={service.name} value={service.status} />)}
+        </OpsPanel>
+
+        {/* Research stack */}
+        <OpsPanel title="Research stack">
+          <OpsRow label="Playwright" value={research?.playwright.status ?? 'Unavailable'} />
+          <OpsRow label="Scrapy" value={research?.scrapy.status ?? 'Unavailable'} />
+          <OpsRow label="Trafilatura" value={research?.trafilatura.status ?? 'Unavailable'} />
+          <OpsRow label="Qdrant" value={research?.qdrant.status ?? 'Needs setup'} />
+        </OpsPanel>
+
+        <OpsPanel title="Required services">
+          <OpsRow label="GitHub" value={toolStatus('github')} />
+          <OpsRow label="Redis" value={toolStatus('redis')} />
+          <OpsRow label="Playwright" value={toolStatus('playwright')} />
+          <OpsRow label="Webdock" value={toolStatus('webdock')} />
+          <OpsRow label="Storage" value={settingsTruth?.storage.status ?? (storage.writable ? 'Connected' : 'Failed')} />
+        </OpsPanel>
+
+        {/* Usage */}
+        <OpsPanel title="Costs / usage">
+          <OpsRow label="Today spend" value={`$${(costs?.todaySpendUsd ?? 0).toFixed(2)}`} />
+          <OpsRow label="Artifacts" value={String(artifacts.length)} />
+          <OpsRow label="Jobs" value={String(jobs.length)} />
+          <OpsRow label="Provider usage" value={Object.keys(costs?.byProvider ?? {}).join(', ') || 'No runs yet'} />
+          <OpsRow label="App usage" value={Object.keys(costs?.byApp ?? {}).join(', ') || 'No runs yet'} />
+        </OpsPanel>
+        <OpsPanel title="Redis / jobs">
+          <OpsRow label="Active jobs" value={String(jobs.filter((job) => ['pending', 'processing', 'running'].includes(String((job as { status?: unknown }).status))).length)} />
+          <OpsRow label="Recent failed jobs" value={String(jobs.filter((job) => String((job as { status?: unknown }).status).includes('fail')).slice(-10).length)} />
+          <OpsRow label="Recent artifacts" value={String(artifacts.slice(-10).length)} />
+          <OpsRow label="Workbench jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('workbench')).length)} />
+          <OpsRow label="Studio jobs" value={String(jobs.filter((job) => String((job as { type?: unknown; source?: unknown }).type ?? (job as { source?: unknown }).source).includes('studio')).length)} />
+        </OpsPanel>
+      </section>
+
+      {/* Provider health */}
+      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5 backdrop-blur-xl">
+        <h3 className="text-base font-black text-slate-100">Provider health truth</h3>
+
+--- src/app/admin/dashboard/app-builder/page.tsx ---
+LINES: 70
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { ArrowRight, Blocks, ClipboardList } from 'lucide-react'
+
+const DRAFT_KEY = 'amarktai-app-plan-draft'
+
+export default function AppBuilderPage() {
+  const [idea, setIdea] = useState('')
+  const [started, setStarted] = useState(false)
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(DRAFT_KEY) ?? ''
+    setIdea(saved)
+    setStarted(Boolean(saved))
+  }, [])
+
+  function updateIdea(value: string) {
+    setIdea(value)
+    window.localStorage.setItem(DRAFT_KEY, value)
+  }
+
+  function startNewPlan() {
+    setIdea('')
+    setStarted(true)
+    window.localStorage.removeItem(DRAFT_KEY)
+  }
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6 lg:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">App Builder</p>
+        <h1 className="mt-2 text-3xl font-black text-white">Turn an idea into an approved build plan.</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">Clarify the problem, users, constraints, data, and success criteria. This workspace saves a planning draft only; it does not create fake apps, agents, or integrations.</p>
+        <button onClick={startNewPlan} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-cyan-300">
+          <Blocks className="h-4 w-4" />
+          Start a new app plan
+        </button>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1fr_320px]">
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5">
+          <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-400" htmlFor="app-plan-idea">Planning brief</label>
+          <textarea
+            id="app-plan-idea"
+            value={idea}
+            onChange={(event) => updateIdea(event.target.value)}
+            rows={14}
+            placeholder="Describe the app idea, intended users, core workflow, constraints, and what success looks like."
+            className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-950/70 p-4 text-sm leading-7 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-400/60"
+          />
+          <div className="mt-4 flex items-center justify-between gap-3">
+            <p className="text-xs text-slate-500">{idea.trim() ? 'Draft saved in this browser.' : started ? 'New plan ready for input.' : 'No app plan started yet.'}</p>
+            <Link href={`/admin/dashboard/workspace${idea.trim() ? `?prompt=${encodeURIComponent(`Help me clarify and plan this standalone app idea without creating or integrating an app yet:\n\n${idea}`)}` : ''}`} className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/10 px-4 py-2 text-xs font-black text-cyan-200 hover:bg-cyan-400/15">
+              Debate and clarify
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
+        <aside className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-5">
+          <ClipboardList className="h-6 w-6 text-cyan-300" />
+          <h2 className="mt-4 font-black text-white">Honest planning state</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">A plan becomes build work only after it is reviewed and sent to Repo Workbench. Future app registry and handoff contracts remain intentionally unwired in this release.</p>
+        </aside>
+      </section>
+    </div>
+  )
+}
+
+--- src/app/admin/dashboard/network-apps/page.tsx ---
+LINES: 13
+import { NETWORK_APPS_EMPTY_MESSAGE } from '@/lib/network-apps-registry'
+
+export default function NetworkAppsPage() {
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Network Apps</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">No connected apps</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{NETWORK_APPS_EMPTY_MESSAGE}</p>
+      </section>
+    </div>
+  )
+}
+
+===== DASHBOARD ROUTES THAT ARE REDIRECT STUBS OR EMPTY =====
+REDIRECT: src/app/admin/dashboard/agents/page.tsx
+import { redirect } from 'next/navigation'
+
+export default function AgentsPage() {
+  redirect('/admin/dashboard/workspace')
+}
+REDIRECT: src/app/admin/dashboard/apps-agents/page.tsx
+import { redirect } from 'next/navigation'
+
+export default function LegacyAppsAgentsPage() {
+  redirect('/admin/dashboard/workspace')
+}
+REDIRECT: src/app/admin/dashboard/command/page.tsx
+import { redirect } from 'next/navigation'
+
+export default function CommandPage() {
+  redirect('/admin/dashboard/workspace')
+}
+SMALL/STUB: src/app/admin/dashboard/memory/page.tsx
+export { default } from '../memory-learning/page'
+SMALL/STUB: src/app/admin/dashboard/network-apps/page.tsx
+import { NETWORK_APPS_EMPTY_MESSAGE } from '@/lib/network-apps-registry'
+
+export default function NetworkAppsPage() {
+  return (
+    <div className="space-y-5">
+      <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Network Apps</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">No connected apps</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">{NETWORK_APPS_EMPTY_MESSAGE}</p>
+      </section>
+    </div>
+  )
+}
+SMALL/STUB: src/app/admin/dashboard/workspace/page.tsx
+import CommandCenter from '@/components/dashboard/CommandCenter'
+
+export default function WorkspacePage() {
+  return <CommandCenter />
+}
+
+===== CURRENT DASHBOARD NAV IMPORTS / LABELS =====
+src/lib/self-healing.ts:2: * Self-Healing Engine — AmarktAI Network
+src/lib/self-healing.ts:244:    const aiApps = await prisma.product.findMany({
+src/lib/self-healing.ts:250:    for (const app of aiApps) {
+src/lib/semantic-cache.ts:58:// ── Cache Operations ─────────────────────────────────────────────────────────
+src/lib/circuit-breaker.ts:2: * Circuit Breaker + Retry System — AmarktAI Network
+src/lib/circuit-breaker.ts:101:// ── Circuit Breaker Operations ───────────────────────────────────────────────
+src/lib/graphiti-client.ts:3: * @description Graphiti integration for AmarktAI Network.
+src/lib/graphiti-client.ts:69:// ── Node Operations ─────────────────────────────────────────────────────────
+src/lib/orchestrator.ts:2: * Amarktai Network — AmarktAI Orchestration Layer
+src/lib/orchestrator.ts:179: * Memory:     reserved for future — always false for now.
+src/lib/orchestrator.ts:597:  agentSystemPrompt?: string
+src/lib/orchestrator.ts:602:  const { appSlug, appCategory, taskType, message, providerOverride, modelOverride, budgetMode, agentSystemPrompt, allowFallback = false } = opts
+src/lib/orchestrator.ts:701:        if (agentSystemPrompt) genxMessages.push({ role: 'system', content: agentSystemPrompt })
+src/lib/orchestrator.ts:945:        agentSystemPrompt,
+src/lib/orchestrator.ts:953:          const fallback = await callProvider(fb.provider, fb.model_id, specialistMessage, agentSystemPrompt)
+src/lib/orchestrator.ts:1077:        agentSystemPrompt,
+src/lib/orchestrator.ts:1116:            agentSystemPrompt,
+src/lib/orchestrator.ts:1192:        agentSystemPrompt,
+src/lib/orchestrator.ts:1265:          agentSystemPrompt,
+src/lib/orchestrator.ts:1272:              agentSystemPrompt,
+src/lib/orchestrator.ts:1674:        memoryUsed: multimodalResult.metadata.usedBrandMemory || multimodalResult.metadata.usedCampaignMemory,
+src/lib/orchestrator.ts:1693:      memoryUsed: multimodalResult.metadata.usedBrandMemory || multimodalResult.metadata.usedCampaignMemory,
+src/lib/platform-settings-truth.ts:5:export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
+src/lib/platform-settings-truth.ts:7:export interface SettingsTruthEntry {
+src/lib/platform-settings-truth.ts:9:  label: string
+src/lib/platform-settings-truth.ts:11:  status: SettingsTruthStatus
+src/lib/platform-settings-truth.ts:26:async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
+src/lib/platform-settings-truth.ts:35:  const status: SettingsTruthStatus = connected
+src/lib/platform-settings-truth.ts:47:    label: node.displayName,
+src/lib/platform-settings-truth.ts:73:export async function getPlatformSettingsTruth() {
+src/lib/repo-workbench.ts:11:import { routeWorkspaceTask } from '@/lib/workspace-executor'
+src/lib/repo-workbench.ts:19:  assertInsideWorkspace,
+src/lib/repo-workbench.ts:21:  resolveWorkspacePath,
+src/lib/repo-workbench.ts:69:  label: string
+src/lib/repo-workbench.ts:79:export const AGENT_MODES: Record<AgentMode, { label: string; capability: 'code_generation' | 'code'; prompt: string }> = {
+src/lib/repo-workbench.ts:81:    label: 'Repo Auditor',
+src/lib/repo-workbench.ts:86:    label: 'Frontend Fixer',
+src/lib/repo-workbench.ts:91:    label: 'Backend Fixer',
+src/lib/repo-workbench.ts:96:    label: 'Fullstack Builder',
+src/lib/repo-workbench.ts:101:    label: 'Deployment Engineer',
+src/lib/repo-workbench.ts:106:    label: 'QA/Test Agent',
+src/lib/repo-workbench.ts:111:    label: 'Security Reviewer',
+src/lib/repo-workbench.ts:148:  return resolveWorkspacePath('repos')
+src/lib/repo-workbench.ts:191:  assertInsideWorkspace(cwd)
+src/lib/repo-workbench.ts:283:  const workspace = await prisma.repoWorkspace.upsert({
+src/lib/repo-workbench.ts:318:export async function getWorkspace(workspaceId: string) {
+src/lib/repo-workbench.ts:319:  const workspace = await prisma.repoWorkspace.findUnique({ where: { id: workspaceId } })
+src/lib/repo-workbench.ts:326:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:352:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:353:  if (isSecretPath(filePath)) throw new Error('Secret/env files are not viewable in Repo Workbench')
+src/lib/repo-workbench.ts:354:  if (isBinaryPath(filePath)) throw new Error('Binary files cannot be opened in Repo Workbench')
+src/lib/repo-workbench.ts:370:      label: m.name || m.id,
+src/lib/repo-workbench.ts:384:      label: m.model_name,
+src/lib/repo-workbench.ts:400:    label: `${providerLabel(m.provider)} - ${m.label}`,
+src/lib/repo-workbench.ts:559:  const workspace = await getWorkspace(input.workspaceId)
+src/lib/repo-workbench.ts:569:      repoWorkspaceId: workspace.id,
+src/lib/repo-workbench.ts:592:  const result = await routeWorkspaceTask({
+src/lib/repo-workbench.ts:643:        repoWorkspaceId: workspace.id,
+src/lib/repo-workbench.ts:743:      repoWorkspaceId: input.workspaceId,
+src/lib/repo-workbench.ts:771:  const systemPrompt = `You are Amarktai Coding Agent in ${agent.label} mode.
+src/lib/repo-workbench.ts:795:  const result = await routeWorkspaceTask({
+src/lib/repo-workbench.ts:846:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:849:      repoWorkspaceId: workspace.id,
+src/lib/repo-workbench.ts:889:  const workspace = await getWorkspace(input.workspaceId)
+src/lib/repo-workbench.ts:892:      repoWorkspaceId: workspace.id,
+src/lib/repo-workbench.ts:933:  const workspace = await getWorkspace(input.workspaceId)
+src/lib/repo-workbench.ts:940:      repoWorkspaceId: workspace.id,
+src/lib/repo-workbench.ts:965:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:966:  const patch = await prisma.repoPatch.findFirst({ where: { id: patchId, repoWorkspaceId: workspaceId } })
+src/lib/repo-workbench.ts:977:  const patchFile = resolveWorkspacePath('patches', `${patch.id}.patch`)
+src/lib/repo-workbench.ts:978:  assertInsideWorkspace(patchFile)
+src/lib/repo-workbench.ts:1016:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1039:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1082:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1083:  const patch = await prisma.repoPatch.findFirst({ where: { id: patchId, repoWorkspaceId: workspaceId } })
+src/lib/repo-workbench.ts:1091:  await runGit(workspace.localPath, ['config', 'user.name', process.env.GIT_AUTHOR_NAME || 'Amarktai Agent'], 30_000)
+src/lib/repo-workbench.ts:1118:export async function pushWorkspaceBranch(workspaceId: string) {
+src/lib/repo-workbench.ts:1119:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1137:  await prisma.repoPatch.updateMany({ where: { repoWorkspaceId: workspaceId, branchName: branch }, data: { status: 'pushed' } })
+src/lib/repo-workbench.ts:1141:export async function createWorkspacePr(workspaceId: string, title: string, body: string) {
+src/lib/repo-workbench.ts:1142:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1168:  await prisma.repoPatch.updateMany({ where: { repoWorkspaceId: workspaceId, branchName: branch }, data: { status: 'pr_created', prUrl } })
+src/lib/repo-workbench.ts:1172:export async function getWorkspaceGitStatus(workspaceId: string) {
+src/lib/repo-workbench.ts:1173:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1191:export async function pullWorkspaceLatest(workspaceId: string, force = false) {
+src/lib/repo-workbench.ts:1192:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1193:  const before = await getWorkspaceGitStatus(workspaceId)
+src/lib/repo-workbench.ts:1202:  const after = await getWorkspaceGitStatus(workspaceId)
+src/lib/repo-workbench.ts:1203:  await prisma.repoWorkspace.update({
+src/lib/repo-workbench.ts:1218:export async function listWorkspaceBranches(workspaceId: string) {
+src/lib/repo-workbench.ts:1219:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1229:export async function createWorkspaceBranch(workspaceId: string, branchName: string, checkout = true) {
+src/lib/repo-workbench.ts:1230:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1237:  await prisma.repoWorkspace.update({ where: { id: workspaceId }, data: { branch, status: 'ready' } }).catch(() => null)
+src/lib/repo-workbench.ts:1242:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1243:  if (isSecretPath(filePath)) throw new Error('Editing secret/env files is blocked in Repo Workbench')
+src/lib/repo-workbench.ts:1244:  if (isBinaryPath(filePath)) throw new Error('Binary files cannot be edited in Repo Workbench')
+src/lib/repo-workbench.ts:1252:      repoWorkspaceId: workspaceId,
+src/lib/repo-workbench.ts:1272:export async function getWorkspaceDiff(workspaceId: string) {
+src/lib/repo-workbench.ts:1273:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1281:export async function runWorkbenchCommand(workspaceId: string, commandLabel: string) {
+src/lib/repo-workbench.ts:1282:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1287:      repoWorkspaceId: workspaceId,
+src/lib/repo-workbench.ts:1294:  const logPath = resolveWorkspacePath('logs', `${task.id}.log`)
+src/lib/repo-workbench.ts:1338:export async function getWorkbenchJob(jobId: string) {
+src/lib/repo-workbench.ts:1350:    workspaceId: task.repoWorkspaceId,
+src/lib/repo-workbench.ts:1380:    logs: await getWorkbenchJobLogs(task.id),
+src/lib/repo-workbench.ts:1386:export async function getLatestWorkbenchJob() {
+src/lib/repo-workbench.ts:1389:  return getWorkbenchJob(task.id)
+src/lib/repo-workbench.ts:1392:export async function getWorkbenchJobLogs(jobId: string) {
+src/lib/repo-workbench.ts:1393:  const logPath = resolveWorkspacePath('logs', `${jobId}.log`)
+src/lib/repo-workbench.ts:1410:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1428:export async function getWorkspacePrStatus(workspaceId: string) {
+src/lib/repo-workbench.ts:1429:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1449:export async function mergeWorkspacePr(workspaceId: string, prNumber: number, override = false) {
+src/lib/repo-workbench.ts:1451:  const gitStatus = await getWorkspaceGitStatus(workspaceId)
+src/lib/repo-workbench.ts:1453:  const status = await getWorkspacePrStatus(workspaceId)
+src/lib/repo-workbench.ts:1462:export async function deployWorkspace(workspaceId: string, confirmation: string) {
+src/lib/repo-workbench.ts:1463:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1470:      repoWorkspaceId: workspaceId,
+src/lib/repo-workbench.ts:1477:  const logPath = resolveWorkspacePath('logs', `${task.id}.log`)
+src/lib/repo-workbench.ts:1500:export async function deleteRepoWorkspace(workspaceId: string) {
+src/lib/repo-workbench.ts:1501:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1504:  await prisma.repoWorkspace.delete({ where: { id: workspaceId } })
+src/lib/repo-workbench.ts:1508:export async function resetRepoWorkspace(workspaceId: string) {
+src/lib/repo-workbench.ts:1509:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1514:  const status = await getWorkspaceGitStatus(workspaceId)
+src/lib/repo-workbench.ts:1515:  await prisma.repoWorkspace.update({ where: { id: workspaceId }, data: { status: status.dirty ? 'dirty' : 'ready' } }).catch(() => null)
+src/lib/repo-workbench.ts:1519:export async function clearRepoWorkspaceLogs(workspaceId: string) {
+src/lib/repo-workbench.ts:1520:  const workspace = await getWorkspace(workspaceId)
+src/lib/repo-workbench.ts:1521:  const tasks = await prisma.repoTask.findMany({ where: { repoWorkspaceId: workspace.id }, select: { id: true } })
+src/lib/repo-workbench.ts:1525:      await fs.rm(resolveWorkspacePath('logs', `${task.id}.log`), { force: true })
+src/lib/coding-agent.ts:26:  label: string
+src/lib/coding-agent.ts:29:  icon: string
+src/lib/coding-agent.ts:36:    label: 'Next.js',
+src/lib/coding-agent.ts:39:    icon: '▲',
+src/lib/coding-agent.ts:48:    label: 'React (Vite)',
+src/lib/coding-agent.ts:51:    icon: '⚛',
+src/lib/coding-agent.ts:59:    label: 'Express API',
+src/lib/coding-agent.ts:62:    icon: '🚀',
+src/lib/coding-agent.ts:70:    label: 'Python Flask',
+src/lib/coding-agent.ts:73:    icon: '🐍',
+src/lib/coding-agent.ts:81:    label: 'Static HTML',
+src/lib/coding-agent.ts:84:    icon: '🌐',
+src/lib/vector-store.ts:2: * Vector Store — AmarktAI Network
+src/lib/vector-store.ts:173:// ── Per-App Isolated Operations ─────────────────────────────────────────────
+src/lib/universal-provider-call.ts:56:      'X-Title': 'Amarktai Network',
+src/lib/universal-provider-call.ts:182:    throw new Error(`Provider "${request.providerKey}" is not configured. Add ${config.envVars.join(' or ')} in Settings.`)
+src/lib/event-bus.ts:2: * Event Bus — AmarktAI Network
+src/lib/event-bus.ts:12:export type SystemEventType =
+src/lib/event-bus.ts:38:export interface SystemEvent {
+src/lib/event-bus.ts:39:  type: SystemEventType
+src/lib/event-bus.ts:47:type EventListener = (event: SystemEvent) => void
+src/lib/event-bus.ts:53:export function emitSystemEvent(
+src/lib/event-bus.ts:54:  type: SystemEventType,
+src/lib/event-bus.ts:58:  const event: SystemEvent = {
+src/lib/litellm-client.ts:3: * @description LiteLLM integration for AmarktAI Network.
+src/lib/runtime-truth.ts:1:import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+src/lib/runtime-truth.ts:5:  const settings = await getPlatformSettingsTruth()
+src/lib/runtime-truth.ts:10:    networkApps: NETWORK_APPS,
+src/lib/capability-engine.ts:69:  label: string;
+src/lib/capability-engine.ts:77:    label: 'general chat',
+src/lib/capability-engine.ts:82:    label: 'deep reasoning',
+src/lib/capability-engine.ts:87:    label: 'code generation / editing',
+src/lib/capability-engine.ts:92:    label: 'retrieval / RAG',
+src/lib/capability-engine.ts:97:    label: 'text embeddings',
+src/lib/capability-engine.ts:102:    label: 'reranking',
+src/lib/capability-engine.ts:107:    label: 'summarization',
+src/lib/capability-engine.ts:112:    label: 'text classification',
+src/lib/capability-engine.ts:117:    label: 'output validation',
+src/lib/capability-engine.ts:122:    label: 'agent planning',
+src/lib/capability-engine.ts:127:    label: 'multimodal / vision understanding',
+src/lib/capability-engine.ts:132:    label: 'image generation',
+src/lib/capability-engine.ts:137:    label: 'image editing',
+src/lib/capability-engine.ts:142:    label: 'video planning / storyboarding',
+src/lib/capability-engine.ts:147:    label: 'video generation',
+src/lib/capability-engine.ts:155:    label: 'voice / speech input (STT)',
+src/lib/capability-engine.ts:161:    label: 'voice / speech output (TTS)',
+src/lib/capability-engine.ts:166:    label: 'realtime voice interaction',
+src/lib/capability-engine.ts:171:    label: 'adult 18+ image generation',
+src/lib/capability-engine.ts:176:    label: 'content moderation',
+src/lib/capability-engine.ts:181:    label: 'app analysis / crawl',
+src/lib/capability-engine.ts:186:    label: 'research / web search',
+src/lib/capability-engine.ts:191:    label: 'deep multi-step research',
+src/lib/capability-engine.ts:196:    label: 'web scraping / data extraction',
+src/lib/capability-engine.ts:201:    label: 'suggestive image generation (non-explicit)',
+src/lib/capability-engine.ts:206:    label: 'suggestive video planning (non-explicit)',
+src/lib/capability-engine.ts:211:    label: 'suggestive video generation (non-explicit, prompt-guarded)',
+src/lib/capability-engine.ts:699:// Settings-gated capabilities (require per-app mode enablement)
+src/lib/capability-engine.ts:707: * as the `blockedBySettings` field on CapabilityStatusEntry for clean UI rendering.
+src/lib/capability-engine.ts:770:  blockedBySettings: boolean;
+src/lib/capability-engine.ts:782:    blockedBySettings: !route.available && SETTINGS_GATED_CAPABILITIES.has(route.capability),
+src/lib/worker.ts:3: * @description Dedicated worker entry point for the AmarktAI Network.
+src/lib/worker.ts:137:  console.log('[worker] Starting AmarktAI background worker...')
+src/lib/error-handler.ts:2: * Global Error Handler — AmarktAI Network
+src/lib/approved-ai-catalog.ts:24:  label: string
+src/lib/approved-ai-catalog.ts:55:  { provider: 'qwen', id: 'qwen-turbo', label: 'Qwen Turbo', costMode: 'cheap', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:56:  { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', costMode: 'cheap', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:57:  { provider: 'together', id: 'meta-llama/Llama-3-70b-chat-hf', label: 'Llama 3 70B Chat', costMode: 'balanced', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:58:  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Coding Balanced', costMode: 'balanced', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:59:  { provider: 'mimo', id: 'mimo-v2.5', label: 'Xiaomi MiMo V2.5', costMode: 'balanced', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:60:  { provider: 'genx', id: 'gpt-5.3-codex', label: 'GenX Coding Best', costMode: 'premium', capability: 'repo_workbench' },
+src/lib/approved-ai-catalog.ts:64:  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Assistant Route', costMode: 'balanced', capability: 'assistant' },
+src/lib/approved-ai-catalog.ts:65:  { provider: 'qwen', id: 'qwen-plus', label: 'Qwen Plus', costMode: 'cheap', capability: 'assistant' },
+src/lib/approved-ai-catalog.ts:66:  { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Groq Llama 3.3', costMode: 'cheap', capability: 'assistant' },
+src/lib/approved-ai-catalog.ts:67:  { provider: 'mimo', id: 'mimo-v2.5', label: 'Xiaomi MiMo V2.5', costMode: 'balanced', capability: 'assistant' },
+src/lib/approved-ai-catalog.ts:71:  { provider: 'huggingface', id: 'task:text', label: 'Text and code task', costMode: 'cheap', capability: 'assistant', taskLabel: 'Text and code' },
+src/lib/approved-ai-catalog.ts:72:  { provider: 'huggingface', id: 'task:image', label: 'Image generation task', costMode: 'cheap', capability: 'image', taskLabel: 'Image generation' },
+src/lib/approved-ai-catalog.ts:73:  { provider: 'huggingface', id: 'task:speech-to-text', label: 'Speech-to-text task', costMode: 'cheap', capability: 'voice', taskLabel: 'Speech to text' },
+src/lib/approved-ai-catalog.ts:74:  { provider: 'huggingface', id: 'task:text-to-speech', label: 'Text-to-speech task', costMode: 'cheap', capability: 'voice', taskLabel: 'Text to speech' },
+src/lib/approved-ai-catalog.ts:75:  { provider: 'huggingface', id: 'task:embeddings', label: 'Embeddings task', costMode: 'cheap', capability: 'embedding', taskLabel: 'Embeddings' },
+src/lib/routing-profiles.ts:3: * @description Production-grade routing profiles for the AmarktAI Network.
+src/lib/platform-route-registry.ts:27:    nextAction: 'Phase 2 wires Studio and Workbench deeper without adding top-level pages.',
+src/lib/platform-route-registry.ts:48:    purpose: 'Studio chat, dashboard context, conversation memory, and voice status.',
+src/lib/platform-route-registry.ts:59:    nextAction: 'Keep public path only for app-token authenticated calls; admin Studio should use protected admin routes.',
+src/lib/service-vault.ts:6: *   1. integrationConfig DB vault (encrypted, set via Admin → Settings)
+src/lib/service-vault.ts:49:  // DB vault is authoritative (set via Admin → Settings → Integrations)
+src/lib/__tests__/core-intelligence.test.ts:2: * Core Intelligence Tests — AmarktAI Network
+src/lib/__tests__/core-intelligence.test.ts:112:  AmarktAIConnector,
+src/lib/__tests__/core-intelligence.test.ts:505:        label: 'Custom Goal',
+src/lib/__tests__/core-intelligence.test.ts:568:      expect(summary.totalApps).toBe(2)
+src/lib/__tests__/core-intelligence.test.ts:844:  describe('AmarktAIConnector', () => {
+src/lib/__tests__/core-intelligence.test.ts:846:      const connector = new AmarktAIConnector({
+src/lib/__tests__/core-intelligence.test.ts:855:      const connector = new AmarktAIConnector({
+src/lib/__tests__/core-intelligence.test.ts:875:      expect(snippet).toContain('AmarktAIConnector')
+src/lib/__tests__/final-dashboard-ux.test.ts:27:    expect(nav).toContain("label: 'App Builder'")
+src/lib/__tests__/final-dashboard-ux.test.ts:28:    expect(nav).toContain("label: 'Repo Workbench'")
+src/lib/__tests__/final-dashboard-ux.test.ts:29:    expect(nav).toContain("label: 'Media Studio / Playground'")
+src/lib/__tests__/final-dashboard-ux.test.ts:30:    expect(nav).toContain("label: 'Outputs'")
+src/lib/__tests__/final-dashboard-ux.test.ts:31:    expect(nav).toContain("label: 'Settings'")
+src/lib/__tests__/final-dashboard-ux.test.ts:32:    expect(nav).toContain("label: 'Advanced Admin'")
+src/lib/__tests__/final-dashboard-ux.test.ts:33:    expect(nav).not.toContain("label: 'Agents'")
+src/lib/__tests__/app-agent-golive.test.ts:56:  it('buildAgentSystemPrompt generates correct system prompt', async () => {
+src/lib/__tests__/app-agent-golive.test.ts:57:    const { buildAgentSystemPrompt } = await import('@/lib/app-agent')
+src/lib/__tests__/app-agent-golive.test.ts:104:    const prompt = buildAgentSystemPrompt(config)
+src/lib/__tests__/app-agent-golive.test.ts:125:  it('buildAgentSystemPrompt handles minimal config', async () => {
+src/lib/__tests__/app-agent-golive.test.ts:126:    const { buildAgentSystemPrompt } = await import('@/lib/app-agent')
+src/lib/__tests__/app-agent-golive.test.ts:173:    const prompt = buildAgentSystemPrompt(config)
+src/lib/__tests__/app-agent-golive.test.ts:245:  it('addMemory returns null when no API key', async () => {
+src/lib/__tests__/app-agent-golive.test.ts:246:    const { addMemory } = await import('@/lib/mem0-client')
+src/lib/__tests__/app-agent-golive.test.ts:247:    const result = await addMemory('test-app', 'test content')
+src/lib/__tests__/app-agent-golive.test.ts:460:    const { buildAgentSystemPrompt } = await import('@/lib/app-agent')
+src/lib/__tests__/app-agent-golive.test.ts:470:    const prompt = buildAgentSystemPrompt(config)
+src/lib/__tests__/app-agent-golive.test.ts:480:    const { buildAgentSystemPrompt } = await import('@/lib/app-agent')
+src/lib/__tests__/app-agent-golive.test.ts:490:    const prompt = buildAgentSystemPrompt(config)
+src/lib/__tests__/app-agent-golive.test.ts:501:    const { buildAgentSystemPrompt } = await import('@/lib/app-agent')
+src/lib/__tests__/app-agent-golive.test.ts:504:    const prompt = buildAgentSystemPrompt(config)
+src/lib/__tests__/app-agent-golive.test.ts:547:    const { addMemory, searchMemories } = await import('@/lib/mem0-client')
+src/lib/__tests__/app-agent-golive.test.ts:556:    const mem = await addMemory('test', 'content')
+src/lib/__tests__/standalone-provider-truth.test.ts:38:    const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
+src/lib/__tests__/standalone-provider-truth.test.ts:40:    const settings = await getPlatformSettingsTruth()
+src/lib/__tests__/agent-runtime.test.ts:84:      expect(typeof status.configuredAgents).toBe('number')
+src/lib/__tests__/agent-runtime.test.ts:85:      expect(status.configuredAgents).toBe(18)
+src/lib/__tests__/platform-systems.test.ts:2: * Platform Systems Tests — Tool Runtime, RAG, Rate Limiter, Webhooks,
+src/lib/__tests__/platform-systems.test.ts:3: * Semantic Cache, Prompt Studio, Guardrails, Smart Router, Workflow Engine,
+src/lib/__tests__/platform-systems.test.ts:4: * Multi-Modal Pipeline, Federated Memory, Batch Processor, Observability,
+src/lib/__tests__/platform-systems.test.ts:5: * Audit Trail, Plugin System.
+src/lib/__tests__/platform-systems.test.ts:600:// ── Prompt Studio ────────────────────────────────────────────────────────────
+src/lib/__tests__/platform-systems.test.ts:613:describe('Prompt Studio', () => {
+src/lib/__tests__/platform-systems.test.ts:952:// ── Federated Memory ─────────────────────────────────────────────────────────
+src/lib/__tests__/platform-systems.test.ts:955:  storeMemory,
+src/lib/__tests__/platform-systems.test.ts:956:  getMemory,
+src/lib/__tests__/platform-systems.test.ts:957:  deleteMemory,
+src/lib/__tests__/platform-systems.test.ts:959:  buildMemoryContext,
+src/lib/__tests__/platform-systems.test.ts:964:describe('Federated Memory', () => {
+src/lib/__tests__/platform-systems.test.ts:977:  it('storeMemory creates memory', async () => {
+src/lib/__tests__/platform-systems.test.ts:978:    const mem = await storeMemory({
+src/lib/__tests__/platform-systems.test.ts:989:  it('getMemory retrieves stored memory', async () => {
+src/lib/__tests__/platform-systems.test.ts:990:    const mem = await storeMemory({ userId: 'u2', appSlug: 't', type: 'fact', content: 'Works in finance' })
+src/lib/__tests__/platform-systems.test.ts:991:    const retrieved = await getMemory(mem.id)
+src/lib/__tests__/platform-systems.test.ts:997:  it('deleteMemory removes memory', async () => {
+src/lib/__tests__/platform-systems.test.ts:998:    const mem = await storeMemory({ userId: 'u3', appSlug: 't', type: 'context', content: 'temp' })
+src/lib/__tests__/platform-systems.test.ts:999:    expect(await deleteMemory(mem.id)).toBe(true)
+src/lib/__tests__/platform-systems.test.ts:1000:    expect(await getMemory(mem.id)).toBeNull()
+src/lib/__tests__/platform-systems.test.ts:1004:    await storeMemory({ userId: 'profile-user', appSlug: 'profile-app', type: 'preference', content: 'Likes dark mode' })
+src/lib/__tests__/platform-systems.test.ts:1005:    await storeMemory({ userId: 'profile-user', appSlug: 'profile-app', type: 'instruction', content: 'Use metric units' })
+src/lib/__tests__/platform-systems.test.ts:1013:  it('buildMemoryContext returns string', async () => {
+src/lib/__tests__/platform-systems.test.ts:1014:    await storeMemory({ userId: 'ctx-user', appSlug: 'ctx-app', type: 'instruction', content: 'Always be concise' })
+src/lib/__tests__/platform-systems.test.ts:1015:    const context = await buildMemoryContext('ctx-user', 'ctx-app', 'Hello there')
+src/lib/__tests__/platform-systems.test.ts:1208:// ── Plugin System ────────────────────────────────────────────────────────────
+src/lib/__tests__/platform-systems.test.ts:1221:describe('Plugin System', () => {
+src/lib/__tests__/api-routes-and-labs.test.ts:2: * API Routes & Labs Tests — AmarktAI Network
+src/lib/__tests__/api-routes-and-labs.test.ts:15: *  - Prompt Studio
+src/lib/__tests__/api-routes-and-labs.test.ts:1024:// ── Prompt Studio ────────────────────────────────────────────────────────────
+src/lib/__tests__/api-routes-and-labs.test.ts:1042:describe('Prompt Studio', () => {
+src/lib/__tests__/app-profiles.test.ts:13:  getMemoryNamespace,
+src/lib/__tests__/app-profiles.test.ts:107:  describe('getMemoryNamespace', () => {
+src/lib/__tests__/app-profiles.test.ts:110:      const ns = getMemoryNamespace(profile)
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:4:import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:30:  it('guards Settings tests with provider mesh IDs', () => {
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:45:  it('returns the truthful Network Apps empty state', () => {
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:53:  it('uses Workspace navigation and keeps Command as compatibility only', () => {
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:54:    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:55:      'Workspace', 'Outputs', 'Memory', 'Settings', 'System',
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:69:  ])('routes "%s" through Workspace as %s', (prompt, intent) => {
+src/lib/__tests__/phase1-backend-source-of-truth.test.ts:72:    expect(route.surface).toBe('Workspace')
+src/lib/__tests__/integration-verification.test.ts:2: * Integration Verification Tests — AmarktAI Network
+src/lib/__tests__/integration-verification.test.ts:240:      // instead of retrieveMemory() from memory.ts.
+src/lib/__tests__/live-media-execution-contract.test.ts:160:  it('uses canonical video capability and exposes local polling in Studio', () => {
+src/lib/__tests__/standalone-core-media-dashboard-fix.test.ts:44:    for (const label of ['App Builder', 'Repo Workbench', 'Media Studio / Playground', 'Outputs', 'Settings', 'Advanced Admin']) {
+src/lib/__tests__/standalone-core-media-dashboard-fix.test.ts:45:      expect(nav).toContain(`label: '${label}'`)
+src/lib/__tests__/standalone-core-media-dashboard-fix.test.ts:70:    expect(nav).not.toContain('Connected Apps')
+src/lib/__tests__/command-router.test.ts:5:  it('routes songs to Workspace with approved providers', () => {
+src/lib/__tests__/command-router.test.ts:8:    expect(route.surface).toBe('Workspace')
+src/lib/__tests__/command-router.test.ts:21:    expect(route.surface).toBe('Workspace')
+src/lib/__tests__/command-router.test.ts:25:  it('routes VPS health to read-only System diagnostics', () => {
+src/lib/__tests__/command-router.test.ts:28:    expect(route.surface).toBe('Workspace')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:4:import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:13:describe('Phase 2 real Studio and Workbench wiring', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:20:    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:23:      'Network Apps',
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:24:      'Outputs',
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:25:      'Memory',
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:26:      'Settings',
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:27:      'System',
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:31:  it('Settings connected count requires a passed live test, not only a saved key', async () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:37:    const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:38:    const truth = await getPlatformSettingsTruth()
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:43:  it('maps every Studio tab to the protected route that owns its real execution state', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:66:  it('Command routes into real Studio surfaces and persists command jobs', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:86:  it('Adult Studio routes text, image, video, and voice through real capability routes', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:104:  it('Workbench loads branches on first repo selection and rehydrates the latest persisted job', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:107:    const repoWorkbench = read('lib/repo-workbench.ts')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:111:    expect(latestRoute).toContain('getLatestWorkbenchJob')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:112:    expect(repoWorkbench).toContain('export async function getLatestWorkbenchJob')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:113:    expect(repoWorkbench).toContain('patch: patch ?')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:114:    expect(repoWorkbench).toContain('logs: await getWorkbenchJobLogs')
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:117:  it('Workbench lifecycle remains the simple guarded repo flow', () => {
+src/lib/__tests__/phase2-real-studio-workbench.test.ts:141:  it('GitHub tokens are not exposed in Workbench UI/log output code paths', () => {
+src/lib/__tests__/public-website-rebuild.test.ts:14:      { href: '/', label: 'Home' },
+src/lib/__tests__/public-website-rebuild.test.ts:15:      { href: '/platform', label: 'Platform' },
+src/lib/__tests__/public-website-rebuild.test.ts:16:      { href: '/network-apps', label: 'Network Apps' },
+src/lib/__tests__/public-website-rebuild.test.ts:17:      { href: '/contact', label: 'Contact' },
+src/lib/__tests__/public-website-rebuild.test.ts:18:      { href: '/admin/login', label: 'Login' },
+src/lib/__tests__/public-website-rebuild.test.ts:41:    for (const token of ['One command window', 'Provider mesh', 'Connected apps', 'Agents', 'Memory', 'Outputs', 'Hidden monitoring']) {
+src/lib/__tests__/public-website-rebuild.test.ts:49:    for (const name of ['Marketing App', 'Crypto / Trading App', 'App Builder', 'Content Studio', 'Research Engine', 'Automation Hub', 'Sales', 'Support', 'Finance', 'Retail / Ecommerce', 'Operations']) {
+src/lib/__tests__/public-website-rebuild.test.ts:62:    for (const token of ['Aiva', 'Superbrain', 'Private AI infrastructure', 'Firecrawl required', 'OpenAI required']) {
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:4:import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:26:    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:29:      'Network Apps',
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:30:      'Outputs',
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:31:      'Memory',
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:32:      'Settings',
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:33:      'System',
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:35:    expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:46:  it('Settings uses approved visible AI providers and the status truth route', () => {
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:62:    const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:63:    const truth = await getPlatformSettingsTruth()
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:71:  it('unifies storage roots across local JSON, storage driver, and Workbench workspace', async () => {
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:75:    const { getRepoWorkspaceRoot } = await import('@/lib/workspace-security')
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:78:    expect(getRepoWorkspaceRoot()).toBe(path.join(path.resolve(process.env.AMARKTAI_STORAGE_ROOT), 'workspaces'))
+src/lib/__tests__/phase1-platform-truth-stabilization.test.ts:97:  it('keeps Workbench guards and token-safe Git auth in place', () => {
+src/lib/__tests__/new-systems.test.ts:2: * New Systems Tests — AmarktAI Network
+src/lib/__tests__/adult-agent-audit.test.ts:2: * Agent Audit & Adult Mode Tests — AmarktAI Network
+src/lib/__tests__/adult-agent-audit.test.ts:5: *  - Agent Audit System (readiness classification, provider checks)
+src/lib/__tests__/adult-agent-audit.test.ts:10:import { auditAllAgents, getAgentReadiness } from '../agent-audit'
+src/lib/__tests__/adult-agent-audit.test.ts:21:describe('Agent Audit System', () => {
+src/lib/__tests__/adult-agent-audit.test.ts:22:  describe('auditAllAgents', () => {
+src/lib/__tests__/adult-agent-audit.test.ts:24:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:30:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:36:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:52:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:61:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:70:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:79:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:88:      const result = auditAllAgents()
+src/lib/__tests__/adult-agent-audit.test.ts:146:      const openaiAgents = ['planner', 'router', 'validator', 'memory', 'campaign',
+src/lib/__tests__/adult-agent-audit.test.ts:150:      for (const type of openaiAgents) {
+src/lib/__tests__/adult-agent-audit.test.ts:160:      const result = auditAllAgents()
+src/lib/__tests__/emotion-engine.test.ts:11: *  7. Emotional Memory
+src/lib/__tests__/emotion-engine.test.ts:61:  // Phase 7 — Memory
+src/lib/__tests__/emotion-engine.test.ts:62:  storeEmotionMemory,
+src/lib/__tests__/emotion-engine.test.ts:381:// ─── Phase 7 — Emotional Memory ─────────────────────────────────────────────
+src/lib/__tests__/emotion-engine.test.ts:383:describe('Phase 7 — Emotional Memory', () => {
+src/lib/__tests__/emotion-engine.test.ts:386:    storeEmotionMemory('user1', analysis, 'test context')
+src/lib/__tests__/emotion-engine.test.ts:396:      storeEmotionMemory('user1', analysis)
+src/lib/__tests__/emotion-engine.test.ts:409:      storeEmotionMemory('user1', analysis)
+src/lib/__tests__/platform-expansion.test.ts:111:// ── Music Studio ─────────────────────────────────────────────────────────────
+src/lib/__tests__/platform-expansion.test.ts:116:  getMusicStudioStatus,
+src/lib/__tests__/platform-expansion.test.ts:117:  getMusicStudioSummary,
+src/lib/__tests__/platform-expansion.test.ts:124:describe('Music Studio', () => {
+src/lib/__tests__/platform-expansion.test.ts:197:  it('getMusicStudioStatus returns a valid status object', () => {
+src/lib/__tests__/platform-expansion.test.ts:198:    const status = getMusicStudioStatus()
+src/lib/__tests__/platform-expansion.test.ts:205:  it('getMusicStudioSummary returns valid summary before any artifacts', () => {
+src/lib/__tests__/platform-expansion.test.ts:206:    const summary = getMusicStudioSummary()
+src/lib/__tests__/platform-expansion.test.ts:300:    expect(sub.limits.autonomousAgents).toBe(true)
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:2: * Settings Provider Source of Truth Tests
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:4: * Verifies that Settings is the only place to configure provider/API keys, and
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:8: *  - Settings uses /api/admin/providers (canonical) for save/test
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:9: *  - Settings uses /api/admin/settings/integrations (canonical) for integrations
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:10: *  - Provider list shown in Settings matches primary+specialist governance groups
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:11: *  - Deprecated/hidden/backlog providers do NOT appear in Settings provider list
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:15: *  - Cohere/Mistral not shown anywhere in Settings provider UI
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:27:// ── Settings is the only provider-key setup surface ──────────────────────────
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:29:describe('Settings provider display names', () => {
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:68:// ── Deprecated/hidden providers not in Settings ───────────────────────────────
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:70:describe('deprecated and hidden providers do not appear in Settings UI', () => {
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:113:describe('Settings shows exactly the right provider groups', () => {
+src/lib/__tests__/settings-provider-source-of-truth.test.ts:174:  it('GenX is in primary group (it is configurable in Settings)', () => {
+src/lib/__tests__/dashboard-productization-fix.test.ts:24:  it('keeps Settings as the only connection setup surface', () => {
+
+===== PACKAGE / UI LIBRARIES =====
+@fontsource-variable/space-grotesk: ^5.2.10
+@radix-ui/react-dialog: ^1.1.15
+@radix-ui/react-dropdown-menu: ^2.1.16
+@radix-ui/react-label: ^2.1.8
+@radix-ui/react-popover: ^1.1.15
+@radix-ui/react-select: ^2.2.6
+@radix-ui/react-separator: ^1.1.8
+@radix-ui/react-slot: ^1.2.4
+@radix-ui/react-switch: ^1.2.6
+@radix-ui/react-tabs: ^1.1.13
+@radix-ui/react-tooltip: ^1.2.8
+class-variance-authority: ^0.7.1
+clsx: ^2.1.1
+framer-motion: ^12.37.0
+lucide-react: ^0.577.0
+recharts: ^3.8.0
+tailwind-merge: ^3.5.0
+tailwindcss: ^3.4.1
+
+===== BUILD QUICK CHECK =====
+├ ○ /admin/dashboard/agents                                  673 B         103 kB
+├ ○ /admin/dashboard/app-builder                           2.42 kB         108 kB
+├ ○ /admin/dashboard/apps-agents                             673 B         103 kB
+├ ○ /admin/dashboard/command                                 673 B         103 kB
+├ ○ /admin/dashboard/memory                                   2 kB         104 kB
+├ ○ /admin/dashboard/memory-learning                          2 kB         104 kB
+├ ○ /admin/dashboard/network-apps                            673 B         103 kB
+├ ○ /admin/dashboard/operations                              673 B         103 kB
+├ ƒ /admin/dashboard/outputs                               5.47 kB         108 kB
+├ ○ /admin/dashboard/settings                              3.27 kB         106 kB
+├ ○ /admin/dashboard/studio                                11.2 kB         119 kB
+├ ○ /admin/dashboard/system                                  673 B         103 kB
+├ ○ /admin/dashboard/workbench                             7.38 kB         112 kB
+├ ○ /admin/dashboard/workspace                             6.12 kB         112 kB
+
+===== HEALTH QUICK CHECK =====
+{"status":"ok","timestamp":"2026-06-08T11:26:24.635Z","version":"1.0.0","db":"ok","latencyMs":30}
+
+================================================================
+ END DESIGN FOUNDATION MAP
+================================================================

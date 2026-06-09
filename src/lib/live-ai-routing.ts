@@ -89,25 +89,25 @@ const CAPABILITY_TO_ROLE: Record<AiCapability, string[]> = {
   image_to_video: ['vision'],
   video: ['vision'],
   video_generation: ['vision'],
-  music_generation: ['chat'],
-  song_generation: ['chat'],
+  music_generation: [],
+  song_generation: [],
   lyrics_generation: ['chat'],
-  instrumental_music: ['chat'],
-  voice_tts: ['chat'],
-  voice_stt: ['chat'],
-  tts: ['chat'],
-  stt: ['chat'],
-  voice_selection: ['chat'],
-  voice_cloning: ['chat'],
+  instrumental_music: [],
+  voice_tts: [],
+  voice_stt: [],
+  tts: [],
+  stt: [],
+  voice_selection: [],
+  voice_cloning: [],
   avatar_video: ['vision'],
   moderation: ['chat'],
-  embeddings: ['chat'],
-  rag: ['chat'],
+  embeddings: [],
+  rag: ['reasoning'],
   adult_text: ['chat'],
   adult_image: ['vision'],
   adult_video: ['vision'],
   adult_voice: ['chat'],
-  audio: ['chat'],
+  audio: [],
   repo_audit: ['coding', 'reasoning'],
   crawling: ['chat', 'reasoning'],
   browser_qa: ['chat', 'reasoning'],
@@ -167,6 +167,15 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
 ] as const
 
 export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
+  const requestedProvider =
+    input.selectedProvider && input.selectedProvider !== 'auto'
+      ? input.selectedProvider
+      : undefined
+  const requestedModel =
+    input.selectedModel && input.selectedModel !== 'auto'
+      ? input.selectedModel
+      : undefined
+
   const costMode = input.costMode ?? 'balanced'
   const appSlug = input.appSlug ?? 'dashboard'
   const governedCapability = normalizeGovernedCapability(input.capability)
@@ -178,12 +187,12 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const governanceValidation = validateCapabilitySelection({
     appSlug,
     capability: governedCapability,
-    provider: input.selectedProvider,
-    modelId: input.selectedModel,
+    provider: requestedProvider,
+    modelId: requestedModel,
     adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
     budgetAllows: typeof input.budgetRemainingUsd !== 'number' || input.budgetRemainingUsd >= COST_ESTIMATE[costMode],
   })
-  if (!governanceValidation.allowed && input.selectedProvider) {
+  if (!governanceValidation.allowed && requestedProvider) {
     return blocked(input, costMode, governanceValidation.reason)
   }
 
@@ -259,14 +268,71 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   }
 }
 
+function isNonTextTaskModel(modelId: string): boolean {
+  const id = modelId.toLowerCase()
+  if (!id.startsWith('task:')) return false
+  if (id === 'task:text') return false
+  return /image|speech-to-text|text-to-speech|embedding|voice|tts|stt|video/.test(id)
+}
+
+function isExactLiveRouteCandidate(model: ProviderModelOption, capability: AiCapability): boolean {
+  if (capability === 'chat') {
+    if (isNonTextTaskModel(model.modelId)) return false
+    return model.roles.some((role) => ['chat', 'reasoning', 'coding'].includes(role))
+      && model.modalities.some((modality) => ['text', 'multimodal'].includes(modality))
+  }
+
+  if (capability === 'reasoning') {
+    if (isNonTextTaskModel(model.modelId)) return false
+    return model.roles.includes('reasoning') || model.roles.includes('chat')
+  }
+
+  if (capability === 'coding' || capability === 'repo_audit') {
+    if (isNonTextTaskModel(model.modelId)) return false
+    return model.roles.includes('coding') || model.roles.includes('agent_planning')
+  }
+
+  if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing' || capability === 'adult_image') {
+    return model.modalities.includes('image') || model.modalities.includes('multimodal')
+  }
+
+  if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video' || capability === 'adult_video') {
+    return model.modalities.includes('video') || model.modalities.includes('multimodal')
+  }
+
+  if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection' || capability === 'voice_cloning' || capability === 'adult_voice') {
+    return model.modalities.includes('voice_tts')
+  }
+
+  if (capability === 'voice_stt' || capability === 'stt') {
+    return model.modalities.includes('voice_stt')
+  }
+
+  if (capability === 'embeddings' || capability === 'rag') {
+    return model.modalities.includes('embedding') || model.roles.includes('reasoning')
+  }
+
+  if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music' || capability === 'audio') {
+    return model.modalities.includes('music')
+  }
+
+  return true
+}
+
+function sortLiveCandidates(models: ProviderModelOption[], costMode: CostMode): ProviderModelOption[] {
+  return models.sort((a, b) => {
+    const costRank = COST_ORDER[costMode].indexOf(a.costTier) - COST_ORDER[costMode].indexOf(b.costTier)
+    if (costRank !== 0) return costRank
+    return providerRank(a.provider) - providerRank(b.provider)
+  })
+}
+
 function modelCandidates(capability: AiCapability, costMode: CostMode, requiresMedia = false): ProviderModelOption[] {
   const governed = governedCandidates(capability)
+    .filter((model) => isExactLiveRouteCandidate(model, capability))
+
   if (governed.length > 0) {
-    return governed.sort((a, b) => {
-      const costRank = COST_ORDER[costMode].indexOf(a.costTier) - COST_ORDER[costMode].indexOf(b.costTier)
-      if (costRank !== 0) return costRank
-      return providerRank(a.provider) - providerRank(b.provider)
-    })
+    return sortLiveCandidates(governed, costMode)
   }
   const roles = CAPABILITY_TO_ROLE[capability]
   const entries = Object.values(STATIC_PROVIDER_MODELS)
@@ -286,11 +352,10 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
       return model.roles.some((role) => roles.includes(role))
     })
 
-  return entries.sort((a, b) => {
-    const costRank = COST_ORDER[costMode].indexOf(a.costTier) - COST_ORDER[costMode].indexOf(b.costTier)
-    if (costRank !== 0) return costRank
-    return providerRank(a.provider) - providerRank(b.provider)
-  })
+  return sortLiveCandidates(
+    entries.filter((model) => isExactLiveRouteCandidate(model, capability)),
+    costMode,
+  )
 }
 
 function governedCandidates(capability: AiCapability): ProviderModelOption[] {

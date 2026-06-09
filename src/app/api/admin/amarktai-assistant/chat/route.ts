@@ -4,6 +4,7 @@ import { executeCapability } from '@/lib/capability-router'
 import { getSession } from '@/lib/session'
 import { recordEstimatedCost } from '@/lib/cost-tracking'
 import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
+import { selectBestModelForTask } from '@/lib/ai-brain-router'
 
 function detectCapability(text: string): string {
   const value = text.toLowerCase()
@@ -32,18 +33,54 @@ export async function POST(req: NextRequest) {
 
   if (!body.message?.trim()) return NextResponse.json({ error: 'message is required' }, { status: 400 })
 
-  const selectedModel = APPROVED_ASSISTANT_MODELS.find((model) => model.id === body.modelOverride)
-  const providerOverride = selectedModel?.provider ?? body.providerOverride
+  const selectedCatalogModel = APPROVED_ASSISTANT_MODELS.find((model) => model.id === body.modelOverride)
+  const providerOverride = selectedCatalogModel?.provider ?? body.providerOverride
   if (providerOverride && !isApprovedAIProvider(providerOverride)) {
-    return NextResponse.json({ error: 'Provider is not approved for AmarktAI Assistant' }, { status: 400 })
+    return NextResponse.json({
+      success: false,
+      error: 'Provider is not approved for AmarktAI Assistant',
+      blocker: 'The requested provider is not in the approved provider catalog.',
+      provider: providerOverride,
+      model: body.modelOverride ?? null,
+    }, { status: 400 })
   }
 
   const capability = body.capability || detectCapability(body.message)
+  const normalizedCapability = normalizeCapability(capability)
+
+  const brainSelection = await selectBestModelForTask({
+    taskType: capability,
+    capability: normalizedCapability,
+    costMode: body.costMode ?? 'balanced',
+    providerPreference: providerOverride,
+    requiresCode: normalizedCapability === 'coding',
+    requiresVision: ['image', 'image_generation', 'video', 'video_generation', 'adult_image', 'adult_video'].includes(normalizedCapability),
+  })
+
+  if (!brainSelection.ok || !brainSelection.selected) {
+    return NextResponse.json({
+      success: false,
+      error: brainSelection.blocker || 'No approved routed assistant model is available.',
+      blocker: brainSelection.blocker || 'No approved routed assistant model is available.',
+      capability: brainSelection.capability ?? normalizedCapability,
+      provider: null,
+      model: null,
+      fallbackChain: brainSelection.fallbackChain.map((model) => ({
+        provider: model.provider,
+        model: model.modelId,
+      })),
+      reason: brainSelection.reason,
+    }, { status: 503 })
+  }
+
+  const selectedProvider = providerOverride || brainSelection.selected.provider
+  const selectedModel = selectedCatalogModel?.id ?? body.modelOverride ?? brainSelection.selected.modelId
+
   const route = routeLiveModel({
-    capability: normalizeCapability(capability),
+    capability: normalizedCapability,
     appSlug: 'assistant',
-    selectedProvider: providerOverride || 'auto',
-    selectedModel: selectedModel?.id ?? body.modelOverride,
+    selectedProvider,
+    selectedModel,
     costMode: body.costMode ?? 'balanced',
     adultPolicy: 'off',
   })
@@ -51,6 +88,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: route.blockedReason ?? 'No approved route is available for this assistant request',
+      blocker: route.blockedReason ?? 'No approved route is available for this assistant request',
+      provider: selectedProvider,
+      model: selectedModel,
+      brainSelection: {
+        provider: brainSelection.selected.provider,
+        model: brainSelection.selected.modelId,
+        capability: brainSelection.capability,
+        fallbackChain: brainSelection.fallbackChain.map((model) => ({
+          provider: model.provider,
+          model: model.modelId,
+        })),
+        reason: brainSelection.reason,
+      },
       route,
     }, { status: 409 })
   }
