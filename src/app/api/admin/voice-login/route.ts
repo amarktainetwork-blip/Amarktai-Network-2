@@ -20,6 +20,53 @@ import crypto from 'crypto'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 
+// ── In-memory IP rate limiter ─────────────────────────────────────────────────
+// Max 5 failed attempts per IP per 15-minute window.
+// Uses a simple Map; for multi-instance deployments replace with Redis.
+const RATE_LIMIT_MAX = 5
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
+
+interface RateLimitEntry {
+  count: number
+  windowStart: number
+}
+
+const rateLimitMap = new Map<string, RateLimitEntry>()
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+  )
+}
+
+/** Returns true if the IP is rate-limited (too many failed attempts). */
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    return false
+  }
+  return entry.count >= RATE_LIMIT_MAX
+}
+
+/** Record a failed attempt for the IP. */
+function recordFailure(ip: string): void {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now })
+  } else {
+    entry.count += 1
+  }
+}
+
+/** Clear the rate-limit counter for an IP on successful auth. */
+function clearRateLimit(ip: string): void {
+  rateLimitMap.delete(ip)
+}
+
 interface VoiceAccessSettings {
   enabled: boolean
   allowVoiceLogin: boolean
@@ -65,6 +112,15 @@ function normalise(s: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // ── Rate limit check ──────────────────────────────────────────────────────
+  const clientIp = getClientIp(request)
+  if (isRateLimited(clientIp)) {
+    return NextResponse.json(
+      { error: 'Too many failed attempts. Please wait 15 minutes before trying again.' },
+      { status: 429 },
+    )
+  }
+
   let passphrase = ''
   try {
     const body = await request.json() as { passphrase?: unknown }
@@ -117,6 +173,7 @@ export async function POST(request: NextRequest) {
   const expected = normalise(settings.loginPassphrase)
 
   if (!timingSafeStringEqual(given, expected)) {
+    recordFailure(clientIp)
     return NextResponse.json(
       { error: 'Passphrase did not match. Try again or use standard login.' },
       { status: 401 },
@@ -136,6 +193,9 @@ export async function POST(request: NextRequest) {
   } catch {
     // DB unavailable — continue with env-var admin identity
   }
+
+  // Clear rate-limit counter on successful auth
+  clearRateLimit(clientIp)
 
   // Issue a real session cookie
   const session = await getSession()
