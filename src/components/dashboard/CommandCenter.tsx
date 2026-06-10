@@ -68,6 +68,7 @@ export default function CommandCenter() {
   const [jobs, setJobs] = useState<CommandJob[]>([])
   const [active, setActive] = useState<CommandJob | null>(null)
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [advanced, setAdvanced] = useState(false)
   const [controlsOpen, setControlsOpen] = useState(false)
   const [capability, setCapability] = useState<Capability>('song')
@@ -95,6 +96,7 @@ export default function CommandCenter() {
   async function submit(text = prompt) {
     if (!text.trim()) return
     setLoading(true)
+    setSubmitError('')
     try {
       const response = await fetch('/api/admin/command', {
         method: 'POST',
@@ -106,6 +108,8 @@ export default function CommandCenter() {
       setActive(data.job)
       setJobs((current) => [data.job, ...current])
       setPrompt('')
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Command routing failed')
     } finally {
       setLoading(false)
     }
@@ -160,6 +164,11 @@ export default function CommandCenter() {
         </div>
 
         <div className="border-t border-slate-700/50 bg-slate-950/40 p-4">
+          {submitError && (
+            <div className="mb-3 rounded-xl border border-red-500/20 bg-red-500/8 px-3 py-2 text-sm font-semibold text-red-300">
+              {submitError}
+            </div>
+          )}
           <div className="flex gap-2">
             <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} rows={3} placeholder="Create, build, audit, repair, research, monitor, or explain..." className="min-h-24 flex-1 resize-none rounded-2xl border border-slate-700/60 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/50" />
             <button onClick={() => submit()} disabled={loading || !prompt.trim()} className="grid w-14 place-items-center rounded-2xl bg-cyan-300 text-slate-950 disabled:opacity-40" aria-label="Send command">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}</button>

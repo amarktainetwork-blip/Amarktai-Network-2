@@ -298,6 +298,10 @@ export default function WorkbenchPage() {
   async function deploy() {
     if (!workspace) return
     const confirmation = `DEPLOY ${workspace.owner}/${workspace.repo}`
+    const confirmed = window.confirm(
+      `⚠️ Deploy confirmation required\n\nThis will deploy "${workspace.owner}/${workspace.repo}" to production.\n\nType OK to confirm.`,
+    )
+    if (!confirmed) return
     const data = await call('Deploy', `/api/admin/repo-workbench/${workspace.id}/deploy`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

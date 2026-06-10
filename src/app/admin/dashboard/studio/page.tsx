@@ -88,7 +88,7 @@ export default function StudioPage() {
   const [costMode, setCostMode] = useState<CostMode>('balanced')
   const [voice, setVoice] = useState('auto')
   const [appSlug] = useState('amarktai-network')
-  const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
+  const [adultPolicy, setAdultPolicy] = useState('off')
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
   const [artifacts, setArtifacts] = useState<ArtifactSummary[]>([])
