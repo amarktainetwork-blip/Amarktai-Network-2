@@ -10,8 +10,6 @@ interface VoiceAccessSettings {
   accent: string
   behavior: VoiceBehavior
   wakePhrase: string
-  allowVoiceLogin: boolean
-  loginPassphrase: string
 }
 
 const DEFAULT_SETTINGS: VoiceAccessSettings = {
@@ -20,8 +18,6 @@ const DEFAULT_SETTINGS: VoiceAccessSettings = {
   accent: 'neutral',
   behavior: 'talk_only',
   wakePhrase: 'Hey AmarktAI',
-  allowVoiceLogin: false,
-  loginPassphrase: '',
 }
 
 function getSettingsKey(session: { email?: string; adminId?: number }): string {
@@ -39,8 +35,6 @@ function parseSettings(notes: string | null | undefined): VoiceAccessSettings {
       accent: parsed.accent ?? DEFAULT_SETTINGS.accent,
       behavior: parsed.behavior === 'talk_execute' ? 'talk_execute' : 'talk_only',
       wakePhrase: parsed.wakePhrase ?? DEFAULT_SETTINGS.wakePhrase,
-      allowVoiceLogin: parsed.allowVoiceLogin ?? DEFAULT_SETTINGS.allowVoiceLogin,
-      loginPassphrase: parsed.loginPassphrase ?? DEFAULT_SETTINGS.loginPassphrase,
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
@@ -77,8 +71,6 @@ export async function POST(request: NextRequest) {
     accent: typeof body.accent === 'string' && body.accent.trim() ? body.accent.trim() : DEFAULT_SETTINGS.accent,
     behavior: body.behavior === 'talk_execute' ? 'talk_execute' : 'talk_only',
     wakePhrase: typeof body.wakePhrase === 'string' && body.wakePhrase.trim() ? body.wakePhrase.trim() : DEFAULT_SETTINGS.wakePhrase,
-    allowVoiceLogin: !!body.allowVoiceLogin,
-    loginPassphrase: typeof body.loginPassphrase === 'string' ? body.loginPassphrase.trim() : '',
   }
 
   const key = getSettingsKey(session)

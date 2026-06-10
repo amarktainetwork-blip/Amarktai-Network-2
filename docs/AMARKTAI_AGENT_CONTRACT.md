@@ -301,7 +301,6 @@ The following security fixes are approved and must be implemented **after** the 
 | Priority | Fix | File |
 |----------|-----|------|
 | 🔴 Critical | Add `VAULT_ENCRYPTION_KEY` to `.env.example` | `.env.example` |
-| 🔴 Critical | Rate-limit voice login endpoint | `src/app/api/admin/voice-login/route.ts` |
 | 🔴 Critical | Fix `secureEqual()` timing bug (compares `a` to itself) | `src/app/api/admin/quick-access/route.ts` |
 | 🟠 High | Persist circuit breaker state to Redis | `src/lib/circuit-breaker.ts` |
 | 🟠 High | IP rate limit before brain endpoint auth | `src/app/api/brain/request/route.ts` |
@@ -388,3 +387,4 @@ The following files are the authoritative sources for their respective domains. 
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-06-10 | 2.0.0 | Initial contract — establishes approved providers, dashboard sections, artifact/job rules, proof gates |
+| 2026-06-10 | 2.0.1 | Removed voice-login feature: deleted `/admin/voice-login` page, `/api/admin/voice-login` route, and stripped `allowVoiceLogin`/`loginPassphrase` from voice-access-settings API |
