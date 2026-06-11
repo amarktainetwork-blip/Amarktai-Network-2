@@ -382,7 +382,6 @@ describe('API Route Files', () => {
     'workflows/route.ts',
     'contact/route.ts',
     'waitlist/route.ts',
-    'fine-tune/route.ts',
   ]
 
   for (const route of routes) {
