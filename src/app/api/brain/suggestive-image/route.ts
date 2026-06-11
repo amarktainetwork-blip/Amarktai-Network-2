@@ -50,6 +50,7 @@ export async function POST(request: NextRequest) {
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride,
     safeMode: false,
+    saveArtifact: true,
   })
 
   return NextResponse.json(
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       imageBase64: result.output?.startsWith('data:image/') ? result.output : undefined,
       provider: result.provider,
       model: result.model,
+      artifactId: result.artifactId,
       promptUsed: prompt,
       promptRewritten: prompt !== body.prompt.trim(),
       error: result.error,

@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     capability: 'image_edit',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride,
+    saveArtifact: true,
   })
   return NextResponse.json(result, { status: result.success ? 200 : 503 })
 }

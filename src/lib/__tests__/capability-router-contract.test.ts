@@ -1,0 +1,268 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({
+  createArtifact: vi.fn(),
+  callProvider: vi.fn(),
+  getVaultApiKey: vi.fn(),
+  getAppSafetyConfig: vi.fn(),
+  loadAppSafetyConfigFromDB: vi.fn(),
+  scanContent: vi.fn(),
+  crawlAppWebsite: vi.fn(),
+  callGenXMedia: vi.fn(),
+}))
+
+vi.mock('@/lib/artifact-store', () => ({ createArtifact: mocks.createArtifact }))
+vi.mock('@/lib/brain', () => ({
+  callProvider: mocks.callProvider,
+  getVaultApiKey: mocks.getVaultApiKey,
+}))
+vi.mock('@/lib/content-filter', () => ({
+  getAppSafetyConfig: mocks.getAppSafetyConfig,
+  loadAppSafetyConfigFromDB: mocks.loadAppSafetyConfigFromDB,
+  scanContent: mocks.scanContent,
+}))
+vi.mock('@/lib/firecrawl', () => ({ crawlAppWebsite: mocks.crawlAppWebsite }))
+vi.mock('@/lib/genx-client', () => ({
+  callGenXMedia: mocks.callGenXMedia,
+  GENX_AUDIO_MODELS: ['genx-audio'],
+  GENX_IMAGE_MODELS: ['genx-image'],
+  GENX_TTS_MODELS: ['genx-tts'],
+  GENX_VIDEO_MODELS: ['genx-video'],
+}))
+vi.mock('@/lib/model-registry', () => ({
+  getDefaultModelForProvider: (provider: string) => `${provider}-default`,
+}))
+vi.mock('@/lib/provider-mesh', () => ({
+  isApprovedDirectProvider: (provider: string) =>
+    ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'].includes(provider),
+}))
+
+import {
+  CAPABILITY_ROUTER_CAPABILITIES,
+  executeCapability,
+  type CapabilityRouterCapability,
+} from '@/lib/capability-router'
+
+const REQUIRED_CAPABILITIES: CapabilityRouterCapability[] = [
+  'chat',
+  'code',
+  'file_analysis',
+  'image_generation',
+  'image_edit',
+  'video_generation',
+  'image_to_video',
+  'music_generation',
+  'lyrics_generation',
+  'tts',
+  'stt',
+  'voice_response',
+  'adult_text',
+  'adult_image',
+  'adult_video',
+  'suggestive_image',
+  'suggestive_video',
+  'repo_edit',
+  'app_build',
+  'deploy_plan',
+  'research',
+  'scrape_website',
+]
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mocks.createArtifact.mockResolvedValue({ id: 'artifact-1' })
+  mocks.getVaultApiKey.mockResolvedValue(null)
+  mocks.getAppSafetyConfig.mockReturnValue({
+    safeMode: false,
+    adultMode: true,
+    suggestiveMode: true,
+  })
+  mocks.loadAppSafetyConfigFromDB.mockResolvedValue(undefined)
+  mocks.scanContent.mockReturnValue({
+    flagged: false,
+    categories: [],
+    message: '',
+    confidence: 0,
+    scanner: 'keyword_fallback',
+  })
+  mocks.callProvider.mockResolvedValue({
+    ok: false,
+    output: null,
+    error: 'not configured',
+  })
+  mocks.callGenXMedia.mockResolvedValue({
+    success: false,
+    url: null,
+    jobId: null,
+    status: 'failed',
+    model: 'genx-model',
+    error: 'GenX API key is not configured',
+  })
+  mocks.crawlAppWebsite.mockResolvedValue({
+    success: false,
+    error: 'Firecrawl API key not configured',
+  })
+})
+
+describe('capability router contract', () => {
+  it('publishes the required capability inventory plus adult voice', () => {
+    expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual([
+      ...REQUIRED_CAPABILITIES.slice(0, 15),
+      'adult_voice',
+      ...REQUIRED_CAPABILITIES.slice(15),
+    ])
+  })
+
+  it('returns a truthful canonical state for every supported capability', async () => {
+    for (const capability of CAPABILITY_ROUTER_CAPABILITIES) {
+      const result = await executeCapability({
+        input: 'contract check',
+        capability,
+        files: capability === 'file_analysis' ? ['contract.txt'] : undefined,
+        adultMode: capability.startsWith('adult_') ? true : undefined,
+        safeMode:
+          capability.startsWith('adult_') || capability.startsWith('suggestive_')
+            ? false
+            : undefined,
+      })
+      expect(['READY', 'NEEDS_CONFIGURATION', 'BLOCKED', 'UNAVAILABLE']).toContain(
+        result.readiness,
+      )
+      expect(result.capability).toBe(capability)
+    }
+  })
+
+  it('blocks unknown capabilities and prohibited direct providers', async () => {
+    const unknown = await executeCapability({
+      input: 'do something',
+      capability: 'invented_capability',
+    })
+    expect(unknown).toMatchObject({ success: false, readiness: 'BLOCKED' })
+
+    const prohibited = await executeCapability({
+      input: 'hello',
+      capability: 'chat',
+      providerOverride: 'openai',
+    })
+    expect(prohibited).toMatchObject({
+      success: false,
+      readiness: 'BLOCKED',
+      error_category: 'provider_policy_block',
+    })
+  })
+
+  it('does not pretend text is speech-to-text audio', async () => {
+    const result = await executeCapability({
+      input: 'transcribe this',
+      capability: 'stt',
+    })
+    expect(result).toMatchObject({
+      success: false,
+      readiness: 'BLOCKED',
+      error_category: 'model_not_supported',
+    })
+    expect(result.error).toContain('/api/brain/stt')
+  })
+
+  it('gates adult capabilities with request and app policy', async () => {
+    const noOptIn = await executeCapability({
+      input: 'adult request',
+      capability: 'adult_text',
+    })
+    expect(noOptIn).toMatchObject({ readiness: 'BLOCKED', error_category: 'guardrail_block' })
+
+    mocks.getAppSafetyConfig.mockReturnValue({
+      safeMode: true,
+      adultMode: false,
+      suggestiveMode: false,
+    })
+    const appBlocked = await executeCapability({
+      input: 'adult request',
+      capability: 'adult_image',
+      appId: 'safe-app',
+      adultMode: true,
+      safeMode: false,
+    })
+    expect(appBlocked).toMatchObject({ readiness: 'BLOCKED', error_category: 'guardrail_block' })
+    expect(mocks.loadAppSafetyConfigFromDB).toHaveBeenCalledWith('safe-app')
+  })
+
+  it('reports unsupported adult video honestly', async () => {
+    const result = await executeCapability({
+      input: 'adult video request',
+      capability: 'adult_video',
+      adultMode: true,
+      safeMode: false,
+    })
+    expect(result).toMatchObject({
+      success: false,
+      readiness: 'UNAVAILABLE',
+      error_category: 'model_not_supported',
+    })
+  })
+
+  it('creates artifacts for immediate text, image, audio, and crawl outputs', async () => {
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callProvider.mockResolvedValue({
+      ok: true,
+      output: 'generated text',
+      error: null,
+    })
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: 'https://media.example/output',
+      jobId: null,
+      status: 'completed',
+      model: 'genx-model',
+      error: null,
+    })
+    mocks.crawlAppWebsite.mockResolvedValue({
+      success: true,
+      summary: 'site summary',
+      pages: [],
+      detectedNiche: 'software',
+      detectedFeatures: [],
+      aiCapabilitiesNeeded: [],
+    })
+
+    const requests = [
+      { capability: 'chat', input: 'hello', providerOverride: 'groq' },
+      { capability: 'image_generation', input: 'create image', providerOverride: 'genx' },
+      { capability: 'tts', input: 'speak this', providerOverride: 'genx' },
+      { capability: 'scrape_website', input: 'https://example.com' },
+    ] as const
+
+    for (const request of requests) {
+      const result = await executeCapability({ ...request, saveArtifact: true })
+      expect(result).toMatchObject({
+        success: true,
+        readiness: 'READY',
+        artifactId: 'artifact-1',
+      })
+    }
+    expect(mocks.createArtifact).toHaveBeenCalledTimes(4)
+  })
+
+  it('does not create an artifact before an asynchronous job has output', async () => {
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: null,
+      jobId: 'job-1',
+      status: 'pending',
+      model: 'genx-video',
+      error: null,
+    })
+    const result = await executeCapability({
+      input: 'create video',
+      capability: 'video_generation',
+      saveArtifact: true,
+    })
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      jobId: 'job-1',
+      output: null,
+    })
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
+  })
+})

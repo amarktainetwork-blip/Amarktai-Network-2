@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     capability: 'research',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride,
+    saveArtifact: true,
   })
 
   return NextResponse.json(
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
       answer: result.output,
       provider: result.provider,
       model: result.model,
+      artifactId: result.artifactId,
       depth,
       error: result.error,
     },

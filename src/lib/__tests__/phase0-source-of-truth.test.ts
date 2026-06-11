@@ -18,6 +18,7 @@ import {
   type RuntimeReadinessState,
 } from '@/lib/runtime-capability-truth'
 import { getAppSafetyConfig } from '@/lib/content-filter'
+import { CAPABILITY_ROUTER_CAPABILITIES } from '@/lib/capability-router'
 
 const ROOT = process.cwd()
 const PROHIBITED_DIRECT = [
@@ -36,6 +37,30 @@ const PROHIBITED_DIRECT = [
   'grok',
   'xai',
 ]
+const REQUIRED_ROUTER_CAPABILITIES = [
+  'chat',
+  'code',
+  'file_analysis',
+  'image_generation',
+  'image_edit',
+  'video_generation',
+  'image_to_video',
+  'music_generation',
+  'lyrics_generation',
+  'tts',
+  'stt',
+  'voice_response',
+  'adult_text',
+  'adult_image',
+  'adult_video',
+  'suggestive_image',
+  'suggestive_video',
+  'repo_edit',
+  'app_build',
+  'deploy_plan',
+  'research',
+  'scrape_website',
+] as const
 
 function source(file: string): string {
   return fs.readFileSync(path.join(ROOT, file), 'utf8')
@@ -93,6 +118,28 @@ describe('Phase 0 source-of-truth contract', () => {
       'Memory / Learning',
       'Control Center / Operations',
       'Settings',
+    ])
+    for (const route of [
+      'app-builder',
+      'workbench',
+      'studio',
+      'outputs',
+      'avatar-voice',
+      'jobs-approvals',
+      'memory-learning',
+      'operations',
+    ]) {
+      expect(
+        fs.existsSync(path.join(ROOT, 'src', 'app', 'admin', 'dashboard', route, 'page.tsx')),
+      ).toBe(true)
+    }
+  })
+
+  it('publishes every required capability-router capability', () => {
+    expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual([
+      ...REQUIRED_ROUTER_CAPABILITIES.slice(0, 15),
+      'adult_voice',
+      ...REQUIRED_ROUTER_CAPABILITIES.slice(15),
     ])
   })
 
@@ -169,5 +216,18 @@ describe('Phase 0 source-of-truth contract', () => {
 
   it('keeps the public website entry point', () => {
     expect(fs.existsSync(path.join(ROOT, 'src', 'app', 'page.tsx'))).toBe(true)
+  })
+
+  it('keeps canonical source-of-truth files present', () => {
+    for (const file of [
+      'src/lib/provider-mesh.ts',
+      'src/lib/universal-model-catalog.ts',
+      'src/lib/runtime-capability-truth.ts',
+      'src/lib/dashboard-nav.ts',
+      'src/lib/content-filter.ts',
+      'src/lib/capability-router.ts',
+    ]) {
+      expect(fs.existsSync(path.join(ROOT, file))).toBe(true)
+    }
   })
 })

@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     capability: 'image_generation',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride ?? body.model,
+    saveArtifact: true,
   })
 
   return NextResponse.json(
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
       status: result.status,
       provider: result.provider,
       model: result.model,
+      artifactId: result.artifactId,
       error: result.error,
       code: result.success ? undefined : 'no_eligible_image_model',
       capability: 'image_generation',
