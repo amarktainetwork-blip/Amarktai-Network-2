@@ -387,4 +387,3 @@ The following files are the authoritative sources for their respective domains. 
 | Date | Version | Change |
 |------|---------|--------|
 | 2026-06-10 | 2.0.0 | Initial contract — establishes approved providers, dashboard sections, artifact/job rules, proof gates |
-| 2026-06-10 | 2.0.1 | Removed voice-login feature: deleted `/admin/voice-login` page, `/api/admin/voice-login` route, and stripped `allowVoiceLogin`/`loginPassphrase` from voice-access-settings API |

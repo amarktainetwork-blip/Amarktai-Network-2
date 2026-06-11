@@ -1068,8 +1068,7 @@ export interface AdultCapabilityReadiness {
 
 /**
  * Adult/suggestive generation is intentionally separate from the normal GenX
- * safe model chain. It may only use explicit adult-capable provider keys:
- * Together AI, Hugging Face, and xAI/Grok.
+ * safe model chain. It may only use approved direct provider keys.
  */
 export async function getAdultCapabilityStatusAsync(): Promise<AdultCapabilityReadiness> {
   const {
@@ -1087,18 +1086,18 @@ export async function getAdultCapabilityStatusAsync(): Promise<AdultCapabilityRe
   const providers: AdultProviderReadiness[] = [
     { provider: 'together', configured: false },
     { provider: 'huggingface', configured: false },
-    { provider: 'xai', configured: false },
+    { provider: 'genx', configured: false },
   ]
 
   try {
     const { getVaultApiKey } = await import('@/lib/brain')
     providers[0].configured = Boolean(await getVaultApiKey('together'))
     providers[1].configured = Boolean(await getVaultApiKey('huggingface'))
-    providers[2].configured = Boolean(await getVaultApiKey('xai') || await getVaultApiKey('grok'))
+    providers[2].configured = Boolean(await getVaultApiKey('genx'))
   } catch {
     providers[0].configured = Boolean(process.env.TOGETHER_API_KEY)
     providers[1].configured = Boolean(process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN)
-    providers[2].configured = Boolean(process.env.XAI_API_KEY || process.env.GROK_API_KEY)
+    providers[2].configured = Boolean(process.env.GENX_API_KEY)
   }
 
   let hfAdultEndpointConfigured = false
