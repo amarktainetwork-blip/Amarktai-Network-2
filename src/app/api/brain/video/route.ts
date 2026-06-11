@@ -1,36 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { callProvider, getVaultApiKey } from '@/lib/brain';
-import { callGenXChat, getGenXStatusAsync, selectGenXModel } from '@/lib/genx-client';
+import { NextRequest, NextResponse } from 'next/server'
+import { callGenXChat, getGenXStatusAsync, selectGenXModel } from '@/lib/genx-client'
 
-/**
- * POST /api/brain/video — Video planning & scene decomposition endpoint
- *
- * This endpoint provides **video planning** capabilities:
- *   - Script → scene decomposition (via real LLM when provider available)
- *   - Visual direction per scene
- *   - Audio direction per scene
- *   - Production metadata (style, duration, aspect ratio)
- *
- * It does **NOT** generate actual video files. Video generation
- * (e.g. via Gemini Veo, Runway, Pika, Stability AI) is not yet
- * integrated — no provider SDK processes the scenes into rendered
- * video. The capability engine truthfully reports video_generation
- * as unavailable.
- *
- * Accepts a JSON body with:
- *   - script (string, required) — the video script or description
- *   - style (string, optional) — visual style ('cinematic' | 'animated' | 'realistic' | 'marketing' | 'social_reel', default: 'cinematic')
- *   - duration (number, optional) — desired duration in seconds (default: 15)
- *   - aspectRatio (string, optional) — '16:9' | '9:16' | '1:1' (default: '16:9')
- *   - scenes (array, optional) — pre-defined scene list
- *
- * Returns:
- *   { capability: 'video_planning', executed: boolean, ai_generated: boolean, scenes, params }
- *
- * Pipeline: script → LLM scene decomposition (fallback: rule-based) → structured planning output
- */
-
-/** Scene in the script→scenes planning pipeline. */
 interface VideoScene {
   sceneNumber: number
   description: string
@@ -40,233 +10,78 @@ interface VideoScene {
   textOverlay?: string
 }
 
-/**
- * Decompose a script into scenes for the planning pipeline.
- * Returns 1-6 scenes depending on total duration.
- */
-function decomposeScriptToScenes(script: string, duration: number, style: string): VideoScene[] {
-  const sceneCount = Math.max(1, Math.min(6, Math.ceil(duration / 5)))
-  const sceneDuration = Math.round(duration / sceneCount)
-  const sentences = script.split(/[.!?]+/).filter(s => s.trim().length > 0)
-
-  const scenes: VideoScene[] = []
-  for (let i = 0; i < sceneCount; i++) {
-    const sentenceSlice = sentences.slice(
-      Math.floor((i / sceneCount) * sentences.length),
-      Math.floor(((i + 1) / sceneCount) * sentences.length),
-    )
-    const sceneDesc = sentenceSlice.join('. ').trim() || `Scene ${i + 1} of the ${style} video`
-
-    const visualDirections: Record<string, string> = {
-      cinematic: 'Wide establishing shot with dramatic lighting, shallow depth of field',
-      animated: 'Smooth motion graphics with bold colours and dynamic transitions',
-      realistic: 'Natural lighting, documentary-style framing, authentic textures',
-      marketing: 'Product-focused hero shot, brand colours, clean typography overlay',
-      social_reel: 'Vertical frame, fast cuts, trend-aligned transitions, bold text overlays',
-    }
-
-    scenes.push({
-      sceneNumber: i + 1,
-      description: sceneDesc,
-      duration: i === sceneCount - 1 ? duration - sceneDuration * (sceneCount - 1) : sceneDuration,
-      visualDirection: visualDirections[style] || visualDirections.cinematic,
-      audioDirection: i === 0 ? 'Fade in background music' : i === sceneCount - 1 ? 'Music crescendo and fade out' : undefined,
-      textOverlay: style === 'social_reel' || style === 'marketing' ? sceneDesc.slice(0, 50) : undefined,
-    })
-  }
-
-  return scenes
+function templateScenes(script: string, duration: number, style: string): VideoScene[] {
+  const count = Math.max(1, Math.min(6, Math.ceil(duration / 5)))
+  const sentences = script.split(/[.!?]+/).map(value => value.trim()).filter(Boolean)
+  return Array.from({ length: count }, (_, index) => ({
+    sceneNumber: index + 1,
+    description: sentences[index] ?? `Scene ${index + 1} of the ${style} video`,
+    duration: index === count - 1 ? duration - Math.floor(duration / count) * index : Math.floor(duration / count),
+    visualDirection: `${style} framing, deliberate lighting, and clear subject motion`,
+  }))
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const {
-      script,
-      style = 'cinematic',
-      duration = 15,
-      aspectRatio = '16:9',
-      scenes: providedScenes,
-    } = body;
+  const body = await request.json().catch(() => null) as {
+    script?: string
+    style?: string
+    duration?: number
+    aspectRatio?: string
+    scenes?: VideoScene[]
+  } | null
 
-    if (!script || typeof script !== 'string' || script.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'script is required and must be a non-empty string' },
-        { status: 400 },
-      );
-    }
+  if (!body?.script?.trim()) {
+    return NextResponse.json({ error: 'script is required and must be a non-empty string' }, { status: 400 })
+  }
 
-    if (duration < 1 || duration > 120) {
-      return NextResponse.json(
-        { error: 'duration must be between 1 and 120 seconds' },
-        { status: 400 },
-      );
-    }
+  const style = body.style ?? 'cinematic'
+  const duration = body.duration ?? 15
+  const aspectRatio = body.aspectRatio ?? '16:9'
+  if (duration < 1 || duration > 120) return NextResponse.json({ error: 'duration must be between 1 and 120 seconds' }, { status: 400 })
 
-    const validStyles = ['cinematic', 'animated', 'realistic', 'marketing', 'social_reel'];
-    if (!validStyles.includes(style)) {
-      return NextResponse.json(
-        { error: `style must be one of: ${validStyles.join(', ')}` },
-        { status: 400 },
-      );
-    }
-
-    const validAspectRatios = ['16:9', '9:16', '1:1'];
-    if (!validAspectRatios.includes(aspectRatio)) {
-      return NextResponse.json(
-        { error: `aspectRatio must be one of: ${validAspectRatios.join(', ')}` },
-        { status: 400 },
-      );
-    }
-
-    // ── Pre-defined scenes provided ───────────────────────────────────
-    if (Array.isArray(providedScenes) && providedScenes.length > 0) {
-      return NextResponse.json({
-        capability: 'video_planning',
-        executed: true,
-        ai_generated: false,
-        message: 'Video planning complete using provided scenes.',
-        generation_available: false,
-        generation_blocker: 'No video generation provider SDK is integrated. Candidates: Gemini Veo 2, Runway Gen-3, Pika, Stability AI Stable Video Diffusion.',
-        engine: 'template_fallback',
-        provider: null,
-        model: null,
-        fallbackUsed: true,
-        blocker: null,
-        params: { script: script.slice(0, 200), style, duration, aspectRatio },
-        scenes: providedScenes as VideoScene[],
-      });
-    }
-
-    // ── Attempt real LLM scene decomposition ─────────────────────────
-    // Prefer OpenAI (gpt-4o-mini for speed/cost), fall back to Gemini, then template.
-    const sceneCount = Math.max(1, Math.min(6, Math.ceil(duration / 5)));
-    const llmPrompt =
-      `You are a professional video director. Decompose the following video script into exactly ${sceneCount} scene(s) for a ${duration}-second ${style} video (aspect ratio: ${aspectRatio}).
-
-Script:
-"""
-${script.slice(0, 2000)}
-"""
-
-Return ONLY a valid JSON array with ${sceneCount} objects. Each object MUST have:
-- "sceneNumber" (integer, 1-based)
-- "description" (string, max 150 chars — what is visually shown in this scene)
-- "duration" (number in seconds; all durations must sum to ${duration})
-- "visualDirection" (string, 1 sentence — camera angle, lighting, motion style for ${style})
-- "audioDirection" (string or null — music/sound for this scene)
-- "textOverlay" (string or null — on-screen text for this scene, null if not needed)
-
-No markdown, no explanation — raw JSON array only.`;
-
-    let aiScenes: VideoScene[] | null = null;
-    let aiProvider: string | null = null;
-    let aiModel: string | null = null;
-    let engine: 'genx' | 'direct_provider' | 'template_fallback' = 'template_fallback';
-
-    const parseSceneOutput = (output: string): VideoScene[] | null => {
-      const cleaned = output.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-      const parsed = JSON.parse(cleaned) as VideoScene[];
-      return Array.isArray(parsed) && parsed.length > 0 && parsed[0].sceneNumber ? parsed : null;
-    };
-
-    const genxStatus = await getGenXStatusAsync();
-    if (genxStatus.available) {
-      try {
-        const genxModel = await selectGenXModel('best', 'chat', 'plan');
-        const genxResult = await callGenXChat({
-          model: genxModel,
-          messages: [{ role: 'user', content: llmPrompt }],
-          max_tokens: 1800,
-          temperature: 0.4,
-          metadata: { capability: 'video_planning' },
-        });
-        if (genxResult.success && genxResult.output) {
-          const parsed = parseSceneOutput(genxResult.output);
-          if (parsed) {
-            aiScenes = parsed;
-            aiProvider = 'genx';
-            aiModel = genxResult.model;
-            engine = 'genx';
-          }
-        }
-      } catch {
-        // GenX planning failed; try direct providers.
-      }
-    }
-
-    // Try OpenAI
-    const openaiKey = !aiScenes ? await getVaultApiKey('openai') : null;
-    if (!aiScenes && openaiKey) {
-      try {
-        const aiResult = await callProvider('openai', 'gpt-4o-mini', llmPrompt);
-        if (aiResult.ok && aiResult.output) {
-          const parsed = parseSceneOutput(aiResult.output);
-          if (parsed) {
-            aiScenes = parsed;
-            aiProvider = 'openai';
-            aiModel = 'gpt-4o-mini';
-            engine = 'direct_provider';
-          }
-        }
-      } catch {
-        // OpenAI call failed — try Gemini
-      }
-    }
-
-    // Try Gemini if OpenAI failed
-    if (!aiScenes) {
-      const geminiKey = await getVaultApiKey('gemini');
-      if (geminiKey) {
-        try {
-          const aiResult = await callProvider('gemini', 'gemini-2.0-flash', llmPrompt);
-          if (aiResult.ok && aiResult.output) {
-            const parsed = parseSceneOutput(aiResult.output);
-            if (parsed) {
-              aiScenes = parsed;
-              aiProvider = 'gemini';
-              aiModel = 'gemini-2.0-flash';
-              engine = 'direct_provider';
-            }
-          }
-        } catch {
-          // Gemini call failed — fall through to template
-        }
-      }
-    }
-
-    // ── Fallback: rule-based template decomposition ───────────────────
-    const scenes: VideoScene[] = aiScenes ?? decomposeScriptToScenes(script, duration, style);
-    const aiGenerated = aiScenes !== null;
-
+  if (body.scenes?.length) {
     return NextResponse.json({
       capability: 'video_planning',
       executed: true,
-      ai_generated: aiGenerated,
-      ai_provider: aiProvider,
-      ai_model: aiModel,
-      engine,
-      provider: aiProvider,
-      model: aiModel,
-      fallbackUsed: !aiGenerated,
-      blocker: null,
-      message: aiGenerated
-        ? `Video planning complete. ${sceneCount} scenes generated by ${aiProvider}/${aiModel}.`
-        : 'Video planning complete using rule-based scene decomposition (no AI provider configured). Add an OpenAI or Gemini key for AI-generated scene breakdowns.',
-      generation_available: false,
-      generation_blocker: 'No video generation provider SDK is integrated. Candidates: Gemini Veo 2, Runway Gen-3, Pika, Stability AI Stable Video Diffusion. Provider API key alone is not sufficient — the rendering pipeline must be implemented.',
-      params: {
-        script: script.slice(0, 200),
-        style,
-        duration,
-        aspectRatio,
-      },
-      scenes,
-    });
-  } catch (err) {
-    return NextResponse.json(
-      { error: 'Internal server error', detail: String(err), executed: false },
-      { status: 500 },
-    );
+      ai_generated: false,
+      engine: 'provided_scenes',
+      provider: null,
+      model: null,
+      params: { style, duration, aspectRatio },
+      scenes: body.scenes,
+    })
   }
+
+  const count = Math.max(1, Math.min(6, Math.ceil(duration / 5)))
+  const prompt = `Return only a JSON array of ${count} video scenes for this ${duration}-second ${style} script. Each scene needs sceneNumber, description, duration, visualDirection, audioDirection, and textOverlay. Script: ${body.script.slice(0, 2000)}`
+  let scenes: VideoScene[] | null = null
+  let model: string | null = null
+
+  const status = await getGenXStatusAsync()
+  if (status.available) {
+    model = await selectGenXModel('best', 'chat', 'plan')
+    const result = await callGenXChat({ model, messages: [{ role: 'user', content: prompt }], max_tokens: 1800 })
+    if (result.success && result.output) {
+      try {
+        const parsed = JSON.parse(result.output.replace(/```json|```/gi, '').trim()) as VideoScene[]
+        if (Array.isArray(parsed) && parsed.length) scenes = parsed
+      } catch {
+        scenes = null
+      }
+    }
+  }
+
+  return NextResponse.json({
+    capability: 'video_planning',
+    executed: true,
+    ai_generated: Boolean(scenes),
+    engine: scenes ? 'genx' : 'template_fallback',
+    provider: scenes ? 'genx' : null,
+    model: scenes ? model : null,
+    fallbackUsed: !scenes,
+    generation_available: false,
+    generation_blocker: 'This endpoint plans scenes; rendered video is handled by the video-generation endpoint.',
+    params: { style, duration, aspectRatio },
+    scenes: scenes ?? templateScenes(body.script, duration, style),
+  })
 }

@@ -2,7 +2,7 @@
  * RAG Pipeline — Retrieval-Augmented Generation
  *
  * Complete pipeline: Document chunking → Embedding → Storage → Retrieval → Context injection.
- * Uses Qdrant vector store for semantic search and OpenAI embeddings for vectorization.
+ * Uses Qdrant vector store for semantic search and Qwen embeddings for vectorization.
  *
  * Truthful: Only returns results that actually exist in the vector store.
  * Gracefully degrades when infrastructure (Qdrant, embedding API) is unavailable.
@@ -64,8 +64,7 @@ export interface IngestResult {
 const DEFAULT_CHUNK_SIZE = 512
 const DEFAULT_CHUNK_OVERLAP = 64
 const DEFAULT_TOP_K = 5
-const EMBEDDING_MODEL = 'text-embedding-3-small'
-const EMBEDDING_DIMENSIONS = 1536
+const EMBEDDING_MODEL = 'text-embedding-v3'
 const EMBEDDING_CACHE_TTL = 3600 // 1 hour
 
 // ── Text Chunking ────────────────────────────────────────────────────────────
@@ -108,11 +107,11 @@ export function chunkText(
 // ── Embedding ────────────────────────────────────────────────────────────────
 
 /**
- * Generate embeddings for text using OpenAI API.
+ * Generate embeddings for text using the approved Qwen API.
  * Caches results in Redis to avoid redundant API calls.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const apiKey = await getVaultApiKey('openai')
+  const apiKey = await getVaultApiKey('qwen')
   if (!apiKey) return null
 
   // Check cache first
@@ -125,7 +124,7 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
   }
 
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
+    const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -134,7 +133,7 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
       body: JSON.stringify({
         model: EMBEDDING_MODEL,
         input: text.slice(0, 8000), // Limit input size
-        dimensions: EMBEDDING_DIMENSIONS,
+        encoding_format: 'float',
       }),
       signal: AbortSignal.timeout(15_000),
     })
@@ -157,11 +156,11 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
  * Generate embeddings for multiple texts in batch.
  */
 export async function generateEmbeddings(texts: string[]): Promise<(number[] | null)[]> {
-  const apiKey = await getVaultApiKey('openai')
+  const apiKey = await getVaultApiKey('qwen')
   if (!apiKey) return texts.map(() => null)
 
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
+    const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -170,7 +169,7 @@ export async function generateEmbeddings(texts: string[]): Promise<(number[] | n
       body: JSON.stringify({
         model: EMBEDDING_MODEL,
         input: texts.map((t) => t.slice(0, 8000)),
-        dimensions: EMBEDDING_DIMENSIONS,
+        encoding_format: 'float',
       }),
       signal: AbortSignal.timeout(30_000),
     })
@@ -348,7 +347,7 @@ export interface RAGHealthStatus {
 
 export async function getRAGHealth(): Promise<RAGHealthStatus> {
   const vectorStoreHealthy = await isQdrantHealthy()
-  const embeddingAvailable = !!(await getVaultApiKey('openai'))
+  const embeddingAvailable = !!(await getVaultApiKey('qwen'))
   return {
     vectorStoreHealthy,
     embeddingAvailable,

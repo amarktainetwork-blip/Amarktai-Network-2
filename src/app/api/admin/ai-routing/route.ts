@@ -49,7 +49,7 @@ export async function GET() {
   const adultGate = await getAdultCapabilityGate(providers)
   const mediaCapabilities = Object.values(MEDIA_CAPABILITY_ROUTES).map((route) => {
     const available = route.providers.filter((entry) => connected.has(entry.provider))
-    const adultBlocked = route.capability.startsWith('adult_') && adultGate.status !== 'ready'
+    const adultBlocked = route.capability.startsWith('adult_') && adultGate.status !== 'READY'
     return {
       capability: route.capability,
       route: route.route,

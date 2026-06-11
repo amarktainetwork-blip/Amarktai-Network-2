@@ -15,22 +15,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
+import { PROVIDER_MESH } from '@/lib/provider-mesh'
 
-// Approved provider integration keys that may be reset
-const APPROVED_RESET_KEYS = [
-  'genx',
-  'github',
-  'webdock',
-  'firecrawl',
-  'storage_config',
-  'qwen',
-  'minimax',
-  'gemini',
-  'groq',
-  'together',
-  'huggingface',
-  'xai',
-]
+const APPROVED_RESET_KEYS = PROVIDER_MESH.map(node => node.id)
+const APPROVED_RESET_KEY_SET = new Set<string>(APPROVED_RESET_KEYS)
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const targetKeys = all
       ? APPROVED_RESET_KEYS
-      : (keys ?? []).filter((k) => APPROVED_RESET_KEYS.includes(k))
+      : (keys ?? []).filter((k) => APPROVED_RESET_KEY_SET.has(k))
 
     if (targetKeys.length === 0) {
       return NextResponse.json(
