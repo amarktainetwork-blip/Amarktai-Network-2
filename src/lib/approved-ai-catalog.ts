@@ -1,10 +1,11 @@
-import { AI_PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+import {
+  AI_PROVIDER_MESH,
+  isApprovedDirectProvider,
+  type ApprovedDirectProviderId,
+} from '@/lib/provider-mesh'
+import { UNIVERSAL_MODEL_ROUTES, type UniversalModelRoute } from '@/lib/universal-model-catalog'
 
-export type ApprovedProviderKey = Extract<
-  ProviderMeshId,
-  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together'
->
-
+export type ApprovedProviderKey = ApprovedDirectProviderId
 export type CostMode = 'cheap' | 'balanced' | 'premium'
 
 export interface ApprovedProvider {
@@ -27,23 +28,16 @@ export interface ApprovedModel {
   taskLabel?: string
 }
 
-const PROVIDER_NOTES: Record<ApprovedProviderKey, string> = {
-  genx: 'Primary OpenAI-compatible routing layer across text, code, media, voice, files, and async jobs.',
-  huggingface: 'Model universe for specialist text, embedding, image, video, and speech tasks.',
-  qwen: 'Low-cost text, reasoning, code, multimodal understanding, and DashScope media routes.',
-  mimo: 'Xiaomi MiMo V2.5-compatible reasoning, coding, multimodal, voice, and tool workflows.',
-  groq: 'Fast text, reasoning, code triage, speech, vision, and tool execution.',
-  together: 'OpenAI-compatible text, image, video, vision, embedding, rerank, and tool routes.',
-}
-
 export const APPROVED_AI_PROVIDERS: readonly ApprovedProvider[] = AI_PROVIDER_MESH.map((provider, sortOrder) => ({
   key: provider.id as ApprovedProviderKey,
   displayName: provider.displayName,
   settingsLabel: provider.displayName,
   defaultBaseUrl: provider.baseUrl,
   envVars: [...provider.envAliases],
-  providerType: 'ai' as const,
-  notes: PROVIDER_NOTES[provider.id as ApprovedProviderKey],
+  providerType: 'ai',
+  notes: provider.id === 'genx'
+    ? 'Gateway for routed model labels across text, code, media, voice, files, and jobs.'
+    : 'Approved direct provider defined by provider-mesh.ts.',
   sortOrder,
 }))
 
@@ -51,32 +45,48 @@ export const APPROVED_PROVIDER_KEYS = new Set<ApprovedProviderKey>(
   APPROVED_AI_PROVIDERS.map((provider) => provider.key),
 )
 
-export const APPROVED_WORKBENCH_MODELS: readonly ApprovedModel[] = [
-  { provider: 'qwen', id: 'qwen-turbo', label: 'Qwen Turbo', costMode: 'cheap', capability: 'repo_workbench' },
-  { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', costMode: 'cheap', capability: 'repo_workbench' },
-  { provider: 'together', id: 'meta-llama/Llama-3-70b-chat-hf', label: 'Llama 3 70B Chat', costMode: 'balanced', capability: 'repo_workbench' },
-  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Coding Balanced', costMode: 'balanced', capability: 'repo_workbench' },
-  { provider: 'mimo', id: 'mimo-v2.5', label: 'Xiaomi MiMo V2.5', costMode: 'balanced', capability: 'repo_workbench' },
-  { provider: 'genx', id: 'gpt-5.3-codex', label: 'GenX Coding Best', costMode: 'premium', capability: 'repo_workbench' },
-] as const
+export const APPROVED_WORKBENCH_MODELS: readonly ApprovedModel[] = UNIVERSAL_MODEL_ROUTES
+  .filter((model) => model.recommendedFor?.includes('repo_workbench'))
+  .map((model) => approvedModel(model, 'repo_workbench'))
 
-export const APPROVED_ASSISTANT_MODELS: readonly ApprovedModel[] = [
-  { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Assistant Route', costMode: 'balanced', capability: 'assistant' },
-  { provider: 'qwen', id: 'qwen-plus', label: 'Qwen Plus', costMode: 'cheap', capability: 'assistant' },
-  { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Groq Llama 3.3', costMode: 'cheap', capability: 'assistant' },
-  { provider: 'mimo', id: 'mimo-v2.5', label: 'Xiaomi MiMo V2.5', costMode: 'balanced', capability: 'assistant' },
-] as const
+export const APPROVED_ASSISTANT_MODELS: readonly ApprovedModel[] = UNIVERSAL_MODEL_ROUTES
+  .filter((model) => model.recommendedFor?.includes('assistant'))
+  .map((model) => approvedModel(model, 'assistant'))
 
-export const HUGGING_FACE_TASK_ROUTES: readonly ApprovedModel[] = [
-  { provider: 'huggingface', id: 'task:text', label: 'Text and code task', costMode: 'cheap', capability: 'assistant', taskLabel: 'Text and code' },
-  { provider: 'huggingface', id: 'task:image', label: 'Image generation task', costMode: 'cheap', capability: 'image', taskLabel: 'Image generation' },
-  { provider: 'huggingface', id: 'task:speech-to-text', label: 'Speech-to-text task', costMode: 'cheap', capability: 'voice', taskLabel: 'Speech to text' },
-  { provider: 'huggingface', id: 'task:text-to-speech', label: 'Text-to-speech task', costMode: 'cheap', capability: 'voice', taskLabel: 'Text to speech' },
-  { provider: 'huggingface', id: 'task:embeddings', label: 'Embeddings task', costMode: 'cheap', capability: 'embedding', taskLabel: 'Embeddings' },
-] as const
+export const HUGGING_FACE_TASK_ROUTES: readonly ApprovedModel[] = UNIVERSAL_MODEL_ROUTES
+  .filter((model) => model.provider === 'huggingface' && model.taskBased)
+  .map((model) => approvedModel(model, capabilityFor(model), model.displayName))
+
+function approvedModel(
+  model: UniversalModelRoute,
+  capability: ApprovedModel['capability'],
+  taskLabel?: string,
+): ApprovedModel {
+  return {
+    provider: model.provider,
+    id: model.modelId,
+    label: model.displayName,
+    costMode: costMode(model.costTier),
+    capability,
+    taskLabel,
+  }
+}
+
+function capabilityFor(model: UniversalModelRoute): ApprovedModel['capability'] {
+  if (model.capabilities.includes('image') || model.capabilities.includes('video')) return 'image'
+  if (model.capabilities.includes('voice/TTS') || model.capabilities.includes('STT')) return 'voice'
+  if (model.capabilities.includes('embeddings/moderation')) return 'embedding'
+  return 'assistant'
+}
+
+function costMode(costTier: string): CostMode {
+  if (costTier === 'premium' || costTier === 'high') return 'premium'
+  if (costTier === 'medium') return 'balanced'
+  return 'cheap'
+}
 
 export function isApprovedAIProvider(provider: string): provider is ApprovedProviderKey {
-  return APPROVED_PROVIDER_KEYS.has(provider as ApprovedProviderKey)
+  return isApprovedDirectProvider(provider)
 }
 
 export function providerLabel(provider: string): string {
