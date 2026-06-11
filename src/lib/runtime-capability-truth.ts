@@ -5,6 +5,7 @@ import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
 import type { ProviderCapability } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+import { normalizeAdultPolicy } from '@/lib/universal-model-catalog'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -168,21 +169,31 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   const approved = providers.filter((provider) => provider.connected && compatibleProviderIds.has(provider.key as never))
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
   const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
+  const policy = normalizeAdultPolicy(
+    await getServiceConfigField('adult_mode', 'mode', 'off').catch(() => 'off') ?? 'off',
+  )
+  const globalEnabled = policy !== 'off'
   const selectedProvider = approved[0]?.key ?? null
   const providerAvailable = approved.length > 0
   const selectedModel = selectedProvider
     ? adultRoutes.flatMap((route) => route.providers).find((entry) => entry.provider === selectedProvider)?.model ?? null
     : null
   return {
-    status: providerAvailable ? 'ready' : 'not_wired',
-    blocker: providerAvailable ? null : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
+    status: !globalEnabled ? 'global_flag_disabled' : providerAvailable ? 'ready' : 'not_wired',
+    blocker: !globalEnabled
+      ? 'Adult mode is off. Explicit operator opt-in is required.'
+      : providerAvailable
+        ? null
+        : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
     providerAvailable,
-    testPassed: providerAvailable,
-    globalEnabled: true,
-    enabled: true,
+    testPassed: lastTestStatus === 'READY',
+    globalEnabled,
+    enabled: globalEnabled && providerAvailable,
     selectedProvider,
     selectedModel,
-    allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
+    allowedCategories: globalEnabled
+      ? ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice']
+      : [],
     blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content'],
     lastTestStatus: lastTestStatus || null,
     lastError: lastError || null,

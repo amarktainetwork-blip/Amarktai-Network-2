@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { maskApiKey } from '@/lib/providers'
 import { validateConfig, classifyDbError, configErrorResponse } from '@/lib/config-validator'
 import { encryptVaultKey } from '@/lib/crypto-vault'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 const patchSchema = z.object({
   displayName: z.string().min(1).max(100).optional(),
@@ -48,7 +49,9 @@ export async function GET(
         updatedAt: true,
       },
     })
-    if (!provider) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!provider || !isApprovedDirectProvider(provider.providerKey)) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
     return NextResponse.json(provider)
   } catch (error) {
     const { category, message } = classifyDbError(error)
@@ -70,6 +73,13 @@ export async function PATCH(
   try {
     const body = await request.json()
     const data = patchSchema.parse(body)
+    const target = await prisma.aiProvider.findUnique({
+      where: { id: parseInt(id) },
+      select: { providerKey: true },
+    })
+    if (!target || !isApprovedDirectProvider(target.providerKey)) {
+      return NextResponse.json({ error: 'Provider is not approved for direct configuration' }, { status: 422 })
+    }
 
     // Build the update payload — only include fields that were provided
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

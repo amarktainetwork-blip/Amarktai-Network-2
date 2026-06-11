@@ -1034,7 +1034,7 @@ export function getAdultCapabilityStatus(): {
 }
 
 export interface AdultProviderReadiness {
-  provider: 'together' | 'huggingface' | 'xai'
+  provider: 'together' | 'huggingface' | 'genx'
   configured: boolean
 }
 

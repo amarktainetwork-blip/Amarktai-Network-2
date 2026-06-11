@@ -6,7 +6,6 @@ export type CoreProvider =
   | ProviderMeshId
   | 'dashscope'
   | 'hf'
-  | 'xai'
 
 export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
 

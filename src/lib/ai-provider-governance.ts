@@ -64,21 +64,23 @@ function governanceCapabilities(capabilities: readonly string[]): ProviderCapabi
   return [...mapped]
 }
 
-export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = PROVIDER_MESH.map((node) => ({
+export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = PROVIDER_MESH.filter((node) => node.kind === 'provider').map((node) => ({
   key: node.id,
   displayName: node.displayName,
   integrationKey: node.id,
   envVar: node.envAliases[0] ?? '',
   envVarAliases: [...node.envAliases],
   status: node.id === 'genx' ? 'core' : node.optional ? 'active_optional' : 'advanced_optional',
-  setupGroup: node.kind === 'provider' ? 'primary' : 'advanced',
+  setupGroup: 'primary',
   reason: 'Approved by the canonical provider mesh.',
   capabilities: governanceCapabilities(node.capabilities),
   coveredByGenX: false,
   wired: true,
-  showInPrimarySetup: node.kind === 'provider',
-  defaultCostRole: node.id === 'genx' ? 'gateway' : node.kind === 'provider' ? 'specialist' : 'ops',
-  notes: 'Compatibility metadata generated from provider-mesh.ts.',
+  showInPrimarySetup: true,
+  defaultCostRole: node.id === 'genx' ? 'gateway' : 'specialist',
+  notes: node.id === 'genx'
+    ? 'Gateway infrastructure for routed model labels; provider identity comes from provider-mesh.ts.'
+    : 'Compatibility metadata generated from provider-mesh.ts.',
 }))
 
 export const PROPOSED_PROVIDER_BACKLOG: readonly ProviderGovernanceEntry[] = []

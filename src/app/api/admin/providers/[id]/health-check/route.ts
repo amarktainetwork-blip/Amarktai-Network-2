@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { runProviderHealthCheck } from '@/lib/providers'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 /** POST /api/admin/providers/[id]/health-check — trigger a live health check */
 export async function POST(
@@ -18,6 +19,9 @@ export async function POST(
   })
 
   if (!provider) return NextResponse.json({ error: 'Provider not found' }, { status: 404 })
+  if (!isApprovedDirectProvider(provider.providerKey)) {
+    return NextResponse.json({ error: 'Provider is not approved for direct health checks' }, { status: 422 })
+  }
 
   if (!provider.enabled) {
     const result = await prisma.aiProvider.update({
