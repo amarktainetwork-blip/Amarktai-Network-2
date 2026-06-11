@@ -64,6 +64,87 @@ const processors: Record<string, JobProcessor> = {
 
   agent_task: async (payload) => {
     console.log(`[worker] Processing agent_task for ${payload.appSlug ?? 'platform'}`)
+    const {
+      agentType,
+      message,
+      context,
+      executionId,
+    } = payload.data as {
+      agentType?: string
+      message?: string
+      context?: Record<string, unknown>
+      executionId?: string
+    }
+    if (!payload.appSlug || !agentType || !message || !executionId) {
+      throw new Error('Agent task payload is missing appSlug, agentType, message, or executionId.')
+    }
+
+    const [
+      { createAgentTask, executeAgent, getAgentDefinition },
+      { createArtifact },
+      { recordExecutionResponse },
+    ] = await Promise.all([
+      import('@/lib/agent-runtime'),
+      import('@/lib/artifact-store'),
+      import('@/lib/execution'),
+    ])
+
+    const definition = getAgentDefinition(agentType as Parameters<typeof getAgentDefinition>[0])
+    const task = createAgentTask(
+      agentType as Parameters<typeof createAgentTask>[0],
+      payload.appSlug,
+      { message, context },
+    )
+    const completed = await executeAgent(task)
+    if (completed.status === 'failed') {
+      const error = completed.error ?? 'Agent execution failed.'
+      recordExecutionResponse(executionId, {
+        success: false,
+        executed: false,
+        status: 'failed',
+        jobStatus: 'failed',
+        taskId: completed.id,
+        error,
+      })
+      throw new Error(error)
+    }
+
+    try {
+      const artifact = await createArtifact({
+        appSlug: payload.appSlug,
+        type: 'document',
+        subType: 'agent_result',
+        title: `${definition.name}: ${message.slice(0, 80)}`,
+        description: `Completed ${agentType} agent output`,
+        traceId: `agent-task-${completed.id}`,
+        content: JSON.stringify(completed.output ?? null, null, 2),
+        mimeType: 'application/json',
+        metadata: { agentType, taskId: completed.id, executionId },
+      })
+      recordExecutionResponse(executionId, {
+        success: true,
+        executed: true,
+        status: 'completed',
+        jobStatus: 'completed',
+        taskId: completed.id,
+        artifactId: artifact.id,
+        storageUrl: artifact.storageUrl,
+        output: completed.output,
+      })
+    } catch (error) {
+      const message = `Agent completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`
+      recordExecutionResponse(executionId, {
+        success: false,
+        executed: false,
+        status: 'failed',
+        jobStatus: 'failed',
+        taskId: completed.id,
+        error: message,
+      })
+      throw new Error(message)
+    }
   },
 
   daily_learning: async (payload) => {

@@ -285,6 +285,7 @@ describe('Phase 1 product contracts', () => {
       'src/app/api/admin/studio/execute/route.ts',
       'src/app/api/admin/jobs/route.ts',
       'src/app/api/admin/approvals/route.ts',
+      'src/app/api/brain/agent/dispatch/route.ts',
       'src/app/api/brain/image/route.ts',
       'src/app/api/brain/video-generate/route.ts',
     ]) {
@@ -292,6 +293,14 @@ describe('Phase 1 product contracts', () => {
         /execution|listExecutions/,
       )
     }
+  })
+
+  it('executes queued agent jobs and reconciles artifacts', () => {
+    const worker = fs.readFileSync(path.join(ROOT, 'src/lib/worker.ts'), 'utf8')
+    expect(worker).toContain('agent_task: async')
+    expect(worker).toContain('executeAgent(task)')
+    expect(worker).toContain('createArtifact({')
+    expect(worker).toContain('recordExecutionResponse(executionId')
   })
 })
 
