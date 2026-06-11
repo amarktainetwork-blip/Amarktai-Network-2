@@ -79,7 +79,7 @@ Audit note: hidden/legacy dashboard pages are a go-live risk because they can ex
 Major route groups found:
 
 - Admin dashboard/runtime: `/api/admin/dashboard`, `/api/admin/runtime-truth`, `/api/admin/system/capabilities`, `/api/admin/truth`, `/api/admin/readiness`, `/api/admin/vps`
-- Admin auth/session: `/api/admin/login`, `/api/admin/logout`, `/api/admin/voice-login`
+- Admin auth/session: `/api/admin/login`, `/api/admin/logout`
 - Provider and key management: `/api/admin/providers`, `/api/admin/providers/[id]`, `/api/admin/providers/catalog`, `/api/admin/providers/health-check-all`, `/api/admin/integrations`, `/api/admin/integration-keys`, `/api/admin/settings/test-*`
 - AI engine and brain: `/api/brain/execute`, `/api/brain/stream`, `/api/brain/image`, `/api/brain/image-edit`, `/api/brain/video`, `/api/brain/video-generate`, `/api/brain/tts`, `/api/brain/stt`, `/api/brain/research`, `/api/brain/moderation`, `/api/brain/embeddings`, `/api/brain/rerank`
 - AmarktAI Assistant: `/api/AmarktAI Assistant/run`, `/api/admin/AmarktAI Assistant/chat`, `/api/admin/AmarktAI Assistant/stream`, `/api/admin/AmarktAI Assistant/context`, `/api/admin/AmarktAI Assistant/memory`

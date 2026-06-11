@@ -1,15 +1,14 @@
-import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
 import { NETWORK_APPS } from '@/lib/network-apps-registry'
+import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 
 export async function getRuntimeTruth() {
-  const settings = await getPlatformSettingsTruth()
+  const runtime = await getDashboardRuntimeTruth()
   return {
     generatedAt: new Date().toISOString(),
-    connectedCapabilities: [...new Set(settings.entries.filter((entry) => entry.connected).flatMap((entry) => entry.capabilities))],
-    connections: settings.entries,
+    readiness: runtime,
+    connectedCapabilities: runtime.capabilities.filter((entry) => entry.status === 'READY').map((entry) => entry.name),
+    connections: runtime.providers,
     networkApps: NETWORK_APPS,
-    warnings: settings.entries
-      .filter((entry) => !entry.optional && !entry.connected)
-      .map((entry) => `${entry.label}: ${entry.blocker}`),
+    warnings: runtime.blockers,
   }
 }

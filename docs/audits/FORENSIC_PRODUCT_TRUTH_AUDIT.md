@@ -99,7 +99,6 @@ Found `src/app/**/page.tsx` public/admin pages:
 | `/terms` | `src/app/terms/page.tsx` | KEEP |
 | `/voice-access` | `src/app/voice-access/page.tsx` | UNKNOWN/NEEDS LIVE TEST |
 | `/admin/login` | `src/app/admin/login/page.tsx` | KEEP |
-| `/admin/voice-login` | `src/app/admin/voice-login/page.tsx` | UNKNOWN/FIX |
 
 ### Dashboard pages
 
@@ -233,7 +232,7 @@ Pages that should be deleted: no extra top-level dashboard pages currently exist
 
 | Route/family | Method(s) | Purpose | Implemented | Logic type | Storage/database | Auth | Frontend using it | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `/api/admin/login`, `/api/admin/logout`, `/api/admin/quick-access`, `/api/admin/voice-login` | POST | Admin auth/session | Yes | Real with fallback admin credentials | Prisma/users/session | Login public, logout/session protected | Login pages/layout | KEEP/FIX |
+| `/api/admin/login`, `/api/admin/logout`, `/api/admin/quick-access` | POST | Admin auth/session | Yes | Real with fallback admin credentials | Prisma/users/session | Login public, logout/session protected | Login pages/layout | KEEP/FIX |
 | `/api/admin/settings/key` | POST | Save approved provider/tool keys | Yes | Real vault write | Prisma `integrationConfig`, encryption helper | Admin session | Settings | KEEP |
 | `/api/admin/settings/test-genx`, `/test-github`, `/test-storage`, `/test-webdock`, `/test-adult` | POST | Live integration tests | Yes | Real external/storage checks | Prisma/env/external APIs | Admin session | Not wired as visible Settings buttons in current page | KEEP/FIX |
 | `/api/admin/ai-model-catalog` | GET | Model catalog and universal catalog | Yes | Mixed live GenX + static fallback | Provider config/vault | Admin session | Studio, Workbench | KEEP/FIX |

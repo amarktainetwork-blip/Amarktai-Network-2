@@ -5,6 +5,7 @@ import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
 import type { ProviderCapability } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+import { normalizeAdultPolicy } from '@/lib/universal-model-catalog'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -15,12 +16,12 @@ export interface GenXRuntimeStatus {
   apiUrl: string | null
 }
 
-export type ProviderStatus =
-  | 'configured_wired'
-  | 'configured_not_wired'
-  | 'not_configured_optional'
-  | 'covered_by_genx'
-  | 'blocked'
+export type RuntimeReadinessState =
+  | 'READY'
+  | 'DEGRADED'
+  | 'NEEDS_CONFIGURATION'
+  | 'BLOCKED'
+  | 'UNAVAILABLE'
 
 export interface ProviderRuntimeEntry {
   key: string
@@ -30,18 +31,16 @@ export interface ProviderRuntimeEntry {
   connected?: boolean
   coveredByGenX: boolean
   keySource: 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
-  status: ProviderStatus
+  status: RuntimeReadinessState
   governanceStatus?: string
   showInPrimarySetup?: boolean
   defaultCostRole?: string
   capabilities?: string[]
 }
 
-export type CapabilityStatus = 'available' | 'blocked' | 'not_implemented'
-
 export interface CapabilityRuntimeEntry {
   name: string
-  status: CapabilityStatus
+  status: RuntimeReadinessState
   blocker: string | null
   models: string[]
   nextAction: string | null
@@ -58,13 +57,7 @@ export interface LocalCoreStatus {
 }
 
 export type AdultCapabilityGateStatus =
-  | 'ready'
-  | 'configured_with_last_error'
-  | 'needs_provider_test'
-  | 'provider_failed'
-  | 'app_permission_disabled'
-  | 'global_flag_disabled'
-  | 'not_wired'
+  RuntimeReadinessState
 
 export interface AdultCapabilityGate {
   status: AdultCapabilityGateStatus
@@ -126,12 +119,12 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
       coveredByGenX: false,
       keySource: source,
       status: entry.connected
-        ? 'configured_wired' as const
+        ? 'READY' as const
         : entry.configured
-          ? 'configured_not_wired' as const
+          ? 'DEGRADED' as const
           : entry.optional
-            ? 'not_configured_optional' as const
-            : 'blocked' as const,
+            ? 'UNAVAILABLE' as const
+            : 'NEEDS_CONFIGURATION' as const,
       governanceStatus: 'approved',
       showInPrimarySetup: entry.kind === 'provider',
       defaultCostRole: entry.key === 'genx' ? 'primary' : 'specialist',
@@ -168,21 +161,31 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   const approved = providers.filter((provider) => provider.connected && compatibleProviderIds.has(provider.key as never))
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
   const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
+  const policy = normalizeAdultPolicy(
+    await getServiceConfigField('adult_mode', 'mode', 'off').catch(() => 'off') ?? 'off',
+  )
+  const globalEnabled = policy !== 'off'
   const selectedProvider = approved[0]?.key ?? null
   const providerAvailable = approved.length > 0
   const selectedModel = selectedProvider
     ? adultRoutes.flatMap((route) => route.providers).find((entry) => entry.provider === selectedProvider)?.model ?? null
     : null
   return {
-    status: providerAvailable ? 'ready' : 'not_wired',
-    blocker: providerAvailable ? null : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
+    status: !globalEnabled ? 'BLOCKED' : providerAvailable ? 'READY' : 'NEEDS_CONFIGURATION',
+    blocker: !globalEnabled
+      ? 'Adult mode is off. Explicit operator opt-in is required.'
+      : providerAvailable
+        ? null
+        : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
     providerAvailable,
-    testPassed: providerAvailable,
-    globalEnabled: true,
-    enabled: true,
+    testPassed: lastTestStatus === 'READY',
+    globalEnabled,
+    enabled: globalEnabled && providerAvailable,
     selectedProvider,
     selectedModel,
-    allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
+    allowedCategories: globalEnabled
+      ? ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice']
+      : [],
     blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content'],
     lastTestStatus: lastTestStatus || null,
     lastError: lastError || null,
@@ -213,7 +216,7 @@ export async function getCapabilityStatus(
     )
     return {
       name: row.name,
-      status: connected.length ? 'available' as const : 'blocked' as const,
+      status: connected.length ? 'READY' as const : 'NEEDS_CONFIGURATION' as const,
       blocker: connected.length ? null : `No tested approved connection provides ${row.capabilities.join(' or ')}.`,
       models: connected.map((provider) => provider.displayName),
       nextAction: connected.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
@@ -242,8 +245,8 @@ export async function getDashboardRuntimeTruth(): Promise<DashboardRuntimeTruth>
     getAdultCapabilityGate(providers),
   ])
   const blockers = [
-    ...providers.filter((provider) => provider.status === 'blocked').map((provider) => `${provider.displayName}: ${provider.reason}`),
-    ...capabilities.filter((capability) => capability.status === 'blocked' && capability.blocker).map((capability) => `${capability.name}: ${capability.blocker}`),
+    ...providers.filter((provider) => provider.status === 'BLOCKED' || provider.status === 'NEEDS_CONFIGURATION').map((provider) => `${provider.displayName}: ${provider.reason}`),
+    ...capabilities.filter((capability) => capability.status !== 'READY' && capability.blocker).map((capability) => `${capability.name}: ${capability.blocker}`),
   ]
   return {
     success: true,

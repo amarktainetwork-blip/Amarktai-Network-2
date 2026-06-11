@@ -1,19 +1,9 @@
 import {
-  APPROVED_AI_PROVIDERS,
-  HUGGING_FACE_TASK_ROUTES,
-  type ApprovedProviderKey,
-} from '@/lib/approved-ai-catalog'
-import {
-  GENX_AUDIO_MODELS,
-  GENX_IMAGE_MODELS,
-  GENX_STT_MODELS,
-  GENX_TEXT_MODELS,
-  GENX_TTS_MODELS,
-  GENX_VIDEO_MODELS,
-  listGenXModels,
-  type GenXModel,
-} from '@/lib/genx-client'
-import { getAllProviderModelCatalogs, type ProviderModelOption } from '@/lib/ai-model-catalog'
+  AI_PROVIDER_MESH,
+  type ApprovedDirectProviderId,
+  type ProviderCapability,
+} from '@/lib/provider-mesh'
+import { listGenXModels, type GenXModel } from '@/lib/genx-client'
 
 export type UniversalCapabilityGroup =
   | 'coding'
@@ -37,20 +27,29 @@ export type AdultPolicyValue =
   | 'full_adult_app_mode'
   | 'specialist'
 
+export type UniversalCostTier = 'free' | 'very_low' | 'low' | 'medium' | 'high' | 'premium' | 'unknown'
+export type UniversalLatencyTier = 'ultra_low' | 'low' | 'medium' | 'high'
+
 export interface UniversalModelRoute {
-  provider: ApprovedProviderKey
+  provider: ApprovedDirectProviderId
   modelId: string
   displayName: string
+  family: string
   capabilities: UniversalCapabilityGroup[]
-  costTier: string
-  source: 'genx_live' | 'genx_fallback' | 'static_catalog' | 'huggingface_task'
+  providerCapabilities: ProviderCapability[]
+  costTier: UniversalCostTier
+  latencyTier: UniversalLatencyTier
+  contextWindow: number
+  source: 'canonical_static' | 'genx_live'
+  enabled: boolean
   configured?: boolean
   taskBased?: boolean
   supportsAdult?: boolean
+  recommendedFor?: Array<'assistant' | 'repo_workbench' | 'media_studio'>
 }
 
 export interface UniversalModelCatalog {
-  providers: typeof APPROVED_AI_PROVIDERS
+  providers: typeof AI_PROVIDER_MESH
   models: UniversalModelRoute[]
   grouped: Record<UniversalCapabilityGroup, UniversalModelRoute[]>
   genx: {
@@ -81,107 +80,154 @@ export function adultPolicyAllows(policy: string | undefined, capability: string
   if (normalized === 'full_adult_app_mode' || normalized === 'specialist') return true
   if (capability === 'adult_text') return ['suggestive', 'adult_text'].includes(normalized)
   if (capability === 'adult_image') return ['suggestive', 'adult_image'].includes(normalized)
-  if (capability === 'adult_video') return ['adult_video'].includes(normalized)
-  if (capability === 'adult_voice') return ['adult_voice'].includes(normalized)
+  if (capability === 'adult_video') return normalized === 'adult_video'
+  if (capability === 'adult_voice') return normalized === 'adult_voice'
   return normalized !== 'off'
 }
 
-export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog> {
-  const [liveGenx, providerCatalogs] = await Promise.all([
-    listGenXModels().catch(() => []),
-    getAllProviderModelCatalogs().catch(() => []),
-  ])
-  const genxModels = liveGenx.length ? liveGenx.map(fromGenXLive) : genxFallbackModels()
-  const staticModels = providerCatalogs
-    .flatMap((catalog) => catalog.models.map((model) => fromStaticModel(model, catalog.configured)))
-    .filter((model) => model.provider !== 'genx')
-  const hfTasks = HUGGING_FACE_TASK_ROUTES.map((route) => ({
-    provider: 'huggingface' as const,
-    modelId: route.id,
-    displayName: route.taskLabel ?? route.label,
-    capabilities: taskCapabilities(route.id),
-    costTier: route.costMode,
-    source: 'huggingface_task' as const,
-    taskBased: true,
-  }))
-  const models = dedupeModels([...genxModels, ...staticModels, ...hfTasks])
+function route(
+  provider: ApprovedDirectProviderId,
+  modelId: string,
+  displayName: string,
+  family: string,
+  capabilities: UniversalCapabilityGroup[],
+  providerCapabilities: ProviderCapability[],
+  options: Partial<Omit<UniversalModelRoute,
+    'provider' | 'modelId' | 'displayName' | 'family' | 'capabilities' | 'providerCapabilities' | 'source'
+  >> = {},
+): UniversalModelRoute {
   return {
-    providers: APPROVED_AI_PROVIDERS,
+    provider,
+    modelId,
+    displayName,
+    family,
+    capabilities,
+    providerCapabilities,
+    costTier: options.costTier ?? 'medium',
+    latencyTier: options.latencyTier ?? 'medium',
+    contextWindow: options.contextWindow ?? 32_768,
+    source: 'canonical_static',
+    enabled: options.enabled ?? true,
+    configured: options.configured,
+    taskBased: options.taskBased,
+    supportsAdult: options.supportsAdult,
+    recommendedFor: options.recommendedFor,
+  }
+}
+
+export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
+  route('genx', 'gpt-5.4-mini', 'GenX Assistant Balanced', 'GenX routed GPT', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('genx', 'gpt-5.3-codex', 'GenX Coding Best', 'GenX routed Codex', ['coding', 'reasoning'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'premium', recommendedFor: ['repo_workbench'] }),
+  route('genx', 'claude-sonnet-4.5', 'Claude Sonnet 4.5 via GenX', 'GenX routed Claude', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'premium' }),
+  route('genx', 'gemini-2.5-pro', 'Gemini 2.5 Pro via GenX', 'GenX routed Gemini', ['chat', 'reasoning', 'image', 'video'], ['text', 'reasoning', 'vision', 'video'], { costTier: 'premium' }),
+  route('genx', 'gpt-image-1', 'GPT Image via GenX', 'GenX routed image', ['image'], ['image'], { costTier: 'high', recommendedFor: ['media_studio'] }),
+  route('genx', 'veo-3.1', 'Veo 3.1 via GenX', 'GenX routed video', ['video'], ['video', 'async_jobs'], { costTier: 'premium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
+  route('genx', 'lyria-2', 'Lyria via GenX', 'GenX routed music', ['music/audio'], ['music', 'audio', 'async_jobs'], { costTier: 'high', latencyTier: 'high', recommendedFor: ['media_studio'] }),
+  route('genx', 'gpt-4o-mini-tts', 'Speech Synthesis via GenX', 'GenX routed speech', ['voice/TTS'], ['tts', 'audio'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('genx', 'gpt-4o-transcribe', 'Speech Transcription via GenX', 'GenX routed speech', ['STT'], ['stt', 'audio'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('genx', 'text-embedding-3-large', 'Embeddings via GenX', 'GenX routed embeddings', ['embeddings/moderation'], ['embeddings'], { costTier: 'low' }),
+
+  route('huggingface', 'task:text', 'Hugging Face Text Task', 'Hugging Face Tasks', ['chat', 'coding'], ['text', 'code'], { costTier: 'low', taskBased: true, recommendedFor: ['assistant'] }),
+  route('huggingface', 'task:image', 'Hugging Face Image Task', 'Hugging Face Tasks', ['image'], ['image'], { costTier: 'low', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('huggingface', 'task:video', 'Hugging Face Video Task', 'Hugging Face Tasks', ['video'], ['video'], { costTier: 'medium', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('huggingface', 'openai/whisper-large-v3', 'Whisper Large v3 on Hugging Face', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', taskBased: true }),
+  route('huggingface', 'facebook/mms-tts-eng', 'MMS TTS English', 'MMS', ['voice/TTS'], ['tts', 'audio'], { costTier: 'low', taskBased: true }),
+  route('huggingface', 'sentence-transformers/all-MiniLM-L6-v2', 'MiniLM Embeddings', 'Sentence Transformers', ['embeddings/moderation'], ['embeddings'], { costTier: 'free', taskBased: true }),
+
+  route('qwen', 'qwen-turbo', 'Qwen Turbo', 'Qwen', ['chat', 'coding'], ['text', 'code'], { costTier: 'very_low', latencyTier: 'low', recommendedFor: ['repo_workbench'] }),
+  route('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant'] }),
+  route('qwen', 'qwen-max', 'Qwen Max', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'vision'], { costTier: 'medium' }),
+  route('qwen', 'wanx2.1-t2i-turbo', 'Wan Image Turbo', 'Wan', ['image'], ['image', 'async_jobs'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('qwen', 'wan2.1-i2v-turbo', 'Wan Image to Video', 'Wan', ['video'], ['video', 'image_to_video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
+
+  route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'premium', contextWindow: 128_000 }),
+
+  route('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B on Groq', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'low', latencyTier: 'ultra_low', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('groq', 'whisper-large-v3-turbo', 'Whisper Large v3 Turbo on Groq', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),
+
+  route('together', 'meta-llama/Llama-3-70b-chat-hf', 'Llama 3 70B Chat on Together', 'Llama 3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('together', 'black-forest-labs/FLUX.1-schnell', 'FLUX.1 Schnell on Together', 'FLUX', ['image'], ['image'], { costTier: 'medium', supportsAdult: true, recommendedFor: ['media_studio'] }),
+] as const
+
+export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog> {
+  const liveGenx = await listGenXModels().catch(() => [])
+  const liveRoutes = liveGenx.map(fromGenXLive)
+  const models = dedupeModels([
+    ...(liveRoutes.length ? liveRoutes : UNIVERSAL_MODEL_ROUTES.filter((model) => model.provider === 'genx')),
+    ...UNIVERSAL_MODEL_ROUTES.filter((model) => model.provider !== 'genx'),
+  ])
+  return {
+    providers: AI_PROVIDER_MESH,
     models,
     grouped: groupModels(models),
-    genx: { live: liveGenx.length > 0, modelCount: liveGenx.length || genxModels.length },
+    genx: {
+      live: liveRoutes.length > 0,
+      modelCount: liveRoutes.length || UNIVERSAL_MODEL_ROUTES.filter((model) => model.provider === 'genx').length,
+    },
     adultPolicies: [...ADULT_POLICY_VALUES],
   }
 }
 
 function fromGenXLive(model: GenXModel): UniversalModelRoute {
+  const capabilities = capabilityGroups(model.capabilities.join(' '), model.category)
   return {
-    provider: 'genx',
-    modelId: model.id,
-    displayName: model.name || model.id,
-    capabilities: capabilityGroups(model.capabilities.join(' '), model.category),
-    costTier: model.costTier,
+    ...route(
+    'genx',
+    model.id,
+    model.name || model.id,
+    'GenX live catalog',
+    capabilities,
+    providerCapabilities(capabilities),
+    {
+      costTier: normalizeCostTier(model.costTier),
+      configured: true,
+      supportsAdult: model.supportsAdult || capabilities.includes('adult'),
+    },
+    ),
     source: 'genx_live',
-    configured: true,
-    supportsAdult: model.supportsAdult || model.capabilities.some((capability) => String(capability).startsWith('adult')),
   }
 }
 
-function fromStaticModel(model: ProviderModelOption, configured: boolean): UniversalModelRoute {
-  return {
-    provider: model.provider as ApprovedProviderKey,
-    modelId: model.modelId,
-    displayName: model.displayName,
-    capabilities: capabilityGroups([...model.roles, ...model.modalities].join(' ')),
-    costTier: model.costTier,
-    source: 'static_catalog',
-    configured,
-  }
+function normalizeCostTier(value: string): UniversalCostTier {
+  return ['free', 'very_low', 'low', 'medium', 'high', 'premium'].includes(value)
+    ? value as UniversalCostTier
+    : 'unknown'
 }
 
-function genxFallbackModels(): UniversalModelRoute[] {
-  const rows: UniversalModelRoute[] = []
-  for (const modelId of GENX_TEXT_MODELS) rows.push(fallback('genx', modelId, ['chat', 'reasoning', 'coding']))
-  for (const modelId of GENX_IMAGE_MODELS) rows.push(fallback('genx', modelId, ['image']))
-  for (const modelId of GENX_VIDEO_MODELS) rows.push(fallback('genx', modelId, ['video']))
-  for (const modelId of GENX_AUDIO_MODELS) rows.push(fallback('genx', modelId, ['music/audio']))
-  for (const modelId of GENX_TTS_MODELS) rows.push(fallback('genx', modelId, ['voice/TTS']))
-  for (const modelId of GENX_STT_MODELS) rows.push(fallback('genx', modelId, ['STT']))
-  return rows
-}
-
-function fallback(provider: ApprovedProviderKey, modelId: string, capabilities: UniversalCapabilityGroup[]): UniversalModelRoute {
-  return { provider, modelId, displayName: modelId, capabilities, costTier: 'unknown', source: 'genx_fallback' }
-}
-
-function capabilityGroups(haystackInput: string, category = ''): UniversalCapabilityGroup[] {
-  const haystack = `${haystackInput} ${category}`.toLowerCase()
+function capabilityGroups(input: string, category = ''): UniversalCapabilityGroup[] {
+  const value = `${input} ${category}`.toLowerCase()
   const groups = new Set<UniversalCapabilityGroup>()
-  if (/code|coding|codex/.test(haystack)) groups.add('coding')
-  if (/reason/.test(haystack)) groups.add('reasoning')
-  if (/chat|text|language/.test(haystack)) groups.add('chat')
-  if (/image|vision/.test(haystack)) groups.add('image')
-  if (/video|avatar/.test(haystack)) groups.add('video')
-  if (/music|audio|song|lyria/.test(haystack)) groups.add('music/audio')
-  if (/tts|voice_tts|text-to-speech|speech/.test(haystack)) groups.add('voice/TTS')
-  if (/stt|voice_stt|transcription|speech-to-text/.test(haystack)) groups.add('STT')
-  if (/embedding|moderation|rerank/.test(haystack)) groups.add('embeddings/moderation')
-  if (/adult|nsfw/.test(haystack)) groups.add('adult')
+  if (/code|coding|codex/.test(value)) groups.add('coding')
+  if (/reason/.test(value)) groups.add('reasoning')
+  if (/chat|text|language/.test(value)) groups.add('chat')
+  if (/image|vision/.test(value)) groups.add('image')
+  if (/video|avatar/.test(value)) groups.add('video')
+  if (/music|audio|song|lyria/.test(value)) groups.add('music/audio')
+  if (/tts|text-to-speech/.test(value)) groups.add('voice/TTS')
+  if (/stt|transcription|speech-to-text/.test(value)) groups.add('STT')
+  if (/embedding|moderation|rerank/.test(value)) groups.add('embeddings/moderation')
+  if (/adult|nsfw/.test(value)) groups.add('adult')
   if (groups.size === 0) groups.add('chat')
   return [...groups]
 }
 
-function taskCapabilities(taskId: string): UniversalCapabilityGroup[] {
-  if (taskId.includes('image')) return ['image']
-  if (taskId.includes('video')) return ['video']
-  if (taskId.includes('speech-to-text')) return ['STT']
-  if (taskId.includes('text-to-speech')) return ['voice/TTS']
-  if (taskId.includes('embedding')) return ['embeddings/moderation']
-  return ['chat', 'coding']
+function providerCapabilities(groups: UniversalCapabilityGroup[]): ProviderCapability[] {
+  const capabilities = new Set<ProviderCapability>()
+  if (groups.includes('chat')) capabilities.add('text')
+  if (groups.includes('coding')) capabilities.add('code')
+  if (groups.includes('reasoning')) capabilities.add('reasoning')
+  if (groups.includes('image')) capabilities.add('image')
+  if (groups.includes('video')) capabilities.add('video')
+  if (groups.includes('music/audio')) capabilities.add('music')
+  if (groups.includes('voice/TTS')) capabilities.add('tts')
+  if (groups.includes('STT')) capabilities.add('stt')
+  if (groups.includes('embeddings/moderation')) capabilities.add('embeddings')
+  return [...capabilities]
 }
 
 function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityGroup, UniversalModelRoute[]> {
-  const grouped = {
+  const grouped: Record<UniversalCapabilityGroup, UniversalModelRoute[]> = {
     coding: [],
     reasoning: [],
     chat: [],
@@ -192,7 +238,7 @@ function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityG
     STT: [],
     'embeddings/moderation': [],
     adult: [],
-  } as Record<UniversalCapabilityGroup, UniversalModelRoute[]>
+  }
   for (const model of models) {
     for (const capability of model.capabilities) grouped[capability].push(model)
   }
@@ -201,12 +247,10 @@ function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityG
 
 function dedupeModels(models: UniversalModelRoute[]): UniversalModelRoute[] {
   const seen = new Set<string>()
-  const out: UniversalModelRoute[] = []
-  for (const model of models) {
+  return models.filter((model) => {
     const key = `${model.provider}:${model.modelId}`
-    if (seen.has(key)) continue
+    if (seen.has(key)) return false
     seen.add(key)
-    out.push(model)
-  }
-  return out
+    return true
+  })
 }

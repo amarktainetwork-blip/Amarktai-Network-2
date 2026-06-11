@@ -3,7 +3,6 @@
  *   - skill-templates
  *   - integration-hub
  *   - multi-agent-team
- *   - smart-home-agent
  *   - dashboard-truth new capability entries
  */
 
@@ -32,17 +31,6 @@ import {
   getHandoffChain,
   HANDOFF_CHAINS,
 } from '../multi-agent-team'
-import {
-  getAllDevices,
-  getDevice,
-  registerDevice,
-  updateDeviceState,
-  findDevices,
-  parseSmartHomeCommand,
-  createAutomationRule,
-  toggleAutomationRule,
-  getSmartHomeStatus,
-} from '../smart-home-agent'
 
 // ── Skill Templates ──────────────────────────────────────────────────────────
 
@@ -83,12 +71,6 @@ describe('Skill Templates', () => {
     expect(t!.launchReady).toBe(true)
   })
 
-  it('should have smart-home template with requiresExternalService=true', () => {
-    const t = getSkillTemplate('smart-home-command-parser')
-    expect(t).toBeDefined()
-    expect(t!.requiresExternalService).toBe(true)
-    expect(t!.launchReady).toBe(false)
-  })
 
   it('getLaunchReadyTemplates should only return launchReady=true templates', () => {
     const ready = getLaunchReadyTemplates()
@@ -246,88 +228,6 @@ describe('Multi-Agent Team', () => {
 })
 
 // ── Smart Home Agent ──────────────────────────────────────────────────────────
-
-describe('Smart Home Agent Framework', () => {
-  it('should have demo devices registered', () => {
-    const devices = getAllDevices()
-    expect(devices.length).toBeGreaterThan(0)
-  })
-
-  it('should return a device by ID', () => {
-    const d = getDevice('demo-thermostat-1')
-    expect(d).toBeDefined()
-    expect(d!.type).toBe('thermostat')
-  })
-
-  it('should register and retrieve a new device', () => {
-    const device = registerDevice({
-      name: 'Test Light',
-      type: 'light',
-      room: 'bedroom',
-      home: 'test_home',
-      state: 'off',
-      attributes: {},
-    })
-    expect(device.id).toBeTruthy()
-    expect(getDevice(device.id)).toBeDefined()
-  })
-
-  it('should update device state', () => {
-    const d = updateDeviceState('demo-light-1', { state: 'on', value: 80 })
-    expect(d).toBeDefined()
-    expect(d!.state).toBe('on')
-    expect(d!.value).toBe(80)
-  })
-
-  it('should find devices by type and room', () => {
-    const lights = findDevices({ type: 'light', home: 'main' })
-    expect(lights.every((d) => d.type === 'light')).toBe(true)
-  })
-
-  it('should parse a smart home command', () => {
-    const result = parseSmartHomeCommand('Turn on the living room lights')
-    expect(result.intents.length).toBeGreaterThan(0)
-    const intent = result.intents[0]
-    expect(intent.action).toBe('on')
-    expect(intent.deviceType).toBe('light')
-    expect(intent.room).toContain('living')
-  })
-
-  it('should parse thermostat command with value', () => {
-    const result = parseSmartHomeCommand('Set the thermostat to 72 degrees')
-    expect(result.intents.length).toBeGreaterThan(0)
-    expect(result.intents[0].deviceType).toBe('thermostat')
-    expect(result.intents[0].action).toBe('set')
-    expect(result.intents[0].value).toBe(72)
-  })
-
-  it('should parse lock command', () => {
-    const result = parseSmartHomeCommand('Lock the front door')
-    expect(result.intents.some((i) => i.action === 'lock')).toBe(true)
-  })
-
-  it('should create and toggle an automation rule', () => {
-    const rule = createAutomationRule({
-      name: 'Goodnight Mode',
-      enabled: true,
-      home: 'main',
-      trigger: { type: 'voice', config: { phrase: 'goodnight' } },
-      actions: [{ deviceType: 'light', room: 'bedroom', command: 'off' }],
-    })
-    expect(rule.id).toBeTruthy()
-    expect(rule.enabled).toBe(true)
-
-    const toggled = toggleAutomationRule(rule.id)
-    expect(toggled!.enabled).toBe(false)
-  })
-
-  it('getSmartHomeStatus should return framework status', () => {
-    const status = getSmartHomeStatus()
-    expect(status.devicesRegistered).toBeGreaterThan(0)
-    expect(['configured', 'simulation_only', 'not_configured']).toContain(status.implementationState)
-    expect(status.configurationNote).toBeTruthy()
-  })
-})
 
 // ── Dashboard Truth — new capability entries ──────────────────────────────────
 

@@ -1,7 +1,7 @@
-import { APPROVED_AI_PROVIDERS, type ApprovedProviderKey } from '@/lib/approved-ai-catalog'
+import { AI_PROVIDER_MESH, type ApprovedDirectProviderId } from '@/lib/provider-mesh'
 
 export interface CanonicalProviderEntry {
-  readonly key: ApprovedProviderKey
+  readonly key: ApprovedDirectProviderId
   readonly displayName: string
   readonly defaultBaseUrl: string
   readonly healthCheckSupported: boolean
@@ -10,7 +10,7 @@ export interface CanonicalProviderEntry {
   readonly launchRequired: boolean
 }
 
-const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
+const CAPABILITY_FAMILIES: Record<ApprovedDirectProviderId, readonly string[]> = {
   genx: ['chat', 'reasoning', 'code', 'image_generation', 'voice', 'agent_planning'],
   huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings'],
   qwen: ['chat', 'reasoning', 'code', 'vision', 'image_generation', 'video_generation', 'voice'],
@@ -19,14 +19,14 @@ const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
   together: ['chat', 'code', 'image_generation'],
 }
 
-export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = APPROVED_AI_PROVIDERS.map((provider) => ({
-  key: provider.key,
+export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = AI_PROVIDER_MESH.map((provider, sortOrder) => ({
+  key: provider.id as ApprovedDirectProviderId,
   displayName: provider.displayName,
-  defaultBaseUrl: provider.defaultBaseUrl,
+  defaultBaseUrl: provider.baseUrl,
   healthCheckSupported: true,
-  supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.key],
-  sortOrder: provider.sortOrder,
-  launchRequired: provider.key === 'genx',
+  supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.id as ApprovedDirectProviderId],
+  sortOrder,
+  launchRequired: provider.id === 'genx',
 }))
 
 export function getCanonicalProvider(key: string): CanonicalProviderEntry | undefined {

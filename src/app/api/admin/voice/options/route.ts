@@ -34,7 +34,7 @@ export async function GET() {
   const voices = BASE_VOICES.map((voice) => {
     const providerReady = configuredProviders.has(voice.provider)
     const genxModelKnown = voice.provider !== 'genx' || GENX_TTS_MODELS.includes(voice.model as (typeof GENX_TTS_MODELS)[number])
-    const capabilityReady = voiceCapability?.status === 'available'
+    const capabilityReady = voiceCapability?.status === 'READY'
     const verified = providerReady && genxModelKnown && capabilityReady
     return {
       ...voice,

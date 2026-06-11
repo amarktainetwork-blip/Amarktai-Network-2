@@ -308,6 +308,20 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
 ] as const
 
 export const AI_PROVIDER_MESH = PROVIDER_MESH.filter((node) => node.kind === 'provider')
+export type ApprovedDirectProviderId = Extract<
+  ProviderMeshId,
+  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together'
+>
+
+export const APPROVED_DIRECT_PROVIDER_IDS = AI_PROVIDER_MESH.map(
+  (node) => node.id as ApprovedDirectProviderId,
+)
+
+const APPROVED_DIRECT_PROVIDER_SET = new Set<string>(APPROVED_DIRECT_PROVIDER_IDS)
+
+export function isApprovedDirectProvider(id: string): id is ApprovedDirectProviderId {
+  return APPROVED_DIRECT_PROVIDER_SET.has(id)
+}
 
 export function getProviderMeshNode(id: string) {
   return PROVIDER_MESH.find((node) => node.id === id)

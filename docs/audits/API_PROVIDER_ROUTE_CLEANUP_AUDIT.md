@@ -149,7 +149,6 @@ Runtime truth must use `getServiceKey()` from `service-vault.ts` as the only key
 | `/api/admin/voice/options` | `ACTIVE_CANONICAL` | Voice model/provider options for AmarktAI Assistant configuration |
 | `/api/admin/voice/preview` | `ACTIVE_CANONICAL` | Preview voice output |
 | `/api/admin/voice-access-settings` | `ACTIVE_CANONICAL` | Voice access control settings |
-| `/api/admin/voice-login` | `ACTIVE_CANONICAL` | Voice-based login |
 | `/api/admin/voice-persona` | `ACTIVE_CANONICAL` | Voice persona configuration |
 
 ---
