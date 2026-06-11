@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server'
 import { getSession } from '@/lib/session'
 import { listProjects, createProject } from '@/lib/playground'
 import type { ProjectType, ProjectStatus } from '@/lib/playground'
+import { createExecution } from '@/lib/execution'
 
 /** GET /api/admin/playground — list all playground projects */
 export async function GET(req: NextRequest) {
@@ -43,7 +44,15 @@ export async function POST(req: NextRequest) {
       description: body.description,
       tags: body.tags,
     })
-    return NextResponse.json(project, { status: 201 })
+    const execution = createExecution({
+      appSlug: 'playground',
+      actor: { type: 'admin', label: 'Command Center' },
+      requestedCapability: body.type === 'code_assistant' ? 'code' : 'chat',
+      prompt: body.description || body.name,
+      action: 'generate',
+      metadata: { projectId: project.id, projectType: body.type },
+    })
+    return NextResponse.json({ ...project, executionId: execution.executionId, execution }, { status: 201 })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Failed to create project' },

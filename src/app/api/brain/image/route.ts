@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { executeCapability } from '@/lib/capability-router'
+import {
+  ensureExecution,
+  recordExecutionResponse,
+  startExecution,
+} from '@/lib/execution'
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as {
@@ -7,12 +12,23 @@ export async function POST(request: NextRequest) {
     model?: string
     modelOverride?: string
     providerOverride?: string
+    appSlug?: string
+    executionId?: string
   } | null
 
   if (!body?.prompt?.trim()) {
     return NextResponse.json({ error: 'prompt is required and must be a non-empty string' }, { status: 400 })
   }
 
+  const execution = ensureExecution({
+    appSlug: body.appSlug || 'amarktai-network',
+    requestedCapability: 'image_generation',
+    prompt: body.prompt.trim(),
+    action: 'generate',
+    selectedProvider: body.providerOverride,
+    selectedModel: body.modelOverride ?? body.model,
+  }, body.executionId)
+  startExecution(execution.executionId)
   const result = await executeCapability({
     input: body.prompt.trim(),
     capability: 'image_generation',
@@ -21,9 +37,9 @@ export async function POST(request: NextRequest) {
     saveArtifact: true,
   })
 
-  return NextResponse.json(
-    {
+  const payload = {
       executed: result.success,
+      success: result.success,
       imageUrl: result.output?.startsWith('http') ? result.output : undefined,
       imageBase64: result.output?.startsWith('data:image/') ? result.output : undefined,
       jobId: result.jobId,
@@ -34,7 +50,11 @@ export async function POST(request: NextRequest) {
       error: result.error,
       code: result.success ? undefined : 'no_eligible_image_model',
       capability: 'image_generation',
-    },
+      executionId: execution.executionId,
+    }
+  const executionResult = recordExecutionResponse(execution.executionId, payload)
+  return NextResponse.json(
+    { ...payload, execution: executionResult },
     { status: result.success ? 200 : 503 },
   )
 }

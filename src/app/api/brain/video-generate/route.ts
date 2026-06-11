@@ -5,6 +5,11 @@ import { getVaultApiKey, callProvider } from '@/lib/brain'
 import { callGenXMedia, GENX_VIDEO_MODELS } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
+import {
+  ensureExecution,
+  recordExecutionResponse,
+  startExecution,
+} from '@/lib/execution'
 
 const RequestSchema = z.object({
   prompt: z.string().min(1).max(1000),
@@ -15,6 +20,8 @@ const RequestSchema = z.object({
   provider: z.enum(['genx', 'qwen', 'auto']).optional().default('auto'),
   model: z.string().optional(),
   capability: z.enum(['video_generation', 'adult_video']).optional().default('video_generation'),
+  executionId: z.string().optional(),
+  adultApprovalRequired: z.boolean().optional().default(false),
 })
 
 async function createQwenJob(prompt: string, model: string, apiKey: string) {
@@ -58,7 +65,18 @@ export async function POST(request: Request): Promise<NextResponse> {
     blocker: 'Invalid request', details: parsed.error.flatten(),
   }, { status: 400 })
 
-  const { prompt, style, duration, aspectRatio, appSlug, provider, model, capability } = parsed.data
+  const {
+    prompt,
+    style,
+    duration,
+    aspectRatio,
+    appSlug,
+    provider,
+    model,
+    capability,
+    executionId,
+    adultApprovalRequired,
+  } = parsed.data
   if (capability === 'adult_video') {
     const targetApp = appSlug ?? 'amarktai-network'
     await loadAppSafetyConfigFromDB(targetApp)
@@ -79,6 +97,36 @@ export async function POST(request: Request): Promise<NextResponse> {
       }, { status: 422 })
     }
   }
+
+  const execution = ensureExecution({
+    appSlug: appSlug ?? 'amarktai-network',
+    requestedCapability: capability,
+    prompt,
+    action: 'generate',
+    selectedProvider: provider === 'auto' ? undefined : provider,
+    selectedModel: model,
+    adultPolicy: capability === 'adult_video' ? 'full_adult_app_mode' : 'off',
+    adultApprovalRequired,
+    expensiveMedia: duration > 10,
+    metadata: { style, duration, aspectRatio },
+  }, executionId)
+  if (execution.status === 'awaiting_approval' || execution.status === 'blocked') {
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      capability,
+      provider: execution.providerPlan.provider,
+      model: execution.modelPlan.model,
+      jobStatus: execution.status,
+      artifactId: null,
+      storageUrl: null,
+      error: execution.error ?? execution.approval.reason,
+      blocker: execution.error ?? execution.approval.reason,
+      executionId: execution.executionId,
+      execution,
+    }, { status: execution.status === 'awaiting_approval' ? 202 : 409 })
+  }
+  startExecution(execution.executionId)
 
   const enhancedPrompt = `${style} style video: ${prompt}`
   let providerJobId = ''
@@ -119,7 +167,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!providerJobId) {
     const videoPlan = await planningFallback(prompt, style, duration)
-    return NextResponse.json({
+    const payload = {
       success: false,
       capability,
       executed: false,
@@ -133,7 +181,10 @@ export async function POST(request: Request): Promise<NextResponse> {
       video_plan: videoPlan,
       error: 'No tested approved video provider could start a real job.',
       blocker: 'No tested approved video provider could start a real job.',
-    }, { status: 501 })
+      executionId: execution.executionId,
+    }
+    const executionResult = recordExecutionResponse(execution.executionId, payload)
+    return NextResponse.json({ ...payload, execution: executionResult }, { status: 501 })
   }
 
   const job = await prisma.videoGenerationJob.create({
@@ -173,13 +224,16 @@ export async function POST(request: Request): Promise<NextResponse> {
       storageUrl = artifact.storageUrl
     } catch (error) {
       const message = `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`
-      return NextResponse.json({
+      const payload = {
         success: false, executed: false, capability, provider: usedProvider, model: usedModel,
         jobStatus: 'failed', artifactId: null, storageUrl: null, error: message, blocker: message, jobId: job.id,
-      }, { status: 500 })
+        executionId: execution.executionId,
+      }
+      const executionResult = recordExecutionResponse(execution.executionId, payload)
+      return NextResponse.json({ ...payload, execution: executionResult }, { status: 500 })
     }
   }
-  return NextResponse.json({
+  const payload = {
     success: true,
     capability,
     executed: true,
@@ -193,5 +247,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     error: null,
     blocker: null,
     pollUrl: `/api/brain/video-generate/${job.id}`,
-  }, { status: status === 'succeeded' ? 201 : 202 })
+    executionId: execution.executionId,
+  }
+  const executionResult = recordExecutionResponse(execution.executionId, payload)
+  return NextResponse.json(
+    { ...payload, execution: executionResult },
+    { status: status === 'succeeded' ? 201 : 202 },
+  )
 }

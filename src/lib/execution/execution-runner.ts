@@ -98,6 +98,13 @@ export function createExecution(input: CreateExecutionInput): ExecutionRecord {
   return record
 }
 
+export function ensureExecution(
+  input: CreateExecutionInput,
+  executionId?: string | null,
+): ExecutionRecord {
+  return (executionId ? getExecution(executionId) : null) ?? createExecution(input)
+}
+
 export function startExecution(executionId: string): ExecutionRecord | null {
   const execution = getExecution(executionId)
   if (!execution) return null
@@ -148,6 +155,57 @@ export function failExecution(executionId: string, error: string): ExecutionReco
     level: 'error',
   })
   return updated
+}
+
+export function recordExecutionResponse(
+  executionId: string,
+  response: Record<string, unknown>,
+): ExecutionRecord | null {
+  const jobId = typeof response.jobId === 'string' ? response.jobId : null
+  const providerJobId =
+    typeof response.providerJobId === 'string' ? response.providerJobId : null
+  const artifactId =
+    typeof response.artifactId === 'string' ? response.artifactId : null
+  const success = response.success === true || response.executed === true
+  const status = String(response.jobStatus ?? response.status ?? '')
+  const isPending = Boolean(jobId && ['pending', 'processing', 'queued'].includes(status))
+
+  if (jobId) {
+    linkExecutionJob(executionId, {
+      jobId,
+      providerJobId,
+      status: status || undefined,
+      pollUrl: typeof response.pollUrl === 'string' ? response.pollUrl : null,
+    })
+  }
+  if (isPending) {
+    return updateExecution(executionId, {
+      status: 'queued',
+      result: response,
+      error: null,
+    })
+  }
+  if (success) {
+    return completeExecution({
+      executionId,
+      result: response,
+      artifact: artifactId
+        ? {
+            artifactId,
+            url:
+              typeof response.storageUrl === 'string'
+                ? response.storageUrl
+                : typeof response.mediaUrl === 'string'
+                  ? response.mediaUrl
+                  : null,
+          }
+        : undefined,
+    })
+  }
+  return failExecution(
+    executionId,
+    String(response.error ?? response.blocker ?? 'Execution failed.'),
+  )
 }
 
 export function resolveExecutionApproval(
