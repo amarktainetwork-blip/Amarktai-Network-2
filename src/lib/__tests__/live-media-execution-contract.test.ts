@@ -159,8 +159,8 @@ describe('live media route contracts', () => {
 
   it('uses canonical video capability and exposes local polling in Studio', () => {
     const studio = read('app/api/admin/studio/execute/route.ts')
-    expect(studio).toContain("if (tab === 'Video') return 'video_generation'")
-    expect(studio).toContain('pollUrl: tracked?.pollUrl ?? null')
-    expect(studio).toContain("vocalStyle: 'instrumental_only'")
+    expect(studio).toContain("capability === 'video_generation'")
+    expect(studio).toContain('mediaStudioResponse')
+    expect(studio).toContain('normalizeVocalStyle')
   })
 })

@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { action?: string; request?: Partial<MusicCreationRequest> }
+  let body: { action?: string; request?: Partial<MusicCreationRequest> & { executionId?: string } }
   try {
     body = await request.json()
   } catch {
@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
   }
 
   const musicRequest = req as MusicCreationRequest
+  const executionId = req.executionId
 
   // Validate genre/mood limits before any processing
   try {
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
       const lyrics = await generateLyrics(musicRequest)
       const artifact = await createArtifact({
         appSlug: musicRequest.appSlug,
+        executionId,
         type: 'text',
         subType: 'lyrics',
         capability: 'lyrics_generation',
@@ -213,7 +215,7 @@ export async function POST(request: NextRequest) {
           description: `${musicRequest.genre} / ${musicRequest.vocalStyle} / ${musicRequest.theme}`,
           provider: 'genx',
           model: generated.model,
-          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre },
+          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre, executionId },
         })
         return NextResponse.json({
           success: true,
@@ -245,7 +247,7 @@ export async function POST(request: NextRequest) {
         provider: 'genx',
         model: generated.model,
         providerJobId: generated.jobId!,
-        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle },
+        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle, executionId },
       })
       return NextResponse.json(localMediaJobResponse(job), { status: 202 })
     }

@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     appSlug?: string
     providerOverride?: string
     modelOverride?: string
+    executionId?: string
   } | null
 
   if (!body?.prompt?.trim()) {
@@ -58,6 +59,7 @@ export async function POST(request: NextRequest) {
     appId: body.appSlug,
     safeMode: false,
     saveArtifact: true,
+    metadata: { executionId: body.executionId },
   })
 
   return NextResponse.json(

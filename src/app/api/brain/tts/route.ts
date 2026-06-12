@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     const text = typeof body.text === 'string' ? body.text.trim() : ''
     const capability: TtsCapability = body.capability === 'adult_voice' ? 'adult_voice' : 'tts'
     const appSlug = typeof body.appSlug === 'string' && body.appSlug ? body.appSlug : 'amarktai-network'
+    const executionId = typeof body.executionId === 'string' ? body.executionId : undefined
     const responseFormat = body.responseFormat === 'audio' ? 'audio' : 'json'
     if (!text) {
       return NextResponse.json(result({ success: false, capability, traceId, jobStatus: 'blocked', error: 'text is required.' }), { status: 400 })
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
             provider: 'genx',
             model: generated.model,
             providerJobId: generated.jobId,
-            metadata: { capability, traceId },
+            metadata: { capability, traceId, executionId },
           })
           return NextResponse.json({
             ...localMediaJobResponse(job),
@@ -180,6 +181,7 @@ export async function POST(request: NextRequest) {
       try {
         const artifact = await createArtifact({
           appSlug,
+          executionId,
           type: 'voice',
           subType: capability,
           capability,
@@ -189,7 +191,7 @@ export async function POST(request: NextRequest) {
           traceId,
           content: audio,
           mimeType,
-          metadata: { capability },
+          metadata: { capability, executionId },
         })
         if (responseFormat === 'audio') {
           return new NextResponse(new Uint8Array(audio), {

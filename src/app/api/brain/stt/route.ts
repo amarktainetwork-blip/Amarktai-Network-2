@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
   const requestedModel = formData.get('model')?.toString()
   const language = formData.get('language')?.toString()
   const appSlug = formData.get('appSlug')?.toString() || 'media-studio'
+  const executionId = formData.get('executionId')?.toString()
   const bytes = Buffer.from(await file.arrayBuffer())
   const mimeType = (file as File).type || 'audio/webm'
 
@@ -47,6 +48,7 @@ export async function POST(request: NextRequest) {
         appSlug,
         sourceMimeType: mimeType,
         fallbackUsed: false,
+        executionId,
       })
     }
     if (requestedProvider === 'genx') return unavailable('GenX STT is not configured or returned no transcript.', 503, 'genx')
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
       })
       if (response.ok) {
         const result = await response.json() as { text?: string }
-        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType })
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
       }
     }
 
@@ -96,7 +98,7 @@ export async function POST(request: NextRequest) {
       if (response.ok) {
         const result = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
         const transcript = result.choices?.[0]?.message?.content
-        if (transcript) return persistTranscript({ transcript, model, language, provider, appSlug, sourceMimeType: mimeType })
+        if (transcript) return persistTranscript({ transcript, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
       }
     }
 
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       })
       if (response.ok) {
         const result = await response.json() as { text?: string }
-        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType })
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
       }
     }
   }
@@ -125,10 +127,12 @@ async function persistTranscript(input: {
   appSlug: string
   sourceMimeType: string
   fallbackUsed?: boolean
+  executionId?: string
 }) {
   try {
     const artifact = await createArtifact({
       appSlug: input.appSlug,
+      executionId: input.executionId,
       type: 'transcript',
       subType: 'stt',
       capability: 'stt',
@@ -141,6 +145,7 @@ async function persistTranscript(input: {
       metadata: {
         language: input.language ?? null,
         sourceMimeType: input.sourceMimeType,
+        executionId: input.executionId,
       },
     })
     return NextResponse.json({

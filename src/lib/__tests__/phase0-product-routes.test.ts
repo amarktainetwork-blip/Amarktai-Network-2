@@ -57,11 +57,13 @@ describe('Phase 0 product route coverage', () => {
   it('requests artifact persistence for generated image and research output', () => {
     for (const route of [
       'src/app/api/brain/image/route.ts',
-      'src/app/api/brain/image-edit/route.ts',
       'src/app/api/brain/suggestive-image/route.ts',
       'src/app/api/brain/research/route.ts',
     ]) {
       expect(source(route)).toContain('saveArtifact: true')
     }
+    const imageEdit = source('src/app/api/brain/image-edit/route.ts')
+    expect(imageEdit).toContain("readiness: 'UNAVAILABLE'")
+    expect(imageEdit).toContain('artifactId: null')
   })
 })
