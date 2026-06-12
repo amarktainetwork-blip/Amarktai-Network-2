@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
     capability: 'image_generation',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride ?? body.model,
+    appId: body.appSlug || 'amarktai-network',
     saveArtifact: true,
+    metadata: { executionId: execution.executionId },
   })
 
   const payload = {

@@ -44,6 +44,15 @@ function capabilityFor(resultMeta: string | null) {
   }
 }
 
+function executionIdFor(resultMeta: string | null) {
+  try {
+    const parsed = JSON.parse(resultMeta ?? '{}') as { executionId?: string }
+    return typeof parsed.executionId === 'string' ? parsed.executionId : undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function ensureVideoArtifact(job: {
   id: string
   appSlug: string | null
@@ -63,8 +72,11 @@ async function ensureVideoArtifact(job: {
     if (existing) return { artifactId: existing.id, storageUrl: existing.storageUrl, artifactError: null }
     const artifact = await createArtifact({
       appSlug: job.appSlug ?? 'amarktai-network',
+      executionId: executionIdFor(job.resultMeta),
+      jobId: job.id,
       type: 'video',
       subType: capabilityFor(job.resultMeta),
+      capability: capabilityFor(job.resultMeta),
       title: `Video generation ${job.id}`,
       description: job.prompt,
       provider: job.provider,

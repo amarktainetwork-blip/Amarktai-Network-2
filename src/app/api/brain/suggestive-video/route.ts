@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAppSafetyConfig, validateSuggestivePrompt } from '@/lib/content-filter';
+import { createArtifact } from '@/lib/artifact-store';
+import { getAppSafetyConfig, loadAppSafetyConfigFromDB, validateSuggestivePrompt } from '@/lib/content-filter';
 
 /**
  * POST /api/brain/suggestive-video — Suggestive (non-explicit) video planning
@@ -141,6 +142,14 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+    if (!appSlug?.trim()) {
+      return NextResponse.json({
+        capability: 'suggestive_video_planning',
+        executed: false,
+        gating_required: true,
+        error: 'appSlug is required for app-policy-gated suggestive planning.',
+      }, { status: 400 });
+    }
 
     if (duration < 1 || duration > 120) {
       return NextResponse.json(
@@ -164,21 +173,20 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Per-app gating check ────────────────────────────────────────────
-    if (appSlug) {
-      const safetyConfig = getAppSafetyConfig(appSlug);
-      if (safetyConfig.safeMode || !safetyConfig.suggestiveMode) {
-        return NextResponse.json(
-          {
-            capability: 'suggestive_video_planning',
-            executed: false,
-            error:
-              'Suggestive video planning is not enabled for this app. ' +
-              'Set safeMode=false and suggestiveMode=true in app settings.',
-            gating_required: true,
-          },
-          { status: 403 },
-        );
-      }
+    await loadAppSafetyConfigFromDB(appSlug);
+    const safetyConfig = getAppSafetyConfig(appSlug);
+    if (safetyConfig.safeMode || !safetyConfig.suggestiveMode) {
+      return NextResponse.json(
+        {
+          capability: 'suggestive_video_planning',
+          executed: false,
+          error:
+            'Suggestive video planning is not enabled for this app. ' +
+            'Set safeMode=false and suggestiveMode=true in app settings.',
+          gating_required: true,
+        },
+        { status: 403 },
+      );
     }
 
     // ── Prompt safety validation ────────────────────────────────────────
@@ -201,7 +209,7 @@ export async function POST(request: NextRequest) {
         ? providedScenes
         : buildSuggestiveScenes(validation.sanitized, duration, style as SuggestiveStyle);
 
-    return NextResponse.json({
+    const payload = {
       capability: 'suggestive_video_planning',
       executed: true,
       fallback_used: false,
@@ -212,8 +220,7 @@ export async function POST(request: NextRequest) {
       generation_available: false,
       generation_blocker:
         'No video generation provider SDK is integrated. ' +
-        'Candidates: Gemini Veo 2, Runway Gen-3, Pika, Stability AI Stable Video Diffusion. ' +
-        'Provider API key alone is not sufficient; a rendering pipeline must be implemented.',
+        'An approved video provider and rendering pipeline must be configured.',
       params: {
         script: validation.sanitized.slice(0, 200),
         style,
@@ -222,7 +229,29 @@ export async function POST(request: NextRequest) {
         content_type: 'suggestive_non_explicit',
       },
       scenes,
-    });
+    };
+    try {
+      const artifact = await createArtifact({
+        appSlug,
+        type: 'report',
+        subType: 'suggestive_video',
+        capability: 'suggestive_video',
+        title: `Suggestive video plan: ${validation.sanitized.slice(0, 80)}`,
+        description: 'Policy-gated scene plan only. No rendered video was generated.',
+        mimeType: 'application/json',
+        content: Buffer.from(JSON.stringify(payload, null, 2)),
+        metadata: { planningOnly: true, contentType: 'suggestive_non_explicit' },
+      });
+      return NextResponse.json({ ...payload, artifactId: artifact.id, storageUrl: artifact.storageUrl });
+    } catch (artifactError) {
+      return NextResponse.json({
+        capability: 'suggestive_video_planning',
+        executed: false,
+        error: `Video plan completed but artifact persistence failed: ${
+          artifactError instanceof Error ? artifactError.message : 'unknown error'
+        }`,
+      }, { status: 503 });
+    }
   } catch (err) {
     return NextResponse.json(
       { error: 'Internal server error', detail: String(err), executed: false },

@@ -112,8 +112,11 @@ const processors: Record<string, JobProcessor> = {
     try {
       const artifact = await createArtifact({
         appSlug: payload.appSlug,
+        executionId,
+        jobId: completed.id,
         type: 'document',
         subType: 'agent_result',
+        capability: agentType === 'developer' ? 'code' : agentType === 'voice' ? 'voice_response' : 'chat',
         title: `${definition.name}: ${message.slice(0, 80)}`,
         description: `Completed ${agentType} agent output`,
         traceId: `agent-task-${completed.id}`,

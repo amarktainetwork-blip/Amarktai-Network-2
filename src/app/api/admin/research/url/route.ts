@@ -4,7 +4,6 @@ import { promisify } from 'util'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
-import { appendRecord, checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 const execFileAsync = promisify(execFile)
 type CrawlResult = { url: string; title: string; content: string; method: string }
@@ -50,26 +49,25 @@ export async function POST(request: NextRequest) {
   }
 
   const content = crawl.content || body.notes || ''
-  let artifact = null
   try {
-    artifact = await createArtifact({
+    const artifact = await createArtifact({
       appSlug: body.appSlug || 'research-engine',
-      type: 'document',
+      type: 'research_result',
       subType: 'research_source',
+      capability: 'scrape_website',
       title: crawl.title,
       description: `Local research source: ${parsed.toString()}`,
       provider: 'local-crawler',
       content,
       metadata: { sourceUrl: parsed.toString(), method: crawl.method, tags: body.tags || [], notes: body.notes || '', warning },
     })
-  } catch {
-    if (checkWritable(LOCAL_STORE_FILES.research).writable) {
-      appendRecord(LOCAL_STORE_FILES.research, {
-        url: parsed.toString(), appSlug: body.appSlug || 'research-engine', title: crawl.title,
-        notes: body.notes || '', tags: body.tags || [], scrapedMethod: crawl.method,
-        content, status: 'completed', createdAt: new Date().toISOString(), warning,
-      })
-    }
+    return NextResponse.json({ success: true, artifact, crawl, warning: warning || null })
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: `Research completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`,
+    }, { status: 503 })
   }
-  return NextResponse.json({ success: true, artifact, crawl, warning: warning || null })
 }

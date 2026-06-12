@@ -168,8 +168,9 @@ export async function POST(req: NextRequest) {
     // Save deploy log as artifact
     const artifact = await createArtifact({
       appSlug,
-      type: 'document',
+      type: 'deployment_plan',
       subType: 'deploy_log',
+      capability: 'deploy_plan',
       title: `Deploy: ${appSlug} → ${branch}`,
       description: `Direct VPS deploy attempt for ${repo}@${branch} to ${deployPath}`,
       mimeType: 'text/plain',

@@ -199,7 +199,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       status,
       providerJobId,
       resultUrl: resultUrl || null,
-      resultMeta: JSON.stringify({ capability }),
+      resultMeta: JSON.stringify({ capability, executionId: execution.executionId }),
     },
   })
   let artifactId: string | null = null
@@ -208,8 +208,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     try {
       const artifact = await createArtifact({
         appSlug: appSlug ?? 'amarktai-network',
+        executionId: execution.executionId,
+        jobId: job.id,
         type: 'video',
         subType: capability,
+        capability,
         title: `${capability === 'adult_video' ? 'Adult video' : 'Video'}: ${prompt.slice(0, 80)}`,
         description: enhancedPrompt,
         provider: usedProvider,

@@ -180,8 +180,9 @@ export async function POST(request: NextRequest) {
       try {
         const artifact = await createArtifact({
           appSlug,
-          type: 'audio',
+          type: 'voice',
           subType: capability,
+          capability,
           title: `${capability === 'adult_voice' ? 'Adult voice' : 'TTS'}: ${text.slice(0, 80)}`,
           provider: entry.provider,
           model,
