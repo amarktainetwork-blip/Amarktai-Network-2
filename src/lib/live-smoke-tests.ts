@@ -20,7 +20,12 @@
  * Server-side only — do NOT import from client components.
  */
 
-import { getProviderMeshNode, sanitizeProviderError, type ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import {
+  APPROVED_DIRECT_PROVIDER_IDS,
+  getProviderMeshNode,
+  sanitizeProviderError,
+  type ApprovedDirectProviderId,
+} from '@/lib/provider-mesh'
 import { isUsableServiceKey } from '@/lib/service-vault'
 import { getMeshCredential } from '@/lib/provider-mesh-status'
 
@@ -185,6 +190,9 @@ const SMOKE_CAPABILITY: Record<ApprovedDirectProviderId, string> = {
   together: 'chat/text',
 }
 
+export const LIVE_SMOKE_PROVIDER_IDS: readonly ApprovedDirectProviderId[] =
+  APPROVED_DIRECT_PROVIDER_IDS
+
 // ── Per-provider runner ───────────────────────────────────────────────────────
 
 async function runProviderSmokeTest(
@@ -213,9 +221,7 @@ async function runProviderSmokeTest(
  * - Runs all providers concurrently.
  */
 export async function runAllProviderSmokeTests(): Promise<ProviderSmokeResult[]> {
-  const APPROVED: ApprovedDirectProviderId[] = ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together']
-
-  return Promise.all(APPROVED.map(async (id): Promise<ProviderSmokeResult> => {
+  return Promise.all(LIVE_SMOKE_PROVIDER_IDS.map(async (id): Promise<ProviderSmokeResult> => {
     const node = getProviderMeshNode(id)!
     const envKey = node.envAliases.find((alias) => isUsableServiceKey(process.env[alias]))
     const vaultKey = await getMeshCredential(id).catch(() => null)
