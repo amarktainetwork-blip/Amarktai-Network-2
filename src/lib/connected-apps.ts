@@ -19,6 +19,10 @@
 
 import crypto from 'crypto'
 import { appendRecord, deleteRecord, findRecord, listRecords, updateRecord } from '@/lib/local-json-store'
+import {
+  CONNECTED_APP_AI_SCOPES,
+  type ConnectedAppAiScope,
+} from '@/lib/ai-capability-taxonomy'
 
 // ── Storage path ─────────────────────────────────────────────────────────────
 
@@ -33,12 +37,14 @@ export type ConnectedAppScope =
   | 'events:read'
   | 'artifacts:read'
   | 'artifacts:write'
+  | ConnectedAppAiScope
 
 export const CONNECTED_APP_SCOPES: ConnectedAppScope[] = [
   'webhook:receive',
   'events:read',
   'artifacts:read',
   'artifacts:write',
+  ...CONNECTED_APP_AI_SCOPES,
 ]
 
 export interface ConnectedApp {

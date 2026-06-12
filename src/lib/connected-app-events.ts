@@ -42,6 +42,17 @@ export interface RecordRejectedEventInput {
   rejectionReason: string
 }
 
+function newestFirst(events: ConnectedAppEvent[]): ConnectedAppEvent[] {
+  return events
+    .map((event, insertionIndex) => ({ event, insertionIndex }))
+    .sort((a, b) => {
+      const timestampDifference =
+        new Date(b.event.timestamp).getTime() - new Date(a.event.timestamp).getTime()
+      return timestampDifference || b.insertionIndex - a.insertionIndex
+    })
+    .map(({ event }) => event)
+}
+
 // ── Event log operations ──────────────────────────────────────────────────────
 
 /**
@@ -85,9 +96,7 @@ export function recordRejectedEvent(input: RecordRejectedEventInput): ConnectedA
  */
 export function listConnectedAppEvents(): ConnectedAppEvent[] {
   const events = listRecords<ConnectedAppEvent>(CONNECTED_APP_EVENTS_FILE)
-  return [...events].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  )
+  return newestFirst(events)
 }
 
 /**
@@ -98,7 +107,5 @@ export function listConnectedAppEventsForApp(appId: string): ConnectedAppEvent[]
     CONNECTED_APP_EVENTS_FILE,
     (e) => e.appId === appId,
   )
-  return [...events].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  )
+  return newestFirst(events)
 }
