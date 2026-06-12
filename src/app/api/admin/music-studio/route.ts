@@ -15,6 +15,7 @@ import {
   type MusicCreationRequest,
 } from '@/lib/music-studio'
 import { callGenXMedia, GENX_AUDIO_MODELS } from '@/lib/genx-client'
+import { createArtifact } from '@/lib/artifact-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
@@ -141,9 +142,26 @@ export async function POST(request: NextRequest) {
   try {
     if (action === 'lyrics_only') {
       const lyrics = await generateLyrics(musicRequest)
+      const artifact = await createArtifact({
+        appSlug: musicRequest.appSlug,
+        type: 'text',
+        subType: 'lyrics',
+        capability: 'lyrics_generation',
+        title: lyrics.title,
+        description: `${musicRequest.genre} / ${musicRequest.vocalStyle}`,
+        model: lyrics.model,
+        mimeType: 'text/plain',
+        content: Buffer.from(lyrics.lyrics, 'utf8'),
+        metadata: {
+          theme: musicRequest.theme,
+          genre: musicRequest.genre,
+          vocalStyle: musicRequest.vocalStyle,
+        },
+      })
       return NextResponse.json({
-        success: true, capability: 'music_generation', provider: null, model: null,
-        jobStatus: 'completed', artifactId: null, storageUrl: null, error: null, blocker: null, lyrics,
+        success: true, capability: 'lyrics_generation', provider: null, model: null,
+        jobStatus: 'completed', artifactId: artifact.id, storageUrl: artifact.storageUrl,
+        error: null, blocker: null, lyrics,
       })
     }
 

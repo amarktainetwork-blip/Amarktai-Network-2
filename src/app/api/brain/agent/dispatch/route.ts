@@ -200,8 +200,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     artifact = await createArtifact({
       appSlug: appId,
+      executionId: execution.executionId,
+      jobId: completed.id,
       type: 'document',
       subType: 'agent_result',
+      capability: capabilityForAgent(agentType as AgentType),
       title: `${definition.name}: ${message.slice(0, 80)}`,
       description: `Completed ${agentType} agent output`,
       provider: execution.providerPlan.provider ?? undefined,

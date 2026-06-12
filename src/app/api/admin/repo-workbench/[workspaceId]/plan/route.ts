@@ -42,6 +42,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ workspa
       scope: body.scope || 'auto',
       agentMode: body.agentMode || 'fullstack_builder',
       modelId: body.modelId,
+      executionId: execution.executionId,
     })
     const completed = completeExecution({
       executionId: execution.executionId,

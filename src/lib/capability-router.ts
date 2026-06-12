@@ -1,4 +1,4 @@
-import { createArtifact } from '@/lib/artifact-store'
+import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import {
   getAppSafetyConfig,
@@ -191,15 +191,19 @@ function outputTypeFor(capability: CapabilityRouterCapability): string {
 
 function artifactTypeFor(
   capability: CapabilityRouterCapability,
-): 'code' | 'audio' | 'music' | 'image' | 'video' | 'report' | 'document' | 'transcript' {
+): ArtifactType {
   if (capability === 'music_generation') return 'music'
   if (capability === 'stt') return 'transcript'
-  if (capability === 'research' || capability === 'deploy_plan') return 'report'
+  if (capability === 'research' || capability === 'scrape_website') return 'research_result'
+  if (capability === 'deploy_plan') return 'deployment_plan'
+  if (capability === 'app_build') return 'app_blueprint'
+  if (capability === 'repo_edit') return 'repo_patch'
+  if (capability === 'tts' || capability === 'voice_response' || capability === 'adult_voice') return 'voice'
   const outputType = outputTypeFor(capability)
   if (outputType === 'code' || outputType === 'audio' || outputType === 'image' || outputType === 'video') {
     return outputType
   }
-  return 'document'
+  return 'text'
 }
 
 function failure(
@@ -232,8 +236,13 @@ async function persistOutput(
   if (!request.saveArtifact) return response
   const artifact = await createArtifact({
     appSlug: request.appId ?? request.workspaceId ?? '__system__',
+    appId: request.appId,
+    workspaceId: request.workspaceId,
+    executionId: typeof request.metadata?.executionId === 'string' ? request.metadata.executionId : undefined,
+    jobId: response.jobId,
     type: artifactTypeFor(response.capability),
     subType: response.capability,
+    capability: response.capability,
     provider: response.provider ?? undefined,
     model: response.model ?? undefined,
     traceId: request.traceId,

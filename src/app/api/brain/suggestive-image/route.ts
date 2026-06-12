@@ -13,21 +13,27 @@ export async function POST(request: NextRequest) {
   if (!body?.prompt?.trim()) {
     return NextResponse.json({ error: 'prompt is required and must be a non-empty string' }, { status: 400 })
   }
+  if (!body.appSlug?.trim()) {
+    return NextResponse.json({
+      capability: 'suggestive_image_generation',
+      executed: false,
+      gating_required: true,
+      error: 'appSlug is required for app-policy-gated suggestive generation.',
+    }, { status: 400 })
+  }
 
-  if (body.appSlug) {
-    await loadAppSafetyConfigFromDB(body.appSlug)
-    const policy = getAppSafetyConfig(body.appSlug)
-    if (policy.safeMode || !policy.suggestiveMode) {
-      return NextResponse.json(
-        {
-          capability: 'suggestive_image_generation',
-          executed: false,
-          gating_required: true,
-          error: 'Suggestive image generation requires safeMode=false and suggestiveMode=true for this app.',
-        },
-        { status: 403 },
-      )
-    }
+  await loadAppSafetyConfigFromDB(body.appSlug)
+  const policy = getAppSafetyConfig(body.appSlug)
+  if (policy.safeMode || !policy.suggestiveMode) {
+    return NextResponse.json(
+      {
+        capability: 'suggestive_image_generation',
+        executed: false,
+        gating_required: true,
+        error: 'Suggestive image generation requires safeMode=false and suggestiveMode=true for this app.',
+      },
+      { status: 403 },
+    )
   }
 
   const validation = validateSuggestivePrompt(body.prompt.trim())
@@ -49,6 +55,7 @@ export async function POST(request: NextRequest) {
     capability: 'suggestive_image',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride,
+    appId: body.appSlug,
     safeMode: false,
     saveArtifact: true,
   })

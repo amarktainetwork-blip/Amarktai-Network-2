@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
     image?: string
     providerOverride?: string
     modelOverride?: string
+    appSlug?: string
   } | null
 
   if (!body?.prompt?.trim() || !body.image) {
@@ -18,6 +19,7 @@ export async function POST(request: NextRequest) {
     capability: 'image_edit',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride,
+    appId: body.appSlug || 'amarktai-network',
     saveArtifact: true,
   })
   return NextResponse.json(result, { status: result.success ? 200 : 503 })

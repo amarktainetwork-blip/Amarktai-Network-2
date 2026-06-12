@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createArtifact } from '@/lib/artifact-store'
 import { getVaultApiKey } from '@/lib/brain'
 import { callGenXMedia, GENX_STT_MODELS } from '@/lib/genx-client'
 import { isApprovedDirectProvider } from '@/lib/provider-mesh'
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
 
   const requestedModel = formData.get('model')?.toString()
   const language = formData.get('language')?.toString()
+  const appSlug = formData.get('appSlug')?.toString() || 'media-studio'
   const bytes = Buffer.from(await file.arrayBuffer())
   const mimeType = (file as File).type || 'audio/webm'
 
@@ -37,14 +39,14 @@ export async function POST(request: NextRequest) {
       metadata: { task: 'transcribe', mimeType, language },
     })
     if (result.success && result.url) {
-      return NextResponse.json({
+      return persistTranscript({
         transcript: result.url,
         model: result.model,
         language,
         provider: 'genx',
-        executed: true,
-        fallback_used: false,
-        capability: 'voice_input',
+        appSlug,
+        sourceMimeType: mimeType,
+        fallbackUsed: false,
       })
     }
     if (requestedProvider === 'genx') return unavailable('GenX STT is not configured or returned no transcript.', 503, 'genx')
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
       })
       if (response.ok) {
         const result = await response.json() as { text?: string }
-        if (result.text) return NextResponse.json({ transcript: result.text, model, language, provider, executed: true, capability: 'voice_input' })
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType })
       }
     }
 
@@ -94,7 +96,7 @@ export async function POST(request: NextRequest) {
       if (response.ok) {
         const result = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
         const transcript = result.choices?.[0]?.message?.content
-        if (transcript) return NextResponse.json({ transcript, model, language, provider, executed: true, capability: 'voice_input' })
+        if (transcript) return persistTranscript({ transcript, model, language, provider, appSlug, sourceMimeType: mimeType })
       }
     }
 
@@ -107,10 +109,58 @@ export async function POST(request: NextRequest) {
       })
       if (response.ok) {
         const result = await response.json() as { text?: string }
-        if (result.text) return NextResponse.json({ transcript: result.text, model, language, provider, executed: true, capability: 'voice_input' })
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType })
       }
     }
   }
 
   return unavailable('No approved STT provider is currently ready.')
+}
+
+async function persistTranscript(input: {
+  transcript: string
+  model: string
+  language?: string
+  provider: string
+  appSlug: string
+  sourceMimeType: string
+  fallbackUsed?: boolean
+}) {
+  try {
+    const artifact = await createArtifact({
+      appSlug: input.appSlug,
+      type: 'transcript',
+      subType: 'stt',
+      capability: 'stt',
+      title: 'Speech transcription',
+      description: input.transcript.slice(0, 240),
+      provider: input.provider,
+      model: input.model,
+      mimeType: 'text/plain',
+      content: Buffer.from(input.transcript, 'utf8'),
+      metadata: {
+        language: input.language ?? null,
+        sourceMimeType: input.sourceMimeType,
+      },
+    })
+    return NextResponse.json({
+      transcript: input.transcript,
+      model: input.model,
+      language: input.language,
+      provider: input.provider,
+      executed: true,
+      fallback_used: input.fallbackUsed ?? false,
+      capability: 'voice_input',
+      artifactId: artifact.id,
+      storageUrl: artifact.storageUrl,
+    })
+  } catch (error) {
+    return NextResponse.json({
+      executed: false,
+      capability: 'voice_input',
+      error: `Transcription completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`,
+    }, { status: 503 })
+  }
 }
