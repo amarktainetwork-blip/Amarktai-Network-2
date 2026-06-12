@@ -57,8 +57,9 @@ describe('VPS storage persistence policy', () => {
 
     expect(health.configured).toBe(true)
     expect(health.writable).toBe(true)
+    expect(health.readable).toBe(true)
     expect(health.directories.map((dir) => dir.name)).toEqual(['artifacts', 'uploads', 'repos', 'workspaces', 'logs'])
-    expect(health.directories.every((dir) => dir.exists && dir.writable)).toBe(true)
+    expect(health.directories.every((dir) => dir.exists && dir.writable && dir.readable)).toBe(true)
   })
 
   it('writes, reads, and deletes artifact files through local_vps storage', async () => {
