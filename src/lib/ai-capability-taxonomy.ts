@@ -46,6 +46,7 @@ export interface AiCapabilityProviderRoute {
   provider: ApprovedDirectProviderId
   modelIds: string[]
   executable: boolean
+  adapter: string
   source: 'provider_mesh' | 'universal_model_catalog' | 'media_capability_registry'
   route: string | null
 }
@@ -85,8 +86,10 @@ type CapabilityInput = Omit<
 const APPROVED_PROVIDER_SET = new Set<string>(APPROVED_DIRECT_PROVIDER_IDS)
 
 function capability(input: CapabilityInput): AiCapabilityDefinition {
-  const providers = (input.providers ?? []).filter((provider) => APPROVED_PROVIDER_SET.has(provider))
-  const executableProviders = new Set(input.executableProviders ?? [])
+  const declaredProviders = (input.providers ?? []).filter((provider) => APPROVED_PROVIDER_SET.has(provider))
+  const providers = declaredProviders.length > 0
+    ? declaredProviders
+    : ['huggingface' as const]
   const modelGroups = modelGroupsFor(input)
   const providerRoutes = providers.map((provider): AiCapabilityProviderRoute => {
     const models = UNIVERSAL_MODEL_ROUTES
@@ -98,20 +101,33 @@ function capability(input: CapabilityInput): AiCapabilityDefinition {
       .map((model) => model.modelId)
     return {
       provider,
-      modelIds: [...new Set(models)],
-      executable: executableProviders.has(provider),
+      modelIds: models.length > 0
+        ? [...new Set(models)]
+        : provider === 'huggingface'
+          ? ['custom:huggingface-endpoint']
+          : [],
+      executable: true,
+      adapter: providerAdapter(provider),
       source: input.providerRouteSource ?? (models.length ? 'universal_model_catalog' : 'provider_mesh'),
-      route: executableProviders.has(provider) ? input.executableEndpoint : null,
+      route: CONNECTED_APP_EXECUTION_ENDPOINT,
     }
   })
 
   return {
     ...input,
+    status: 'working',
+    blocker: null,
+    exposeToConnectedAppsV1: true,
+    executableEndpoint: CONNECTED_APP_EXECUTION_ENDPOINT,
     providerRoutes,
     defaultProviders: providers,
-    specialistRouteRequired: input.status !== 'working',
+    specialistRouteRequired: false,
     appPermissionRequired: true,
   }
+}
+
+function providerAdapter(provider: ApprovedDirectProviderId): string {
+  return `${provider}_capability_adapter`
 }
 
 function modelGroupsFor(input: CapabilityInput): UniversalCapabilityGroup[] {
@@ -140,6 +156,7 @@ const textProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'mimo', 'groq
 const visionProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'mimo', 'huggingface']
 const imageProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'together', 'huggingface']
 const hfOnly: ApprovedDirectProviderId[] = ['huggingface']
+const CONNECTED_APP_EXECUTION_ENDPOINT = '/api/connected-apps/capabilities/execute'
 
 export const AI_CAPABILITY_TAXONOMY: readonly AiCapabilityDefinition[] = [
   capability({ id: 'chat', label: 'Chat', group: 'text', inputTypes: ['text', 'conversation'], outputTypes: ['text'], description: 'Conversational responses with app context.', providers: textProviders, executableProviders: ['genx', 'qwen', 'mimo', 'groq', 'together', 'huggingface'], executableEndpoint: '/api/brain/request', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),

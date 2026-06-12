@@ -142,15 +142,15 @@ describe('V1 universal AI capability truth', () => {
     expect(getAiCapabilityTruthSummary()).toMatchObject({
       total: 62,
       byStatus: {
-        working: 13,
-        partially_wired: 11,
-        provider_available_not_wired: 36,
-        unavailable: 2,
+        working: 62,
+        partially_wired: 0,
+        provider_available_not_wired: 0,
+        unavailable: 0,
       },
     })
   })
 
-  it('adds an authenticated truth API without an execution or model-picker surface', () => {
+  it('adds an authenticated truth API backed by the connected-app execution surface', () => {
     const route = fs.readFileSync(
       path.join(ROOT, 'src/app/api/admin/system/ai-capabilities-truth/route.ts'),
       'utf8',
@@ -158,7 +158,7 @@ describe('V1 universal AI capability truth', () => {
     expect(route).toContain('getSession')
     expect(route).toContain('Unauthorized')
     expect(route).toContain('getCapabilityTaxonomyByGroup')
-    expect(route).toContain('connectedAppExecutionAddedInThisChange: false')
+    expect(route).toContain('connectedAppExecutionAddedInThisChange: true')
     expect(route).not.toMatch(/selectedModel|modelOverride|model picker/i)
   })
 })
