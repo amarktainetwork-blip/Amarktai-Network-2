@@ -1,115 +1,296 @@
-export type CapabilityGroup =
-  | 'multimodal'
-  | 'computer_vision'
-  | 'natural_language_processing'
-  | 'audio'
-  | 'tabular'
-  | 'time_series'
-  | 'reinforcement_learning'
-  | 'robotics'
-  | 'graph_ml'
-  | 'system_ops'
+import {
+  APPROVED_DIRECT_PROVIDER_IDS,
+  getProviderMeshNode,
+  type ApprovedDirectProviderId,
+} from '@/lib/provider-mesh'
+import {
+  UNIVERSAL_MODEL_ROUTES,
+  type UniversalCapabilityGroup,
+} from '@/lib/universal-model-catalog'
+
+export const AI_CAPABILITY_CATEGORIES = [
+  'text',
+  'multimodal',
+  'computer_vision',
+  'video',
+  'audio',
+  'music',
+  'avatar_voice',
+  'tabular',
+  'agents_or_planning',
+  'experimental',
+] as const
+
+export type CapabilityGroup = typeof AI_CAPABILITY_CATEGORIES[number]
+export type AiCapabilityStatus =
+  | 'working'
+  | 'partially_wired'
+  | 'provider_available_not_wired'
+  | 'unavailable'
+
+export const CONNECTED_APP_AI_SCOPES = [
+  'ai:text:execute',
+  'ai:image:execute',
+  'ai:video:execute',
+  'ai:audio:execute',
+  'ai:music:execute',
+  'ai:avatar:execute',
+  'ai:research:execute',
+  'ai:data:execute',
+  'ai:campaign:execute',
+] as const
+
+export type ConnectedAppAiScope = typeof CONNECTED_APP_AI_SCOPES[number]
+
+export interface AiCapabilityProviderRoute {
+  provider: ApprovedDirectProviderId
+  modelIds: string[]
+  executable: boolean
+  source: 'provider_mesh' | 'universal_model_catalog' | 'media_capability_registry'
+  route: string | null
+}
 
 export interface AiCapabilityDefinition {
   id: string
   label: string
   group: CapabilityGroup
   description: string
-  defaultProviders: string[]
+  inputTypes: string[]
+  outputTypes: string[]
+  requiredScope: ConnectedAppAiScope
+  providerRoutes: AiCapabilityProviderRoute[]
+  executableEndpoint: string | null
+  status: AiCapabilityStatus
+  blocker: string | null
+  exposeToConnectedAppsV1: boolean
+  createsArtifact: boolean
+  longRunning: boolean
+
+  // Compatibility fields used by the app AI package recommender.
+  defaultProviders: ApprovedDirectProviderId[]
   specialistRouteRequired: boolean
   appPermissionRequired: boolean
   safetyNotes?: string
 }
 
+type CapabilityInput = Omit<
+  AiCapabilityDefinition,
+  'defaultProviders' | 'specialistRouteRequired' | 'appPermissionRequired' | 'providerRoutes'
+> & {
+  providers?: ApprovedDirectProviderId[]
+  executableProviders?: ApprovedDirectProviderId[]
+  providerRouteSource?: AiCapabilityProviderRoute['source']
+}
+
+const APPROVED_PROVIDER_SET = new Set<string>(APPROVED_DIRECT_PROVIDER_IDS)
+
+function capability(input: CapabilityInput): AiCapabilityDefinition {
+  const providers = (input.providers ?? []).filter((provider) => APPROVED_PROVIDER_SET.has(provider))
+  const executableProviders = new Set(input.executableProviders ?? [])
+  const modelGroups = modelGroupsFor(input)
+  const providerRoutes = providers.map((provider): AiCapabilityProviderRoute => {
+    const models = UNIVERSAL_MODEL_ROUTES
+      .filter((model) =>
+        model.provider === provider
+        && model.enabled
+        && model.capabilities.some((modelCapability) => modelGroups.includes(modelCapability)),
+      )
+      .map((model) => model.modelId)
+    return {
+      provider,
+      modelIds: [...new Set(models)],
+      executable: executableProviders.has(provider),
+      source: input.providerRouteSource ?? (models.length ? 'universal_model_catalog' : 'provider_mesh'),
+      route: executableProviders.has(provider) ? input.executableEndpoint : null,
+    }
+  })
+
+  return {
+    ...input,
+    providerRoutes,
+    defaultProviders: providers,
+    specialistRouteRequired: input.status !== 'working',
+    appPermissionRequired: true,
+  }
+}
+
+function modelGroupsFor(input: CapabilityInput): UniversalCapabilityGroup[] {
+  if (input.id === 'embeddings' || input.id === 'rerank' || input.id === 'text_ranking') {
+    return ['embeddings/moderation']
+  }
+  if (input.id === 'automatic_speech_recognition') return ['STT']
+  if (input.id === 'text_to_speech' || input.id === 'voice_clone_or_voice_design') return ['voice/TTS']
+  if (input.group === 'music' || input.id === 'text_to_audio') return ['music/audio']
+  if (input.group === 'video' || input.inputTypes.includes('video') || input.outputTypes.includes('video')) {
+    return ['video']
+  }
+  if (
+    input.group === 'computer_vision'
+    || input.inputTypes.includes('image')
+    || input.outputTypes.includes('image')
+    || input.outputTypes.includes('3d_asset')
+  ) {
+    return ['image']
+  }
+  if (input.group === 'multimodal') return ['image', 'video', 'chat', 'reasoning']
+  return input.id === 'reasoning' ? ['reasoning'] : ['chat', 'reasoning']
+}
+
+const textProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'mimo', 'groq', 'together', 'huggingface']
+const visionProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'mimo', 'huggingface']
+const imageProviders: ApprovedDirectProviderId[] = ['genx', 'qwen', 'together', 'huggingface']
+const hfOnly: ApprovedDirectProviderId[] = ['huggingface']
+
 export const AI_CAPABILITY_TAXONOMY: readonly AiCapabilityDefinition[] = [
-  // Multimodal
-  cap('audio_text_to_text', 'Audio-Text-to-Text', 'multimodal', 'Transcribe or reason over audio plus text input.', ['genx', 'gemini', 'qwen', 'huggingface', 'deepgram'], true, true),
-  cap('image_text_to_text', 'Image-Text-to-Text', 'multimodal', 'Answer or reason over image plus text.', ['genx', 'gemini', 'qwen', 'huggingface', 'zhipu'], false, true),
-  cap('image_text_to_image', 'Image-Text-to-Image', 'multimodal', 'Edit/generate image from image plus text.', ['genx', 'qwen', 'huggingface', 'together'], true, true),
-  cap('image_text_to_video', 'Image-Text-to-Video', 'multimodal', 'Generate video from image plus prompt.', ['genx', 'qwen', 'together'], true, true),
-  cap('visual_question_answering', 'Visual Question Answering', 'multimodal', 'Answer questions about images.', ['genx', 'gemini', 'qwen', 'huggingface', 'zhipu'], false, true),
-  cap('document_question_answering', 'Document Question Answering', 'multimodal', 'Answer questions from documents and scans.', ['genx', 'gemini', 'huggingface', 'qwen'], false, true),
-  cap('video_text_to_text', 'Video-Text-to-Text', 'multimodal', 'Analyze or summarize video with text prompt.', ['genx', 'gemini', 'qwen', 'huggingface'], true, true),
-  cap('visual_document_retrieval', 'Visual Document Retrieval', 'multimodal', 'Search/retrieve visual document regions or pages.', ['huggingface', 'gemini', 'genx'], true, true),
-  cap('any_to_any', 'Any-to-Any', 'multimodal', 'General multimodal conversion/reasoning.', ['genx', 'gemini', 'qwen', 'minimax', 'huggingface'], true, true),
+  capability({ id: 'chat', label: 'Chat', group: 'text', inputTypes: ['text', 'conversation'], outputTypes: ['text'], description: 'Conversational responses with app context.', providers: textProviders, executableProviders: ['genx', 'qwen', 'mimo', 'groq', 'together', 'huggingface'], executableEndpoint: '/api/brain/request', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'reasoning', label: 'Reasoning', group: 'agents_or_planning', inputTypes: ['text', 'context'], outputTypes: ['text', 'plan'], description: 'Multi-step reasoning and structured planning.', providers: ['genx', 'qwen', 'mimo', 'groq', 'together'], executableProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'], executableEndpoint: '/api/brain/request', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'research', label: 'Research', group: 'agents_or_planning', inputTypes: ['text', 'url'], outputTypes: ['research_result', 'sources'], description: 'Structured research using the canonical capability router.', providers: ['genx', 'qwen', 'mimo', 'groq', 'together'], executableProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'], executableEndpoint: '/api/brain/research', status: 'working', blocker: null, requiredScope: 'ai:research:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
+  capability({ id: 'text_generation', label: 'Text Generation', group: 'text', inputTypes: ['text', 'context'], outputTypes: ['text'], description: 'Generate app-facing text and structured copy.', providers: textProviders, executableProviders: ['genx', 'qwen', 'mimo', 'groq', 'together', 'huggingface'], executableEndpoint: '/api/brain/request', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
 
-  // Computer Vision
-  cap('depth_estimation', 'Depth Estimation', 'computer_vision', 'Estimate depth maps from images.', ['huggingface'], true, true),
-  cap('image_classification', 'Image Classification', 'computer_vision', 'Classify images.', ['huggingface', 'gemini', 'qwen'], false, true),
-  cap('object_detection', 'Object Detection', 'computer_vision', 'Detect objects and boxes.', ['huggingface', 'gemini', 'qwen'], true, true),
-  cap('image_segmentation', 'Image Segmentation', 'computer_vision', 'Segment regions or objects.', ['huggingface'], true, true),
-  cap('text_to_image', 'Text-to-Image', 'computer_vision', 'Generate images from text.', ['genx', 'qwen', 'huggingface', 'together'], true, true),
-  cap('image_to_text', 'Image-to-Text', 'computer_vision', 'Caption/extract text from images.', ['genx', 'gemini', 'qwen', 'huggingface'], false, true),
-  cap('image_to_image', 'Image-to-Image', 'computer_vision', 'Transform or edit images.', ['genx', 'qwen', 'huggingface'], true, true),
-  cap('image_to_video', 'Image-to-Video', 'computer_vision', 'Generate video from image.', ['genx', 'qwen', 'together'], true, true),
-  cap('unconditional_image_generation', 'Unconditional Image Generation', 'computer_vision', 'Generate images without prompt conditioning.', ['huggingface'], true, true),
-  cap('video_classification', 'Video Classification', 'computer_vision', 'Classify videos.', ['huggingface', 'gemini'], true, true),
-  cap('text_to_video', 'Text-to-Video', 'computer_vision', 'Generate videos from text.', ['genx', 'qwen', 'together'], true, true),
-  cap('zero_shot_image_classification', 'Zero-Shot Image Classification', 'computer_vision', 'Classify images against arbitrary labels.', ['huggingface', 'gemini'], false, true),
-  cap('mask_generation', 'Mask Generation', 'computer_vision', 'Generate masks for images.', ['huggingface'], true, true),
-  cap('zero_shot_object_detection', 'Zero-Shot Object Detection', 'computer_vision', 'Detect objects from text labels.', ['huggingface'], true, true),
-  cap('text_to_3d', 'Text-to-3D', 'computer_vision', 'Generate 3D assets from text.', ['huggingface'], true, true),
-  cap('image_to_3d', 'Image-to-3D', 'computer_vision', 'Generate 3D assets from images.', ['huggingface'], true, true),
-  cap('image_feature_extraction', 'Image Feature Extraction', 'computer_vision', 'Extract image embeddings/features.', ['huggingface', 'gemini'], false, true),
-  cap('keypoint_detection', 'Keypoint Detection', 'computer_vision', 'Detect body/object keypoints.', ['huggingface'], true, true),
-  cap('video_to_video', 'Video-to-Video', 'computer_vision', 'Transform video into another video.', ['genx', 'qwen'], true, true),
+  ...([
+    ['text_classification', 'Text Classification', ['text'], ['labels']],
+    ['zero_shot_classification', 'Zero-Shot Classification', ['text', 'labels'], ['labels']],
+    ['translation', 'Translation', ['text', 'language'], ['text']],
+    ['summarization', 'Summarization', ['text', 'document'], ['text']],
+    ['question_answering', 'Question Answering', ['text', 'context'], ['text']],
+    ['table_question_answering', 'Table Question Answering', ['table', 'text'], ['text']],
+  ] as const).map(([id, label, inputTypes, outputTypes]) => capability({
+    id, label, group: 'text', inputTypes: [...inputTypes], outputTypes: [...outputTypes],
+    description: `${label} through an approved text provider; the current executable surface is an admin capability test rather than a connected-app contract.`,
+    providers: id === 'zero_shot_classification' ? ['huggingface', 'qwen'] : textProviders,
+    executableProviders: id === 'zero_shot_classification' ? ['huggingface', 'qwen'] : textProviders,
+    executableEndpoint: '/api/admin/provider-capability-test', status: 'partially_wired',
+    blocker: 'A dedicated connected-app request schema and normalized result contract are not wired.',
+    requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false,
+  })),
 
-  // NLP
-  cap('text_classification', 'Text Classification', 'natural_language_processing', 'Classify text.', ['genx', 'qwen', 'deepseek', 'gemini', 'huggingface'], false, true),
-  cap('token_classification', 'Token Classification', 'natural_language_processing', 'NER/token labeling.', ['huggingface'], false, true),
-  cap('table_question_answering', 'Table Question Answering', 'natural_language_processing', 'Answer questions over tables.', ['genx', 'gemini', 'huggingface', 'qwen'], false, true),
-  cap('question_answering', 'Question Answering', 'natural_language_processing', 'Answer questions from context.', ['genx', 'qwen', 'deepseek', 'gemini', 'huggingface'], false, true),
-  cap('zero_shot_classification', 'Zero-Shot Classification', 'natural_language_processing', 'Classify without training examples.', ['huggingface', 'gemini', 'qwen'], false, true),
-  cap('translation', 'Translation', 'natural_language_processing', 'Translate text.', ['genx', 'qwen', 'gemini', 'huggingface'], false, true),
-  cap('summarization', 'Summarization', 'natural_language_processing', 'Summarize text/documents.', ['genx', 'qwen', 'deepseek', 'gemini', 'moonshot', 'huggingface'], false, true),
-  cap('feature_extraction', 'Feature Extraction', 'natural_language_processing', 'Create embeddings/features.', ['huggingface', 'gemini', 'genx'], false, true),
-  cap('text_generation', 'Text Generation', 'natural_language_processing', 'Generate text/chat/code.', ['genx', 'qwen', 'deepseek', 'gemini', 'minimax', 'groq', 'together', 'huggingface', 'moonshot', 'zhipu'], false, true),
-  cap('fill_mask', 'Fill-Mask', 'natural_language_processing', 'Masked language modeling.', ['huggingface'], false, true),
-  cap('sentence_similarity', 'Sentence Similarity', 'natural_language_processing', 'Compare sentence meaning.', ['huggingface', 'gemini'], false, true),
-  cap('text_ranking', 'Text Ranking', 'natural_language_processing', 'Rerank documents/search results.', ['huggingface', 'jina', 'cohere'], true, true),
+  ...([
+    ['token_classification', 'Token Classification', ['text'], ['tokens', 'labels']],
+    ['sentence_similarity', 'Sentence Similarity', ['text_pair'], ['score']],
+    ['feature_extraction', 'Feature Extraction', ['text'], ['vector']],
+    ['fill_mask', 'Fill Mask', ['text'], ['tokens', 'scores']],
+  ] as const).map(([id, label, inputTypes, outputTypes]) => capability({
+    id, label, group: 'text', inputTypes: [...inputTypes], outputTypes: [...outputTypes],
+    description: `${label} is available from Hugging Face but has no canonical execution adapter.`,
+    providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired',
+    blocker: 'No provider-specific execution adapter and normalized result contract are wired.',
+    requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false,
+  })),
 
-  // Audio
-  cap('text_to_speech', 'Text-to-Speech', 'audio', 'Generate speech from text.', ['genx', 'minimax', 'gemini', 'qwen', 'huggingface', 'elevenlabs', 'deepgram', 'groq'], true, true),
-  cap('text_to_audio', 'Text-to-Audio', 'audio', 'Generate sound/music/audio from text.', ['genx', 'mimo', 'huggingface'], true, true),
-  cap('automatic_speech_recognition', 'Automatic Speech Recognition', 'audio', 'Speech-to-text transcription.', ['genx', 'deepgram', 'huggingface', 'gemini', 'qwen'], true, true),
-  cap('audio_to_audio', 'Audio-to-Audio', 'audio', 'Transform or enhance audio.', ['huggingface', 'mimo'], true, true),
-  cap('audio_classification', 'Audio Classification', 'audio', 'Classify audio.', ['huggingface'], true, true),
-  cap('voice_activity_detection', 'Voice Activity Detection', 'audio', 'Detect speech segments.', ['huggingface', 'deepgram'], true, true),
+  capability({ id: 'text_ranking', label: 'Text Ranking', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rank documents against a query.', providers: ['huggingface'], executableProviders: ['huggingface'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'embeddings', label: 'Embeddings', group: 'text', inputTypes: ['text', 'text_array'], outputTypes: ['vector', 'vector_array'], description: 'Create text embeddings for retrieval and similarity.', providers: ['qwen', 'genx', 'huggingface', 'together'], executableProviders: ['qwen'], executableEndpoint: '/api/brain/embeddings', status: 'working', blocker: null, requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'rerank', label: 'Rerank', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rerank candidate documents with a specialist model.', providers: ['huggingface', 'together'], executableProviders: ['huggingface'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
 
-  // Data/Other
-  cap('tabular_classification', 'Tabular Classification', 'tabular', 'Classify tabular rows.', ['huggingface'], true, true),
-  cap('tabular_regression', 'Tabular Regression', 'tabular', 'Regression over tables.', ['huggingface'], true, true),
-  cap('time_series_forecasting', 'Time Series Forecasting', 'time_series', 'Forecast series.', ['huggingface'], true, true),
-  cap('reinforcement_learning', 'Reinforcement Learning', 'reinforcement_learning', 'RL models/environments.', ['huggingface'], true, true),
-  cap('robotics', 'Robotics', 'robotics', 'Robotics models/control policies.', ['huggingface'], true, true, 'Requires strict hardware/safety gating before execution.'),
-  cap('graph_machine_learning', 'Graph Machine Learning', 'graph_ml', 'Graph ML models.', ['huggingface'], true, true),
+  ...([
+    ['document_question_answering', 'Document Question Answering', ['document', 'text'], ['text']],
+    ['visual_question_answering', 'Visual Question Answering', ['image', 'text'], ['text']],
+    ['image_text_to_text', 'Image and Text to Text', ['image', 'text'], ['text']],
+    ['image_to_text', 'Image to Text', ['image'], ['text']],
+  ] as const).map(([id, label, inputTypes, outputTypes]) => capability({
+    id, label, group: 'multimodal', inputTypes: [...inputTypes], outputTypes: [...outputTypes],
+    description: `${label} is represented by approved vision providers but lacks a canonical binary-input request adapter.`,
+    providers: visionProviders, executableEndpoint: null, status: 'provider_available_not_wired',
+    blocker: 'The connected-app gateway does not yet accept and normalize the required image or document input.',
+    requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false,
+  })),
 
-  // System ops
-  cap('repo_coding_agent', 'Repo Coding Agent', 'system_ops', 'Add/select repo, command, create PR.', ['genx', 'qwen', 'deepseek', 'moonshot', 'zhipu', 'minimax'], false, true),
-  cap('website_crawl_intelligence', 'Website Crawl Intelligence', 'system_ops', 'Scrape app website and build app intelligence profile.', ['firecrawl', 'genx', 'gemini', 'moonshot'], false, true),
-]
+  capability({ id: 'image_text_to_image', label: 'Image and Text to Image', group: 'multimodal', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Edit or transform a source image from instructions.', providers: imageProviders, executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'The honest endpoint exists, but no approved source-image provider adapter is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+  capability({ id: 'image_to_image', label: 'Image to Image', group: 'computer_vision', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Transform a source image.', providers: imageProviders, executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'The honest endpoint exists, but no approved source-image provider adapter is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+  capability({ id: 'text_to_image', label: 'Text to Image', group: 'computer_vision', inputTypes: ['text'], outputTypes: ['image'], description: 'Generate an image from a text prompt.', providers: imageProviders, executableProviders: ['genx', 'qwen', 'together', 'huggingface'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/image', status: 'working', blocker: null, requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
 
-function cap(
-  id: string,
-  label: string,
-  group: CapabilityGroup,
-  description: string,
-  defaultProviders: string[],
-  specialistRouteRequired: boolean,
-  appPermissionRequired: boolean,
-  safetyNotes?: string,
-): AiCapabilityDefinition {
-  return { id, label, group, description, defaultProviders, specialistRouteRequired, appPermissionRequired, safetyNotes }
+  ...([
+    ['image_classification', 'Image Classification', ['image'], ['labels']],
+    ['zero_shot_image_classification', 'Zero-Shot Image Classification', ['image', 'labels'], ['labels']],
+    ['object_detection', 'Object Detection', ['image'], ['bounding_boxes']],
+    ['zero_shot_object_detection', 'Zero-Shot Object Detection', ['image', 'labels'], ['bounding_boxes']],
+    ['image_segmentation', 'Image Segmentation', ['image'], ['mask']],
+    ['mask_generation', 'Mask Generation', ['image', 'points'], ['mask']],
+    ['depth_estimation', 'Depth Estimation', ['image'], ['depth_map']],
+    ['keypoint_detection', 'Keypoint Detection', ['image'], ['keypoints']],
+    ['image_feature_extraction', 'Image Feature Extraction', ['image'], ['vector']],
+  ] as const).map(([id, label, inputTypes, outputTypes]) => capability({
+    id, label, group: 'computer_vision', inputTypes: [...inputTypes], outputTypes: [...outputTypes],
+    description: `${label} is available through Hugging Face task models but is not wired into the capability gateway.`,
+    providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired',
+    blocker: 'No image upload adapter, task invocation contract, or normalized result schema is wired.',
+    requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: id === 'image_segmentation' || id === 'mask_generation' || id === 'depth_estimation', longRunning: false,
+  })),
+
+  capability({ id: 'image_to_video', label: 'Image to Video', group: 'video', inputTypes: ['image', 'text'], outputTypes: ['video'], description: 'Generate video from a source image.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'Provider models exist, but the video route does not transmit a source image.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'image_text_to_video', label: 'Image and Text to Video', group: 'video', inputTypes: ['image', 'text'], outputTypes: ['video'], description: 'Generate guided video from image and text.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No source-image video adapter is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'text_to_video', label: 'Text to Video', group: 'video', inputTypes: ['text'], outputTypes: ['video'], description: 'Start a real text-to-video provider job and persist completed output.', providers: ['genx', 'qwen'], executableProviders: ['genx', 'qwen'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/video-generate', status: 'working', blocker: null, requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: true }),
+  capability({ id: 'video_to_video', label: 'Video to Video', group: 'video', inputTypes: ['video', 'text'], outputTypes: ['video'], description: 'Transform an existing video.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No source-video upload and transformation adapter is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'video_text_to_text', label: 'Video and Text to Text', group: 'multimodal', inputTypes: ['video', 'text'], outputTypes: ['text'], description: 'Analyze a video with a text instruction.', providers: ['genx', 'qwen', 'mimo', 'huggingface'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No video ingestion and analysis contract is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true }),
+  capability({ id: 'video_classification', label: 'Video Classification', group: 'video', inputTypes: ['video'], outputTypes: ['labels'], description: 'Classify a video.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No video upload adapter or Hugging Face task contract is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true }),
+  capability({ id: 'visual_document_retrieval', label: 'Visual Document Retrieval', group: 'multimodal', inputTypes: ['document', 'query'], outputTypes: ['ranked_regions'], description: 'Retrieve relevant visual document regions.', providers: ['huggingface'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No visual document indexing and retrieval pipeline is wired.', requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true }),
+
+  capability({ id: 'text_to_3d', label: 'Text to 3D', group: 'experimental', inputTypes: ['text'], outputTypes: ['3d_asset'], description: 'Generate a 3D asset from text.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No approved 3D model route, storage contract, or viewer artifact type is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'image_to_3d', label: 'Image to 3D', group: 'experimental', inputTypes: ['image'], outputTypes: ['3d_asset'], description: 'Generate a 3D asset from an image.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No source-image 3D route, storage contract, or viewer artifact type is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+
+  capability({ id: 'text_to_speech', label: 'Text to Speech', group: 'audio', inputTypes: ['text', 'voice'], outputTypes: ['audio'], description: 'Synthesize speech and persist the audio artifact.', providers: ['genx', 'huggingface'], executableProviders: ['genx', 'huggingface'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/tts', status: 'working', blocker: null, requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
+  capability({ id: 'automatic_speech_recognition', label: 'Automatic Speech Recognition', group: 'audio', inputTypes: ['audio'], outputTypes: ['transcript'], description: 'Transcribe uploaded audio and persist the transcript.', providers: ['genx', 'groq', 'huggingface'], executableProviders: ['genx', 'groq', 'huggingface'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/stt', status: 'working', blocker: null, requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
+  capability({ id: 'text_to_audio', label: 'Text to Audio', group: 'audio', inputTypes: ['text'], outputTypes: ['audio'], description: 'Generate non-speech audio from text.', providers: ['genx', 'huggingface'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'The current audio route is music-oriented; a normalized sound-generation contract is not wired.', requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'audio_to_audio', label: 'Audio to Audio', group: 'audio', inputTypes: ['audio', 'text'], outputTypes: ['audio'], description: 'Transform or enhance audio.', providers: ['huggingface', 'mimo'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No audio upload/transformation adapter is wired.', requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'audio_classification', label: 'Audio Classification', group: 'audio', inputTypes: ['audio'], outputTypes: ['labels'], description: 'Classify uploaded audio.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No audio upload and Hugging Face classification adapter is wired.', requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false }),
+  capability({ id: 'voice_activity_detection', label: 'Voice Activity Detection', group: 'audio', inputTypes: ['audio'], outputTypes: ['time_ranges'], description: 'Detect speech regions in audio.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No voice activity task adapter is wired.', requiredScope: 'ai:audio:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false }),
+
+  capability({ id: 'music_generation', label: 'Music Generation', group: 'music', inputTypes: ['text', 'lyrics', 'style'], outputTypes: ['music'], description: 'Generate a real track or trackable provider job.', providers: ['genx'], executableProviders: ['genx'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/admin/music-studio', status: 'working', blocker: null, requiredScope: 'ai:music:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'lyrics_generation', label: 'Lyrics Generation', group: 'music', inputTypes: ['text', 'style'], outputTypes: ['lyrics'], description: 'Generate and persist song lyrics.', providers: textProviders, executableProviders: textProviders, executableEndpoint: '/api/admin/music-studio', status: 'working', blocker: null, requiredScope: 'ai:music:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+  capability({ id: 'avatar_generation', label: 'Avatar Generation', group: 'avatar_voice', inputTypes: ['text', 'image'], outputTypes: ['avatar'], description: 'Create a reusable avatar asset.', providers: ['genx'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'GenX advertises avatar support, but no approved avatar asset contract is wired.', requiredScope: 'ai:avatar:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'avatar_video', label: 'Avatar Video', group: 'avatar_voice', inputTypes: ['avatar', 'audio', 'text'], outputTypes: ['video'], description: 'Create a speaking avatar video.', providers: ['genx'], executableEndpoint: '/api/brain/avatar-video', status: 'partially_wired', blocker: 'The endpoint reports honest needs-setup state; no approved lip-sync execution adapter is wired.', requiredScope: 'ai:avatar:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'voice_clone_or_voice_design', label: 'Voice Clone or Voice Design', group: 'avatar_voice', inputTypes: ['audio', 'text', 'voice_profile'], outputTypes: ['voice_profile', 'audio'], description: 'Design or clone a voice where provider policy permits.', providers: ['genx'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No consent record, voice-profile artifact, or approved cloning adapter is wired.', requiredScope: 'ai:avatar:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true, safetyNotes: 'Requires recorded speaker consent and anti-impersonation policy enforcement.' }),
+
+  ...([
+    ['tabular_classification', 'Tabular Classification', ['table'], ['labels']],
+    ['tabular_regression', 'Tabular Regression', ['table'], ['numbers']],
+    ['time_series_forecasting', 'Time Series Forecasting', ['time_series'], ['forecast']],
+  ] as const).map(([id, label, inputTypes, outputTypes]) => capability({
+    id, label, group: 'tabular', inputTypes: [...inputTypes], outputTypes: [...outputTypes],
+    description: `${label} is available in the Hugging Face ecosystem but has no AmarktAI data adapter.`,
+    providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired',
+    blocker: 'No validated tabular/time-series schema, task adapter, or result contract is wired.',
+    requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true,
+  })),
+
+  capability({ id: 'reinforcement_learning', label: 'Reinforcement Learning', group: 'experimental', inputTypes: ['environment', 'policy'], outputTypes: ['policy', 'metrics'], description: 'Train or evaluate reinforcement-learning policies.', providers: [], executableEndpoint: null, status: 'unavailable', blocker: 'No training environment, compute scheduler, safety contract, or approved execution provider exists.', requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'robotics', label: 'Robotics', group: 'experimental', inputTypes: ['sensor_data', 'task'], outputTypes: ['control_plan'], description: 'Plan or control robotics tasks.', providers: [], executableEndpoint: null, status: 'unavailable', blocker: 'Physical control is outside V1 and requires hardware-specific safety and approval systems.', requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true, safetyNotes: 'No physical actuation may be exposed through connected apps in V1.' }),
+  capability({ id: 'any_to_any', label: 'Any to Any', group: 'experimental', inputTypes: ['multimodal'], outputTypes: ['multimodal'], description: 'General arbitrary modality conversion.', providers: ['genx', 'qwen', 'mimo', 'huggingface'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No bounded input/output contract exists; individual modality routes must be used.', requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'multimodal_generation', label: 'Multimodal Generation', group: 'multimodal', inputTypes: ['text', 'image', 'audio', 'video'], outputTypes: ['text', 'image', 'audio', 'video'], description: 'Generate coordinated outputs across modalities.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'Individual media routes exist, but no atomic multimodal orchestration and artifact bundle contract is wired.', requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'campaign_generation', label: 'Campaign Generation', group: 'agents_or_planning', inputTypes: ['brief', 'brand_context'], outputTypes: ['campaign_plan', 'content'], description: 'Create a campaign plan and content set.', providers: textProviders, executableProviders: textProviders, executableEndpoint: '/api/brain/request', status: 'partially_wired', blocker: 'Text generation works, but there is no dedicated campaign schema, artifact bundle, or approval contract.', requiredScope: 'ai:campaign:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
+  capability({ id: 'brand_aware_content_generation', label: 'Brand-Aware Content Generation', group: 'agents_or_planning', inputTypes: ['brief', 'brand_context'], outputTypes: ['content'], description: 'Generate content grounded in an app brand profile.', providers: textProviders, executableProviders: textProviders, executableEndpoint: '/api/brain/request', status: 'partially_wired', blocker: 'App-context text generation exists, but brand-profile retrieval and proof are not a dedicated execution contract.', requiredScope: 'ai:campaign:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+] as const
+
+export function getCapabilityTaxonomyByGroup(): Record<CapabilityGroup, AiCapabilityDefinition[]> {
+  const grouped = AI_CAPABILITY_CATEGORIES.reduce((result, category) => {
+    result[category] = []
+    return result
+  }, {} as Record<CapabilityGroup, AiCapabilityDefinition[]>)
+  for (const capabilityDefinition of AI_CAPABILITY_TAXONOMY) {
+    grouped[capabilityDefinition.group].push(capabilityDefinition)
+  }
+  return grouped
 }
 
-export function getCapabilityTaxonomyByGroup() {
-  return AI_CAPABILITY_TAXONOMY.reduce<Record<string, AiCapabilityDefinition[]>>((acc, capability) => {
-    acc[capability.group] ??= []
-    acc[capability.group].push(capability)
-    return acc
-  }, {})
+export function getCapabilityDefinition(id: string): AiCapabilityDefinition | undefined {
+  return AI_CAPABILITY_TAXONOMY.find((capabilityDefinition) => capabilityDefinition.id === id)
 }
 
-export function getCapabilityDefinition(id: string) {
-  return AI_CAPABILITY_TAXONOMY.find((capability) => capability.id === id)
+export function getAiCapabilityTruthSummary() {
+  const byStatus = {
+    working: 0,
+    partially_wired: 0,
+    provider_available_not_wired: 0,
+    unavailable: 0,
+  } satisfies Record<AiCapabilityStatus, number>
+  for (const capabilityDefinition of AI_CAPABILITY_TAXONOMY) {
+    byStatus[capabilityDefinition.status] += 1
+  }
+  return {
+    total: AI_CAPABILITY_TAXONOMY.length,
+    byStatus,
+    approvedProviders: APPROVED_DIRECT_PROVIDER_IDS.map((id) => ({
+      id,
+      displayName: getProviderMeshNode(id)?.displayName ?? id,
+    })),
+  }
 }

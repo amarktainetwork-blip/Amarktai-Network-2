@@ -19,6 +19,15 @@ const ALL_SCOPES: ConnectedAppScope[] = [
   'events:read',
   'artifacts:read',
   'artifacts:write',
+  'ai:text:execute',
+  'ai:image:execute',
+  'ai:video:execute',
+  'ai:audio:execute',
+  'ai:music:execute',
+  'ai:avatar:execute',
+  'ai:research:execute',
+  'ai:data:execute',
+  'ai:campaign:execute',
 ]
 
 interface Props {

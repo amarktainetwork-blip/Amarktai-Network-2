@@ -186,9 +186,9 @@ function selectForCapability(capability: AiCapabilityDefinition, catalogs: Provi
 }
 
 function modalityMatchesCapability(modality: string, capability: AiCapabilityDefinition) {
-  if (capability.group === 'natural_language_processing') return modality === 'text' || modality === 'multimodal'
+  if (capability.group === 'text' || capability.group === 'agents_or_planning') return modality === 'text' || modality === 'multimodal'
   if (capability.group === 'audio') return modality === 'voice_tts' || modality === 'voice_stt' || modality === 'music' || modality === 'multimodal'
-  if (capability.group === 'computer_vision') return modality === 'image' || modality === 'video' || modality === 'multimodal'
+  if (capability.group === 'computer_vision' || capability.group === 'video') return modality === 'image' || modality === 'video' || modality === 'multimodal'
   if (capability.group === 'multimodal') return modality === 'multimodal' || modality === 'image' || modality === 'video' || modality === 'voice_tts' || modality === 'voice_stt'
   return true
 }
@@ -218,7 +218,7 @@ function mapCapabilities(capabilities: AiCapabilityDefinition[], adultRequested:
     if (capability.id.includes('image')) mapped.add(adultRequested ? 'adult_image' : 'image')
     if (capability.id.includes('speech') || capability.id.includes('voice')) mapped.add('voice_tts')
     if (capability.group === 'audio') mapped.add('voice_tts')
-    if (capability.group === 'natural_language_processing') mapped.add(adultRequested ? 'adult_text' : 'chat')
+    if (capability.group === 'text' || capability.group === 'agents_or_planning') mapped.add(adultRequested ? 'adult_text' : 'chat')
   }
   if (mapped.size === 0) mapped.add('chat')
   return [...mapped]
