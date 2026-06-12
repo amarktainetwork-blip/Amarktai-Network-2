@@ -14,6 +14,12 @@ import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
 import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
+import {
+  createExecution,
+  failExecution,
+  recordExecutionResponse,
+  startExecution,
+} from '@/lib/execution'
 
 type ExecuteBody = {
   tab?: StudioTab
@@ -27,6 +33,7 @@ type ExecuteBody = {
   voiceId?: string
   size?: string
   style?: string
+  adultApprovalRequired?: boolean
 }
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -112,10 +119,46 @@ export async function POST(request: NextRequest) {
   }
 
   const capability = normalizeCapability(tab, body.mode)
+  const execution = createExecution({
+    appSlug,
+    actor: { type: 'admin', label: 'Media Studio' },
+    requestedCapability: capability,
+    prompt,
+    action: tab === 'Avatar / Talking Video' ? 'avatar_clone' : 'generate',
+    selectedProvider: body.provider === 'auto' ? undefined : body.provider,
+    selectedModel: body.model === 'auto' ? undefined : body.model,
+    costMode: body.costMode,
+    adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
+    adultApprovalRequired: body.adultApprovalRequired,
+    metadata: { tab, mode: body.mode, size: body.size, style: body.style },
+  })
+  if (execution.status === 'awaiting_approval' || execution.status === 'blocked') {
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      capability,
+      jobStatus: execution.status,
+      artifactId: null,
+      storageUrl: null,
+      error: execution.error ?? execution.approval.reason,
+      blocker: execution.error ?? execution.approval.reason,
+      executionId: execution.executionId,
+      execution,
+    }, { status: execution.status === 'awaiting_approval' ? 202 : 409 })
+  }
+  startExecution(execution.executionId)
+
   if (tab === 'Avatar / Talking Video') {
     const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
     const data = await readJson(response)
-    return NextResponse.json({ ...data, result: data, artifact: null }, { status: response.status })
+    const executionResult = recordExecutionResponse(execution.executionId, data)
+    return NextResponse.json({
+      ...data,
+      result: data,
+      artifact: null,
+      executionId: execution.executionId,
+      execution: executionResult,
+    }, { status: response.status })
   }
 
   const route = routeLiveModel({
@@ -129,10 +172,12 @@ export async function POST(request: NextRequest) {
   })
 
   if (route.blockedReason) {
+    const executionResult = failExecution(execution.executionId, route.blockedReason)
     return NextResponse.json({
       success: false, executed: false, capability, provider: null, model: null,
       jobStatus: 'blocked', artifactId: null, storageUrl: null,
       error: route.blockedReason, blocker: route.blockedReason, route,
+      executionId: execution.executionId, execution: executionResult,
     }, { status: 409 })
   }
 
@@ -152,7 +197,21 @@ export async function POST(request: NextRequest) {
         mimeType: 'application/json',
         metadata: { tab, route },
       })
-      return NextResponse.json({ success: response.ok, executed: response.ok, result: data, artifact, route }, { status: response.status })
+      const payload = {
+        success: response.ok,
+        executed: response.ok,
+        result: data,
+        artifact,
+        artifactId: artifact.id,
+        storageUrl: 'storageUrl' in artifact ? artifact.storageUrl : null,
+        route,
+      }
+      const executionResult = recordExecutionResponse(execution.executionId, payload)
+      return NextResponse.json({
+        ...payload,
+        executionId: execution.executionId,
+        execution: executionResult,
+      }, { status: response.status })
     }
 
     if (tab === 'Image') {
@@ -161,6 +220,8 @@ export async function POST(request: NextRequest) {
       }
       const response = await imagePost(jsonRequest('/api/brain/image', {
         prompt,
+        appSlug,
+        executionId: execution.executionId,
         size: body.size ?? '1024x1024',
         providerOverride: route.selectedProvider,
         modelOverride: route.selectedModel,
@@ -216,6 +277,8 @@ export async function POST(request: NextRequest) {
         result: data,
         artifact: persisted?.artifact ?? null,
         route,
+        executionId: execution.executionId,
+        execution: data.execution ?? null,
       }, { status: tracked ? 202 : success ? 200 : response.ok ? 502 : response.status })
     }
 
@@ -232,9 +295,11 @@ export async function POST(request: NextRequest) {
         provider,
         model: route.selectedModel,
         capability,
+        executionId: execution.executionId,
       }) as Request)
       const data = await readJson(response)
       const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      const executionResult = data.execution ?? recordExecutionResponse(execution.executionId, data)
       return NextResponse.json({
         success: Boolean(data.success),
         executed: Boolean(data.executed),
@@ -249,6 +314,8 @@ export async function POST(request: NextRequest) {
         result: data,
         artifact,
         route,
+        executionId: execution.executionId,
+        execution: executionResult,
       }, { status: response.status })
     }
 
@@ -267,6 +334,7 @@ export async function POST(request: NextRequest) {
         },
       }))
       const data = await readJson(response)
+      const executionResult = recordExecutionResponse(execution.executionId, data)
       return NextResponse.json({
         ...data,
         success: Boolean(data.success),
@@ -284,6 +352,8 @@ export async function POST(request: NextRequest) {
         result: data,
         artifact: data.artifact ?? null,
         route,
+        executionId: execution.executionId,
+        execution: executionResult,
       }, { status: response.status })
     }
 
@@ -301,11 +371,14 @@ export async function POST(request: NextRequest) {
       }))
       const data = await readJson(response)
       const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      const executionResult = recordExecutionResponse(execution.executionId, data)
       return NextResponse.json({
         ...data,
         result: data,
         artifact,
         route,
+        executionId: execution.executionId,
+        execution: executionResult,
       }, { status: response.status })
     }
 
@@ -320,7 +393,15 @@ export async function POST(request: NextRequest) {
         }))
         const data = await readJson(response)
         const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-        return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
+        const executionResult = recordExecutionResponse(execution.executionId, data)
+        return NextResponse.json({
+          ...data,
+          result: data,
+          artifact,
+          route,
+          executionId: execution.executionId,
+          execution: executionResult,
+        }, { status: response.status })
       }
       const response = await adultTextPost(jsonRequest('/api/brain/adult-text', {
         prompt,
@@ -330,16 +411,30 @@ export async function POST(request: NextRequest) {
       }))
       const data = await readJson(response)
       const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
+      const executionResult = recordExecutionResponse(execution.executionId, data)
+      return NextResponse.json({
+        ...data,
+        result: data,
+        artifact,
+        route,
+        executionId: execution.executionId,
+        execution: executionResult,
+      }, { status: response.status })
     }
 
     return NextResponse.json({ success: false, executed: false, error: `${tab} execution is not available through this route.`, route }, { status: 400 })
   } catch (error) {
+    const executionResult = failExecution(
+      execution.executionId,
+      error instanceof Error ? error.message : 'Studio execution failed',
+    )
     return NextResponse.json({
       success: false,
       executed: false,
       error: error instanceof Error ? error.message : 'Studio execution failed',
       route,
+      executionId: execution.executionId,
+      execution: executionResult,
     }, { status: 500 })
   }
 }

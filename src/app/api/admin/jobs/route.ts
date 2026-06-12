@@ -11,6 +11,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getQueue, isJobQueueHealthy } from '@/lib/job-queue'
 import { prisma } from '@/lib/prisma'
+import { listExecutions } from '@/lib/execution'
 
 export async function GET() {
   const session = await getSession()
@@ -91,6 +92,7 @@ export async function GET() {
       batch: batchStats,
       video: videoStats,
       learning: learningStats,
+      executions: listExecutions({ limit: 100 }),
       timestamp: new Date().toISOString(),
     })
   } catch (err) {

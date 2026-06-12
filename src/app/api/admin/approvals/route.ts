@@ -17,6 +17,7 @@ import {
   findRecord,
   LOCAL_STORE_FILES,
 } from '@/lib/local-json-store'
+import { listExecutions, resolveExecutionApproval } from '@/lib/execution'
 
 interface LocalApproval {
   id: string
@@ -88,7 +89,12 @@ export async function GET(req: NextRequest) {
     const localFiltered = localApprovals.filter(
       (a) => statusFilter === 'all' || a.status === statusFilter || (statusFilter === 'pending' && a.status === 'pending'),
     )
-    return NextResponse.json({ approvals: [...mapped, ...localFiltered], total: mapped.length + localFiltered.length, driver: 'db+local' })
+    return NextResponse.json({
+      approvals: [...mapped, ...localFiltered],
+      executions: listExecutions({ approvalStatus: statusFilter === 'pending' ? 'pending' : undefined }),
+      total: mapped.length + localFiltered.length,
+      driver: 'db+local',
+    })
   } catch {
     // Fall through to local
   }
@@ -99,7 +105,12 @@ export async function GET(req: NextRequest) {
     (a) => statusFilter === 'all' || a.status === statusFilter || (statusFilter === 'pending' && a.status === 'pending'),
   ).slice(0, limit)
 
-  return NextResponse.json({ approvals: filtered, total: filtered.length, driver: 'local_vps' })
+  return NextResponse.json({
+    approvals: filtered,
+    executions: listExecutions({ approvalStatus: statusFilter === 'pending' ? 'pending' : undefined }),
+    total: filtered.length,
+    driver: 'local_vps',
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -186,6 +197,7 @@ export async function POST(req: NextRequest) {
           { action: decision === 'approved' ? 'approved' : 'rejected', by: 'admin', at: now },
         ],
       })
+      resolveExecutionApproval(id, decision === 'approved' ? 'approved' : 'rejected')
       return NextResponse.json({ success: true, decision, driver: 'local_vps' })
     }
 
