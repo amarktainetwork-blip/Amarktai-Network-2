@@ -74,19 +74,31 @@ export default function DashboardHomePage() {
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [readiness, setReadiness] = useState<ReadinessSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [readinessError, setReadinessError] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    Promise.all([
-      fetch('/api/admin/system/ai-deployment-readiness').then((r) => r.json()).catch(() => null),
-    ]).then(([readinessData]) => {
-      if (!mounted) return
-      if (readinessData) {
+    fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' })
+      .then(async (response) => {
+        const readinessData = await response.json().catch(() => null)
+        if (!response.ok || !readinessData?.summary) throw new Error('Readiness unavailable')
+        return readinessData
+      })
+      .then((readinessData) => {
+        if (!mounted) return
         setProviders(readinessData.providers ?? [])
-        setReadiness(readinessData.summary ?? null)
-      }
-      setLoading(false)
-    })
+        setReadiness(readinessData.summary)
+        setReadinessError(false)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setProviders([])
+        setReadiness(null)
+        setReadinessError(true)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
     return () => { mounted = false }
   }, [])
 
@@ -147,8 +159,16 @@ export default function DashboardHomePage() {
           <>
             <StatCard
               label="Providers ready"
-              value={`${readyProviders.length} / ${providers.length}`}
-              status={readyProviders.length === providers.length ? 'ready' : readyProviders.length > 0 ? 'partial' : 'missing'}
+              value={readinessError ? 'Unavailable' : `${readyProviders.length} / ${providers.length}`}
+              status={
+                readinessError
+                  ? 'unknown'
+                  : providers.length > 0 && readyProviders.length === providers.length
+                    ? 'ready'
+                    : readyProviders.length > 0
+                      ? 'partial'
+                      : 'missing'
+              }
               icon={<Network className="h-5 w-5" />}
               href="/admin/dashboard/provider-mesh"
             />
@@ -161,15 +181,15 @@ export default function DashboardHomePage() {
             />
             <StatCard
               label="Artifact storage"
-              value={readiness?.artifactPersistenceReady ? 'Ready' : 'Needs setup'}
-              status={readiness?.artifactPersistenceReady ? 'ready' : 'missing'}
+              value={readinessError ? 'Unavailable' : readiness?.artifactPersistenceReady ? 'Ready' : 'Needs setup'}
+              status={readinessError ? 'unknown' : readiness?.artifactPersistenceReady ? 'ready' : 'missing'}
               icon={<Layers3 className="h-5 w-5" />}
               href="/admin/dashboard/outputs"
             />
             <StatCard
               label="System readiness"
-              value={readiness ? (readiness.blockerCount === 0 ? 'All clear' : `${readiness.blockerCount} blockers`) : 'Checking…'}
-              status={readiness?.blockerCount === 0 ? 'ready' : 'missing'}
+              value={readinessError ? 'Unavailable' : readiness ? (readiness.blockerCount === 0 ? 'All clear' : `${readiness.blockerCount} blockers`) : 'Checking...'}
+              status={readinessError ? 'unknown' : readiness?.blockerCount === 0 ? 'ready' : 'missing'}
               icon={<Zap className="h-5 w-5" />}
               href="/admin/dashboard/system"
             />
@@ -190,6 +210,11 @@ export default function DashboardHomePage() {
           <div className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
             <Loader2 className="h-4 w-4 animate-spin text-slate-600" />
             <p className="text-sm text-slate-500">Checking provider configuration…</p>
+          </div>
+        ) : readinessError ? (
+          <div className="flex items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <p className="text-sm text-slate-400">Provider status is unavailable. Open Settings to retry.</p>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -244,7 +269,7 @@ function StatCard({
 }: {
   label: string
   value: string
-  status: 'ready' | 'partial' | 'missing'
+  status: 'ready' | 'partial' | 'missing' | 'unknown'
   icon: React.ReactNode
   href: string
 }) {
@@ -252,11 +277,13 @@ function StatCard({
     ready: 'text-emerald-400',
     partial: 'text-amber-400',
     missing: 'text-amber-400',
+    unknown: 'text-slate-300',
   }
   const dotColors = {
     ready: 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]',
     partial: 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.8)]',
     missing: 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.8)]',
+    unknown: 'bg-slate-500',
   }
 
   return (

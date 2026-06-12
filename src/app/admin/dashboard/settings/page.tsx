@@ -1,35 +1,27 @@
-/**
- * Settings page — provider setup, API keys, storage, and policy.
- *
- * User-friendly setup cards. No raw env dumps. No backend wording.
- * Shows: Ready / Needs setup / Not configured in plain language.
- */
-
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
   ChevronRight,
   ExternalLink,
+  Eye,
+  EyeOff,
   Key,
   Loader2,
   RefreshCw,
+  Save,
   Server,
   Settings2,
   Shield,
+  TestTube2,
 } from 'lucide-react'
+import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type ProviderSetup = {
-  id: string
-  displayName: string
-  configured: boolean
-  state: 'ready' | 'missing' | 'invalid'
-  acceptedEnvVars: string[]
-  blocker: string | null
+type SettingsTruth = {
+  providers: SettingsTruthEntry[]
+  connectedCount: number
 }
 
 type StorageSetup = {
@@ -37,63 +29,79 @@ type StorageSetup = {
   writable: boolean
   readable: boolean
   driver: string
-  root: string
 }
 
-// ── Provider setup instructions ───────────────────────────────────────────────
-
-const PROVIDER_DOCS: Record<string, { url: string; keyName: string; hint: string }> = {
-  genx: { url: 'https://query.genx.sh', keyName: 'GENX_API_KEY', hint: 'Text, image, video, audio, music, avatar, TTS, STT' },
-  huggingface: { url: 'https://huggingface.co/settings/tokens', keyName: 'HUGGINGFACE_API_KEY', hint: 'Text, image, audio, STT, embeddings, specialist models' },
-  qwen: { url: 'https://dashscope.aliyuncs.com', keyName: 'QWEN_API_KEY', hint: 'Text, image, video, audio, embeddings, async jobs' },
-  mimo: { url: 'https://api.xiaomimimo.com', keyName: 'MIMO_API_KEY', hint: 'Text, reasoning, vision, audio, TTS, STT, web search' },
-  groq: { url: 'https://console.groq.com/keys', keyName: 'GROQ_API_KEY', hint: 'Ultra-fast text, reasoning, STT, TTS' },
-  together: { url: 'https://api.together.xyz/settings/api-keys', keyName: 'TOGETHER_API_KEY', hint: 'Text, image, embeddings, rerank, open models' },
+const PROVIDER_DOCS: Record<string, { url: string; hint: string }> = {
+  genx: { url: 'https://query.genx.sh', hint: 'Text, image, video, audio, music, avatar, TTS, and STT' },
+  huggingface: { url: 'https://huggingface.co/settings/tokens', hint: 'Text, image, audio, STT, embeddings, and specialist models' },
+  qwen: { url: 'https://dashscope.aliyuncs.com', hint: 'Text, image, video, audio, embeddings, and async jobs' },
+  mimo: { url: 'https://api.xiaomimimo.com', hint: 'Text, reasoning, vision, audio, TTS, STT, and web search' },
+  groq: { url: 'https://console.groq.com/keys', hint: 'Fast text, reasoning, STT, and TTS' },
+  together: { url: 'https://api.together.xyz/settings/api-keys', hint: 'Text, image, embeddings, reranking, and open models' },
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [providers, setProviders] = useState<ProviderSetup[]>([])
+  const [truth, setTruth] = useState<SettingsTruth | null>(null)
   const [storage, setStorage] = useState<StorageSetup | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setRefreshing(true)
+    setLoadError('')
     try {
-      const res = await fetch('/api/admin/system/ai-deployment-readiness')
-      const data = await res.json()
-      setProviders(data.providers ?? [])
-      setStorage(data.artifacts?.storage ?? null)
+      const [settingsResponse, readinessResponse] = await Promise.all([
+        fetch('/api/admin/settings/status', { cache: 'no-store' }),
+        fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' }),
+      ])
+      const [settingsData, readinessData] = await Promise.all([
+        settingsResponse.json().catch(() => null),
+        readinessResponse.json().catch(() => null),
+      ])
+      if (!settingsResponse.ok || !settingsData?.truth) {
+        throw new Error('Provider status is unavailable.')
+      }
+
+      setTruth({
+        providers: settingsData.truth.providers ?? [],
+        connectedCount: settingsData.truth.connectedCount ?? 0,
+      })
+      setStorage(
+        readinessResponse.ok
+          ? readinessData?.artifacts?.storage ?? null
+          : null,
+      )
     } catch {
-      // silently fail — show empty state
+      setTruth(null)
+      setStorage(null)
+      setLoadError('Provider readiness could not be checked. Refresh or sign in again.')
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { void load() }, [load])
 
-  const readyCount = providers.filter((p) => p.state === 'ready').length
+  const providers = truth?.providers ?? []
+  const connectedProviders = providers.filter((provider) => provider.connected).length
 
   return (
     <div className="space-y-8">
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Settings</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white lg:text-3xl">
-            Provider Setup & Configuration
+            Connect capabilities once.
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Add your API keys to activate AI capabilities. Keys are stored securely on your server.
+            Save a provider key securely, then run a live test before it is shown as ready.
           </p>
         </div>
         <button
-          onClick={load}
+          type="button"
+          onClick={() => void load()}
           disabled={refreshing}
           className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
         >
@@ -102,116 +110,59 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* ── Summary strip ──────────────────────────────────────────────────── */}
       {!loading && (
         <div className="flex flex-wrap gap-3">
-          <StatusPill
-            label={`${readyCount} of ${providers.length} providers ready`}
-            status={readyCount === providers.length ? 'ready' : readyCount > 0 ? 'partial' : 'missing'}
-          />
-          <StatusPill
-            label={storage?.writable ? 'Storage ready' : 'Storage needs setup'}
-            status={storage?.writable ? 'ready' : 'missing'}
-          />
+          {truth ? (
+            <StatusPill
+              label={`${connectedProviders} of ${providers.length} providers ready`}
+              status={
+                providers.length > 0 && connectedProviders === providers.length
+                  ? 'ready'
+                  : connectedProviders > 0
+                    ? 'partial'
+                    : 'missing'
+              }
+            />
+          ) : (
+            <StatusPill label="Provider status unavailable" status="unknown" />
+          )}
+          {storage ? (
+            <StatusPill
+              label={storage.writable ? 'Storage ready' : 'Storage needs setup'}
+              status={storage.writable ? 'ready' : 'missing'}
+            />
+          ) : (
+            <StatusPill label="Storage status unavailable" status="unknown" />
+          )}
         </div>
       )}
 
-      {/* ── Provider setup cards ───────────────────────────────────────────── */}
+      {loadError && (
+        <div className="flex items-start gap-3 rounded-2xl border border-slate-700 bg-slate-900/60 p-4 text-sm text-slate-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <p>{loadError}</p>
+        </div>
+      )}
+
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
           <Key className="h-4 w-4" />
-          AI Provider API Keys
+          AI Provider Connections
         </h2>
 
         {loading ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
-            <p className="text-sm text-slate-500">Checking provider configuration…</p>
+          <LoadingCard label="Checking provider configuration..." />
+        ) : truth ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {providers.map((provider) => (
+              <ProviderConnectionCard key={provider.key} entry={provider} refresh={load} />
+            ))}
           </div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {providers.map((provider) => {
-              const docs = PROVIDER_DOCS[provider.id]
-              const isReady = provider.state === 'ready'
-
-              return (
-                <div
-                  key={provider.id}
-                  className={[
-                    'rounded-2xl border p-5 transition',
-                    isReady
-                      ? 'border-emerald-800/40 bg-emerald-900/10'
-                      : 'border-amber-800/30 bg-amber-900/8',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={[
-                          'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border',
-                          isReady
-                            ? 'border-emerald-700/40 bg-emerald-900/30'
-                            : 'border-amber-700/30 bg-amber-900/20',
-                        ].join(' ')}
-                      >
-                        {isReady
-                          ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
-                          : <AlertTriangle className="h-4.5 w-4.5 text-amber-400" />
-                        }
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-100">{provider.displayName}</p>
-                        {docs && <p className="text-xs text-slate-500">{docs.hint}</p>}
-                      </div>
-                    </div>
-                    <span
-                      className={[
-                        'shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide',
-                        isReady
-                          ? 'bg-emerald-900/60 text-emerald-300'
-                          : 'bg-amber-900/60 text-amber-300',
-                      ].join(' ')}
-                    >
-                      {isReady ? 'Ready' : 'Needs setup'}
-                    </span>
-                  </div>
-
-                  {!isReady && (
-                    <div className="mt-4 rounded-xl border border-amber-800/30 bg-amber-900/15 p-3">
-                      <p className="text-xs font-bold text-amber-200">
-                        Add your API key to activate this provider.
-                      </p>
-                      {docs && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <code className="rounded bg-slate-900/60 px-2 py-0.5 font-mono text-[11px] text-amber-300">
-                            {docs.keyName}
-                          </code>
-                          <a
-                            href={docs.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs font-bold text-amber-400 transition hover:text-amber-300"
-                          >
-                            Get key <ExternalLink className="h-3 w-3" />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {isReady && (
-                    <p className="mt-3 text-xs text-emerald-300/70">
-                      Connected and ready to route capabilities.
-                    </p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          <UnavailableCard label="Provider setup is unavailable until readiness can be checked." />
         )}
       </section>
 
-      {/* ── Storage setup ──────────────────────────────────────────────────── */}
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
           <Server className="h-4 w-4" />
@@ -219,71 +170,38 @@ export default function SettingsPage() {
         </h2>
 
         {loading ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
-            <p className="text-sm text-slate-500">Checking storage…</p>
-          </div>
+          <LoadingCard label="Checking storage..." />
         ) : storage ? (
-          <div
-            className={[
-              'rounded-2xl border p-5',
-              storage.writable
-                ? 'border-emerald-800/40 bg-emerald-900/10'
-                : 'border-amber-800/30 bg-amber-900/8',
-            ].join(' ')}
-          >
+          <div className={`rounded-2xl border p-5 ${storage.writable ? 'border-emerald-800/40 bg-emerald-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div
-                  className={[
-                    'flex h-9 w-9 items-center justify-center rounded-xl border',
-                    storage.writable
-                      ? 'border-emerald-700/40 bg-emerald-900/30'
-                      : 'border-amber-700/30 bg-amber-900/20',
-                  ].join(' ')}
-                >
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${storage.writable ? 'border-emerald-700/40 bg-emerald-900/30' : 'border-amber-700/30 bg-amber-900/20'}`}>
                   {storage.writable
-                    ? <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
-                    : <AlertTriangle className="h-4.5 w-4.5 text-amber-400" />
-                  }
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    : <AlertTriangle className="h-4 w-4 text-amber-400" />}
                 </div>
                 <div>
                   <p className="font-black text-slate-100">Artifact Storage</p>
                   <p className="text-xs text-slate-500">
-                    {storage.writable ? 'Writable and ready' : 'Needs configuration'}
+                    {storage.writable ? 'Writable and ready' : 'Storage is not writable'}
                   </p>
                 </div>
               </div>
-              <span
-                className={[
-                  'rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide',
-                  storage.writable
-                    ? 'bg-emerald-900/60 text-emerald-300'
-                    : 'bg-amber-900/60 text-amber-300',
-                ].join(' ')}
-              >
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${storage.writable ? 'bg-emerald-900/60 text-emerald-300' : 'bg-amber-900/60 text-amber-300'}`}>
                 {storage.writable ? 'Ready' : 'Needs setup'}
               </span>
             </div>
             {!storage.writable && (
-              <div className="mt-4 rounded-xl border border-amber-800/30 bg-amber-900/15 p-3">
-                <p className="text-xs font-bold text-amber-200">
-                  Configure your storage path to save artifacts.
-                </p>
-                <code className="mt-1 block font-mono text-[11px] text-amber-300">
-                  AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage
-                </code>
-              </div>
+              <p className="mt-4 rounded-xl border border-amber-800/30 bg-amber-900/15 p-3 text-xs font-bold text-amber-200">
+                Configure a readable and writable artifact storage location during deployment.
+              </p>
             )}
           </div>
         ) : (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
-            <p className="text-sm text-slate-500">Storage status unavailable.</p>
-          </div>
+          <UnavailableCard label="Storage status is currently unavailable." />
         )}
       </section>
 
-      {/* ── Security & policy ──────────────────────────────────────────────── */}
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
           <Shield className="h-4 w-4" />
@@ -309,41 +227,201 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* ── Advanced settings link ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-slate-800/60 bg-slate-900/30 p-5">
         <div className="flex items-center gap-3">
           <Settings2 className="h-5 w-5 text-slate-500" />
           <div>
             <p className="font-bold text-slate-300">Advanced configuration</p>
             <p className="text-xs text-slate-500">
-              Database, Redis, SMTP, and other infrastructure settings are configured via environment variables on your server.
+              Infrastructure connections are managed during deployment. Secret values are never displayed here.
             </p>
           </div>
         </div>
       </div>
-
     </div>
   )
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+function ProviderConnectionCard({
+  entry,
+  refresh,
+}: {
+  entry: SettingsTruthEntry
+  refresh: () => Promise<void>
+}) {
+  const [value, setValue] = useState('')
+  const [show, setShow] = useState(false)
+  const [busy, setBusy] = useState<'save' | 'test' | null>(null)
+  const [message, setMessage] = useState('')
+  const docs = PROVIDER_DOCS[entry.key]
 
-function StatusPill({ label, status }: { label: string; status: 'ready' | 'partial' | 'missing' }) {
+  async function save() {
+    if (!value.trim()) return
+    setBusy('save')
+    setMessage('')
+    try {
+      const response = await fetch('/api/admin/settings/key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: entry.key,
+          type: 'provider',
+          label: entry.label,
+          value: value.trim(),
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      setMessage(response.ok ? `Saved ${data.masked ?? 'securely'}. Run the live test.` : data.error ?? 'Save failed.')
+      if (response.ok) {
+        setValue('')
+        await refresh()
+      }
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function test() {
+    setBusy('test')
+    setMessage('')
+    try {
+      const response = await fetch(entry.testRoute, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: entry.key }),
+      })
+      const data = await response.json().catch(() => ({}))
+      setMessage(data.success ? data.detail || 'Live test passed.' : data.error || 'Live test failed.')
+      await refresh()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const ready = entry.connected
+  const failed = entry.status === 'Failed'
+
+  return (
+    <article className={`rounded-2xl border p-5 ${ready ? 'border-emerald-800/40 bg-emerald-900/10' : failed ? 'border-red-800/40 bg-red-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="font-black text-slate-100">{entry.label}</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            {docs?.hint ?? `Unlocks ${entry.unlocks}.`}
+          </p>
+        </div>
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${ready ? 'bg-emerald-900/60 text-emerald-300' : failed ? 'bg-red-900/60 text-red-300' : 'bg-amber-900/60 text-amber-300'}`}>
+          {ready ? 'Ready' : failed ? 'Test failed' : entry.configured ? 'Needs test' : 'Needs setup'}
+        </span>
+      </div>
+
+      {entry.requiresSecret && (
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <input
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              type={show ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Paste API key"
+              aria-label={`${entry.label} API key`}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2.5 pr-10 text-sm text-white outline-none placeholder:text-slate-600 focus:border-teal-400/50"
+            />
+            <button
+              type="button"
+              onClick={() => setShow((current) => !current)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-500"
+              aria-label={show ? 'Hide value' : 'Show value'}
+            >
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={busy !== null || !value.trim()}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2.5 text-xs font-black text-slate-200 transition hover:bg-slate-700 disabled:opacity-40"
+          >
+            {busy === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save
+          </button>
+        </div>
+      )}
+
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-slate-400">{entry.lastTestResult}</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {entry.lastTestedAt ? new Date(entry.lastTestedAt).toLocaleString() : entry.blocker}
+          </p>
+          {entry.error && <p className="mt-1 text-xs font-semibold text-red-300">{entry.error}</p>}
+          {message && <p className="mt-1 text-xs font-semibold text-teal-200">{message}</p>}
+          {!entry.configured && docs && (
+            <a
+              href={docs.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-400 transition hover:text-amber-300"
+            >
+              Get provider key <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => void test()}
+          disabled={busy !== null || (!entry.configured && entry.requiresSecret)}
+          className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-500 px-3 py-2 text-xs font-black text-slate-950 transition hover:bg-teal-400 disabled:opacity-40"
+        >
+          {busy === 'test' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TestTube2 className="h-4 w-4" />}
+          Test
+        </button>
+      </div>
+    </article>
+  )
+}
+
+function StatusPill({
+  label,
+  status,
+}: {
+  label: string
+  status: 'ready' | 'partial' | 'missing' | 'unknown'
+}) {
   const styles = {
     ready: 'border-emerald-800/40 bg-emerald-900/20 text-emerald-300',
     partial: 'border-amber-800/30 bg-amber-900/15 text-amber-300',
     missing: 'border-amber-800/30 bg-amber-900/15 text-amber-300',
+    unknown: 'border-slate-700 bg-slate-900/60 text-slate-300',
   }
   const dots = {
-    ready: 'bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.8)]',
-    partial: 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.8)]',
-    missing: 'bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.8)]',
+    ready: 'bg-emerald-400',
+    partial: 'bg-amber-400',
+    missing: 'bg-amber-400',
+    unknown: 'bg-slate-500',
   }
 
   return (
     <div className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold ${styles[status]}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${dots[status]}`} />
       {label}
+    </div>
+  )
+}
+
+function LoadingCard({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
+      <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
+      <p className="text-sm text-slate-500">{label}</p>
+    </div>
+  )
+}
+
+function UnavailableCard({ label }: { label: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <p className="text-sm text-slate-400">{label}</p>
     </div>
   )
 }

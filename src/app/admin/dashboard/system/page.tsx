@@ -70,15 +70,19 @@ export default function SystemPage() {
   const [data, setData] = useState<ReadinessData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   const load = async () => {
     setRefreshing(true)
+    setLoadError(false)
     try {
-      const res = await fetch('/api/admin/system/ai-deployment-readiness')
-      const json = await res.json()
+      const res = await fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.summary) throw new Error('Readiness unavailable')
       setData(json)
     } catch {
-      // silently fail
+      setData(null)
+      setLoadError(true)
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -121,6 +125,18 @@ export default function SystemPage() {
         <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
           <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
           <p className="text-sm text-slate-500">Checking platform readiness…</p>
+        </div>
+      ) : loadError ? (
+        <div className="rounded-2xl border border-slate-700 bg-slate-900/60 p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800/60">
+              <AlertTriangle className="h-6 w-6 text-amber-400" />
+            </div>
+            <div>
+              <p className="text-lg font-black text-slate-200">Readiness status unavailable</p>
+              <p className="text-sm text-slate-400">Refresh the page or sign in again to check live platform status.</p>
+            </div>
+          </div>
         </div>
       ) : (
         <div
@@ -277,7 +293,7 @@ export default function SystemPage() {
           <div>
             <p className="font-bold text-slate-300">Security note</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              API keys and signing secrets are never shown in this interface. They are stored as environment variables on your server. Connected-app signing secrets are stored as hashes only.
+              API keys and signing secrets are never shown in this interface. Provider keys are stored securely server-side. Connected-app signing secrets are stored as hashes only.
             </p>
           </div>
         </div>

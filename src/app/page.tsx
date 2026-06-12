@@ -90,7 +90,7 @@ export default function HomePage() {
             <h1 className="mt-6 text-5xl font-black leading-[0.95] tracking-[-0.04em] text-white sm:text-6xl lg:text-7xl xl:text-8xl">
               <BrandName />
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-cyan-300 to-teal-400">
-                Network
+                Capability OS
               </span>
             </h1>
 
@@ -350,7 +350,7 @@ export default function HomePage() {
 
           <div className="relative z-10 flex flex-col items-start gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div className="max-w-2xl">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Get started</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Begin creating</p>
               <h2 className="mt-3 text-4xl font-black tracking-tight lg:text-5xl">
                 One command layer.<br />
                 <span className="text-teal-300">Connected work. Honest results.</span>
