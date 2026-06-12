@@ -1,46 +1,84 @@
-import { NextResponse, NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { listProjects, createProject } from '@/lib/playground'
-import type { ProjectType, ProjectStatus } from '@/lib/playground'
+import { createProject, listProjects } from '@/lib/playground'
+import type { ProjectStatus, ProjectType } from '@/lib/playground'
 import { createExecution } from '@/lib/execution'
+import {
+  getCommandCenterExecution,
+  listCommandCenterHistory,
+  runCommandCenter,
+  type CommandCenterRunInput,
+} from '@/lib/command-center'
 
-/** GET /api/admin/playground — list all playground projects */
-export async function GET(req: NextRequest) {
+/** GET /api/admin/playground - execution history or legacy playground projects. */
+export async function GET(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { searchParams } = new URL(req.url)
-  const type   = searchParams.get('type')   as ProjectType   | undefined
-  const status = searchParams.get('status') as ProjectStatus | undefined
-
+  const { searchParams } = new URL(request.url)
   try {
-    const projects = await listProjects({ type: type ?? undefined, status: status ?? undefined })
+    const executionId = searchParams.get('executionId')
+    if (executionId) {
+      const run = await getCommandCenterExecution(executionId)
+      return run
+        ? NextResponse.json(run)
+        : NextResponse.json({ error: 'Execution not found' }, { status: 404 })
+    }
+
+    if (!searchParams.has('projects') && !searchParams.has('type')) {
+      const runs = await listCommandCenterHistory(Number(searchParams.get('limit')) || 30)
+      return NextResponse.json({ runs, executions: runs.map((run) => run.execution) })
+    }
+
+    const type = searchParams.get('type') as ProjectType | undefined
+    const status = searchParams.get('status') as ProjectStatus | undefined
+    const projects = await listProjects({
+      type: type ?? undefined,
+      status: status ?? undefined,
+    })
     return NextResponse.json({ projects })
-  } catch (e) {
+  } catch (error) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Failed to list projects' },
+      { error: error instanceof Error ? error.message : 'Failed to load Playground' },
       { status: 500 },
     )
   }
 }
 
-/** POST /api/admin/playground — create a new project */
-export async function POST(req: NextRequest) {
+/** POST /api/admin/playground - run Command Center or create a legacy project. */
+export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   try {
-    const body = await req.json()
+    const body = await request.json() as CommandCenterRunInput & {
+      name?: string
+      type?: ProjectType
+      description?: string
+      tags?: string[]
+    }
+
+    if (body.prompt || body.executionId || body.quickAction) {
+      const run = await runCommandCenter(body)
+      return NextResponse.json(
+        run,
+        { status: run.status === 'awaiting_approval' ? 202 : 201 },
+      )
+    }
+
     if (!body.name || !body.type) {
-      return NextResponse.json({ error: 'name and type are required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'prompt or name and type are required' },
+        { status: 400 },
+      )
     }
     const project = await createProject({
       name: body.name,
-      type: body.type as ProjectType,
+      type: body.type,
       description: body.description,
       tags: body.tags,
     })
@@ -52,11 +90,21 @@ export async function POST(req: NextRequest) {
       action: 'generate',
       metadata: { projectId: project.id, projectType: body.type },
     })
-    return NextResponse.json({ ...project, executionId: execution.executionId, execution }, { status: 201 })
-  } catch (e) {
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Failed to create project' },
-      { status: 500 },
+      { ...project, executionId: execution.executionId, execution },
+      { status: 201 },
+    )
+  } catch (error) {
+    const message = error instanceof Error
+      ? error.message
+      : 'Command Center execution failed'
+    return NextResponse.json(
+      { error: message },
+      {
+        status: message === 'prompt is required' || message === 'Execution not found.'
+          ? 400
+          : 500,
+      },
     )
   }
 }

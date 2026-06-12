@@ -17,7 +17,8 @@ describe('dashboard productization correction', () => {
   it('shows real execution results and sanitized failures', () => {
     const page = read('components/dashboard/CommandCenter.tsx')
     expect(page).toContain('active.execution?.error')
-    expect(page).toContain('active.execution?.detail')
+    expect(page).toContain('active.artifacts.map')
+    expect(page).toContain('active.execution.events.map')
     expect(read('lib/provider-mesh.ts')).toContain('sanitizeProviderError')
   })
 
