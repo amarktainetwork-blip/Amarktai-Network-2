@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { executeCapability } from '@/lib/capability-router'
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as {
@@ -8,19 +7,22 @@ export async function POST(request: NextRequest) {
     providerOverride?: string
     modelOverride?: string
     appSlug?: string
+    executionId?: string
   } | null
 
   if (!body?.prompt?.trim() || !body.image) {
     return NextResponse.json({ error: 'prompt and image are required' }, { status: 400 })
   }
 
-  const result = await executeCapability({
-    input: `${body.prompt.trim()}\nSource image: ${body.image}`,
+  return NextResponse.json({
+    success: false,
+    executed: false,
     capability: 'image_edit',
-    providerOverride: body.providerOverride,
-    modelOverride: body.modelOverride,
-    appId: body.appSlug || 'amarktai-network',
-    saveArtifact: true,
-  })
-  return NextResponse.json(result, { status: result.success ? 200 : 503 })
+    readiness: 'UNAVAILABLE',
+    provider: body.providerOverride ?? null,
+    model: body.modelOverride ?? null,
+    jobStatus: 'unavailable',
+    artifactId: null,
+    error: 'Image editing requires a provider adapter that transmits the source image. No approved source-image adapter is wired yet.',
+  }, { status: 501 })
 }

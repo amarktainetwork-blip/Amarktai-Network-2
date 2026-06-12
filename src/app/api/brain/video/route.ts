@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
     aspectRatio?: string
     scenes?: VideoScene[]
     appSlug?: string
+    executionId?: string
   } | null
 
   if (!body?.script?.trim()) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
       params: { style, duration, aspectRatio },
       scenes: body.scenes,
     }
-    return persistVideoPlan(body.appSlug, body.script, payload)
+    return persistVideoPlan(body.appSlug, body.script, payload, body.executionId)
   }
 
   const count = Math.max(1, Math.min(6, Math.ceil(duration / 5)))
@@ -87,17 +88,19 @@ export async function POST(request: NextRequest) {
     params: { style, duration, aspectRatio },
     scenes: scenes ?? templateScenes(body.script, duration, style),
   }
-  return persistVideoPlan(body.appSlug, body.script, payload)
+  return persistVideoPlan(body.appSlug, body.script, payload, body.executionId)
 }
 
 async function persistVideoPlan(
   appSlug: string | undefined,
   script: string,
   payload: Record<string, unknown>,
+  executionId?: string,
 ) {
   try {
     const artifact = await createArtifact({
       appSlug: appSlug || 'media-studio',
+      executionId,
       type: 'report',
       subType: 'video_plan',
       capability: 'video_generation',
@@ -107,7 +110,7 @@ async function persistVideoPlan(
       model: typeof payload.model === 'string' ? payload.model : undefined,
       mimeType: 'application/json',
       content: Buffer.from(JSON.stringify(payload, null, 2)),
-      metadata: { planningOnly: true },
+      metadata: { planningOnly: true, executionId },
     })
     return NextResponse.json({ ...payload, artifactId: artifact.id, storageUrl: artifact.storageUrl })
   } catch (error) {

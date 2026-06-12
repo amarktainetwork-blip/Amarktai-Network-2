@@ -1,440 +1,289 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
-import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
-import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
-import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
-import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
-import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
-import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
-import { POST as imagePost } from '@/app/api/brain/image/route'
-import { POST as videoPost } from '@/app/api/brain/video-generate/route'
-import { POST as ttsPost } from '@/app/api/brain/tts/route'
-import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
-import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
-import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
-import { POST as musicPost } from '@/app/api/admin/music-studio/route'
+import { loadAppSafetyConfigFromDB } from '@/lib/content-filter'
 import {
   createExecution,
   failExecution,
+  getExecution,
   recordExecutionResponse,
   startExecution,
+  updateExecution,
+  type ExecutionRecord,
 } from '@/lib/execution'
+import {
+  listMediaStudioHistory,
+  mediaStudioErrorMessage,
+  mediaStudioResponse,
+  type MediaStudioCapability,
+} from '@/lib/media-studio'
+import { POST as imagePost } from '@/app/api/brain/image/route'
+import { POST as imageEditPost } from '@/app/api/brain/image-edit/route'
+import { POST as suggestiveImagePost } from '@/app/api/brain/suggestive-image/route'
+import { POST as videoPlanPost } from '@/app/api/brain/video/route'
+import { POST as videoPost } from '@/app/api/brain/video-generate/route'
+import { POST as musicPost } from '@/app/api/admin/music-studio/route'
+import { POST as ttsPost } from '@/app/api/brain/tts/route'
+import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
 
-type ExecuteBody = {
-  tab?: StudioTab
+type StudioBody = {
+  executionId?: string
+  appSlug?: string
+  capability?: MediaStudioCapability
   prompt?: string
   provider?: string
   model?: string
   costMode?: 'cheap' | 'balanced' | 'premium'
-  appSlug?: string
-  adultPolicy?: string
-  mode?: 'text' | 'image' | 'video' | 'voice'
-  voiceId?: string
-  size?: string
+  source?: string
+  artifactIds?: string[]
   style?: string
-  adultApprovalRequired?: boolean
+  aspectRatio?: string
+  quality?: string
+  duration?: number
+  scenePlanOnly?: boolean
+  genre?: string
+  moods?: string[]
+  vocalStyle?: string
+  instrumental?: boolean
+  language?: string
+  lyrics?: string
+  voiceId?: string
 }
 
-function jsonRequest(path: string, body: Record<string, unknown>) {
-  return new NextRequest(new URL(path, 'http://studio.local'), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-}
-
-async function readJson(response: Response): Promise<Record<string, unknown>> {
-  return await response.json().catch(() => ({})) as Record<string, unknown>
-}
-
-async function persistArtifact(input: {
-  appSlug: string
-  type: ArtifactType
-  subType: string
-  title: string
-  description?: string
-  provider?: string
-  model?: string
-  content?: Buffer | string
-  contentUrl?: string
-  mimeType?: string
-  metadata?: Record<string, unknown>
-}) {
-  try {
-    return await createArtifact({
-      appSlug: input.appSlug,
-      type: input.type,
-      subType: input.subType,
-      title: input.title,
-      description: input.description,
-      provider: input.provider,
-      model: input.model,
-      content: typeof input.content === 'string' ? Buffer.from(input.content, 'utf8') : input.content,
-      contentUrl: input.contentUrl,
-      mimeType: input.mimeType,
-      metadata: input.metadata ?? {},
-    })
-  } catch (error) {
-    return {
-      id: null,
-      warning: error instanceof Error ? error.message : 'Artifact persistence failed',
-    }
+export async function GET(request: NextRequest) {
+  const session = await getSession()
+  if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const executionId = request.nextUrl.searchParams.get('executionId')
+  if (executionId) {
+    const run = await mediaStudioResponse(executionId)
+    return run
+      ? NextResponse.json(run)
+      : NextResponse.json({ error: 'Execution not found' }, { status: 404 })
   }
-}
-
-function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
-  if (tab === 'Research') return 'research'
-  if (tab === 'Image') return 'image_generation'
-  if (tab === 'Video') return 'video_generation'
-  if (tab === 'Music / Audio') return 'music_generation'
-  if (tab === 'Voice / TTS') return 'tts'
-  if (tab === 'Avatar / Talking Video') return 'avatar_video'
-  if (tab === 'Adult') {
-    if (adultMode === 'image') return 'adult_image'
-    if (adultMode === 'video') return 'adult_video'
-    if (adultMode === 'voice') return 'adult_voice'
-    return 'adult_text'
-  }
-  return 'chat'
+  const runs = await listMediaStudioHistory(Number(request.nextUrl.searchParams.get('limit')) || 30)
+  return NextResponse.json({ runs, executions: runs.map((run) => run.execution) })
 }
 
 export async function POST(request: NextRequest) {
   const session = await getSession()
-  if (!session.isLoggedIn) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
-
-  const body = await request.json().catch(() => ({})) as ExecuteBody
-  const tab = body.tab
-  const prompt = body.prompt?.trim() ?? ''
-  const appSlug = body.appSlug?.trim() || 'amarktai-network'
-  if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
-  if (!prompt) return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
-
-  const config = getStudioRouteConfig(tab)
-  if (config.status === 'missing') {
-    return NextResponse.json({
-      success: false, executed: false, capability: config.capability, provider: null, model: null,
-      jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: config.detail, blocker: config.detail, route: config,
-    }, { status: 501 })
+  if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const body = await request.json().catch(() => ({})) as StudioBody
+  const existing = body.executionId ? getExecution(body.executionId) : null
+  if (body.executionId && !existing) {
+    return NextResponse.json({ error: 'Execution not found' }, { status: 404 })
+  }
+  const prompt = (existing?.input.prompt ?? body.prompt ?? '').trim()
+  const capability = (existing?.detectedCapability ?? body.capability) as MediaStudioCapability | undefined
+  if (!prompt || !capability) {
+    return NextResponse.json({ error: 'prompt and capability are required' }, { status: 400 })
   }
 
-  const capability = normalizeCapability(tab, body.mode)
-  const execution = createExecution({
+  const appSlug = existing?.appSlug ?? body.appSlug?.trim() ?? 'amarktai-network'
+  const safety = await loadAppSafetyConfigFromDB(appSlug)
+  let execution = existing ?? createExecution({
     appSlug,
     actor: { type: 'admin', label: 'Media Studio' },
     requestedCapability: capability,
     prompt,
-    action: tab === 'Avatar / Talking Video' ? 'avatar_clone' : 'generate',
+    files: body.source ? [body.source] : [],
+    action: 'generate',
     selectedProvider: body.provider === 'auto' ? undefined : body.provider,
     selectedModel: body.model === 'auto' ? undefined : body.model,
     costMode: body.costMode,
-    adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
-    adultApprovalRequired: body.adultApprovalRequired,
-    metadata: { tab, mode: body.mode, size: body.size, style: body.style },
+    adultPolicy: safety.adultMode
+      ? 'full_adult_app_mode'
+      : safety.suggestiveMode
+        ? 'suggestive'
+        : 'off',
+    expensiveMedia: capability.includes('video') && Number(body.duration ?? 4) > 10,
+    metadata: {
+      source: 'media_studio',
+      mediaSource: body.source ?? null,
+      artifactIds: body.artifactIds ?? [],
+      parameters: studioParameters(body),
+    },
   })
-  if (execution.status === 'awaiting_approval' || execution.status === 'blocked') {
-    return NextResponse.json({
-      success: false,
-      executed: false,
-      capability,
-      jobStatus: execution.status,
-      artifactId: null,
-      storageUrl: null,
-      error: execution.error ?? execution.approval.reason,
-      blocker: execution.error ?? execution.approval.reason,
-      executionId: execution.executionId,
-      execution,
-    }, { status: execution.status === 'awaiting_approval' ? 202 : 409 })
-  }
-  startExecution(execution.executionId)
-
-  if (tab === 'Avatar / Talking Video') {
-    const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
-    const data = await readJson(response)
-    const executionResult = recordExecutionResponse(execution.executionId, data)
-    return NextResponse.json({
-      ...data,
-      result: data,
-      artifact: null,
-      executionId: execution.executionId,
-      execution: executionResult,
-    }, { status: response.status })
-  }
-
-  const route = routeLiveModel({
-    capability,
-    appSlug,
-    selectedProvider: body.provider ?? 'auto',
-    selectedModel: body.model === 'auto' ? undefined : body.model,
-    costMode: body.costMode ?? 'balanced',
-    adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
-    requiresMedia: ['image', 'video', 'adult_image', 'adult_video', 'adult_voice', 'music_generation', 'tts'].includes(capability),
-  })
-
-  if (route.blockedReason) {
-    const executionResult = failExecution(execution.executionId, route.blockedReason)
-    return NextResponse.json({
-      success: false, executed: false, capability, provider: null, model: null,
-      jobStatus: 'blocked', artifactId: null, storageUrl: null,
-      error: route.blockedReason, blocker: route.blockedReason, route,
-      executionId: execution.executionId, execution: executionResult,
-    }, { status: 409 })
-  }
-
-  try {
-    if (tab === 'Research') {
-      const response = await researchAssistPost(jsonRequest('/api/admin/research/assist', { prompt, appSlug }))
-      const data = await readJson(response)
-      const artifact = await persistArtifact({
-        appSlug,
-        type: 'document',
-        subType: 'research_brief',
-        title: `Research: ${prompt.slice(0, 80)}`,
-        description: 'Studio Research Agent result',
-        provider: String(route.selectedProvider ?? 'research'),
-        model: String(route.selectedModel ?? ''),
-        content: JSON.stringify(data, null, 2),
-        mimeType: 'application/json',
-        metadata: { tab, route },
-      })
-      const payload = {
-        success: response.ok,
-        executed: response.ok,
-        result: data,
-        artifact,
-        artifactId: artifact.id,
-        storageUrl: 'storageUrl' in artifact ? artifact.storageUrl : null,
-        route,
-      }
-      const executionResult = recordExecutionResponse(execution.executionId, payload)
-      return NextResponse.json({
-        ...payload,
-        executionId: execution.executionId,
-        execution: executionResult,
-      }, { status: response.status })
-    }
-
-    if (tab === 'Image') {
-      if (route.selectedProvider === 'huggingface') {
-        return NextResponse.json({ success: false, executed: false, error: 'Hugging Face image generation is task-based and is not wired to this image execution route yet.', route }, { status: 409 })
-      }
-      const response = await imagePost(jsonRequest('/api/brain/image', {
-        prompt,
-        appSlug,
-        executionId: execution.executionId,
-        size: body.size ?? '1024x1024',
-        providerOverride: route.selectedProvider,
-        modelOverride: route.selectedModel,
-      }))
-      const data = await readJson(response)
-      const persisted = response.ok && data.executed
-        ? await persistCanonicalMediaResult({
-          result: data,
-          appSlug,
-          type: 'image',
-          subType: 'studio_image',
-          title: `Image: ${prompt.slice(0, 80)}`,
-          provider: String(data.provider ?? route.selectedProvider ?? ''),
-          model: String(data.model ?? route.selectedModel ?? ''),
-          metadata: { tab, route },
-        })
-        : null
-      const localJob = persisted?.status === 'processing'
-        && persisted.jobId
-        && String(data.provider ?? route.selectedProvider) === 'genx'
-        ? createLocalMediaJob({
-          capability: 'image_generation',
-          appSlug,
-          type: 'image',
-          subType: 'studio_image',
-          title: `Image: ${prompt.slice(0, 80)}`,
-          prompt,
-          provider: String(data.provider ?? route.selectedProvider ?? ''),
-          model: String(data.model ?? route.selectedModel ?? ''),
-          providerJobId: persisted.jobId,
-          metadata: { tab, route, responseShapeKeys: persisted.responseShapeKeys },
-        })
-        : null
-      const tracked = localJob ? localMediaJobResponse(localJob) : null
-      const success = Boolean(persisted?.success || tracked?.success)
-      return NextResponse.json({
-        ...tracked,
-        success,
-        executed: success,
-        capability,
-        provider: persisted?.provider ?? data.provider ?? route.selectedProvider,
-        model: persisted?.model ?? data.model ?? route.selectedModel,
-        jobStatus: tracked?.jobStatus ?? persisted?.status ?? 'failed',
-        jobId: tracked?.jobId ?? persisted?.jobId ?? null,
-        providerJobId: tracked?.providerJobId ?? persisted?.jobId ?? null,
-        pollUrl: tracked?.pollUrl ?? null,
-        artifactId: persisted?.artifactId ?? null,
-        storageUrl: persisted?.storageUrl ?? null,
-        imageUrl: persisted?.mediaUrl ?? null,
-        blocker: tracked ? null : persisted?.blocker ?? data.error ?? null,
-        error: tracked ? null : persisted?.blocker ?? data.error ?? null,
-        responseShapeKeys: persisted?.responseShapeKeys ?? Object.keys(data).sort(),
-        result: data,
-        artifact: persisted?.artifact ?? null,
-        route,
-        executionId: execution.executionId,
-        execution: data.execution ?? null,
-      }, { status: tracked ? 202 : success ? 200 : response.ok ? 502 : response.status })
-    }
-
-    if (tab === 'Video' || capability === 'adult_video') {
-      const provider = route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
-        ? route.selectedProvider
-        : 'genx'
-      const response = await videoPost(jsonRequest('/api/brain/video-generate', {
-        prompt,
-        style: body.style ?? 'cinematic',
-        duration: 4,
-        aspectRatio: '16:9',
-        appSlug,
-        provider,
-        model: route.selectedModel,
-        capability,
-        executionId: execution.executionId,
-      }) as Request)
-      const data = await readJson(response)
-      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      const executionResult = data.execution ?? recordExecutionResponse(execution.executionId, data)
-      return NextResponse.json({
-        success: Boolean(data.success),
-        executed: Boolean(data.executed),
-        capability,
-        provider: data.provider ?? route.selectedProvider,
-        model: data.model ?? route.selectedModel,
-        jobStatus: data.jobStatus ?? data.status ?? 'processing',
-        artifactId: data.artifactId ?? null,
-        storageUrl: data.storageUrl ?? null,
-        error: data.error ?? null,
-        blocker: data.blocker ?? data.error ?? null,
-        result: data,
-        artifact,
-        route,
-        executionId: execution.executionId,
-        execution: executionResult,
-      }, { status: response.status })
-    }
-
-    if (tab === 'Music / Audio') {
-      const response = await musicPost(jsonRequest('/api/admin/music-studio', {
-        action: 'create_async',
-        request: {
-          appSlug,
-          theme: prompt,
-          genre: 'cinematic',
-          genres: ['cinematic'],
-          vocalStyle: 'instrumental_only',
-          prompt,
-          provider: route.selectedProvider,
-          model: route.selectedModel,
-        },
-      }))
-      const data = await readJson(response)
-      const executionResult = recordExecutionResponse(execution.executionId, data)
-      return NextResponse.json({
-        ...data,
-        success: Boolean(data.success),
-        executed: Boolean(data.executed),
-        capability,
-        provider: data.provider ?? route.selectedProvider,
-        model: data.model ?? route.selectedModel,
-        jobStatus: data.jobStatus ?? data.status ?? 'failed',
-        jobId: data.jobId ?? null,
-        pollUrl: data.pollUrl ?? null,
-        artifactId: data.artifactId ?? null,
-        storageUrl: data.storageUrl ?? null,
-        error: data.error ?? null,
-        blocker: data.blocker ?? data.error ?? null,
-        result: data,
-        artifact: data.artifact ?? null,
-        route,
-        executionId: execution.executionId,
-        execution: executionResult,
-      }, { status: response.status })
-    }
-
-    if (tab === 'Voice / TTS' || capability === 'adult_voice') {
-      const provider = ['genx', 'huggingface'].includes(String(route.selectedProvider))
-        ? route.selectedProvider
-        : 'auto'
-      const response = await ttsPost(jsonRequest('/api/brain/tts', {
-        text: prompt,
-        provider,
-        model: provider === 'auto' ? undefined : route.selectedModel,
-        voiceId: body.voiceId,
-        appSlug,
-        capability,
-      }))
-      const data = await readJson(response)
-      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      const executionResult = recordExecutionResponse(execution.executionId, data)
-      return NextResponse.json({
-        ...data,
-        result: data,
-        artifact,
-        route,
-        executionId: execution.executionId,
-        execution: executionResult,
-      }, { status: response.status })
-    }
-
-    if (tab === 'Adult') {
-      if (body.mode === 'image') {
-        const response = await adultImagePost(jsonRequest('/api/brain/adult-image', {
-          prompt,
-          appSlug,
-          size: body.size ?? '768x768',
-          provider: route.selectedProvider,
-          model: route.selectedModel,
-        }))
-        const data = await readJson(response)
-        const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-        const executionResult = recordExecutionResponse(execution.executionId, data)
-        return NextResponse.json({
-          ...data,
-          result: data,
-          artifact,
-          route,
-          executionId: execution.executionId,
-          execution: executionResult,
-        }, { status: response.status })
-      }
-      const response = await adultTextPost(jsonRequest('/api/brain/adult-text', {
-        prompt,
-        appSlug,
-        provider: route.selectedProvider,
-        model: route.selectedModel,
-      }))
-      const data = await readJson(response)
-      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      const executionResult = recordExecutionResponse(execution.executionId, data)
-      return NextResponse.json({
-        ...data,
-        result: data,
-        artifact,
-        route,
-        executionId: execution.executionId,
-        execution: executionResult,
-      }, { status: response.status })
-    }
-
-    return NextResponse.json({ success: false, executed: false, error: `${tab} execution is not available through this route.`, route }, { status: 400 })
-  } catch (error) {
-    const executionResult = failExecution(
-      execution.executionId,
-      error instanceof Error ? error.message : 'Studio execution failed',
+  if (['blocked', 'awaiting_approval', 'cancelled'].includes(execution.status)) {
+    return NextResponse.json(
+      await mediaStudioResponse(execution),
+      { status: execution.status === 'awaiting_approval' ? 202 : 409 },
     )
-    return NextResponse.json({
-      success: false,
-      executed: false,
-      error: error instanceof Error ? error.message : 'Studio execution failed',
-      route,
-      executionId: execution.executionId,
-      execution: executionResult,
-    }, { status: 500 })
   }
+  if (existing?.approval.required && existing.approval.status !== 'approved') {
+    return NextResponse.json(await mediaStudioResponse(existing), { status: 202 })
+  }
+  if (!['planned', 'running'].includes(execution.status)) {
+    return NextResponse.json(await mediaStudioResponse(execution))
+  }
+
+  execution = startExecution(execution.executionId) ?? execution
+  try {
+    const response = await dispatchStudio(request, body, execution, safety)
+    const payload = await response.json().catch(() => ({})) as Record<string, unknown>
+    execution = recordExecutionResponse(execution.executionId, payload) ?? execution
+    if (payload.success !== true && payload.executed !== true) {
+      execution = updateExecution(execution.executionId, { result: payload }) ?? execution
+    }
+    const run = await mediaStudioResponse(execution)
+    return NextResponse.json(run, {
+      status: execution.status === 'queued' || execution.status === 'awaiting_approval'
+        ? 202
+        : response.ok ? 200 : response.status,
+    })
+  } catch (error) {
+    execution = failExecution(execution.executionId, mediaStudioErrorMessage(error)) ?? execution
+    return NextResponse.json(await mediaStudioResponse(execution), { status: 500 })
+  }
+}
+
+async function dispatchStudio(
+  original: NextRequest,
+  body: StudioBody,
+  execution: ExecutionRecord,
+  safety: { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean },
+) {
+  const capability = execution.detectedCapability
+  const common = {
+    prompt: execution.input.prompt,
+    appSlug: execution.appSlug,
+    executionId: execution.executionId,
+    providerOverride: body.provider === 'auto' ? undefined : body.provider,
+    modelOverride: body.model === 'auto' ? undefined : body.model,
+  }
+  if (capability === 'image_generation') {
+    return imagePost(jsonRequest(original, '/api/brain/image', {
+      ...common,
+      size: imageSize(body.aspectRatio, body.quality),
+    }))
+  }
+  if (capability === 'image_edit') {
+    return imageEditPost(jsonRequest(original, '/api/brain/image-edit', {
+      ...common,
+      image: body.source,
+    }))
+  }
+  if (capability === 'suggestive_image') {
+    return suggestiveImagePost(jsonRequest(original, '/api/brain/suggestive-image', common))
+  }
+  if (capability === 'video_generation' && body.scenePlanOnly) {
+    return videoPlanPost(jsonRequest(original, '/api/brain/video', {
+      script: execution.input.prompt,
+      appSlug: execution.appSlug,
+      executionId: execution.executionId,
+      style: body.style,
+      duration: body.duration,
+      aspectRatio: body.aspectRatio,
+    }))
+  }
+  if (capability === 'video_generation' || capability === 'adult_video') {
+    return videoPost(jsonRequest(original, '/api/brain/video-generate', {
+      prompt: execution.input.prompt,
+      appSlug: execution.appSlug,
+      executionId: execution.executionId,
+      provider: body.provider === 'auto' ? 'auto' : body.provider,
+      model: body.model === 'auto' ? undefined : body.model,
+      capability,
+      style: normalizeVideoStyle(body.style),
+      duration: Math.min(Math.max(Number(body.duration ?? 4), 1), 30),
+      aspectRatio: normalizeAspect(body.aspectRatio),
+    }))
+  }
+  if (capability === 'music_generation' || capability === 'lyrics_generation') {
+    return musicPost(jsonRequest(original, '/api/admin/music-studio', {
+      action: capability === 'lyrics_generation' ? 'lyrics_only' : 'create_async',
+      request: {
+        appSlug: execution.appSlug,
+        executionId: execution.executionId,
+        theme: execution.input.prompt,
+        genre: normalizeGenre(body.genre),
+        genres: [normalizeGenre(body.genre)],
+        moods: body.moods ?? [],
+        vocalStyle: normalizeVocalStyle(body.vocalStyle, body.instrumental),
+        instrumental: Boolean(body.instrumental),
+        durationSeconds: Math.min(Math.max(Number(body.duration ?? 180), 15), 600),
+        language: body.language ?? 'English',
+        existingLyrics: body.lyrics,
+      },
+    }))
+  }
+  if (capability === 'tts' || capability === 'adult_voice') {
+    return ttsPost(jsonRequest(original, '/api/brain/tts', {
+      text: execution.input.prompt,
+      appSlug: execution.appSlug,
+      executionId: execution.executionId,
+      provider: body.provider === 'auto' ? 'auto' : body.provider,
+      model: body.model === 'auto' ? undefined : body.model,
+      capability,
+      voiceId: body.voiceId,
+      language: body.language,
+    }))
+  }
+  if (capability === 'adult_image') {
+    return adultImagePost(jsonRequest(original, '/api/brain/adult-image', {
+      prompt: execution.input.prompt,
+      appSlug: execution.appSlug,
+      executionId: execution.executionId,
+      provider: body.provider === 'auto' ? 'auto' : body.provider,
+      model: body.model === 'auto' ? undefined : body.model,
+      size: imageSize(body.aspectRatio, body.quality),
+    }))
+  }
+  return NextResponse.json({
+    success: false,
+    executed: false,
+    capability,
+    readiness: capability.startsWith('adult_') && !safety.adultMode ? 'BLOCKED' : 'UNAVAILABLE',
+    jobStatus: 'unavailable',
+    error: `${capability} is not available through the JSON Studio route.`,
+  }, { status: 501 })
+}
+
+function jsonRequest(original: NextRequest, path: string, body: Record<string, unknown>) {
+  return new NextRequest(new URL(path, original.url), {
+    method: 'POST',
+    headers: original.headers,
+    body: JSON.stringify(body),
+  })
+}
+
+function studioParameters(body: StudioBody) {
+  return {
+    style: body.style,
+    aspectRatio: body.aspectRatio,
+    quality: body.quality,
+    duration: body.duration,
+    scenePlanOnly: body.scenePlanOnly,
+    genre: body.genre,
+    moods: body.moods,
+    vocalStyle: body.vocalStyle,
+    instrumental: body.instrumental,
+    language: body.language,
+    voiceId: body.voiceId,
+  }
+}
+
+function imageSize(aspect = '1:1', quality = 'standard') {
+  if (aspect === '16:9') return quality === 'high' ? '1024x576' : '768x432'
+  if (aspect === '9:16') return quality === 'high' ? '576x1024' : '432x768'
+  return quality === 'high' ? '1024x1024' : '768x768'
+}
+
+function normalizeAspect(value?: string): '16:9' | '9:16' | '1:1' {
+  return value === '9:16' || value === '1:1' ? value : '16:9'
+}
+
+function normalizeVideoStyle(value?: string): 'cinematic' | 'animated' | 'realistic' | 'documentary' | 'commercial' {
+  return ['animated', 'realistic', 'documentary', 'commercial'].includes(value ?? '')
+    ? value as 'animated' | 'realistic' | 'documentary' | 'commercial'
+    : 'cinematic'
+}
+
+function normalizeGenre(value?: string) {
+  const allowed = ['pop', 'rock', 'hip_hop', 'edm', 'gospel', 'amapiano', 'afrobeats', 'jazz', 'classical', 'rnb', 'country', 'blues', 'reggae', 'soul', 'ambient', 'lofi', 'cinematic']
+  return allowed.includes(value ?? '') ? value : 'cinematic'
+}
+
+function normalizeVocalStyle(value?: string, instrumental?: boolean) {
+  if (instrumental) return 'instrumental_only'
+  const allowed = ['male_lead', 'female_lead', 'choir', 'rap', 'spoken_word', 'a_cappella', 'harmonized', 'falsetto']
+  return allowed.includes(value ?? '') ? value : 'female_lead'
 }

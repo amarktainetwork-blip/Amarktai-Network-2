@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
     const appSlug = typeof body.appSlug === 'string' ? body.appSlug : ''
+    const executionId = typeof body.executionId === 'string' ? body.executionId : undefined
     if (!prompt || !appSlug) {
       return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
     }
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
           const imageUrl = data.data?.[0]?.url
           const imageBase64 = data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : undefined
           if (res.ok && (imageUrl || imageBase64)) {
-            return persistImage({ appSlug, prompt, provider: entry.provider, model, traceId, imageUrl, imageBase64, attempts })
+            return persistImage({ appSlug, prompt, provider: entry.provider, model, traceId, imageUrl, imageBase64, attempts, executionId })
           }
           attempts.push({ provider: entry.provider, model, status: 'test_failed', httpStatus: res.status })
         } catch (error) {
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
             const bytes = Buffer.from(await res.arrayBuffer())
             if (bytes.length > 0) {
               const imageBase64 = `data:${contentType.startsWith('image/') ? contentType : 'image/png'};base64,${bytes.toString('base64')}`
-              return persistImage({ appSlug, prompt, provider: entry.provider, model: hfModel, traceId, imageBase64, attempts })
+              return persistImage({ appSlug, prompt, provider: entry.provider, model: hfModel, traceId, imageBase64, attempts, executionId })
             }
           }
           attempts.push({ provider: entry.provider, model: hfModel, status: 'test_failed', httpStatus: res.status })
@@ -180,11 +181,13 @@ async function persistImage(input: {
   imageUrl?: string
   imageBase64?: string
   attempts: Array<Record<string, unknown>>
+  executionId?: string
 }) {
   try {
     const match = input.imageBase64?.match(/^data:([^;]+);base64,(.+)$/)
     const artifact = await createArtifact({
       appSlug: input.appSlug,
+      executionId: input.executionId,
       type: 'image',
       subType: CAPABILITY,
       title: `Adult image: ${input.prompt.slice(0, 80)}`,
@@ -194,7 +197,7 @@ async function persistImage(input: {
       content: match ? Buffer.from(match[2], 'base64') : undefined,
       contentUrl: input.imageUrl,
       mimeType: match?.[1] ?? 'image/png',
-      metadata: { capability: CAPABILITY },
+      metadata: { capability: CAPABILITY, executionId: input.executionId },
     })
     return NextResponse.json(payload({
       success: true,
