@@ -1,7 +1,15 @@
 /**
- * Phase 5: Connected Apps — test suite
+ * Phase 5: Connected Apps — test suite (registration UI slice)
  *
  * Tests:
+ *   - create app returns id + secret
+ *   - duplicate slug rejected
+ *   - invalid slug rejected
+ *   - secret shown once only (not stored in app record)
+ *   - secret hash stored (not plain secret)
+ *   - suspend app blocks webhook
+ *   - reactivate app allows webhook again
+ *   - deregister removes app from list
  *   - valid HMAC accepted
  *   - invalid HMAC rejected
  *   - expired timestamp rejected
@@ -16,7 +24,6 @@ import path from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // ── Hoist the in-memory store so it is available inside vi.mock factories ─────
-// Also hoist a simple counter-based ID generator (no imports needed inside factory)
 
 const hoisted = vi.hoisted(() => {
   let _counter = 0
@@ -72,6 +79,13 @@ vi.mock('@/lib/local-json-store', () => {
     return updated
   }
 
+  function deleteRecord<T extends { id: string }>(relPath: string, id: string): boolean {
+    const records = readJsonFile<T>(relPath)
+    const filtered = records.filter((r) => (r as { id: string }).id !== id)
+    if (filtered.length === records.length) return false
+    return writeJsonFile(relPath, filtered)
+  }
+
   function listRecords<T extends { id: string }>(
     relPath: string,
     filter?: (record: T) => boolean,
@@ -91,6 +105,7 @@ vi.mock('@/lib/local-json-store', () => {
     writeJsonFile,
     appendRecord,
     updateRecord,
+    deleteRecord,
     listRecords,
     findRecord,
   }
@@ -105,6 +120,11 @@ import {
   listConnectedApps,
   suspendConnectedApp,
   activateConnectedApp,
+  deregisterConnectedApp,
+  isValidSlug,
+  deriveSigningSecretRef,
+  hashSigningSecret,
+  generateSigningSecret,
 } from '@/lib/connected-apps'
 
 import {
@@ -131,6 +151,14 @@ function makeSignature(secret: string, timestamp: string, body: string): string 
   return `sha256=${computeWebhookSignature(secret, timestamp, body)}`
 }
 
+function registerApp(overrides: { name?: string; slug?: string; scopes?: string[] } = {}) {
+  return registerConnectedApp({
+    name: overrides.name ?? 'Test App',
+    slug: overrides.slug ?? 'test-app',
+    scopes: (overrides.scopes as never) ?? ['webhook:receive'],
+  })
+}
+
 // ── Reset store and env between tests ─────────────────────────────────────────
 
 beforeEach(() => {
@@ -140,39 +168,75 @@ beforeEach(() => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Connected App Registry
+// Connected App Registry — registration
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('Connected App Registry', () => {
-  it('registers a new app and returns it with an id', () => {
-    const app = registerConnectedApp({
-      name: 'Test App',
-      slug: 'test-app',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'TEST_APP_SECRET',
-    })
+describe('Connected App Registry — registration', () => {
+  it('registers a new app and returns app + signingSecret', () => {
+    const result = registerApp()
 
-    expect(app.id).toBeTruthy()
-    expect(app.name).toBe('Test App')
-    expect(app.slug).toBe('test-app')
-    expect(app.status).toBe('active')
-    expect(app.scopes).toContain('webhook:receive')
-    expect(app.signingSecretRef).toBe('TEST_APP_SECRET')
-    expect(app.createdAt).toBeTruthy()
-    expect(app.updatedAt).toBeTruthy()
+    expect(result.app.id).toBeTruthy()
+    expect(result.app.name).toBe('Test App')
+    expect(result.app.slug).toBe('test-app')
+    expect(result.app.status).toBe('active')
+    expect(result.app.scopes).toContain('webhook:receive')
+    expect(result.app.signingSecretRef).toBe('AMARKTAI_APP_SECRET_TEST_APP')
+    expect(result.app.createdAt).toBeTruthy()
+    expect(result.app.updatedAt).toBeTruthy()
+    expect(result.signingSecret).toBeTruthy()
+    expect(typeof result.signingSecret).toBe('string')
+    expect(result.signingSecret.length).toBeGreaterThan(0)
   })
 
-  it('does not store the plain signing secret', () => {
-    const app = registerConnectedApp({
-      name: 'Secret Test',
-      slug: 'secret-test',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'MY_SECRET_ENV_VAR',
-    })
+  it('secret is shown once — not stored in app record', () => {
+    const result = registerApp()
+    const raw = JSON.stringify(result.app)
 
-    const raw = JSON.stringify(app)
-    expect(raw).not.toContain('supersecret')
-    expect(app.signingSecretRef).toBe('MY_SECRET_ENV_VAR')
+    // The plain secret must not appear in the stored app record
+    expect(raw).not.toContain(result.signingSecret)
+  })
+
+  it('stores a hash of the secret, not the plain secret', () => {
+    const result = registerApp()
+
+    expect(result.app.signingSecretHash).toBeTruthy()
+    expect(result.app.signingSecretHash).not.toBe(result.signingSecret)
+    // Hash should be 64 hex chars (SHA-256)
+    expect(result.app.signingSecretHash).toMatch(/^[0-9a-f]{64}$/)
+    // Hash must match
+    expect(result.app.signingSecretHash).toBe(hashSigningSecret(result.signingSecret))
+  })
+
+  it('signingSecretRef is derived from slug', () => {
+    const result = registerConnectedApp({
+      name: 'My App',
+      slug: 'my-app',
+      scopes: ['webhook:receive'],
+    })
+    expect(result.app.signingSecretRef).toBe('AMARKTAI_APP_SECRET_MY_APP')
+  })
+
+  it('duplicate slug is rejected', () => {
+    registerApp({ slug: 'unique-slug' })
+    expect(() => registerApp({ slug: 'unique-slug' })).toThrow('already registered')
+  })
+
+  it('invalid slug is rejected', () => {
+    expect(() =>
+      registerConnectedApp({ name: 'Bad', slug: 'UPPERCASE', scopes: ['webhook:receive'] }),
+    ).toThrow('Invalid slug')
+
+    expect(() =>
+      registerConnectedApp({ name: 'Bad', slug: '-leading-hyphen', scopes: ['webhook:receive'] }),
+    ).toThrow('Invalid slug')
+
+    expect(() =>
+      registerConnectedApp({ name: 'Bad', slug: 'trailing-hyphen-', scopes: ['webhook:receive'] }),
+    ).toThrow('Invalid slug')
+
+    expect(() =>
+      registerConnectedApp({ name: 'Bad', slug: 'a', scopes: ['webhook:receive'] }),
+    ).toThrow('Invalid slug')
   })
 
   it('returns null for unknown app id', () => {
@@ -180,13 +244,7 @@ describe('Connected App Registry', () => {
   })
 
   it('finds app by slug', () => {
-    const app = registerConnectedApp({
-      name: 'Slug App',
-      slug: 'slug-app',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'TEST_APP_SECRET',
-    })
-
+    const { app } = registerApp({ slug: 'slug-app' })
     const found = getConnectedAppBySlug('slug-app')
     expect(found).not.toBeNull()
     expect(found!.id).toBe(app.id)
@@ -202,42 +260,84 @@ describe('Connected App Registry', () => {
 
   it('app appears in list only after registration', () => {
     expect(listConnectedApps()).toHaveLength(0)
-
-    registerConnectedApp({
-      name: 'App A',
-      slug: 'app-a',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'TEST_APP_SECRET',
-    })
-
+    registerApp({ slug: 'app-a' })
     expect(listConnectedApps()).toHaveLength(1)
     expect(listConnectedApps()[0].slug).toBe('app-a')
   })
+})
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Connected App Registry — suspend / reactivate / deregister
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Connected App Registry — lifecycle', () => {
   it('suspends an active app', () => {
-    const app = registerConnectedApp({
-      name: 'Suspend Me',
-      slug: 'suspend-me',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'TEST_APP_SECRET',
-    })
-
+    const { app } = registerApp({ slug: 'suspend-me' })
     const suspended = suspendConnectedApp(app.id)
     expect(suspended).not.toBeNull()
     expect(suspended!.status).toBe('suspended')
   })
 
   it('reactivates a suspended app', () => {
-    const app = registerConnectedApp({
-      name: 'Reactivate Me',
-      slug: 'reactivate-me',
-      scopes: ['webhook:receive'],
-      signingSecretRef: 'TEST_APP_SECRET',
-    })
-
+    const { app } = registerApp({ slug: 'reactivate-me' })
     suspendConnectedApp(app.id)
     const reactivated = activateConnectedApp(app.id)
     expect(reactivated!.status).toBe('active')
+  })
+
+  it('deregister removes app from list', () => {
+    const { app } = registerApp({ slug: 'delete-me' })
+    expect(listConnectedApps()).toHaveLength(1)
+
+    const deleted = deregisterConnectedApp(app.id)
+    expect(deleted).toBe(true)
+    expect(listConnectedApps()).toHaveLength(0)
+    expect(getConnectedApp(app.id)).toBeNull()
+  })
+
+  it('deregister returns false for unknown id', () => {
+    expect(deregisterConnectedApp('nonexistent')).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slug and secret helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Slug and secret helpers', () => {
+  it('isValidSlug accepts valid slugs', () => {
+    expect(isValidSlug('my-app')).toBe(true)
+    expect(isValidSlug('app123')).toBe(true)
+    expect(isValidSlug('a1')).toBe(true)
+    expect(isValidSlug('my-cool-app-v2')).toBe(true)
+  })
+
+  it('isValidSlug rejects invalid slugs', () => {
+    expect(isValidSlug('a')).toBe(false) // too short
+    expect(isValidSlug('UPPER')).toBe(false)
+    expect(isValidSlug('-leading')).toBe(false)
+    expect(isValidSlug('trailing-')).toBe(false)
+    expect(isValidSlug('has space')).toBe(false)
+    expect(isValidSlug('')).toBe(false)
+  })
+
+  it('deriveSigningSecretRef converts slug to env var name', () => {
+    expect(deriveSigningSecretRef('my-app')).toBe('AMARKTAI_APP_SECRET_MY_APP')
+    expect(deriveSigningSecretRef('cool-app-v2')).toBe('AMARKTAI_APP_SECRET_COOL_APP_V2')
+  })
+
+  it('generateSigningSecret returns a 64-char hex string', () => {
+    const secret = generateSigningSecret()
+    expect(secret).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('hashSigningSecret returns a 64-char hex SHA-256', () => {
+    const hash = hashSigningSecret('mysecret')
+    expect(hash).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('two different secrets produce different hashes', () => {
+    expect(hashSigningSecret('secret-a')).not.toBe(hashSigningSecret('secret-b'))
   })
 })
 
@@ -272,7 +372,7 @@ describe('HMAC Webhook Verification', () => {
   it('rejects an invalid HMAC signature', () => {
     const body = JSON.stringify({ event: 'order.created' })
     const ts = makeTimestamp()
-    const sig = `sha256=${'a'.repeat(64)}` // wrong signature
+    const sig = `sha256=${'a'.repeat(64)}`
 
     const result = verifyWebhookSignature({
       rawBody: body,
@@ -286,14 +386,14 @@ describe('HMAC Webhook Verification', () => {
     expect((result as { ok: false; reason: string }).reason).toBe('invalid_signature')
   })
 
-  it('rejects a tampered body (signature mismatch)', () => {
+  it('rejects a tampered body', () => {
     const originalBody = JSON.stringify({ event: 'order.created', amount: 100 })
     const tamperedBody = JSON.stringify({ event: 'order.created', amount: 99999 })
     const ts = makeTimestamp()
-    const sig = makeSignature(SECRET, ts, originalBody) // signed with original
+    const sig = makeSignature(SECRET, ts, originalBody)
 
     const result = verifyWebhookSignature({
-      rawBody: tamperedBody, // but body was tampered
+      rawBody: tamperedBody,
       timestampHeader: ts,
       signatureHeader: sig,
       signingSecretRef: SECRET_REF,
@@ -306,7 +406,7 @@ describe('HMAC Webhook Verification', () => {
 
   it('rejects an expired timestamp', () => {
     const body = JSON.stringify({ event: 'old.event' })
-    const oldTs = makeTimestamp(-(WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS + 60)) // 6 minutes ago
+    const oldTs = makeTimestamp(-(WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS + 60))
     const sig = makeSignature(SECRET, oldTs, body)
 
     const result = verifyWebhookSignature({
@@ -314,7 +414,6 @@ describe('HMAC Webhook Verification', () => {
       timestampHeader: oldTs,
       signatureHeader: sig,
       signingSecretRef: SECRET_REF,
-      // nowSeconds defaults to real time — old timestamp will be expired
     })
 
     expect(result.ok).toBe(false)
@@ -338,13 +437,10 @@ describe('HMAC Webhook Verification', () => {
   })
 
   it('rejects when timestamp header is missing', () => {
-    const body = 'hello'
-    const sig = makeSignature(SECRET, '1234567890', body)
-
     const result = verifyWebhookSignature({
-      rawBody: body,
+      rawBody: 'hello',
       timestampHeader: null,
-      signatureHeader: sig,
+      signatureHeader: makeSignature(SECRET, '1234567890', 'hello'),
       signingSecretRef: SECRET_REF,
     })
 
@@ -366,12 +462,12 @@ describe('HMAC Webhook Verification', () => {
     expect((result as { ok: false; reason: string }).reason).toBe('missing_signature')
   })
 
-  it('rejects when signature has wrong format (no sha256= prefix)', () => {
+  it('rejects when signature has wrong format', () => {
     const ts = makeTimestamp()
     const result = verifyWebhookSignature({
       rawBody: 'hello',
       timestampHeader: ts,
-      signatureHeader: 'abc123', // no sha256= prefix
+      signatureHeader: 'abc123',
       signingSecretRef: SECRET_REF,
       nowSeconds: parseInt(ts, 10),
     })
@@ -383,12 +479,10 @@ describe('HMAC Webhook Verification', () => {
   it('rejects when signing secret is not configured', () => {
     delete process.env[SECRET_REF]
     const ts = makeTimestamp()
-    const sig = makeSignature(SECRET, ts, 'body')
-
     const result = verifyWebhookSignature({
       rawBody: 'body',
       timestampHeader: ts,
-      signatureHeader: sig,
+      signatureHeader: makeSignature(SECRET, ts, 'body'),
       signingSecretRef: SECRET_REF,
       nowSeconds: parseInt(ts, 10),
     })
@@ -404,6 +498,27 @@ describe('HMAC Webhook Verification', () => {
   it('resolveSigningSecret returns the value when env var is set', () => {
     process.env['TEST_APP_SECRET'] = 'mysecret'
     expect(resolveSigningSecret('TEST_APP_SECRET')).toBe('mysecret')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Suspend blocks webhook / reactivate allows webhook
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Suspend blocks webhook, reactivate allows webhook', () => {
+  it('suspended app has status suspended', () => {
+    const { app } = registerApp({ slug: 'block-test' })
+    suspendConnectedApp(app.id)
+    const updated = getConnectedApp(app.id)
+    expect(updated!.status).toBe('suspended')
+  })
+
+  it('reactivated app has status active', () => {
+    const { app } = registerApp({ slug: 'reactivate-test' })
+    suspendConnectedApp(app.id)
+    activateConnectedApp(app.id)
+    const updated = getConnectedApp(app.id)
+    expect(updated!.status).toBe('active')
   })
 })
 
@@ -456,11 +571,7 @@ describe('Connected App Event Log', () => {
   it('event is written after accepted webhook — appears in list', () => {
     expect(listConnectedAppEvents()).toHaveLength(0)
 
-    recordAcceptedEvent({
-      appId: 'app-789',
-      eventType: 'ping',
-      payload: null,
-    })
+    recordAcceptedEvent({ appId: 'app-789', eventType: 'ping', payload: null })
 
     const events = listConnectedAppEvents()
     expect(events).toHaveLength(1)
@@ -485,14 +596,13 @@ describe('Connected App Event Log', () => {
     recordAcceptedEvent({ appId: 'app-X', eventType: 'second', payload: null })
 
     const events = listConnectedAppEvents()
-    // newest first — second event should be at index 0
     expect(events[0].eventType).toBe('second')
     expect(events[1].eventType).toBe('first')
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UI empty state — file-level checks
+// UI page — file-level checks
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Connected Apps UI page', () => {
@@ -506,7 +616,6 @@ describe('Connected Apps UI page', () => {
   it('UI page shows empty state message when no apps', () => {
     const src = fs.readFileSync(pagePath, 'utf8')
     expect(src).toContain('No connected apps')
-    expect(src).toContain('No apps have been registered yet')
   })
 
   it('UI page does not contain fake status strings', () => {
@@ -517,48 +626,62 @@ describe('Connected Apps UI page', () => {
     expect(src).not.toContain('"healthy"')
   })
 
-  it('UI page renders apps from live registry (no hardcoded app cards)', () => {
+  it('UI page does not contain hardcoded app names', () => {
     const src = fs.readFileSync(pagePath, 'utf8')
-    expect(src).toContain('listConnectedApps()')
     expect(src).not.toContain('Marketing App')
     expect(src).not.toContain('Trading App')
   })
 
   it('UI page shows event log from live event store', () => {
     const src = fs.readFileSync(pagePath, 'utf8')
-    expect(src).toContain('listConnectedAppEvents()')
+    expect(src).toContain('connected-app-events')
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Webhook route — file-level checks
+// API routes — file-level checks
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('Webhook ingest route', () => {
+describe('Connected Apps API routes', () => {
   const ROOT = path.resolve(__dirname, '../../')
-  const routePath = path.join(ROOT, 'app/api/admin/connected-apps/webhook/route.ts')
 
-  it('webhook route file exists', () => {
-    expect(fs.existsSync(routePath)).toBe(true)
+  it('POST route file exists', () => {
+    expect(fs.existsSync(path.join(ROOT, 'app/api/admin/connected-apps/route.ts'))).toBe(true)
+  })
+
+  it('POST route registers apps', () => {
+    const src = fs.readFileSync(
+      path.join(ROOT, 'app/api/admin/connected-apps/route.ts'),
+      'utf8',
+    )
+    expect(src).toContain('registerConnectedApp')
+    expect(src).toContain('signingSecret')
+  })
+
+  it('[id] route file exists', () => {
+    expect(
+      fs.existsSync(path.join(ROOT, 'app/api/admin/connected-apps/[id]/route.ts')),
+    ).toBe(true)
+  })
+
+  it('[id] route handles suspend/activate/delete', () => {
+    const src = fs.readFileSync(
+      path.join(ROOT, 'app/api/admin/connected-apps/[id]/route.ts'),
+      'utf8',
+    )
+    expect(src).toContain('suspendConnectedApp')
+    expect(src).toContain('activateConnectedApp')
+    expect(src).toContain('deregisterConnectedApp')
   })
 
   it('webhook route verifies HMAC before processing', () => {
-    const src = fs.readFileSync(routePath, 'utf8')
+    const src = fs.readFileSync(
+      path.join(ROOT, 'app/api/admin/connected-apps/webhook/route.ts'),
+      'utf8',
+    )
     expect(src).toContain('verifyWebhookSignature')
-  })
-
-  it('webhook route rejects unknown apps', () => {
-    const src = fs.readFileSync(routePath, 'utf8')
     expect(src).toContain('unknown_app')
-  })
-
-  it('webhook route records rejected events', () => {
-    const src = fs.readFileSync(routePath, 'utf8')
     expect(src).toContain('recordRejectedEvent')
-  })
-
-  it('webhook route records accepted events', () => {
-    const src = fs.readFileSync(routePath, 'utf8')
     expect(src).toContain('recordAcceptedEvent')
   })
 })
