@@ -22,8 +22,6 @@ const VOICE_MAP: Record<string, VoiceChoice> = {
   'genx:grok-tts:neutral': { provider: 'genx', model: 'grok-tts', label: 'AmarktAI Neutral' },
   'genx:aura-2:warm': { provider: 'genx', model: 'aura-2', label: 'AmarktAI Warm' },
   'genx:genxlm-voice-v1:premium': { provider: 'genx', model: 'genxlm-voice-v1', label: 'AmarktAI Premium' },
-  'elevenlabs:default:studio': { provider: 'elevenlabs', model: 'eleven_multilingual_v2', voiceId: 'EXAVITQu4vr4xnSDxMaL', gender: 'female', label: 'ElevenLabs Studio Voice' },
-  'deepgram:aura-2:fast': { provider: 'deepgram', model: 'aura-2-luna-en', gender: 'female', label: 'Deepgram Aura Fast' },
 }
 
 export const dynamic = 'force-dynamic'

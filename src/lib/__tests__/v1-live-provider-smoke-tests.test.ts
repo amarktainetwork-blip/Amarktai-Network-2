@@ -422,7 +422,12 @@ describe('Connected-app E2E flow — file-level proof', () => {
       path.join(ROOT, 'app/api/connected-apps/capabilities/execute/route.ts'),
       'utf8',
     )
-    expect(src).toContain('verifyWebhookSignature')
+    const engineSrc = fs.readFileSync(
+      path.join(ROOT, 'lib/connected-app-capability-engine.ts'),
+      'utf8',
+    )
+    expect(src).toContain('authenticateConnectedAppCapabilityRequest')
+    expect(engineSrc).toContain('verifyWebhookSignature')
   })
 
   it('connected-app execute route checks capability scope', () => {
