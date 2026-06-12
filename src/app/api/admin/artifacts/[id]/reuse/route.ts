@@ -20,6 +20,9 @@ export async function POST(
   return NextResponse.json({
     sourceArtifactId: artifact.id,
     reuse: {
+      id: artifact.id,
+      title: artifact.title,
+      description: artifact.description,
       appSlug: artifact.appSlug,
       appId: artifact.appId,
       workspaceId: artifact.workspaceId,
@@ -29,7 +32,15 @@ export async function POST(
       provider: artifact.provider,
       model: artifact.model,
       mimeType: artifact.mimeType,
+      previewUrl: artifact.previewUrl,
+      downloadUrl: artifact.downloadUrl,
       metadata: artifact.metadata,
+    },
+    contextReference: {
+      id: artifact.id,
+      label: artifact.title,
+      value: `artifact:${artifact.id}`,
+      summary: `${artifact.title} (${artifact.type}, ${artifact.capability})`,
     },
   })
 }
