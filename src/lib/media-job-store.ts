@@ -7,6 +7,7 @@ import {
   updateRecord,
 } from '@/lib/local-json-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
+import { recordExecutionResponse } from '@/lib/execution'
 
 export type LocalMediaJobStatus = 'queued' | 'processing' | 'completed' | 'failed'
 export type LocalMediaType = 'image' | 'audio' | 'music' | 'video'
@@ -86,39 +87,47 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
   if (!job || job.status === 'completed' || job.status === 'failed') return job
 
   if (Date.now() - new Date(job.createdAt).getTime() > MAX_PROCESSING_MS) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Media provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(failed)
+    return failed
   }
 
   if (job.provider !== 'genx') {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Provider "${job.provider}" does not have a local media polling contract.`,
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(failed)
+    return failed
   }
 
   const providerResult = await getGenXJobStatus(job.providerJobId)
   if (!providerResult) return job
   if (providerResult.status === 'failed') {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: providerResult.error ?? 'Media provider job failed.',
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(failed)
+    return failed
   }
   if (!['completed', 'succeeded'].includes(providerResult.status)) {
     return saveJob(job, { status: 'processing', error: null })
   }
   if (!providerResult.resultUrl) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: 'Media provider reported completion without a usable media URL.',
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(failed)
+    return failed
   }
 
   try {
@@ -142,7 +151,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         localJobId: job.id,
       },
     })
-    return saveJob(job, {
+    const completed = saveJob(job, {
       status: 'completed',
       artifactId: persisted.artifactId,
       storageUrl: persisted.storageUrl,
@@ -150,13 +159,25 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
       error: null,
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(completed)
+    return completed
   } catch (error) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
       completedAt: new Date().toISOString(),
     })
+    reconcileExecution(failed)
+    return failed
   }
+}
+
+function reconcileExecution(job: LocalMediaJob | null) {
+  const executionId = typeof job?.metadata.executionId === 'string'
+    ? job.metadata.executionId
+    : null
+  if (!job || !executionId || !['completed', 'failed'].includes(job.status)) return
+  recordExecutionResponse(executionId, localMediaJobResponse(job))
 }
 
 export function localMediaJobResponse(job: LocalMediaJob) {

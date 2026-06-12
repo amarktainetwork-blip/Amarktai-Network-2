@@ -4,6 +4,7 @@ import { getVaultApiKey } from '@/lib/brain'
 import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
 import { createArtifact } from '@/lib/artifact-store'
+import { recordExecutionResponse } from '@/lib/execution'
 
 const MAX_PROCESSING_MS = 15 * 60 * 1000
 
@@ -156,7 +157,9 @@ export async function GET(
 
   if (job.status === 'succeeded' || job.status === 'failed') {
     const artifact = job.status === 'succeeded' ? await ensureVideoArtifact(job) : undefined
-    return NextResponse.json(responsePayload(job, artifact))
+    const payload = responsePayload(job, artifact)
+    reconcileVideoExecution(job.resultMeta, payload)
+    return NextResponse.json(payload)
   }
 
   if (Date.now() - job.createdAt.getTime() > MAX_PROCESSING_MS) {
@@ -167,7 +170,9 @@ export async function GET(
         errorMessage: `Video provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       },
     })
-    return NextResponse.json(responsePayload(updated))
+    const payload = responsePayload(updated)
+    reconcileVideoExecution(updated.resultMeta, payload)
+    return NextResponse.json(payload)
   }
 
   let update: { status: string; resultUrl?: string; error?: string } | null = null
@@ -243,5 +248,14 @@ export async function GET(
   }
 
   const artifact = updated.status === 'succeeded' ? await ensureVideoArtifact(updated) : undefined
-  return NextResponse.json(responsePayload(updated, artifact))
+  const payload = responsePayload(updated, artifact)
+  reconcileVideoExecution(updated.resultMeta, payload)
+  return NextResponse.json(payload)
+}
+
+function reconcileVideoExecution(resultMeta: string | null, payload: Record<string, unknown>) {
+  const executionId = executionIdFor(resultMeta)
+  if (executionId && ['succeeded', 'failed'].includes(String(payload.jobStatus))) {
+    recordExecutionResponse(executionId, payload)
+  }
 }
