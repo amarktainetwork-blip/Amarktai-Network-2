@@ -48,7 +48,8 @@ export interface StorageStatus {
 
 export interface StorageHealth extends StorageStatus {
   writable: boolean
-  directories: Array<{ name: string; path: string; exists: boolean; writable: boolean }>
+  readable: boolean
+  directories: Array<{ name: string; path: string; exists: boolean; writable: boolean; readable: boolean }>
   error: string | null
 }
 
@@ -313,7 +314,7 @@ export async function verifyStorage(): Promise<StorageHealth> {
   let error: string | null = null
 
   if (status.driver !== REQUIRED_STORAGE_DRIVER) {
-    return { ...status, writable: false, directories, error: status.note }
+    return { ...status, writable: false, readable: false, directories, error: status.note }
   }
 
   try {
@@ -323,28 +324,33 @@ export async function verifyStorage(): Promise<StorageHealth> {
       const dirPath = path.join(status.basePath, name)
       let exists = false
       let writable = false
+      let readable = false
       try {
         await fs.mkdir(dirPath, { recursive: true })
         await fs.access(dirPath)
         exists = true
         const probePath = path.join(dirPath, `.amarktai-write-test-${process.pid}`)
         await fs.writeFile(probePath, 'ok')
+        readable = (await fs.readFile(probePath, 'utf8')) === 'ok'
         await fs.unlink(probePath)
         writable = true
       } catch {
         writable = false
+        readable = false
       }
-      directories.push({ name, path: dirPath, exists, writable })
+      directories.push({ name, path: dirPath, exists, writable, readable })
     }
   } catch (err) {
     error = err instanceof Error ? err.message : 'Storage verification failed'
   }
 
   const writable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.writable)
+  const readable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.readable)
   return {
     ...status,
-    configured: status.configured && writable,
+    configured: status.configured && writable && readable,
     writable,
+    readable,
     directories,
     error,
   }

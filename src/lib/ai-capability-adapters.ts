@@ -2,6 +2,7 @@ import { callUniversalProvider } from '@/lib/universal-provider-call'
 import { callGenXMedia, getGenXJobStatus } from '@/lib/genx-client'
 import { getVaultApiKey } from '@/lib/brain'
 import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
+import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 import type {
   AiCapabilityDefinition,
   AiCapabilityProviderRoute,
@@ -71,39 +72,6 @@ const PROVIDER_CATEGORIES: Record<ApprovedDirectProviderId, readonly string[]> =
   mimo: ['text', 'multimodal', 'video', 'audio', 'agents_or_planning'],
   groq: ['text', 'multimodal', 'audio', 'agents_or_planning'],
   together: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
-}
-
-const HF_DEFAULT_MODELS: Record<string, string> = {
-  text_classification: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
-  token_classification: 'dslim/bert-base-NER',
-  zero_shot_classification: 'facebook/bart-large-mnli',
-  translation: 'Helsinki-NLP/opus-mt-en-fr',
-  summarization: 'facebook/bart-large-cnn',
-  question_answering: 'deepset/roberta-base-squad2',
-  table_question_answering: 'google/tapas-base-finetuned-wtq',
-  sentence_similarity: 'sentence-transformers/all-MiniLM-L6-v2',
-  text_ranking: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  feature_extraction: 'sentence-transformers/all-MiniLM-L6-v2',
-  fill_mask: 'google-bert/bert-base-uncased',
-  embeddings: 'sentence-transformers/all-MiniLM-L6-v2',
-  rerank: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  visual_question_answering: 'dandelin/vilt-b32-finetuned-vqa',
-  image_to_text: 'Salesforce/blip-image-captioning-base',
-  image_classification: 'google/vit-base-patch16-224',
-  zero_shot_image_classification: 'openai/clip-vit-large-patch14',
-  object_detection: 'facebook/detr-resnet-50',
-  zero_shot_object_detection: 'google/owlvit-base-patch32',
-  image_segmentation: 'facebook/mask2former-swin-large-coco-panoptic',
-  mask_generation: 'facebook/sam-vit-base',
-  depth_estimation: 'Intel/dpt-large',
-  keypoint_detection: 'facebook/detr-resnet-50',
-  image_feature_extraction: 'google/vit-base-patch16-224',
-  video_classification: 'MCG-NJU/videomae-base-finetuned-kinetics',
-  text_to_speech: 'facebook/mms-tts-eng',
-  automatic_speech_recognition: 'openai/whisper-large-v3',
-  audio_classification: 'MIT/ast-finetuned-audioset-10-10-0.4593',
-  voice_activity_detection: 'pyannote/voice-activity-detection',
-  time_series_forecasting: 'amazon/chronos-t5-small',
 }
 
 function result(
@@ -211,16 +179,17 @@ function parseProviderJson(value: string | null): unknown {
 async function executeHuggingFace(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'huggingface' as const
   const key = await getVaultApiKey(provider)
-  const model = input.model
-    ?? HF_DEFAULT_MODELS[input.capability.id]
-    ?? input.route.modelIds.find((id) => !id.startsWith('task:'))
-    ?? 'custom:huggingface-endpoint'
+  const specialist = resolveHfSpecialistConfig(input.capability.id, input.route)
+  const model = input.model ?? specialist.model ?? 'custom:huggingface-endpoint'
   if (!key) return result(provider, model, 'needs_configuration', { error: 'Hugging Face key not configured.' })
-  const endpoint = publicHttpsUrl(input.endpointUrl)
-    ?? (!model.startsWith('custom:') ? `https://api-inference.huggingface.co/models/${model}` : null)
+  const endpoint = specialist.endpointSource === 'environment'
+    ? specialist.endpoint
+    : !specialist.endpointRequired && !model.startsWith('custom:')
+      ? `https://api-inference.huggingface.co/models/${model}`
+      : null
   if (!endpoint) {
     return result(provider, model, 'needs_configuration', {
-      error: `${input.capability.id} requires a configured Hugging Face Inference Endpoint URL or model ID.`,
+      error: `${input.capability.id} requires ${specialist.requiredEnv.join(' or ')}.`,
     })
   }
 
