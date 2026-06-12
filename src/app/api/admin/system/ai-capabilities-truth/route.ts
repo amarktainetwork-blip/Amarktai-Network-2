@@ -30,7 +30,7 @@ export async function GET() {
         'src/lib/universal-model-catalog.ts',
         'src/lib/media-capability-registry.ts',
       ],
-      connectedAppExecutionAddedInThisChange: false,
+      connectedAppExecutionAddedInThisChange: true,
     },
   })
 }

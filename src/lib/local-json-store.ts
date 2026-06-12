@@ -168,4 +168,5 @@ export const LOCAL_STORE_FILES = {
   executions: 'jobs/executions.json',
   connectedApps: 'connected-apps/apps.json',
   connectedAppEvents: 'connected-apps/events.json',
+  connectedAppCapabilityJobs: 'connected-apps/capability-jobs.json',
 } as const
