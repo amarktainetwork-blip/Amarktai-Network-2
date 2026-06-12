@@ -25,10 +25,27 @@ describe('dashboard productization correction', () => {
   it('keeps Settings as the only connection setup surface', () => {
     const settings = read('app/admin/dashboard/settings/page.tsx')
     expect(settings).toContain('Connect capabilities once.')
+    expect(settings).toContain('/api/admin/settings/status')
+    expect(settings).toContain('/api/admin/settings/key')
+    expect(settings).toContain('entry.testRoute')
     expect(settings).toContain('Save')
     expect(settings).toContain('Test')
+    expect(settings).toContain('Provider status unavailable')
+    expect(settings).not.toMatch(/[A-Z][A-Z0-9_]+_API_KEY/)
     expect(settings).not.toContain('OpenAI')
     expect(settings).not.toContain('Firecrawl')
+  })
+
+  it('does not render failed readiness requests as ready', () => {
+    const overview = read('app/admin/dashboard/page.tsx')
+    const settings = read('app/admin/dashboard/settings/page.tsx')
+    const system = read('app/admin/dashboard/system/page.tsx')
+    expect(overview).toContain('readinessError')
+    expect(overview).toContain("'Unavailable'")
+    expect(settings).toContain('loadError')
+    expect(settings).toContain("status=\"unknown\"")
+    expect(system).toContain('loadError')
+    expect(system).toContain('Readiness status unavailable')
   })
 
   it('presents memory in plain English with working management actions', () => {
