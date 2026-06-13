@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
-  ChevronRight,
   ExternalLink,
   Eye,
   EyeOff,
@@ -30,8 +29,15 @@ type StorageSetup = {
   configured: boolean
   writable: boolean
   readable: boolean
+  deletable?: boolean
+  ready?: boolean
+  root?: string
+  checkedAt?: string
+  error?: string | null
   driver: string
 }
+type RuntimeTool = { id: string; connected: boolean; capabilities: string[]; detail: string }
+type CapabilityEntry = { id?: string; capability?: string; label?: string; status?: string; createsArtifact?: boolean; longRunning?: boolean; blocker?: string | null; providers?: unknown[] }
 
 type RoutingPolicy = {
   studio: 'cheap' | 'balanced' | 'premium' | 'auto'
@@ -58,20 +64,30 @@ export default function SettingsPage() {
     connectedApps: 'auto',
   })
   const [routingMessage, setRoutingMessage] = useState('')
+  const [safety, setSafety] = useState({ safeMode: true, suggestiveMode: false, adultMode: false })
+  const [safetyMessage, setSafetyMessage] = useState('')
+  const [runtimeTools, setRuntimeTools] = useState<RuntimeTool[]>([])
+  const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
 
   const load = useCallback(async () => {
     setRefreshing(true)
     setLoadError('')
     try {
-      const [settingsResponse, readinessResponse, routingResponse] = await Promise.all([
+      const [settingsResponse, readinessResponse, routingResponse, safetyResponse, runtimeResponse, capabilityResponse] = await Promise.all([
         fetch('/api/admin/settings/status', { cache: 'no-store' }),
         fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' }),
         fetch('/api/admin/settings/routing-policy', { cache: 'no-store' }),
+        fetch('/api/admin/app-safety?appSlug=amarktai-network', { cache: 'no-store' }),
+        fetch('/api/admin/settings/runtime-tools', { cache: 'no-store' }),
+        fetch('/api/admin/system/ai-capabilities-truth', { cache: 'no-store' }),
       ])
-      const [settingsData, readinessData, routingData] = await Promise.all([
+      const [settingsData, readinessData, routingData, safetyData, runtimeData, capabilityData] = await Promise.all([
         settingsResponse.json().catch(() => null),
         readinessResponse.json().catch(() => null),
         routingResponse.json().catch(() => null),
+        safetyResponse.json().catch(() => null),
+        runtimeResponse.json().catch(() => null),
+        capabilityResponse.json().catch(() => null),
       ])
       if (!settingsResponse.ok || !settingsData?.truth) {
         throw new Error('Provider status is unavailable.')
@@ -91,6 +107,13 @@ export default function SettingsPage() {
       if (routingResponse.ok && routingData?.routingPolicy) {
         setRoutingPolicy(routingData.routingPolicy)
       }
+      if (safetyResponse.ok) setSafety({
+        safeMode: safetyData.safeMode !== false,
+        suggestiveMode: Boolean(safetyData.suggestiveMode),
+        adultMode: Boolean(safetyData.adultMode),
+      })
+      if (runtimeResponse.ok) setRuntimeTools(runtimeData.tools ?? [])
+      if (capabilityResponse.ok) setCapabilities(capabilityData.capabilities ?? capabilityData.matrix ?? [])
     } catch {
       setTruth(null)
       setStorage(null)
@@ -115,6 +138,17 @@ export default function SettingsPage() {
     })
     const data = await response.json().catch(() => ({}))
     setRoutingMessage(response.ok ? 'Routing defaults saved.' : data.error ?? 'Routing defaults could not be saved.')
+  }
+
+  async function saveSafety() {
+    setSafetyMessage('')
+    const response = await fetch('/api/admin/app-safety', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ appSlug: 'amarktai-network', ...safety }),
+    })
+    const data = await response.json().catch(() => ({}))
+    setSafetyMessage(response.ok ? 'Content safety policy saved.' : data.error || 'Policy could not be saved.')
   }
 
   return (
@@ -271,6 +305,14 @@ export default function SettingsPage() {
                 Configure a readable and writable artifact storage location during deployment.
               </p>
             )}
+            <div className="mt-4 grid gap-2 text-xs sm:grid-cols-4">
+              <StorageFact label="Readable" value={storage.readable} />
+              <StorageFact label="Writable" value={storage.writable} />
+              <StorageFact label="Deletable" value={storage.deletable === true} />
+              <StorageFact label="Driver" text={storage.driver} />
+            </div>
+            {storage.root && <p className="mt-3 break-all text-xs text-slate-500">{storage.root}</p>}
+            {storage.checkedAt && <p className="mt-1 text-[11px] text-slate-600">Checked {new Date(storage.checkedAt).toLocaleString()}</p>}
           </div>
         ) : (
           <UnavailableCard label="Storage status is currently unavailable." />
@@ -280,39 +322,32 @@ export default function SettingsPage() {
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
           <Shield className="h-4 w-4" />
-          Security & Policy
+          Content Safety / Adult Mode
         </h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {[
-            { label: 'Connected App Secrets', desc: 'Manage signing secrets for registered connected apps', href: '/admin/dashboard/connected-apps' },
-            { label: 'Content Safety Policy', desc: 'Configure safe mode, adult mode, and content filters', href: '/admin/dashboard/settings' },
-          ].map(({ label, desc, href }) => (
-            <a
-              key={label}
-              href={href}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5 transition hover:border-slate-700 hover:bg-slate-900/70"
-            >
-              <div>
-                <p className="font-bold text-slate-200">{label}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{desc}</p>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-slate-600" />
-            </a>
-          ))}
+        <div id="content-safety" className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5">
+          <p className="text-sm leading-6 text-slate-400">Safe mode is the default. Suggestive and adult modes require explicit opt-in; prohibited content remains blocked in every mode.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <SafetyToggle label="Safe mode" detail="General-audience generation" checked={safety.safeMode} onChange={(safeMode) => setSafety((current) => ({ ...current, safeMode, ...(safeMode ? { suggestiveMode: false, adultMode: false } : {}) }))} />
+            <SafetyToggle label="Suggestive mode" detail="Requires safe mode off" checked={safety.suggestiveMode} disabled={safety.safeMode} onChange={(suggestiveMode) => setSafety((current) => ({ ...current, suggestiveMode }))} />
+            <SafetyToggle label="Adult mode" detail="Lawful 18+ content only" checked={safety.adultMode} disabled={safety.safeMode} onChange={(adultMode) => setSafety((current) => ({ ...current, adultMode }))} />
+          </div>
+          <div className="mt-4 flex items-center gap-3"><button onClick={() => void saveSafety()} className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-xs font-black text-slate-950"><Save className="h-4 w-4" />Save safety policy</button>{safetyMessage && <p className="text-xs text-teal-200">{safetyMessage}</p>}</div>
         </div>
       </section>
 
-      <div className="rounded-2xl border border-slate-800/60 bg-slate-900/30 p-5">
-        <div className="flex items-center gap-3">
-          <Settings2 className="h-5 w-5 text-slate-500" />
-          <div>
-            <p className="font-bold text-slate-300">Advanced configuration</p>
-            <p className="text-xs text-slate-500">
-              Infrastructure connections are managed during deployment. Secret values are never displayed here.
-            </p>
-          </div>
+      <section>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Server className="h-4 w-4" />Local Runtime Tools</h2>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {runtimeTools.map((tool) => <article key={tool.id} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4"><div className="flex items-center justify-between"><p className="font-black text-white">{tool.id}</p><span className={`h-2.5 w-2.5 rounded-full ${tool.connected ? 'bg-emerald-400' : 'bg-amber-400'}`} /></div><p className="mt-3 text-xs leading-5 text-slate-500">{tool.detail}</p></article>)}
         </div>
-      </div>
+      </section>
+
+      <section>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Settings2 className="h-4 w-4" />Capability Matrix</h2>
+        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
+          {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
+        </div>
+      </section>
     </div>
   )
 }
@@ -527,4 +562,24 @@ function UnavailableCard({ label }: { label: string }) {
       <p className="text-sm text-slate-400">{label}</p>
     </div>
   )
+}
+
+function StorageFact({ label, value, text }: { label: string; value?: boolean; text?: string }) {
+  return <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-3"><p className="text-slate-600">{label}</p><p className={`mt-1 font-black ${text ? 'text-slate-300' : value ? 'text-emerald-300' : 'text-amber-300'}`}>{text ?? (value ? 'Yes' : 'No')}</p></div>
+}
+
+function SafetyToggle({
+  label,
+  detail,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string
+  detail: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (checked: boolean) => void
+}) {
+  return <label className={`flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/50 p-4 ${disabled ? 'opacity-50' : ''}`}><span><span className="block text-sm font-black text-slate-200">{label}</span><span className="mt-1 block text-xs text-slate-500">{detail}</span></span><input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-teal-400" /></label>
 }

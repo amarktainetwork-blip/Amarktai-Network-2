@@ -27,7 +27,11 @@ vi.mock('@/lib/genx-client', () => ({
   GENX_AUDIO_MODELS: ['genx-audio'],
   GENX_IMAGE_MODELS: ['genx-image'],
   GENX_TTS_MODELS: ['genx-tts'],
+  GENX_STT_MODELS: ['genx-stt'],
+  GENX_MUSIC_MODELS: ['genx-music'],
+  GENX_AVATAR_MODELS: ['genx-avatar'],
   GENX_VIDEO_MODELS: ['genx-video'],
+  getGenXJobStatus: vi.fn(),
 }))
 vi.mock('@/lib/model-registry', () => ({
   getDefaultModelForProvider: (provider: string) => `${provider}-default`,
@@ -290,9 +294,11 @@ describe('capability router contract', () => {
     expect(result).toMatchObject({
       success: true,
       readiness: 'READY',
-      jobId: 'job-1',
+      providerJobId: 'job-1',
       output: null,
     })
+    expect(result.jobId).toBeTruthy()
+    expect(result.pollUrl).toContain('/api/brain/media-jobs/')
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
 })

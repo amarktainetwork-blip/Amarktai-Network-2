@@ -72,17 +72,6 @@ const adultCapabilities = [
   ['adult_voice', 'Adult voice'],
 ] as const
 
-const quickActions = [
-  ['chat', 'Chat', 'Ask AmarktAI to explain or draft something.'],
-  ['research', 'Research', 'Research a topic and create a reusable result.'],
-  ['image', 'Image', 'Generate an image through the image capability.'],
-  ['image_edit', 'Image edit', 'Edit an image using a file or artifact reference.'],
-  ['video', 'Video', 'Start video generation or return honest readiness.'],
-  ['music', 'Music / song', 'Create music or return configuration status.'],
-  ['tts', 'TTS / voice', 'Generate speech from your prompt.'],
-  ['system_check', 'System check', 'Capture live runtime readiness as an artifact.'],
-] as const
-
 const activeStatuses = new Set(['planned', 'queued', 'running'])
 export default function CommandCenter() {
   const [apps, setApps] = useState<AppOption[]>([])
@@ -242,9 +231,7 @@ export default function CommandCenter() {
       <header className="rounded-3xl border border-cyan-400/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.14),transparent_42%)] p-5 lg:p-7">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Command Center</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Say what you want done.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-          Select the app context, inspect the execution plan, approve risky work, and reuse completed outputs without leaving the operating surface.
-        </p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">A focused assistant workspace for questions, research, planning, and capability execution.</p>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="App context">
             <select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="command-control">
@@ -258,30 +245,13 @@ export default function CommandCenter() {
             </select>
           </Field>
           <Fact label="App policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
-          <Fact label="Execution path" value="Task -> Plan -> Approval -> Job -> Artifact" />
+          <Fact label="Workspace" value="Conversation, result, and reusable artifacts" />
         </div>
       </header>
 
-      <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
-        <h2 className="font-black text-white">Quick actions</h2>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {quickActions.map(([value, label, description]) => (
-            <button
-              key={value}
-              onClick={() => submit(value)}
-              disabled={loading || !prompt.trim()}
-              className="rounded-xl border border-slate-700/50 bg-slate-950/45 p-3 text-left hover:border-cyan-400/30 disabled:opacity-40"
-            >
-              <span className="text-sm font-black text-slate-200">{label}</span>
-              <span className="mt-1 block text-xs leading-5 text-slate-400">{description}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <main className="space-y-5">
-          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 lg:p-5">
+      <div className="space-y-5">
+        <main className="flex flex-col gap-5">
+          <section className="order-last sticky bottom-4 z-20 rounded-2xl border border-cyan-400/25 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-2xl lg:p-5">
             <textarea
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -377,7 +347,9 @@ export default function CommandCenter() {
           )}
         </main>
 
-        <aside className="space-y-4">
+        <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+          <summary className="cursor-pointer text-sm font-black text-slate-200">Recent work and shortcuts</summary>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_260px]">
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
             <div className="flex items-center justify-between">
               <div><h2 className="font-black text-white">Run history</h2><p className="mt-1 text-xs text-slate-400">Execution-store records only.</p></div>
@@ -406,7 +378,8 @@ export default function CommandCenter() {
             <p className="font-black text-slate-200">Creative options</p>
             <p className="mt-2">Media controls remain capability-specific. Command Center submits task context and records honest readiness.</p>
           </section>
-        </aside>
+          </div>
+        </details>
       </div>
     </div>
   )

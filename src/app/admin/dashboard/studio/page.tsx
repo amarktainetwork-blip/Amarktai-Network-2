@@ -19,6 +19,18 @@ import {
 type AppOption = { slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
 type CapabilityTruth = { capability: string; status: string; blocker?: string | null }
+type CreativeOption = { id: string; name: string }
+type VideoProject = {
+  id: string
+  title: string
+  status: string
+  progress: number
+  finalArtifactId: string | null
+  finalVideoUrl: string | null
+  error: string | null
+  blocker: string | null
+  scenes: Array<{ id: string; order: number; prompt: string; status: string; mediaUrl: string | null; error: string | null }>
+}
 type Artifact = {
   id: string
   title: string
@@ -48,6 +60,7 @@ type StudioRun = {
 }
 
 const capabilities = [
+  ['chat', 'Text / copy / chat'],
   ['image_generation', 'Image'],
   ['image_edit', 'Image edit'],
   ['suggestive_image', 'Suggestive image'],
@@ -70,6 +83,12 @@ export default function StudioPage() {
   const [policy, setPolicy] = useState<SafetyPolicy>({ safeMode: true, adultMode: false, suggestiveMode: false })
   const [capabilityTruth, setCapabilityTruth] = useState<CapabilityTruth[]>([])
   const [capability, setCapability] = useState('image_generation')
+  const [projects, setProjects] = useState<CreativeOption[]>([])
+  const [brandKits, setBrandKits] = useState<CreativeOption[]>([])
+  const [projectId, setProjectId] = useState('')
+  const [brandKitId, setBrandKitId] = useState('')
+  const [provider, setProvider] = useState('auto')
+  const [model, setModel] = useState('')
   const [prompt, setPrompt] = useState('')
   const [source, setSource] = useState('')
   const [sourceArtifact, setSourceArtifact] = useState<Artifact | null>(null)
@@ -79,6 +98,9 @@ export default function StudioPage() {
   const [quality, setQuality] = useState('standard')
   const [qualityTier, setQualityTier] = useState<'cheap' | 'balanced' | 'premium' | 'auto'>('auto')
   const [duration, setDuration] = useState(4)
+  const [longForm, setLongForm] = useState(false)
+  const [sceneCount, setSceneCount] = useState(0)
+  const [tone, setTone] = useState('confident')
   const [scenePlanOnly, setScenePlanOnly] = useState(false)
   const [genre, setGenre] = useState('cinematic')
   const [genres, setGenres] = useState<string[]>(['cinematic'])
@@ -89,6 +111,7 @@ export default function StudioPage() {
   const [voiceId, setVoiceId] = useState('auto')
   const [lyrics, setLyrics] = useState('')
   const [active, setActive] = useState<StudioRun | null>(null)
+  const [videoProject, setVideoProject] = useState<VideoProject | null>(null)
   const [history, setHistory] = useState<StudioRun[]>([])
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(false)
@@ -113,6 +136,10 @@ export default function StudioPage() {
     }).catch(() => null)
     fetch('/api/admin/ai-routing', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
       setCapabilityTruth(Array.isArray(data.mediaCapabilities) ? data.mediaCapabilities : [])
+    }).catch(() => null)
+    fetch('/api/admin/creative-workspaces', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
+      setProjects(data.projects ?? [])
+      setBrandKits(data.brandKits ?? [])
     }).catch(() => null)
     loadHistory()
   }, [loadHistory])
@@ -144,9 +171,21 @@ export default function StudioPage() {
     return () => window.clearInterval(timer)
   }, [active, loadArtifacts])
 
+  useEffect(() => {
+    if (!videoProject || ['completed', 'failed', 'blocked'].includes(videoProject.status)) return
+    const timer = window.setInterval(async () => {
+      const response = await fetch(`/api/admin/video-projects?id=${encodeURIComponent(videoProject.id)}`, { cache: 'no-store' })
+      const data = await response.json()
+      if (data.project) setVideoProject(data.project)
+      if (data.project?.status === 'completed') await loadArtifacts()
+    }, 4000)
+    return () => window.clearInterval(timer)
+  }, [videoProject, loadArtifacts])
+
   async function run(executionId?: string) {
     if (!executionId && capability === 'stt') return runStt()
     if (!executionId && !prompt.trim()) return
+    if (!executionId && capability === 'video_generation' && longForm) return runLongFormVideo()
     setLoading(true)
     setError('')
     try {
@@ -163,6 +202,8 @@ export default function StudioPage() {
           aspectRatio,
           quality,
           qualityTier,
+          provider: provider === 'auto' ? undefined : provider,
+          model: model || undefined,
           duration,
           scenePlanOnly,
           genre,
@@ -173,6 +214,8 @@ export default function StudioPage() {
           language,
           voiceId,
           lyrics: lyrics || undefined,
+          projectId: projectId || undefined,
+          brandKitId: brandKitId || undefined,
         }),
       })
       const data = await response.json()
@@ -183,6 +226,41 @@ export default function StudioPage() {
       await loadArtifacts()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Media Studio execution failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function runLongFormVideo() {
+    setLoading(true)
+    setError('')
+    setActive(null)
+    try {
+      const response = await fetch('/api/admin/video-projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          appSlug,
+          title: prompt.slice(0, 80),
+          prompt,
+          totalDuration: duration,
+          aspectRatio,
+          style,
+          tone,
+          sceneCount: sceneCount || undefined,
+          brandKitId: brandKitId || undefined,
+          qualityTier,
+          provider: provider === 'auto' ? undefined : provider,
+          model: model || undefined,
+          projectId: projectId || undefined,
+          audioReference: source || undefined,
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok || !data.project) throw new Error(data.error || 'Long-form video project could not start')
+      setVideoProject(data.project)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Long-form video project could not start')
     } finally {
       setLoading(false)
     }
@@ -264,13 +342,19 @@ export default function StudioPage() {
   return (
     <div className="space-y-5">
       <header className="rounded-3xl border border-fuchsia-400/20 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.13),transparent_42%)] p-5 lg:p-7">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Media Studio</p>
-        <h1 className="mt-2 text-3xl font-black text-white">Production media factory.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Create media through AmarktAI capabilities and keep every completed output in the canonical artifact library.</p>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Create Studio</p>
+        <h1 className="mt-2 text-3xl font-black text-white">One workspace for every creative capability.</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Brief the work, add project and brand context, then follow real provider jobs and persisted artifacts in one preview-first workspace.</p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {capabilities.filter(([value]) => !value.startsWith('adult_') && value !== 'suggestive_image' && value !== 'lyrics_generation' && value !== 'stt').map(([value, label]) => (
+            <button key={value} onClick={() => setCapability(value)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${capability === value ? 'border-fuchsia-300/50 bg-fuchsia-300/15 text-fuchsia-100' : 'border-slate-700 text-slate-500'}`}>{label}</button>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="App context"><select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="control">{apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}{apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}</select></Field>
-          <Field label="Media type"><select value={capability} onChange={(event) => setCapability(event.target.value)} className="control">{capabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-          <Fact label="App policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
+          <Field label="Project"><select value={projectId} onChange={(event) => setProjectId(event.target.value)} className="control"><option value="">No project</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}</select></Field>
+          <Field label="Brand kit"><select value={brandKitId} onChange={(event) => setBrandKitId(event.target.value)} className="control"><option value="">No brand kit</option>{brandKits.map((kit) => <option key={kit.id} value={kit.id}>{kit.name}</option>)}</select></Field>
+          <Fact label="Content policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
         </div>
       </header>
 
@@ -288,10 +372,11 @@ export default function StudioPage() {
 
           <Panel title="Parameters">
             <Field label="Routing quality"><select value={qualityTier} onChange={(event) => setQualityTier(event.target.value as typeof qualityTier)} className="control"><option value="auto">Auto / mixed</option><option value="cheap">Cheap</option><option value="balanced">Balanced</option><option value="premium">Premium</option></select></Field>
+            <div className="grid grid-cols-2 gap-2"><Field label="Provider"><select value={provider} onChange={(event) => setProvider(event.target.value)} className="control"><option value="auto">Automatic</option><option value="genx">GenX</option><option value="qwen">Qwen / Wan</option><option value="together">Together AI</option><option value="huggingface">Hugging Face</option><option value="groq">Groq</option><option value="mimo">MiMo</option></select></Field><Field label="Model, optional"><input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Automatic" className="control" /></Field></div>
             {isImage && <><Field label="Style"><input value={style} onChange={(event) => setStyle(event.target.value)} className="control" /></Field><div className="grid grid-cols-2 gap-2"><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>1:1</option><option>16:9</option><option>9:16</option></select></Field><Field label="Quality"><select value={quality} onChange={(event) => setQuality(event.target.value)} className="control"><option value="standard">Standard</option><option value="high">High</option></select></Field></div></>}
             {isMusic && <><Field label="Genres / style blend"><select multiple value={genres} onChange={(event) => { const values = Array.from(event.target.selectedOptions, (option) => option.value).slice(0, 5); setGenres(values); setGenre(values[0] ?? 'cinematic') }} className="control min-h-32"><option>cinematic</option><option>pop</option><option>rock</option><option value="hip_hop">Hip hop</option><option>folk</option><option>amapiano</option><option>afrobeats</option><option>ambient</option></select></Field><p className="text-[11px] text-slate-500">Select up to five styles. The backend blends them in the order selected.</p><Field label="Mood"><input value={mood} onChange={(event) => setMood(event.target.value)} className="control" /></Field><Field label="Vocal style"><select value={vocalStyle} onChange={(event) => setVocalStyle(event.target.value)} className="control"><option value="female_lead">Female lead</option><option value="male_lead">Male lead</option><option>choir</option><option>rap</option><option value="spoken_word">Spoken word</option></select></Field><Toggle label="Instrumental" checked={instrumental} onChange={setInstrumental} />{capability === 'music_generation' && <Field label="Existing lyrics"><textarea value={lyrics} onChange={(event) => setLyrics(event.target.value)} rows={3} className="control" /></Field>}</>}
             {(isVoice || capability === 'stt') && <><Field label="Language"><input value={language} onChange={(event) => setLanguage(event.target.value)} className="control" /></Field>{isVoice && <Field label="Voice / style"><input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} className="control" /></Field>}</>}
-            {isVideo && <><Field label="Video style"><select value={style} onChange={(event) => setStyle(event.target.value)} className="control"><option>cinematic</option><option>animated</option><option>realistic</option><option>documentary</option><option>commercial</option></select></Field><div className="grid grid-cols-2 gap-2"><Field label="Duration"><input type="number" min={1} max={30} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className="control" /></Field><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>16:9</option><option>9:16</option><option>1:1</option></select></Field></div>{capability === 'video_generation' && <Toggle label="Scene plan only" checked={scenePlanOnly} onChange={setScenePlanOnly} />}</>}
+            {isVideo && <><Field label="Video style"><select value={style} onChange={(event) => setStyle(event.target.value)} className="control"><option>cinematic</option><option>animated</option><option>realistic</option><option>documentary</option><option>commercial</option></select></Field><Field label="Tone / mood"><input value={tone} onChange={(event) => setTone(event.target.value)} className="control" /></Field><div className="grid grid-cols-2 gap-2"><Field label="Duration"><input type="number" min={1} max={longForm ? 240 : 30} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className="control" /></Field><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>16:9</option><option>9:16</option><option>1:1</option></select></Field></div>{capability === 'video_generation' && <><Toggle label="Long-form / multi-scene" checked={longForm} onChange={(value) => { setLongForm(value); if (value && duration < 90) setDuration(90) }} />{longForm && <Field label="Scene count, 0 = automatic"><input type="number" min={0} max={30} value={sceneCount} onChange={(event) => setSceneCount(Number(event.target.value))} className="control" /></Field>}<Toggle label="Scene plan only" checked={scenePlanOnly} onChange={setScenePlanOnly} /></>}</>}
           </Panel>
 
           <Panel title="Capability readiness">
@@ -301,7 +386,8 @@ export default function StudioPage() {
         </aside>
 
         <main className="space-y-4">
-          {!active && <section className="grid min-h-80 place-items-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 text-center text-slate-400">Your route plan, progress, and media output appear here.</section>}
+          {!active && !videoProject && <section className="grid min-h-[560px] place-items-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 text-center text-slate-400">Your result preview, job progress, and persisted artifacts appear here.</section>}
+          {videoProject && <LongFormVideoPanel project={videoProject} />}
           {active && <>
             <section className="grid gap-3 md:grid-cols-2">
               <Panel title="Capability route"><Fact label="Capability" value={friendly(active.capability)} /><Fact label="Quality policy" value={friendly(active.modelPlan.costMode)} /><p className="text-xs leading-5 text-slate-400">AmarktAI selected an available route for this capability and policy.</p></Panel>
@@ -354,7 +440,32 @@ function ArtifactCard({ artifact, onReuse }: { artifact: Artifact; onReuse: (art
   </article>
 }
 
+function LongFormVideoPanel({ project }: { project: VideoProject }) {
+  return <section className="space-y-5 rounded-2xl border border-fuchsia-400/20 bg-slate-900/60 p-5">
+    <div className="flex flex-wrap items-start justify-between gap-4">
+      <div><p className="text-xs font-black uppercase tracking-[.18em] text-fuchsia-300">Long-form video project</p><h2 className="mt-2 text-2xl font-black text-white">{project.title}</h2></div>
+      <span className="rounded-full border border-fuchsia-400/25 px-3 py-1 text-xs font-black uppercase text-fuchsia-200">{friendly(project.status)}</span>
+    </div>
+    <div>
+      <div className="flex justify-between text-xs font-bold text-slate-400"><span>Production progress</span><span>{project.progress}%</span></div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800"><div className="h-full rounded-full bg-gradient-to-r from-fuchsia-400 to-cyan-300 transition-all" style={{ width: `${project.progress}%` }} /></div>
+    </div>
+    {project.finalVideoUrl && <video controls preload="metadata" src={project.finalVideoUrl} className="aspect-video w-full rounded-2xl bg-black" />}
+    {(project.error || project.blocker) && <ErrorPanel message={project.blocker || project.error || 'Video project paused'} />}
+    <div className="grid gap-3 md:grid-cols-2">
+      {project.scenes.map((scene) => <article key={scene.id} className="rounded-xl border border-slate-800 bg-slate-950/55 p-3">
+        <div className="flex items-center justify-between"><p className="text-xs font-black text-white">Scene {scene.order}</p><span className="text-[10px] font-black uppercase text-cyan-300">{scene.status}</span></div>
+        <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500">{scene.prompt}</p>
+        {scene.mediaUrl && <video controls preload="metadata" src={scene.mediaUrl} className="mt-3 aspect-video w-full rounded-lg bg-black" />}
+        {scene.error && <p className="mt-2 text-xs text-amber-300">{scene.error}</p>}
+      </article>)}
+    </div>
+    {project.finalArtifactId && <Link href="/admin/dashboard/artifacts" className="inline-flex rounded-xl bg-fuchsia-300 px-4 py-2.5 text-sm font-black text-slate-950">Open final artifact</Link>}
+  </section>
+}
+
 function placeholder(capability: string) {
+  if (capability === 'chat') return 'Draft copy, write a campaign brief, or ask for a structured text result...'
   if (capability === 'image_edit') return 'Describe the edit to apply to the source image...'
   if (capability === 'lyrics_generation') return 'Describe the song theme and lyrical direction...'
   if (capability === 'tts' || capability === 'adult_voice') return 'Enter the text to speak...'

@@ -87,6 +87,7 @@ import {
   recordProviderSuccess,
 } from '@/lib/provider-performance'
 import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
+import { createLocalMediaJob } from '@/lib/media-job-store'
 import {
   getAppSafetyConfig,
   loadAppSafetyConfigFromDB,
@@ -2027,6 +2028,25 @@ export async function executeCapabilityOrchestration(
         capability: taxonomyId,
         latencyMs,
       })
+      const mediaType = capabilityArtifactType(capability)
+      const localJob = ['image', 'audio', 'music', 'video'].includes(mediaType)
+        ? createLocalMediaJob({
+            capability,
+            appSlug: request.appId ?? request.workspaceId ?? '__system__',
+            type: mediaType as 'image' | 'audio' | 'music' | 'video',
+            subType: capability,
+            title: `${capability.replace(/_/g, ' ')} generation`,
+            description: request.input,
+            prompt: request.input,
+            provider: adapterResult.provider,
+            model: adapterResult.model,
+            providerJobId: adapterResult.providerJobId,
+            metadata: {
+              ...(request.metadata ?? {}),
+              providerAttempts: attempts,
+            },
+          })
+        : null
       return {
         success: true,
         capability,
@@ -2035,8 +2055,9 @@ export async function executeCapabilityOrchestration(
         model: adapterResult.model,
         outputType: capabilityOutputType(capability),
         output: null,
-        jobId: adapterResult.providerJobId,
+        jobId: localJob?.id ?? adapterResult.providerJobId,
         providerJobId: adapterResult.providerJobId,
+        pollUrl: localJob ? `/api/brain/media-jobs/${localJob.id}` : null,
         status: 'processing',
         fallbackUsed: index > 0,
         fallbackReason: index > 0 ? 'An earlier provider/model attempt failed.' : undefined,

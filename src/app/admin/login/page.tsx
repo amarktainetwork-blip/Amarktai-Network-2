@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 import BrandName from '@/components/BrandName'
 
@@ -44,12 +45,13 @@ export default function AdminLoginPage() {
       <div className="pointer-events-none absolute inset-0 panel-grid opacity-35" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(100,167,255,0.08),transparent_34%,rgba(3,5,10,0.96))]" />
 
-      <section className="relative z-10 w-full max-w-[420px] border border-white/[0.12] bg-[rgba(7,11,18,0.92)] shadow-2xl shadow-black/60 backdrop-blur-2xl">
+      <Link href="/" className="absolute left-6 top-6 z-20 text-sm font-black tracking-tight text-white"><BrandName /></Link>
+      <section className="relative z-10 w-full max-w-[440px] rounded-3xl border border-white/[0.12] bg-[rgba(7,11,18,0.92)] shadow-2xl shadow-black/60 backdrop-blur-2xl">
         <div className="section-line h-px w-full" />
         <div className="px-8 py-9">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]"><BrandName /></p>
-          <h1 className="mt-6 text-3xl font-semibold leading-tight text-white">Operator authentication</h1>
-          <p className="mt-3 text-sm leading-6 text-[var(--amarkt-muted)]">Authorized infrastructure operators only.</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-cyan-300">Welcome back</p>
+          <h1 className="mt-6 text-3xl font-semibold leading-tight text-white">Sign in to your creative command center.</h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--amarkt-muted)]">Create campaigns, media, music, avatars, and connected app intelligence from one workspace.</p>
 
           <form onSubmit={handleSubmit} className="mt-9 space-y-5">
             <label className="block">
@@ -97,7 +99,7 @@ export default function AdminLoginPage() {
               disabled={loading}
               className="flex w-full items-center justify-center border border-white/[0.14] bg-white/[0.07] py-3.5 font-mono text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/[0.11] disabled:opacity-45"
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Authenticate'}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sign in'}
             </button>
           </form>
         </div>

@@ -52,6 +52,9 @@ export function planExecution(input: CreateExecutionInput): ExecutionPlan {
   })
   const estimatedCostUsd = input.estimatedCostUsd ?? route.estimatedCostUsd
   const approval = evaluateApprovalPolicy(input, detectedCapability, estimatedCostUsd)
+  const policyBlockedReason = isPolicyBlock(route.blockedReason)
+    ? route.blockedReason
+    : null
 
   return {
     requestedCapability: input.requestedCapability ?? detectedCapability,
@@ -75,8 +78,16 @@ export function planExecution(input: CreateExecutionInput): ExecutionPlan {
     },
     riskLevel: approval.riskLevel,
     estimatedCostUsd,
-    blockedReason: route.blockedReason,
+    // Provider/model readiness is resolved by the canonical orchestrator, which
+    // owns fallback. The legacy planner may only stop policy, safety, budget,
+    // or approval-sensitive work before execution.
+    blockedReason: policyBlockedReason,
   }
+}
+
+function isPolicyBlock(reason: string | null): boolean {
+  if (!reason) return false
+  return /(adult|suggestive|safe mode|policy|approval|budget|spend|not approved)/i.test(reason)
 }
 
 function toLiveCapability(capability: CapabilityRouterCapability): AiCapability {

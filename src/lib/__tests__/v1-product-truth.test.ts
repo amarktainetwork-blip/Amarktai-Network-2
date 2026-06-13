@@ -57,7 +57,7 @@ describe('V1 AmarktAI product truth', () => {
     expect(brand).toContain('Amarkt<span')
     expect(brand).toContain('>AI</span>')
     expect(brand).toContain('text-cyan-400')
-    expect(brand).not.toContain('Network')
+    expect(brand).toContain('AmarktAI Network')
     expect(brand).not.toContain('>ai</span>')
   })
 
@@ -86,14 +86,16 @@ describe('V1 AmarktAI product truth', () => {
   it('uses exactly the approved V1 dashboard navigation', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
-      'Studio',
-      'Capabilities',
-      'Connected Apps',
-      'Artifacts',
+      'Create Studio',
+      'Projects & Brand Kits',
+      'Avatar Library',
+      'Music Studio',
       'Jobs',
+      'Artifacts',
+      'Connected Apps',
       'Settings',
     ])
-    expect(new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href)).size).toBe(7)
+    expect(new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href)).size).toBe(9)
   })
 
   it('keeps every required V1 route and removes legacy page routes', () => {

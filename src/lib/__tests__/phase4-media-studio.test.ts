@@ -104,7 +104,9 @@ describe('Phase 4 Media Studio product coverage', () => {
     const page = read('app/admin/dashboard/studio/page.tsx')
     for (const term of [
       'App context',
-      'Media type',
+      'Create Studio',
+      'Project',
+      'Brand kit',
       'Image edit',
       'Suggestive image',
       'Music / song',
@@ -120,6 +122,8 @@ describe('Phase 4 Media Studio product coverage', () => {
       'Artifact result',
       'Media job history',
       'Reusable artifacts',
+      'Long-form / multi-scene',
+      'Scene count',
     ]) expect(page).toContain(term)
   })
 
