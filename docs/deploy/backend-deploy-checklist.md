@@ -11,15 +11,16 @@ Use this checklist before restarting the VPS service.
 
    ```sql
    CREATE DATABASE amarktai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'amarktai_app'@'127.0.0.1' IDENTIFIED BY 'REPLACE_WITH_A_REAL_RANDOM_PASSWORD';
-   GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai_app'@'127.0.0.1';
+   CREATE USER 'amarktai'@'127.0.0.1' IDENTIFIED BY 'STRONG_PASSWORD';
+   GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai'@'127.0.0.1';
    FLUSH PRIVILEGES;
    ```
 
 3. Set a real URL in `/var/www/amarktai/platform/.env`. The required format is:
-   `DATABASE_URL="mysql://USER:PASSWORD@127.0.0.1:3306/amarktai"`
+   `DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"`
 
-   Replace `USER` and `PASSWORD`; do not deploy the template literally.
+   Replace `STRONG_PASSWORD` with a unique generated secret; do not deploy the
+   template literally.
 
 4. Prepare persistent local storage:
    `install -d -o www-data -g www-data -m 0750 /var/www/amarktai/storage/{artifacts,uploads,repos,workspaces,logs}`

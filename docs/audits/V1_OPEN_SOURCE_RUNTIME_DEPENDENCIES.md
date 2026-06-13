@@ -1,31 +1,52 @@
 # V1 Open-Source Runtime Dependency Audit
 
-| Package or runtime | Why V1 needs it | Current use | Decision |
+## Kept dependencies
+
+| Package or runtime | Why needed | Representative use | Decision |
 | --- | --- | --- | --- |
-| Next.js 15 | HTTP routes, server rendering, standalone production server | `src/app`, API route handlers, `next.config.mjs` | Keep |
-| React 18 / React DOM | Dashboard and public UI | `src/app/**/*.tsx`, `src/components` | Keep |
-| Prisma 5 / `@prisma/client` | MariaDB schema and DB access | `prisma/schema.prisma`, `src/lib/prisma.ts`, artifact/job/profile stores | Keep |
-| MariaDB/MySQL connector | Production SQL protocol | Prisma's `mysql` datasource and bundled query engine | Keep through Prisma; do not add `mysql2` unless a non-Prisma SQL caller is introduced |
-| iron-session | Admin cookie sessions | `src/lib/session.ts`, `src/middleware.ts` | Keep |
-| Vitest | Unit and contract proof | `src/lib/__tests__` | Keep |
-| Tailwind CSS / PostCSS | Existing dashboard styling and production CSS build | `tailwind.config.ts`, `postcss.config.mjs`, page components | Keep |
-| Node `fs` / `path` | Local VPS storage adapter | `src/lib/storage-driver.ts`, `src/lib/local-json-store.ts` | Keep; no external filesystem package is needed |
-| BullMQ | Durable Redis-backed job queue abstraction | `src/lib/job-queue.ts` | Keep |
-| ioredis | Queue and Redis connectivity | `src/lib/redis.ts`, BullMQ setup | Keep |
-| Zod | Request validation | Brain, integration, and admin API routes | Keep |
-| Playwright | Local crawl/render capability | crawler and browser routes; provider mesh local tool entry | Keep |
-| Native `FormData`, `Blob`, `File`, `Buffer` | Studio image/audio/video upload and provider multipart requests | Studio STT, provider adapters, media routes | Keep; no Multer dependency is required for Next.js route handlers |
-| Native `fetch` | Approved provider HTTP adapters and remote artifact retrieval | capability adapters, artifact store, provider tests | Keep |
+| `next` | HTTP routes, rendering, standalone build | `src/app`, route handlers | Keep |
+| `react`, `react-dom` | Existing dashboard and public UI | page/component TSX | Keep |
+| `tailwindcss`, `postcss`, `tailwind-merge`, `clsx` | Styling pipeline | config, CSS, UI helpers | Keep |
+| `@fontsource-variable/inter` | Dashboard font asset | global CSS and dashboard layout | Keep |
+| `lucide-react` | Existing UI icons | dashboard/public components | Keep |
+| `prisma`, `@prisma/client` | MariaDB schema and DB stores | Prisma schema and client | Keep |
+| Prisma MySQL engine | MariaDB protocol | datasource `provider = "mysql"` | Keep; no `mysql2` needed |
+| `iron-session` | Admin cookie sessions | session library and middleware | Keep |
+| `vitest` | Unit and contract proof | `src/lib/__tests__` | Keep |
+| `bullmq`, `ioredis` | Queue and Redis connection | job queue and Redis library | Keep |
+| `zod` | Runtime validation | API routes and capability inputs | Keep |
+| `bcryptjs` | Password hashing | admin authentication | Keep |
+| `nodemailer` | Configured email delivery | notification helpers | Keep |
+| `playwright` | Existing crawl/render runtime | local tools and crawlers | Keep |
+| `@qdrant/js-client-rest` | Vector-store integration | `vector-store.ts` | Keep |
+| `sentiment` | Emotion analysis | emotion engine | Keep |
+| Node `crypto` | HMAC, signing, vault encryption | webhook verifier, crypto vault | Keep |
+| Node `fs`, `path` | Local VPS storage | storage and artifact modules | Keep |
+| Native `fetch`, `FormData`, `Blob`, `File`, `Buffer` | Provider HTTP and Studio uploads | adapters and media routes | Keep |
 
-## Missing dependencies
+## Removed stale direct dependencies
 
-No additional open-source package is required for the requested V1 runtime.
-Prisma supplies MariaDB/MySQL connectivity, Node supplies local filesystem and
-multipart primitives, and the existing BullMQ/ioredis pair covers queued work.
+These packages had no imports anywhere outside `package.json` and the lockfile:
 
-## Removed or deferred dependencies
+- `@fontsource-variable/space-grotesk`
+- `@hookform/resolvers`
+- ten unused `@radix-ui/react-*` packages
+- `class-variance-authority`
+- `date-fns`
+- `framer-motion`
+- `react-hook-form`
+- `recharts`
+- `socket.io`
+- `socket.io-client`
 
-- MongoDB and Mongoose are not dependencies and are not part of V1.
-- An S3 SDK is intentionally deferred. The `StorageDriver` interface isolates
-  Studio, jobs, and artifacts from the active `local_vps` implementation, so an
-  S3-compatible adapter can be added later without changing callers.
+The package-manager operation removed 19 direct packages and 122 transitive
+packages. The audit reported zero known vulnerabilities afterward.
+
+## Missing or deferred dependencies
+
+- Prisma's MySQL engine provides MariaDB connectivity.
+- Native web APIs cover multipart upload; Multer is not needed.
+- No S3 SDK is required for V1. A future implementation belongs behind the
+  existing `StorageDriver`.
+- VPS installs must use `npm ci`, which clears development-only extraneous
+  modules.

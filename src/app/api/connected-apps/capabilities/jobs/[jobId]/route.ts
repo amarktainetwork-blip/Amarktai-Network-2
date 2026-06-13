@@ -36,12 +36,7 @@ export async function GET(
     jobId: job.id,
     status: job.status,
     capability: job.capability,
-    route: {
-      provider: job.provider,
-      model: job.model,
-      adapter: job.adapter,
-      qualityTier: job.qualityTier,
-    },
+    qualityTier: job.qualityTier,
     result: job.result,
     artifact: job.artifactId ? { id: job.artifactId, url: job.artifactUrl } : null,
     error: job.error,

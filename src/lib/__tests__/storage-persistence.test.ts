@@ -79,6 +79,19 @@ describe('VPS storage persistence policy', () => {
     expect(await driver.exists(result.path)).toBe(false)
   })
 
+  it('blocks storage keys that escape the configured root', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    vi.resetModules()
+
+    const { getStorageDriver } = await import('@/lib/storage-driver')
+    const driver = getStorageDriver()
+
+    await expect(
+      driver.put('../outside.txt', Buffer.from('blocked'), 'text/plain'),
+    ).rejects.toThrow('Path traversal detected')
+  })
+
   it('createArtifact does not claim success until physical storage is verified', async () => {
     process.env.STORAGE_DRIVER = 'local_vps'
     process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
