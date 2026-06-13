@@ -33,13 +33,13 @@ The standalone `server.js` resolves `/_next/static/` relative to its own
 working directory. The `amarktai-web` systemd service sets:
 
 ```ini
-WorkingDirectory=/var/www/amarktai/repo/.next/standalone
+WorkingDirectory=/var/www/amarktai/platform/.next/standalone
 ```
 
 Therefore the standalone server looks for static assets at:
 
 ```
-/var/www/amarktai/repo/.next/standalone/.next/static/
+/var/www/amarktai/platform/.next/standalone/.next/static/
 ```
 
 The deploy script (`scripts/deploy_and_proof_safe.sh`) performs this copy:
@@ -62,12 +62,12 @@ The service unit at `deploy/amarktai-web.service` (copied to
 
 ```ini
 [Service]
-WorkingDirectory=/var/www/amarktai/repo/.next/standalone
-ExecStart=/usr/bin/node /var/www/amarktai/repo/.next/standalone/server.js
+WorkingDirectory=/var/www/amarktai/platform/.next/standalone
+ExecStart=/usr/bin/node /var/www/amarktai/platform/.next/standalone/server.js
 Environment=NODE_ENV=production
 Environment=PORT=3000
 Environment=HOSTNAME=0.0.0.0
-EnvironmentFile=-/var/www/amarktai/repo/.env
+EnvironmentFile=-/var/www/amarktai/platform/.env
 ```
 
 The `WorkingDirectory` is the standalone directory itself. The server reads
@@ -105,7 +105,7 @@ If you want Nginx to bypass Node for static assets (lower latency), use an
 
 ```nginx
 location /_next/static/ {
-    alias /var/www/amarktai/repo/.next/standalone/.next/static/;
+    alias /var/www/amarktai/platform/.next/standalone/.next/static/;
     try_files $uri =404;
     expires 1y;
     access_log off;
@@ -123,23 +123,23 @@ location /_next/static/ {
 
 ```bash
 # 1. Confirm the standalone static directory is populated
-ls /var/www/amarktai/repo/.next/standalone/.next/static/css/
+ls /var/www/amarktai/platform/.next/standalone/.next/static/css/
 
 # 2. Pick a CSS file and test locally against Node (should be 200)
-CSS=$(ls /var/www/amarktai/repo/.next/standalone/.next/static/css/*.css | head -1)
+CSS=$(ls /var/www/amarktai/platform/.next/standalone/.next/static/css/*.css | head -1)
 CSS_NAME=$(basename "$CSS")
 curl -I http://127.0.0.1:3000/_next/static/css/$CSS_NAME
 
 # 3. Test through the public domain (should be 200)
-curl -I https://amarktai.com/_next/static/css/$CSS_NAME
+curl -I https://amarktai.co.za/_next/static/css/$CSS_NAME
 
 # 4. Same for a JS chunk
-JS=$(ls /var/www/amarktai/repo/.next/standalone/.next/static/chunks/*.js | head -1)
+JS=$(ls /var/www/amarktai/platform/.next/standalone/.next/static/chunks/*.js | head -1)
 JS_NAME=$(basename "$JS")
-curl -I https://amarktai.com/_next/static/chunks/$JS_NAME
+curl -I https://amarktai.co.za/_next/static/chunks/$JS_NAME
 
 # 5. Run the full diagnostic (on the production server)
-bash /var/www/amarktai/repo/scripts/diagnose_next_static_assets.sh
+bash /var/www/amarktai/platform/scripts/diagnose_next_static_assets.sh
 ```
 
 ---
@@ -164,16 +164,16 @@ linked CSS, JS, and font files all return HTTP 400.
 
 ```bash
 # 1. Are the files there?
-ls /var/www/amarktai/repo/.next/standalone/.next/static/css/*.css
+ls /var/www/amarktai/platform/.next/standalone/.next/static/css/*.css
 
 # 2. Is Node returning 200 locally?
 curl -sI http://127.0.0.1:3000/_next/static/css/<hash>.css | head -1
 
 # 3. Is Nginx passing the request through?
-curl -sI https://amarktai.com/_next/static/css/<hash>.css | head -1
+curl -sI https://amarktai.co.za/_next/static/css/<hash>.css | head -1
 
 # 4. Full diagnostic
-bash /var/www/amarktai/repo/scripts/diagnose_next_static_assets.sh
+bash /var/www/amarktai/platform/scripts/diagnose_next_static_assets.sh
 ```
 
 ---
@@ -184,7 +184,7 @@ If a bad deploy causes static assets to break and you need to roll back quickly:
 
 ```bash
 # On the production server
-cd /var/www/amarktai/repo
+cd /var/www/amarktai/platform
 
 # 1. Check out the previous known-good commit
 git fetch origin main
@@ -210,7 +210,7 @@ If a rollback is not possible and you need a hot-fix for static assets only
 (e.g. the standalone directory is intact but the copy was missed):
 
 ```bash
-cd /var/www/amarktai/repo
+cd /var/www/amarktai/platform
 rm -rf .next/standalone/.next/static
 cp -R .next/static .next/standalone/.next/static
 sudo systemctl restart amarktai-web

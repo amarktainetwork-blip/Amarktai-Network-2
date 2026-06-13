@@ -131,7 +131,10 @@ export interface MusicCreationRequest {
    */
   generateCoverArt?: boolean
   /** Quality tier for model selection. */
-  qualityTier?: 'standard' | 'high' | 'premium'
+  qualityTier?: 'cheap' | 'balanced' | 'premium' | 'auto'
+  /** Backend-selected infrastructure route. Not exposed as the primary Studio UX. */
+  provider?: 'genx' | 'huggingface'
+  model?: string
 }
 
 /** Resolve the primary genre from a request (handles both legacy and new multi-genre field). */

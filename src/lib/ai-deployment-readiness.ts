@@ -230,7 +230,7 @@ function safeEqualHex(left: string, right: string): boolean {
 function safeOperationalError(error: unknown, fallback: string): string {
   const raw = error instanceof Error ? error.message : fallback
   return raw
-    .replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, '[redacted-database-url]')
+    .replace(/(?:mysql|mariadb):\/\/[^\s"']+/gi, '[redacted-database-url]')
     .replace(/\b(?:password|secret|token|api[-_]?key)=\S+/gi, '[redacted-credential]')
     .slice(0, 400)
 }

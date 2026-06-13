@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
       provider: job.provider,
       model: job.model,
       adapter: job.adapter,
+      qualityTier: job.qualityTier,
     },
     result: job.result,
     artifact: job.artifactId ? { id: job.artifactId, url: job.artifactUrl } : null,

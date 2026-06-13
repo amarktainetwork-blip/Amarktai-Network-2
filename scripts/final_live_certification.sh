@@ -5,7 +5,7 @@
 # Run on VPS after deploy to certify the production system is live.
 #
 # Usage:
-#   BASE_URL="https://amarktai.com" ./scripts/final_live_certification.sh
+#   BASE_URL="https://amarktai.co.za" ./scripts/final_live_certification.sh
 #   # or local dev:
 #   BASE_URL="http://localhost:3000" ./scripts/final_live_certification.sh
 #
@@ -459,6 +459,6 @@ else
   echo "  # or: sudo systemctl restart amarktai"
   echo ""
   echo "Verify after deploy:"
-  echo "  BASE_URL=https://amarktai.com ./scripts/final_live_certification.sh"
+  echo "  BASE_URL=https://amarktai.co.za ./scripts/final_live_certification.sh"
   exit 0
 fi

@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import crypto from 'crypto'
+import { resolveStoragePath } from '@/lib/storage-root'
 
 export interface MediaArtifactRecord {
   id: string
@@ -16,7 +17,7 @@ export interface MediaArtifactRecord {
   createdAt: string
 }
 
-const ARTIFACT_ROOT = process.env.MEDIA_ARTIFACT_ROOT || '/var/www/amarktai/repo/public/generated-artifacts'
+const ARTIFACT_ROOT = process.env.MEDIA_ARTIFACT_ROOT || resolveStoragePath('artifacts/media')
 const PUBLIC_PREFIX = process.env.MEDIA_ARTIFACT_PUBLIC_PREFIX || '/generated-artifacts'
 
 function safeSegment(input: string) {

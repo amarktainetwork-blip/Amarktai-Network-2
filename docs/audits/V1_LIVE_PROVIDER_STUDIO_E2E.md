@@ -114,7 +114,7 @@ The connected-app E2E flow is fully wired:
 | Blocker | Required Action |
 |---|---|
 | All 6 provider API keys missing | Set `GENX_API_KEY`, `HUGGINGFACE_API_KEY`, `QWEN_API_KEY`, `MIMO_API_KEY`, `GROQ_API_KEY`, `TOGETHER_API_KEY` in production env |
-| `DATABASE_URL` not set | Configure PostgreSQL connection string |
+| `DATABASE_URL` not set | Configure the MariaDB connection string |
 | `AMARKTAI_STORAGE_ROOT` not set | Configure VPS storage path (default: `/var/www/amarktai/storage`) |
 | GenX base URL | Set `GENX_BASE_URL` or `GENX_API_URL` if not using default `https://query.genx.sh` |
 | Connected-app signing secrets | For each registered app, set `AMARKTAI_APP_SECRET_<SLUG>` in production env |
@@ -151,7 +151,7 @@ GROQ_API_KEY=<your-groq-key>
 TOGETHER_API_KEY=<your-together-key>
 
 # Database
-DATABASE_URL=postgresql://user:pass@host:5432/amarktai
+DATABASE_URL=mysql://USER:PASSWORD@127.0.0.1:3306/amarktai
 
 # Storage
 AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage

@@ -66,7 +66,7 @@ These routes return `needs_configuration` until a real endpoint is supplied. No 
 Required production configuration:
 
 ```text
-DATABASE_URL=postgresql://...
+DATABASE_URL=mysql://USER:PASSWORD@127.0.0.1:3306/amarktai
 STORAGE_DRIVER=local_vps
 AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage
 ```

@@ -5,15 +5,15 @@
 #   bash scripts/diagnose_next_static_assets.sh
 #
 # Optional overrides:
-#   PORT=3000 REPO_DIR=/var/www/amarktai/repo bash scripts/diagnose_next_static_assets.sh
+#   PORT=3000 REPO_DIR=/var/www/amarktai/platform bash scripts/diagnose_next_static_assets.sh
 #
 # Exit code: 0 = all required checks passed, nonzero = at least one failure.
 
 set -uo pipefail
 
 PORT="${PORT:-3000}"
-REPO_DIR="${REPO_DIR:-/var/www/amarktai/repo}"
-BASE_URL="${BASE_URL:-https://amarktai.com}"
+REPO_DIR="${REPO_DIR:-/var/www/amarktai/platform}"
+BASE_URL="${BASE_URL:-https://amarktai.co.za}"
 
 _DIAG_TMP=$(mktemp /tmp/_diag_body.XXXXXX)
 trap 'rm -f "$_DIAG_TMP"' EXIT

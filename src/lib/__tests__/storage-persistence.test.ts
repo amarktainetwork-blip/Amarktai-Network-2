@@ -35,6 +35,7 @@ afterEach(async () => {
 describe('VPS storage persistence policy', () => {
   it('uses local_vps and the required storage root by default', async () => {
     delete process.env.STORAGE_DRIVER
+    delete process.env.AMARKTAI_STORAGE_ROOT
     delete process.env.STORAGE_ROOT
     vi.resetModules()
 
@@ -49,7 +50,7 @@ describe('VPS storage persistence policy', () => {
 
   it('creates required directories and verifies write access', async () => {
     process.env.STORAGE_DRIVER = 'local_vps'
-    process.env.STORAGE_ROOT = await makeTempStorageRoot()
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
     vi.resetModules()
 
     const { verifyStorage } = await import('@/lib/storage-driver')
@@ -64,7 +65,7 @@ describe('VPS storage persistence policy', () => {
 
   it('writes, reads, and deletes artifact files through local_vps storage', async () => {
     process.env.STORAGE_DRIVER = 'local_vps'
-    process.env.STORAGE_ROOT = await makeTempStorageRoot()
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
     vi.resetModules()
 
     const { getStorageDriver } = await import('@/lib/storage-driver')
@@ -80,7 +81,7 @@ describe('VPS storage persistence policy', () => {
 
   it('createArtifact does not claim success until physical storage is verified', async () => {
     process.env.STORAGE_DRIVER = 'local_vps'
-    process.env.STORAGE_ROOT = await makeTempStorageRoot()
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
     vi.resetModules()
 
     const { createArtifact } = await import('@/lib/artifact-store')

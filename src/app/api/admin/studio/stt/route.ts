@@ -8,6 +8,10 @@ import {
   startExecution,
 } from '@/lib/execution'
 import { mediaStudioErrorMessage, mediaStudioResponse } from '@/lib/media-studio'
+import {
+  resolveRoutingQuality,
+  selectCapabilityRoutePlan,
+} from '@/lib/capability-routing-policy'
 
 export async function POST(request: NextRequest) {
   const session = await getSession()
@@ -22,6 +26,27 @@ export async function POST(request: NextRequest) {
   const provider = String(incoming.get('provider') || 'auto')
   const model = String(incoming.get('model') || '')
   const language = String(incoming.get('language') || '')
+  const qualityTier = await resolveRoutingQuality({
+    requested: String(incoming.get('qualityTier') || ''),
+    appSlug,
+    surface: 'studio',
+  })
+  const routePlan = await selectCapabilityRoutePlan({
+    capability: 'automatic_speech_recognition',
+    qualityTier,
+    requestedProvider: provider === 'auto' ? undefined : provider as never,
+    requestedModel: model && model !== 'auto' ? model : undefined,
+  })
+  if (!routePlan.selected) {
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      capability: 'stt',
+      readiness: routePlan.setupRequired ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+      jobStatus: routePlan.setupRequired ? 'needs_setup' : 'unavailable',
+      error: routePlan.reason,
+    }, { status: routePlan.setupRequired ? 503 : 501 })
+  }
   let execution = createExecution({
     appSlug,
     actor: { type: 'admin', label: 'Media Studio' },
@@ -29,12 +54,14 @@ export async function POST(request: NextRequest) {
     prompt: `Transcribe ${file instanceof File ? file.name : 'audio input'}`,
     files: [file instanceof File ? file.name : 'audio input'],
     action: 'generate',
-    selectedProvider: provider === 'auto' ? undefined : provider,
-    selectedModel: model && model !== 'auto' ? model : undefined,
+    selectedProvider: routePlan.selected.route.provider,
+    selectedModel: routePlan.selected.model,
+    costMode: qualityTier === 'auto' ? 'balanced' : qualityTier,
     metadata: {
       source: 'media_studio',
       sourceFile: file instanceof File ? file.name : 'audio input',
       language,
+      qualityTier,
     },
   })
   execution = startExecution(execution.executionId) ?? execution
@@ -44,8 +71,8 @@ export async function POST(request: NextRequest) {
     form.append('file', file, file instanceof File ? file.name : 'audio.webm')
     form.append('appSlug', appSlug)
     form.append('executionId', execution.executionId)
-    form.append('provider', provider)
-    if (model && model !== 'auto') form.append('model', model)
+    form.append('provider', routePlan.selected.route.provider)
+    form.append('model', routePlan.selected.model)
     if (language) form.append('language', language)
     const response = await sttPost(new NextRequest(new URL('/api/brain/stt', request.url), {
       method: 'POST',

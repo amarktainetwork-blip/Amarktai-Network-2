@@ -24,6 +24,14 @@ import { POST as videoPost } from '@/app/api/brain/video-generate/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 import { POST as ttsPost } from '@/app/api/brain/tts/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
+import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
+import { executeCapability } from '@/lib/capability-router'
+import {
+  productCapabilityToTaxonomyId,
+  resolveRoutingQuality,
+  selectCapabilityRoutePlan,
+  type RoutingQualityTier,
+} from '@/lib/capability-routing-policy'
 
 type StudioBody = {
   executionId?: string
@@ -33,6 +41,7 @@ type StudioBody = {
   provider?: string
   model?: string
   costMode?: 'cheap' | 'balanced' | 'premium'
+  qualityTier?: RoutingQualityTier
   source?: string
   artifactIds?: string[]
   style?: string
@@ -41,6 +50,7 @@ type StudioBody = {
   duration?: number
   scenePlanOnly?: boolean
   genre?: string
+  genres?: string[]
   moods?: string[]
   vocalStyle?: string
   instrumental?: boolean
@@ -79,6 +89,22 @@ export async function POST(request: NextRequest) {
 
   const appSlug = existing?.appSlug ?? body.appSlug?.trim() ?? 'amarktai-network'
   const safety = await loadAppSafetyConfigFromDB(appSlug)
+  const qualityTier = await resolveRoutingQuality({
+    requested: body.qualityTier ?? body.costMode,
+    appSlug,
+    surface: 'studio',
+  })
+  const taxonomyId = productCapabilityToTaxonomyId(capability)
+  const routePlan = taxonomyId
+    ? await selectCapabilityRoutePlan({
+        capability: taxonomyId,
+        qualityTier,
+        requestedProvider: body.provider && body.provider !== 'auto' ? body.provider as never : undefined,
+        requestedModel: body.model && body.model !== 'auto' ? body.model : undefined,
+      })
+    : null
+  const selectedProvider = routePlan?.selected?.route.provider
+  const selectedModel = routePlan?.selected?.model
   let execution = existing ?? createExecution({
     appSlug,
     actor: { type: 'admin', label: 'Media Studio' },
@@ -86,9 +112,9 @@ export async function POST(request: NextRequest) {
     prompt,
     files: body.source ? [body.source] : [],
     action: 'generate',
-    selectedProvider: body.provider === 'auto' ? undefined : body.provider,
-    selectedModel: body.model === 'auto' ? undefined : body.model,
-    costMode: body.costMode,
+    selectedProvider,
+    selectedModel,
+    costMode: qualityTier === 'auto' ? 'balanced' : qualityTier,
     adultPolicy: safety.adultMode
       ? 'full_adult_app_mode'
       : safety.suggestiveMode
@@ -100,6 +126,8 @@ export async function POST(request: NextRequest) {
       mediaSource: body.source ?? null,
       artifactIds: body.artifactIds ?? [],
       parameters: studioParameters(body),
+      qualityTier,
+      canonicalCapability: taxonomyId,
     },
   })
   if (['blocked', 'awaiting_approval', 'cancelled'].includes(execution.status)) {
@@ -114,10 +142,23 @@ export async function POST(request: NextRequest) {
   if (!['planned', 'running'].includes(execution.status)) {
     return NextResponse.json(await mediaStudioResponse(execution))
   }
+  if (routePlan?.setupRequired || (routePlan && !routePlan.selected)) {
+    execution = recordExecutionResponse(execution.executionId, {
+      success: false,
+      executed: false,
+      capability,
+      readiness: 'NEEDS_CONFIGURATION',
+      jobStatus: 'needs_setup',
+      error: routePlan.reason,
+      blocker: routePlan.reason,
+      qualityTier,
+    }) ?? execution
+    return NextResponse.json(await mediaStudioResponse(execution), { status: 503 })
+  }
 
   execution = startExecution(execution.executionId) ?? execution
   try {
-    const response = await dispatchStudio(request, body, execution, safety)
+    const response = await dispatchStudio(request, body, execution, safety, qualityTier)
     const payload = await response.json().catch(() => ({})) as Record<string, unknown>
     execution = recordExecutionResponse(execution.executionId, payload) ?? execution
     if (payload.success !== true && payload.executed !== true) {
@@ -140,19 +181,23 @@ async function dispatchStudio(
   body: StudioBody,
   execution: ExecutionRecord,
   safety: { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean },
+  qualityTier: 'cheap' | 'balanced' | 'premium' | 'auto',
 ) {
   const capability = execution.detectedCapability
+  const selectedProvider = execution.providerPlan.provider ?? undefined
+  const selectedModel = execution.modelPlan.model ?? undefined
   const common = {
     prompt: execution.input.prompt,
     appSlug: execution.appSlug,
     executionId: execution.executionId,
-    providerOverride: body.provider === 'auto' ? undefined : body.provider,
-    modelOverride: body.model === 'auto' ? undefined : body.model,
+    providerOverride: selectedProvider,
+    modelOverride: selectedModel,
   }
   if (capability === 'image_generation') {
     return imagePost(jsonRequest(original, '/api/brain/image', {
       ...common,
       size: imageSize(body.aspectRatio, body.quality),
+      qualityTier,
     }))
   }
   if (capability === 'image_edit') {
@@ -179,8 +224,8 @@ async function dispatchStudio(
       prompt: execution.input.prompt,
       appSlug: execution.appSlug,
       executionId: execution.executionId,
-      provider: body.provider === 'auto' ? 'auto' : body.provider,
-      model: body.model === 'auto' ? undefined : body.model,
+      provider: selectedProvider ?? 'auto',
+      model: selectedModel,
       capability,
       style: normalizeVideoStyle(body.style),
       duration: Math.min(Math.max(Number(body.duration ?? 4), 1), 30),
@@ -195,13 +240,19 @@ async function dispatchStudio(
         executionId: execution.executionId,
         theme: execution.input.prompt,
         genre: normalizeGenre(body.genre),
-        genres: [normalizeGenre(body.genre)],
+        genres: normalizeGenres(body.genres, body.genre),
         moods: body.moods ?? [],
         vocalStyle: normalizeVocalStyle(body.vocalStyle, body.instrumental),
         instrumental: Boolean(body.instrumental),
         durationSeconds: Math.min(Math.max(Number(body.duration ?? 180), 15), 600),
         language: body.language ?? 'English',
         existingLyrics: body.lyrics,
+        productionNotes: normalizeGenres(body.genres, body.genre).length > 1
+          ? `Blend styles: ${normalizeGenres(body.genres, body.genre).join(' + ')}`
+          : undefined,
+        qualityTier,
+        provider: selectedProvider,
+        model: selectedModel,
       },
     }))
   }
@@ -210,8 +261,8 @@ async function dispatchStudio(
       text: execution.input.prompt,
       appSlug: execution.appSlug,
       executionId: execution.executionId,
-      provider: body.provider === 'auto' ? 'auto' : body.provider,
-      model: body.model === 'auto' ? undefined : body.model,
+      provider: selectedProvider ?? 'auto',
+      model: selectedModel,
       capability,
       voiceId: body.voiceId,
       language: body.language,
@@ -222,10 +273,42 @@ async function dispatchStudio(
       prompt: execution.input.prompt,
       appSlug: execution.appSlug,
       executionId: execution.executionId,
-      provider: body.provider === 'auto' ? 'auto' : body.provider,
-      model: body.model === 'auto' ? undefined : body.model,
+      provider: selectedProvider ?? 'auto',
+      model: selectedModel,
       size: imageSize(body.aspectRatio, body.quality),
     }))
+  }
+  if (capability === 'avatar_video') {
+    return avatarVideoPost(jsonRequest(original, '/api/brain/avatar-video', {
+      prompt: execution.input.prompt,
+      appSlug: execution.appSlug,
+      executionId: execution.executionId,
+      source: body.source,
+      voiceId: body.voiceId,
+      provider: selectedProvider ?? 'auto',
+      model: selectedModel,
+    }))
+  }
+  if (capability === 'chat' || capability === 'code' || capability === 'file_analysis') {
+    const result = await executeCapability({
+      input: execution.input.prompt,
+      capability,
+      files: execution.input.files,
+      appId: execution.appSlug,
+      providerOverride: selectedProvider,
+      modelOverride: selectedModel,
+      saveArtifact: true,
+      metadata: {
+        executionId: execution.executionId,
+        source: body.source,
+        qualityTier,
+      },
+    })
+    return NextResponse.json({
+      ...result,
+      executed: result.success,
+      jobStatus: result.status ?? (result.success ? 'completed' : 'needs_setup'),
+    }, { status: result.success ? 200 : result.readiness === 'NEEDS_CONFIGURATION' ? 503 : 409 })
   }
   return NextResponse.json({
     success: false,
@@ -253,11 +336,13 @@ function studioParameters(body: StudioBody) {
     duration: body.duration,
     scenePlanOnly: body.scenePlanOnly,
     genre: body.genre,
+    genres: body.genres,
     moods: body.moods,
     vocalStyle: body.vocalStyle,
     instrumental: body.instrumental,
     language: body.language,
     voiceId: body.voiceId,
+    qualityTier: body.qualityTier,
   }
 }
 
@@ -280,6 +365,13 @@ function normalizeVideoStyle(value?: string): 'cinematic' | 'animated' | 'realis
 function normalizeGenre(value?: string) {
   const allowed = ['pop', 'rock', 'hip_hop', 'edm', 'gospel', 'amapiano', 'afrobeats', 'jazz', 'classical', 'rnb', 'country', 'blues', 'reggae', 'soul', 'ambient', 'lofi', 'cinematic']
   return allowed.includes(value ?? '') ? value : 'cinematic'
+}
+
+function normalizeGenres(values?: string[], fallback?: string) {
+  const normalized = (values?.length ? values : [fallback])
+    .map(normalizeGenre)
+    .filter((value, index, all) => all.indexOf(value) === index)
+  return normalized.slice(0, 5)
 }
 
 function normalizeVocalStyle(value?: string, instrumental?: boolean) {

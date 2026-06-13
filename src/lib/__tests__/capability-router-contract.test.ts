@@ -32,9 +32,8 @@ vi.mock('@/lib/genx-client', () => ({
 vi.mock('@/lib/model-registry', () => ({
   getDefaultModelForProvider: (provider: string) => `${provider}-default`,
 }))
-vi.mock('@/lib/provider-mesh', () => ({
-  isApprovedDirectProvider: (provider: string) =>
-    ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'].includes(provider),
+vi.mock('@/lib/provider-mesh-status', () => ({
+  getMeshCredential: (provider: string) => mocks.getVaultApiKey(provider),
 }))
 
 import {
@@ -109,6 +108,7 @@ describe('capability router contract', () => {
     expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual([
       ...REQUIRED_CAPABILITIES.slice(0, 15),
       'adult_voice',
+      'avatar_video',
       ...REQUIRED_CAPABILITIES.slice(15),
     ])
   })

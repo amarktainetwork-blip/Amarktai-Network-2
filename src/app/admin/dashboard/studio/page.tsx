@@ -56,6 +56,7 @@ const capabilities = [
   ['tts', 'TTS / voice'],
   ['stt', 'STT / transcription'],
   ['video_generation', 'Video'],
+  ['avatar_video', 'Avatar / talking video'],
   ['adult_image', 'Adult image'],
   ['adult_video', 'Adult video'],
   ['adult_voice', 'Adult voice'],
@@ -76,9 +77,11 @@ export default function StudioPage() {
   const [style, setStyle] = useState('cinematic')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [quality, setQuality] = useState('standard')
+  const [qualityTier, setQualityTier] = useState<'cheap' | 'balanced' | 'premium' | 'auto'>('auto')
   const [duration, setDuration] = useState(4)
   const [scenePlanOnly, setScenePlanOnly] = useState(false)
   const [genre, setGenre] = useState('cinematic')
+  const [genres, setGenres] = useState<string[]>(['cinematic'])
   const [mood, setMood] = useState('uplifting')
   const [vocalStyle, setVocalStyle] = useState('female_lead')
   const [instrumental, setInstrumental] = useState(false)
@@ -159,9 +162,11 @@ export default function StudioPage() {
           style,
           aspectRatio,
           quality,
+          qualityTier,
           duration,
           scenePlanOnly,
           genre,
+          genres,
           moods: mood ? [mood] : [],
           vocalStyle,
           instrumental,
@@ -195,6 +200,7 @@ export default function StudioPage() {
       form.append('file', audioFile)
       form.append('appSlug', appSlug)
       form.append('language', language)
+      form.append('qualityTier', qualityTier)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json()
       if (!response.ok && !data.executionId) throw new Error(data.error || 'Transcription failed')
@@ -281,8 +287,9 @@ export default function StudioPage() {
           </Panel>
 
           <Panel title="Parameters">
+            <Field label="Routing quality"><select value={qualityTier} onChange={(event) => setQualityTier(event.target.value as typeof qualityTier)} className="control"><option value="auto">Auto / mixed</option><option value="cheap">Cheap</option><option value="balanced">Balanced</option><option value="premium">Premium</option></select></Field>
             {isImage && <><Field label="Style"><input value={style} onChange={(event) => setStyle(event.target.value)} className="control" /></Field><div className="grid grid-cols-2 gap-2"><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>1:1</option><option>16:9</option><option>9:16</option></select></Field><Field label="Quality"><select value={quality} onChange={(event) => setQuality(event.target.value)} className="control"><option value="standard">Standard</option><option value="high">High</option></select></Field></div></>}
-            {isMusic && <><Field label="Genre"><select value={genre} onChange={(event) => setGenre(event.target.value)} className="control"><option>cinematic</option><option>pop</option><option>rock</option><option value="hip_hop">Hip hop</option><option>amapiano</option><option>afrobeats</option><option>ambient</option></select></Field><Field label="Mood"><input value={mood} onChange={(event) => setMood(event.target.value)} className="control" /></Field><Field label="Vocal style"><select value={vocalStyle} onChange={(event) => setVocalStyle(event.target.value)} className="control"><option value="female_lead">Female lead</option><option value="male_lead">Male lead</option><option>choir</option><option>rap</option><option value="spoken_word">Spoken word</option></select></Field><Toggle label="Instrumental" checked={instrumental} onChange={setInstrumental} />{capability === 'music_generation' && <Field label="Existing lyrics"><textarea value={lyrics} onChange={(event) => setLyrics(event.target.value)} rows={3} className="control" /></Field>}</>}
+            {isMusic && <><Field label="Genres / style blend"><select multiple value={genres} onChange={(event) => { const values = Array.from(event.target.selectedOptions, (option) => option.value).slice(0, 5); setGenres(values); setGenre(values[0] ?? 'cinematic') }} className="control min-h-32"><option>cinematic</option><option>pop</option><option>rock</option><option value="hip_hop">Hip hop</option><option>folk</option><option>amapiano</option><option>afrobeats</option><option>ambient</option></select></Field><p className="text-[11px] text-slate-500">Select up to five styles. The backend blends them in the order selected.</p><Field label="Mood"><input value={mood} onChange={(event) => setMood(event.target.value)} className="control" /></Field><Field label="Vocal style"><select value={vocalStyle} onChange={(event) => setVocalStyle(event.target.value)} className="control"><option value="female_lead">Female lead</option><option value="male_lead">Male lead</option><option>choir</option><option>rap</option><option value="spoken_word">Spoken word</option></select></Field><Toggle label="Instrumental" checked={instrumental} onChange={setInstrumental} />{capability === 'music_generation' && <Field label="Existing lyrics"><textarea value={lyrics} onChange={(event) => setLyrics(event.target.value)} rows={3} className="control" /></Field>}</>}
             {(isVoice || capability === 'stt') && <><Field label="Language"><input value={language} onChange={(event) => setLanguage(event.target.value)} className="control" /></Field>{isVoice && <Field label="Voice / style"><input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} className="control" /></Field>}</>}
             {isVideo && <><Field label="Video style"><select value={style} onChange={(event) => setStyle(event.target.value)} className="control"><option>cinematic</option><option>animated</option><option>realistic</option><option>documentary</option><option>commercial</option></select></Field><div className="grid grid-cols-2 gap-2"><Field label="Duration"><input type="number" min={1} max={30} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className="control" /></Field><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>16:9</option><option>9:16</option><option>1:1</option></select></Field></div>{capability === 'video_generation' && <Toggle label="Scene plan only" checked={scenePlanOnly} onChange={setScenePlanOnly} />}</>}
           </Panel>
@@ -297,8 +304,8 @@ export default function StudioPage() {
           {!active && <section className="grid min-h-80 place-items-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 text-center text-slate-400">Your route plan, progress, and media output appear here.</section>}
           {active && <>
             <section className="grid gap-3 md:grid-cols-2">
-              <Panel title="Provider / model plan"><Fact label="Capability" value={friendly(active.capability)} /><Fact label="Provider" value={active.providerPlan.provider ?? 'No executable provider selected'} /><Fact label="Model" value={active.modelPlan.model ?? active.modelPlan.task ?? 'No executable model selected'} /><p className="text-xs leading-5 text-slate-400">{active.providerPlan.reason}</p></Panel>
-              <Panel title="Readiness"><Fact label="Execution status" value={friendly(active.status)} /><Fact label="Capability readiness" value={friendly(active.readiness ?? 'Pending route result')} /><p className="text-xs text-slate-400">Fallbacks: {active.providerPlan.fallbackProviders.join(' -> ') || 'None'}</p></Panel>
+              <Panel title="Capability route"><Fact label="Capability" value={friendly(active.capability)} /><Fact label="Quality policy" value={friendly(active.modelPlan.costMode)} /><p className="text-xs leading-5 text-slate-400">AmarktAI selected an available route for this capability and policy.</p></Panel>
+              <Panel title="Readiness"><Fact label="Execution status" value={friendly(active.status)} /><Fact label="Capability readiness" value={friendly(active.readiness ?? 'Pending route result')} /><p className="text-xs text-slate-400">Infrastructure selection remains internal and can fall back when a configured route fails.</p></Panel>
             </section>
             <Panel title="Approval">
               {!active.approval.required && <StatusLine kind="ok" title="No approval required" detail="This media action may run automatically." />}

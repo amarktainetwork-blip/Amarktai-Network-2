@@ -3,15 +3,15 @@
 # Run on the VPS after deploying the latest merged code.
 #
 # Usage:
-#   cd /var/www/amarktai/repo
+#   cd /var/www/amarktai/platform
 #   sudo bash scripts/verify_golive.sh
 
 set -Eeuo pipefail
 
-APP_DIR="${APP_DIR:-/var/www/amarktai/repo}"
+APP_DIR="${APP_DIR:-/var/www/amarktai/platform}"
 SERVICE_NAME="${SERVICE_NAME:-amarktai-web}"
 LOCAL_BASE_URL="${LOCAL_BASE_URL:-http://localhost:3000}"
-PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://amarktai.com}"
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-https://amarktai.co.za}"
 WORKSPACE_ROOT="${REPO_WORKSPACE_ROOT:-/var/amarktai/workspaces}"
 REPORT_DIR="$APP_DIR/docs/forensic"
 REPORT_FILE="$REPORT_DIR/LIVE_VPS_GOLIVE_VERIFICATION.md"

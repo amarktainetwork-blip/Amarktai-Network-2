@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -485,7 +485,7 @@ model AppAiProfile {
   fallbackChain      String @default("[]") @map("fallback_chain") // JSON array
 
   // Cost & Budget
-  costMode          String @default("balanced") @map("cost_mode") // cheap|balanced|premium|custom
+  costMode          String @default("auto") @map("cost_mode") // cheap|balanced|premium|auto
   maxCostPerRequest Float? @map("max_cost_per_request")
   monthlyBudgetCap  Float? @map("monthly_budget_cap")
 
