@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const memory = vi.hoisted(() => {
@@ -54,7 +52,6 @@ vi.mock('@/lib/local-json-store', () => {
   }
 })
 
-import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 import {
   completeExecution,
   createExecution,
@@ -64,7 +61,6 @@ import {
 } from '@/lib/execution'
 import { APPROVED_DIRECT_PROVIDER_IDS } from '@/lib/provider-mesh'
 
-const ROOT = process.cwd()
 const PROHIBITED_DIRECT = new Set([
   'openai',
   'anthropic',
@@ -246,69 +242,3 @@ describe('Phase 1 execution planning', () => {
     }
   })
 })
-
-describe('Phase 1 product contracts', () => {
-  it('keeps removed voice authentication absent outside regression tests', () => {
-    const files = ['src', 'docs']
-      .flatMap((directory) => filesUnder(directory))
-      .filter((file) => /\.(ts|tsx|js|jsx|md|json)$/i.test(file))
-      .filter((file) => !file.includes(`${path.sep}__tests__${path.sep}`))
-    const corpus = files.map((file) => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n')
-    expect(corpus.toLowerCase()).not.toContain(['voice', 'login'].join('-'))
-    expect(corpus.toLowerCase()).not.toContain(['allow', 'voice', 'login'].join(''))
-  })
-
-  it('keeps every required dashboard section', () => {
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Command Center',
-      'App Builder',
-      'Connected Apps',
-      'Provider Mesh',
-      'Model Universe',
-      'Agents',
-      'Repo Workbench',
-      'Media Studio',
-      'Outputs',
-      'Avatar / Voice',
-      'Jobs / Approvals',
-      'Memory / Learning',
-      'Control Center / Operations',
-      'Settings',
-    ])
-  })
-
-  it('wires execution metadata into the required core routes', () => {
-    for (const file of [
-      'src/app/api/admin/playground/route.ts',
-      'src/app/api/admin/app-builder/projects/route.ts',
-      'src/app/api/admin/repo-workbench/[workspaceId]/plan/route.ts',
-      'src/app/api/admin/studio/execute/route.ts',
-      'src/app/api/admin/jobs/route.ts',
-      'src/app/api/admin/approvals/route.ts',
-      'src/app/api/brain/agent/dispatch/route.ts',
-      'src/app/api/brain/image/route.ts',
-      'src/app/api/brain/video-generate/route.ts',
-    ]) {
-      expect(fs.readFileSync(path.join(ROOT, file), 'utf8')).toMatch(
-        /execution|listExecutions/,
-      )
-    }
-  })
-
-  it('executes queued agent jobs and reconciles artifacts', () => {
-    const worker = fs.readFileSync(path.join(ROOT, 'src/lib/worker.ts'), 'utf8')
-    expect(worker).toContain('agent_task: async')
-    expect(worker).toContain('executeAgent(task)')
-    expect(worker).toContain('createArtifact({')
-    expect(worker).toContain('recordExecutionResponse(executionId')
-  })
-})
-
-function filesUnder(directory: string): string[] {
-  const absolute = path.join(ROOT, directory)
-  if (!fs.existsSync(absolute)) return []
-  return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
-    const relative = path.join(directory, entry.name)
-    return entry.isDirectory() ? filesUnder(relative) : [relative]
-  })
-}

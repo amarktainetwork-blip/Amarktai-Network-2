@@ -11,18 +11,18 @@ function source(file: string): string {
 describe('Phase 0 product route coverage', () => {
   it('keeps the required dashboard and public routes', () => {
     for (const file of [
-      'src/app/admin/dashboard/app-builder/page.tsx',
-      'src/app/admin/dashboard/workbench/page.tsx',
+      'src/app/admin/dashboard/command/page.tsx',
       'src/app/admin/dashboard/studio/page.tsx',
-      'src/app/admin/dashboard/outputs/page.tsx',
-      'src/app/admin/dashboard/avatar-voice/page.tsx',
-      'src/app/admin/dashboard/jobs-approvals/page.tsx',
-      'src/app/admin/dashboard/memory-learning/page.tsx',
-      'src/app/admin/dashboard/operations/page.tsx',
+      'src/app/admin/dashboard/capabilities/page.tsx',
+      'src/app/admin/dashboard/connected-apps/page.tsx',
+      'src/app/admin/dashboard/artifacts/page.tsx',
+      'src/app/admin/dashboard/jobs/page.tsx',
+      'src/app/admin/dashboard/settings/page.tsx',
       'src/app/page.tsx',
     ]) {
       expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true)
     }
+    expect(fs.existsSync(path.join(ROOT, 'src/app/admin/dashboard/app-builder/page.tsx'))).toBe(false)
   })
 
   it('keeps adult text, image, video, and voice app-policy gated', () => {

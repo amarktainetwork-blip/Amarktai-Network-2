@@ -18,7 +18,7 @@ import {
 
 type AppOption = { slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
-type CapabilityTruth = { capability: string; status: string; blocker?: string | null; providers?: Array<{ provider: string; model: string }> }
+type CapabilityTruth = { capability: string; status: string; blocker?: string | null }
 type Artifact = {
   id: string
   title: string
@@ -61,7 +61,6 @@ const capabilities = [
   ['adult_voice', 'Adult voice'],
 ] as const
 
-const approvedProviders = ['auto', 'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together']
 const activeStatuses = new Set(['planned', 'queued', 'running'])
 
 export default function StudioPage() {
@@ -74,9 +73,6 @@ export default function StudioPage() {
   const [source, setSource] = useState('')
   const [sourceArtifact, setSourceArtifact] = useState<Artifact | null>(null)
   const [audioFile, setAudioFile] = useState<File | null>(null)
-  const [provider, setProvider] = useState('auto')
-  const [model, setModel] = useState('')
-  const [costMode, setCostMode] = useState('balanced')
   const [style, setStyle] = useState('cinematic')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [quality, setQuality] = useState('standard')
@@ -160,9 +156,6 @@ export default function StudioPage() {
           prompt,
           source: sourceArtifact ? `artifact:${sourceArtifact.id}` : source || undefined,
           artifactIds: sourceArtifact ? [sourceArtifact.id] : [],
-          provider,
-          model: model || undefined,
-          costMode,
           style,
           aspectRatio,
           quality,
@@ -201,8 +194,6 @@ export default function StudioPage() {
       const form = new FormData()
       form.append('file', audioFile)
       form.append('appSlug', appSlug)
-      form.append('provider', provider)
-      if (model) form.append('model', model)
       form.append('language', language)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json()
@@ -269,9 +260,9 @@ export default function StudioPage() {
       <header className="rounded-3xl border border-fuchsia-400/20 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.13),transparent_42%)] p-5 lg:p-7">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Media Studio</p>
         <h1 className="mt-2 text-3xl font-black text-white">Production media factory.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Create media through the shared execution core, inspect the real provider plan, and keep every completed output in the canonical artifact library.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Create media through AmarktAI capabilities and keep every completed output in the canonical artifact library.</p>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <Field label="App context"><select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="control">{apps.length === 0 && <option value="amarktai-network">AmarktAI Network</option>}{apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}</select></Field>
+          <Field label="App context"><select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="control">{apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}{apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}</select></Field>
           <Field label="Media type"><select value={capability} onChange={(event) => setCapability(event.target.value)} className="control">{capabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
           <Fact label="App policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
         </div>
@@ -296,11 +287,9 @@ export default function StudioPage() {
             {isVideo && <><Field label="Video style"><select value={style} onChange={(event) => setStyle(event.target.value)} className="control"><option>cinematic</option><option>animated</option><option>realistic</option><option>documentary</option><option>commercial</option></select></Field><div className="grid grid-cols-2 gap-2"><Field label="Duration"><input type="number" min={1} max={30} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className="control" /></Field><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>16:9</option><option>9:16</option><option>1:1</option></select></Field></div>{capability === 'video_generation' && <Toggle label="Scene plan only" checked={scenePlanOnly} onChange={setScenePlanOnly} />}</>}
           </Panel>
 
-          <Panel title="Route controls">
-            <Fact label="Runtime capability truth" value={capability === 'image_edit' ? 'UNAVAILABLE - source adapter missing' : runtimeTruth?.status === 'available' ? `READY - ${runtimeTruth.providers?.map((item) => item.provider).join(', ')}` : runtimeTruth?.blocker ?? 'Readiness will be verified at execution time'} />
-            <Field label="Approved provider"><select value={provider} onChange={(event) => setProvider(event.target.value)} className="control">{approvedProviders.map((item) => <option key={item} value={item}>{item === 'auto' ? 'Automatic route' : item}</option>)}</select></Field>
-            <Field label="Model override"><input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Automatic" className="control" /></Field>
-            <Field label="Cost mode"><select value={costMode} onChange={(event) => setCostMode(event.target.value)} className="control"><option value="cheap">Cheap</option><option value="balanced">Balanced</option><option value="premium">Premium</option></select></Field>
+          <Panel title="Capability readiness">
+            <Fact label="Runtime truth" value={capability === 'image_edit' ? 'UNAVAILABLE - source adapter missing' : runtimeTruth?.status === 'available' ? 'READY' : runtimeTruth?.blocker ?? 'Readiness will be verified at execution time'} />
+            <p className="text-xs leading-5 text-slate-400">AmarktAI selects infrastructure automatically after validating this capability.</p>
           </Panel>
         </aside>
 
@@ -334,7 +323,7 @@ export default function StudioPage() {
           <Panel title="Reusable artifacts">
             <div className="max-h-96 space-y-2 overflow-auto">{artifacts.length === 0 && <p className="text-xs text-slate-400">No completed app artifacts.</p>}{artifacts.map((artifact) => <button key={artifact.id} onClick={() => reuseArtifact(artifact)} className="block w-full rounded-xl border border-slate-700/50 p-3 text-left"><p className="truncate text-xs font-bold text-slate-200">{artifact.title}</p><p className="mt-1 text-[10px] uppercase text-slate-500">{friendly(artifact.type)}</p></button>)}</div>
           </Panel>
-          <div className="grid grid-cols-2 gap-2"><SummaryLink href="/admin/dashboard/outputs" label="Outputs" /><SummaryLink href="/admin/dashboard/jobs-approvals" label="Jobs" /></div>
+          <div className="grid grid-cols-2 gap-2"><SummaryLink href="/admin/dashboard/artifacts" label="Artifacts" /><SummaryLink href="/admin/dashboard/jobs" label="Jobs" /></div>
         </aside>
       </div>
     </div>

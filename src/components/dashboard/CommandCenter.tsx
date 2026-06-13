@@ -62,9 +62,6 @@ const capabilityOptions = [
   ['lyrics_generation', 'Lyrics'],
   ['tts', 'Text to speech'],
   ['voice_response', 'Voice response'],
-  ['repo_edit', 'Repo task plan'],
-  ['app_build', 'App builder brief'],
-  ['deploy_plan', 'Deployment plan'],
   ['scrape_website', 'Website research'],
 ] as const
 
@@ -76,22 +73,17 @@ const adultCapabilities = [
 ] as const
 
 const quickActions = [
-  ['chat', 'Chat', 'Ask Amarktai to explain or draft something.'],
+  ['chat', 'Chat', 'Ask AmarktAI to explain or draft something.'],
   ['research', 'Research', 'Research a topic and create a reusable result.'],
-  ['image', 'Image', 'Generate an image through the approved provider mesh.'],
+  ['image', 'Image', 'Generate an image through the image capability.'],
   ['image_edit', 'Image edit', 'Edit an image using a file or artifact reference.'],
   ['video', 'Video', 'Start video generation or return honest readiness.'],
   ['music', 'Music / song', 'Create music or return configuration status.'],
   ['tts', 'TTS / voice', 'Generate speech from your prompt.'],
-  ['repo_plan', 'Repo task plan', 'Create a read-only repository work plan.'],
-  ['app_brief', 'App builder brief', 'Create a brief without starting App Builder.'],
-  ['deploy_plan', 'Deployment plan', 'Create a plan without deploying anything.'],
   ['system_check', 'System check', 'Capture live runtime readiness as an artifact.'],
 ] as const
 
 const activeStatuses = new Set(['planned', 'queued', 'running'])
-const approvedProviders = ['auto', 'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together']
-
 export default function CommandCenter() {
   const [apps, setApps] = useState<AppOption[]>([])
   const [appSlug, setAppSlug] = useState('amarktai-network')
@@ -99,10 +91,6 @@ export default function CommandCenter() {
   const [capability, setCapability] = useState('auto')
   const [prompt, setPrompt] = useState('')
   const [references, setReferences] = useState('')
-  const [provider, setProvider] = useState('auto')
-  const [model, setModel] = useState('')
-  const [costMode, setCostMode] = useState('balanced')
-  const [advanced, setAdvanced] = useState(false)
   const [active, setActive] = useState<Execution | null>(null)
   const [history, setHistory] = useState<Execution[]>([])
   const [reusedArtifacts, setReusedArtifacts] = useState<Artifact[]>([])
@@ -181,9 +169,6 @@ export default function CommandCenter() {
           quickAction,
           references: references.split('\n').map((value) => value.trim()).filter(Boolean),
           artifactIds: reusedArtifacts.map((artifact) => artifact.id),
-          selectedProvider: provider === 'auto' ? undefined : provider,
-          selectedModel: model.trim() || undefined,
-          costMode,
         }),
       })
       const data = await response.json()
@@ -263,7 +248,7 @@ export default function CommandCenter() {
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="App context">
             <select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="command-control">
-              {apps.length === 0 && <option value="amarktai-network">AmarktAI Network</option>}
+              {apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}
               {apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}
             </select>
           </Field>
@@ -327,28 +312,6 @@ export default function CommandCenter() {
                     Context: {artifact.title} x
                   </button>
                 ))}
-              </div>
-            )}
-            <button onClick={() => setAdvanced((value) => !value)} className="mt-4 text-xs font-black uppercase tracking-[0.14em] text-slate-400 hover:text-cyan-200">
-              Advanced
-            </button>
-            {advanced && (
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <Field label="Approved provider">
-                  <select value={provider} onChange={(event) => setProvider(event.target.value)} className="command-control">
-                    {approvedProviders.map((item) => <option key={item} value={item}>{item === 'auto' ? 'Automatic route' : item}</option>)}
-                  </select>
-                </Field>
-                <Field label="Model override">
-                  <input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Automatic" className="command-control" />
-                </Field>
-                <Field label="Cost mode">
-                  <select value={costMode} onChange={(event) => setCostMode(event.target.value)} className="command-control">
-                    <option value="cheap">Cheap</option>
-                    <option value="balanced">Balanced</option>
-                    <option value="premium">Premium</option>
-                  </select>
-                </Field>
               </div>
             )}
             {submitError && <ErrorPanel message={submitError} />}
@@ -436,12 +399,12 @@ export default function CommandCenter() {
             </div>
           </section>
           <section className="grid grid-cols-2 gap-2">
-            <SummaryLink href="/admin/dashboard/outputs" label="Outputs" />
-            <SummaryLink href="/admin/dashboard/jobs-approvals" label="Jobs / Approvals" />
+            <SummaryLink href="/admin/dashboard/artifacts" label="Artifacts" />
+            <SummaryLink href="/admin/dashboard/jobs" label="Jobs" />
           </section>
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 text-xs leading-5 text-slate-400">
             <p className="font-black text-slate-200">Creative options</p>
-            <p className="mt-2">Media controls remain capability-specific. Command Center submits task context and records honest provider readiness.</p>
+            <p className="mt-2">Media controls remain capability-specific. Command Center submits task context and records honest readiness.</p>
           </section>
         </aside>
       </div>

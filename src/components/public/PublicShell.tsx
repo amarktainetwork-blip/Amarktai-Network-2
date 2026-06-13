@@ -36,7 +36,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
           <Link
             href="/"
             className="flex items-center gap-2.5 font-mono text-[13px] font-bold uppercase tracking-[0.18em] text-white transition hover:text-teal-300"
-            aria-label="AmarktAI Network home"
+            aria-label="AmarktAI home"
           >
             <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-teal-500/40 bg-teal-500/15 text-teal-400">
               <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4" aria-hidden="true">
@@ -142,7 +142,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
                 The universal AI capability engine for apps, media, automation, and connected products.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                {['62 capabilities', '6 providers', 'Connected apps'].map((tag) => (
+                {['Capability first', 'Connected apps', 'Reusable artifacts'].map((tag) => (
                   <span key={tag} className="rounded-full border border-teal-500/25 bg-teal-500/8 px-2.5 py-0.5 text-[10px] font-bold text-teal-400">
                     {tag}
                   </span>
@@ -156,7 +156,6 @@ export default function PublicShell({ children }: { children: React.ReactNode })
               <div className="mt-3 grid gap-2">
                 {[
                   { href: '/platform', label: 'Platform overview' },
-                  { href: '/network-apps', label: 'Network Apps' },
                   { href: '/about', label: 'About' },
                   { href: '/admin/login', label: 'Command Center' },
                 ].map(({ href, label }) => (
@@ -185,7 +184,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
           </div>
 
           <div className="mt-10 border-t border-white/8 pt-6 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">
-            © 2026 AmarktAI Network. All rights reserved.
+            Copyright 2026 AmarktAI. All rights reserved.
           </div>
         </div>
       </footer>

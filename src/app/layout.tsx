@@ -17,19 +17,19 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'AmarktAI Network | Private AI Operations Architecture',
+  title: 'AmarktAI | Universal AI Capability Engine',
   description:
-    'AmarktAI Network is a private AI operations platform for model routing, agent coordination, persistent memory, artifacts, approvals, and governed deployment workflows.',
+    'AmarktAI turns user intent into governed capability execution, jobs, results, and reusable artifacts.',
   keywords: [
     'AI operations architecture',
     'AI orchestration',
-    'model routing',
-    'agent coordination',
+    'AI capabilities',
+    'connected apps',
     'AI operating system',
     'deployment governance',
-    'AmarktAI Network',
+    'AmarktAI',
   ],
-  authors: [{ name: 'AmarktAI Network' }],
+  authors: [{ name: 'AmarktAI' }],
   robots: 'index, follow',
 }
 

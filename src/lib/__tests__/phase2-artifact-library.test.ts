@@ -138,7 +138,7 @@ describe('Phase 2 Artifact Library APIs and dashboard', () => {
   })
 
   it('renders image, audio, video, and structured text previews from real records', () => {
-    const page = source('src/app/admin/dashboard/outputs/page.tsx')
+    const page = source('src/app/admin/dashboard/artifacts/page.tsx')
     expect(page).toContain("artifact.type === 'image'")
     expect(page).toContain("['audio', 'music', 'voice']")
     expect(page).toContain("['video', 'avatar']")
@@ -147,15 +147,15 @@ describe('Phase 2 Artifact Library APIs and dashboard', () => {
   })
 
   it('shows execution, job, MIME, file size, and artifact actions', () => {
-    const page = source('src/app/admin/dashboard/outputs/page.tsx')
+    const page = source('src/app/admin/dashboard/artifacts/page.tsx')
     for (const term of ['Execution', 'Job', 'mimeType', 'formatBytes', 'Open', 'Download', 'Reuse', 'Archive']) {
       expect(page).toContain(term)
     }
   })
 
-  it('keeps the Outputs dashboard section', () => {
-    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Outputs')).toBe(true)
-    expect(fs.existsSync(path.join(ROOT, 'src/app/admin/dashboard/outputs/page.tsx'))).toBe(true)
+  it('keeps the Artifacts dashboard section', () => {
+    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Artifacts')).toBe(true)
+    expect(fs.existsSync(path.join(ROOT, 'src/app/admin/dashboard/artifacts/page.tsx'))).toBe(true)
   })
 })
 
@@ -173,9 +173,7 @@ describe('Phase 2 producer and policy coverage', () => {
     expect(source('src/lib/artifact-policy.ts')).toContain('loadAppSafetyConfigFromDB')
   })
 
-  it('persists app blueprints, repo changes, research, STT, and video plans', () => {
-    expect(source('src/app/api/admin/app-builder/projects/route.ts')).toContain("type: 'app_blueprint'")
-    expect(source('src/lib/repo-workbench.ts')).toContain("return 'repo_patch'")
+  it('persists research, STT, and video plans', () => {
     expect(source('src/lib/capability-router.ts')).toContain("return 'research_result'")
     expect(source('src/app/api/brain/stt/route.ts')).toContain("type: 'transcript'")
     expect(source('src/app/api/brain/video/route.ts')).toContain("subType: 'video_plan'")
@@ -186,7 +184,7 @@ describe('Phase 2 producer and policy coverage', () => {
     const removedTerm = ['voice', '-', 'login'].join('')
     const corpus = [
       source('src/lib/artifact-store.ts'),
-      source('src/app/admin/dashboard/outputs/page.tsx'),
+      source('src/app/admin/dashboard/artifacts/page.tsx'),
       source('src/app/api/admin/artifacts/route.ts'),
     ].join('\n').toLowerCase()
     expect(corpus).not.toContain(removedTerm)

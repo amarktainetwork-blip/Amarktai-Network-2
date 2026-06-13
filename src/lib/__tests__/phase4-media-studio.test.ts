@@ -114,7 +114,7 @@ describe('Phase 4 Media Studio product coverage', () => {
       'Adult image',
       'Adult video',
       'Adult voice',
-      'Provider / model plan',
+      'Capability readiness',
       'Approval',
       'Execution / job progress',
       'Artifact result',

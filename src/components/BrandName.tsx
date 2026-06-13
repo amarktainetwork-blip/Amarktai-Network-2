@@ -1,7 +1,7 @@
 export default function BrandName({ className = '' }: { className?: string }) {
   return (
-    <span className={className}>
-      Amarkt<span className="text-cyan-400">ai</span> Network
+    <span className={className} aria-label="AmarktAI">
+      Amarkt<span className="text-cyan-400">AI</span>
     </span>
   )
 }
