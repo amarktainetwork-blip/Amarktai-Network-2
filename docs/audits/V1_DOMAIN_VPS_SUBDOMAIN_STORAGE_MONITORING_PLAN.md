@@ -3,6 +3,8 @@
 ## Implemented now
 
 - Canonical main domains are `amarktai.co.za` and `www.amarktai.co.za`.
+- Wildcard DNS is planned for `*.amarktai.co.za`; it prepares future names but
+  does not claim that any future app is deployed.
 - The checked-in Nginx configuration proxies both names to port `3000`.
 - The deploy script uses `/var/www/amarktai/platform` and creates the shared
   `apps`, `storage`, `logs`, and `backups` directories.
@@ -22,13 +24,10 @@
 | --- | --- | --- |
 | A | `@` | VPS public IPv4 |
 | CNAME | `www` | `amarktai.co.za` |
-| CNAME | `marketing` | `amarktai.co.za` |
-| CNAME | `travel` | `amarktai.co.za` |
-| CNAME | `pets` | `amarktai.co.za` |
-| CNAME | `health` | `amarktai.co.za` |
-| CNAME | `games` | `amarktai.co.za` |
+| A | `*` | VPS public IPv4 |
 
-Individual A records to the VPS IP are an acceptable fallback for subdomains.
+The wildcard covers marketing, travel, pets, health, games, and later app
+slugs. Exact A records remain an optional override.
 
 ## Runtime layout
 
@@ -46,6 +45,10 @@ Individual A records to the VPS IP are an acceptable fallback for subdomains.
 - `marketing.amarktai.co.za` -> `127.0.0.1:3101` when that app is deployed.
 - `travel.amarktai.co.za` -> `127.0.0.1:3102` when that app is deployed.
 - Pets, health, and games remain DNS reservations until ports and processes are assigned.
+- Future apps may use exact `server_name` blocks or a deliberate app-slug
+  landing layer. No catch-all application router is implemented in this PR.
+- Wildcard TLS requires DNS-01 validation and must include the apex domain as a
+  separate certificate name.
 
 ## Monitoring thresholds
 
@@ -59,6 +62,8 @@ daemon.
 
 - Provision each future app process, port, process-manager definition, Nginx
   server block, TLS certificate, deploy pipeline, and backup plan.
+- Register each app in Connected Apps, generate its signing secret once, assign
+  scopes, and configure HMAC-signed capability requests.
 - Implement the S3-compatible `StorageDriver` when off-VPS replication is required.
 - Add an external time-series collector if historical charts and alert delivery
   are required. V1 exposes a truthful point-in-time snapshot only.

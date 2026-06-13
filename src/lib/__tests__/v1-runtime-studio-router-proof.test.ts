@@ -154,4 +154,31 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(plan).toContain('127.0.0.1:3101')
     expect(plan).toContain('/var/www/amarktai/apps/<app-slug>')
   })
+
+  it('documents wildcard DNS without enabling a fake subdomain app router', () => {
+    const rootTruth = source('README_VPS_AMARKTAI_OPERATING_TRUTH.md')
+    const docsTruth = source('docs/AMARKTAI_V1_OPERATING_TRUTH.md')
+    const deploy = source('docs/deploy/DOMAIN_DNS_NGINX_VPS.md')
+    const nginx = source('deploy/nginx.conf')
+
+    for (const truth of [rootTruth, docsTruth]) {
+      expect(truth).toContain('AmarktAI is the main AI operating system and capability engine')
+      expect(truth).toContain('/var/www/amarktai/apps/<app-slug>')
+      expect(truth).toContain('HMAC-signed')
+      expect(truth).toContain('cheap')
+      expect(truth).toContain('balanced')
+      expect(truth).toContain('premium')
+      expect(truth).toContain('auto')
+      expect(truth).toContain('App Builder')
+      expect(truth).toContain('Repo Workbench')
+      expect(truth).toContain('MCP')
+    }
+
+    expect(deploy).toContain('| A | `*` | `VPS_PUBLIC_IP` |')
+    expect(deploy).toContain('DNS-01 validation')
+    expect(deploy).toContain('Register `<slug>.amarktai.co.za` in AmarktAI Connected Apps')
+    expect(nginx).toContain('#     server_name *.amarktai.co.za;')
+    expect(nginx).toContain('#     return 404;')
+    expect(nginx).not.toMatch(/^\s*server_name \*\.amarktai\.co\.za;/m)
+  })
 })

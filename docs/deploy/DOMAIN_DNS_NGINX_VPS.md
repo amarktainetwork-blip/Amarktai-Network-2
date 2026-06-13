@@ -4,7 +4,8 @@
 
 - Main platform: `amarktai.co.za`
 - Main alias: `www.amarktai.co.za`
-- Reserved future apps: `marketing`, `travel`, `pets`, `health`, and `games`
+- Wildcard future apps: `*.amarktai.co.za`
+- Examples: `marketing`, `travel`, `pets`, `health`, and `games`
 
 ## GoDaddy DNS
 
@@ -14,15 +15,11 @@ Create these records after the VPS has a stable public IPv4 address:
 | --- | --- | --- | --- |
 | A | `@` | `VPS_PUBLIC_IP` | Main platform |
 | CNAME | `www` | `amarktai.co.za` | Main alias |
-| CNAME | `marketing` | `amarktai.co.za` | Future app |
-| CNAME | `travel` | `amarktai.co.za` | Future app |
-| CNAME | `pets` | `amarktai.co.za` | Future app |
-| CNAME | `health` | `amarktai.co.za` | Future app |
-| CNAME | `games` | `amarktai.co.za` | Future app |
+| A | `*` | `VPS_PUBLIC_IP` | Future app subdomains |
 
-If CNAME records are unsuitable, create individual A records for the subdomains
-that point to the same VPS IPv4 address. Use a low TTL during cutover, then
-raise it after verification.
+The wildcard covers future names such as `marketing`, `travel`, `pets`,
+`health`, and `games`. Use a low TTL during cutover, then raise it after
+verification. DNS resolution does not mean an app is deployed or ready.
 
 ## VPS folders
 
@@ -41,7 +38,19 @@ The platform runs on port `3000`. Reserved future mappings are:
 - `marketing.amarktai.co.za` -> `127.0.0.1:3101`
 - `travel.amarktai.co.za` -> `127.0.0.1:3102`
 
-Do not enable a subdomain server block until its process exists.
+Future apps can later route through an exact Nginx `server_name` and dedicated
+port, or through an explicitly implemented app-slug landing layer. Do not
+enable a subdomain server block until its process exists.
+
+## Future app onboarding
+
+1. Create `/var/www/amarktai/apps/<slug>`.
+2. Register `<slug>.amarktai.co.za` in AmarktAI Connected Apps.
+3. Generate the signing secret once and store it in the app runtime.
+4. Assign minimum required capability scopes.
+5. Configure the AmarktAI API base URL and signing secret.
+6. Provision the app process and exact Nginx `server_name`.
+7. Send HMAC-signed capability requests and track returned jobs and artifacts.
 
 ## Nginx and TLS
 
@@ -57,7 +66,13 @@ systemctl reload nginx
 certbot --nginx -d amarktai.co.za -d www.amarktai.co.za
 ```
 
-Future app server blocks should use a separate upstream and certificate name.
+Future app server blocks should use a separate upstream and exact
+`server_name`. The checked-in Nginx file contains a disabled wildcard template;
+activate only a real route.
+
+For a wildcard TLS certificate, use DNS-01 validation. HTTP-01 validation does
+not issue wildcard certificates. Request both `amarktai.co.za` and
+`*.amarktai.co.za`, because the wildcard does not cover the apex domain.
 
 ## Monitoring
 
