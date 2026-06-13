@@ -88,10 +88,32 @@ Routing policy supports `cheap`, `balanced`, `premium`, and `auto`. Providers
 remain internal adapters. GenX is important but is not hardcoded for every
 capability.
 
+## MariaDB production truth
+
+The Prisma datasource uses `provider = "mysql"` and V1 production uses
+MariaDB. Install and start `mariadb-server`, then create the application
+database and user:
+
+```sql
+CREATE DATABASE amarktai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'amarktai'@'127.0.0.1' IDENTIFIED BY 'STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+Configure:
+
+```text
+DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"
+```
+
+Replace the placeholder password, then run `npm ci`, `npx prisma generate`,
+`npx prisma validate`, `npx prisma db push`, and a `SELECT 1` through
+`prisma db execute`.
+
 ## Guardrails for future work
 
 Do not reintroduce the old `Amarktai` spelling, provider marketing, fake
 connected-app cards, fake readiness, App Builder, Repo Workbench, MCP, a
 provider marketplace, direct provider calls, duplicate routing/storage/truth
 layers, or obsolete docs and tests that preserve the wrong V1 product.
-

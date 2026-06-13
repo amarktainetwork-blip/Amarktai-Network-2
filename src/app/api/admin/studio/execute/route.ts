@@ -363,7 +363,7 @@ function normalizeVideoStyle(value?: string): 'cinematic' | 'animated' | 'realis
 }
 
 function normalizeGenre(value?: string) {
-  const allowed = ['pop', 'rock', 'hip_hop', 'edm', 'gospel', 'amapiano', 'afrobeats', 'jazz', 'classical', 'rnb', 'country', 'blues', 'reggae', 'soul', 'ambient', 'lofi', 'cinematic']
+  const allowed = ['pop', 'rock', 'folk', 'hip_hop', 'edm', 'gospel', 'amapiano', 'afrobeats', 'jazz', 'classical', 'rnb', 'country', 'blues', 'reggae', 'soul', 'ambient', 'lofi', 'cinematic']
   return allowed.includes(value ?? '') ? value : 'cinematic'
 }
 

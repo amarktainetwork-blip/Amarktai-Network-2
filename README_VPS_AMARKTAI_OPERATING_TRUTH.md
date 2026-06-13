@@ -82,6 +82,34 @@ Studio, jobs, connected apps, and artifacts use the storage adapter. Cloud or
 S3-compatible storage can be added later through that adapter. Future code must
 not hardwire product features directly to local filesystem paths.
 
+## MariaDB production setup
+
+MariaDB is the V1 production database. PostgreSQL and MongoDB are not the V1
+database truth.
+
+```bash
+apt-get update
+apt-get install -y mariadb-server
+systemctl enable --now mariadb
+sudo mariadb
+```
+
+```sql
+CREATE DATABASE amarktai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'amarktai'@'127.0.0.1' IDENTIFIED BY 'STRONG_PASSWORD';
+GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai'@'127.0.0.1';
+FLUSH PRIVILEGES;
+```
+
+Set the real generated password in `/var/www/amarktai/platform/.env`:
+
+```text
+DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"
+```
+
+Then run `npm ci`, `npx prisma generate`, `npx prisma validate`,
+`npx prisma db push`, and a `SELECT 1` through `prisma db execute`.
+
 ## Provider and routing truth
 
 Providers are internal backend adapters. Users do not choose raw providers in
@@ -124,4 +152,3 @@ Examples covered by the wildcard include `marketing`, `travel`, `pets`,
 - old docs or tests that protect superseded product truth
 - direct provider/model calls from connected apps
 - a second router, storage system, capability taxonomy, or dashboard
-

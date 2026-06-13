@@ -151,7 +151,7 @@ GROQ_API_KEY=<your-groq-key>
 TOGETHER_API_KEY=<your-together-key>
 
 # Database
-DATABASE_URL=mysql://USER:PASSWORD@127.0.0.1:3306/amarktai
+DATABASE_URL=mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai
 
 # Storage
 AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage

@@ -5,6 +5,12 @@ import {
   normalizeRoutingQuality,
   selectCapabilityRoutePlan,
 } from '@/lib/capability-routing-policy'
+import {
+  buildLyricsPrompt,
+  resolveGenre,
+  validateMusicRequest,
+  type MusicCreationRequest,
+} from '@/lib/music-studio'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 
 const ROOT = process.cwd()
@@ -25,7 +31,7 @@ describe('V1 runtime, Studio, and capability router proof', () => {
   it('uses MariaDB in Prisma and documents the exact production URL format', () => {
     expect(source('prisma/schema.prisma')).toContain('provider = "mysql"')
     expect(source('.env.example')).toContain(
-      'DATABASE_URL="mysql://USER:PASSWORD@127.0.0.1:3306/amarktai"',
+      'DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"',
     )
     const deploy = source('docs/deploy/backend-deploy-checklist.md')
     expect(deploy).toContain('apt-get install -y mariadb-server')
@@ -107,6 +113,26 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(music).toContain("'cheap' | 'balanced' | 'premium' | 'auto'")
   })
 
+  it('validates and preserves a multi-genre music blend contract', () => {
+    const request: MusicCreationRequest = {
+      appSlug: 'marketing',
+      theme: 'A confident product launch',
+      genre: 'rock',
+      genres: ['rock', 'pop', 'folk'],
+      moods: ['uplifting'],
+      vocalStyle: 'female_lead',
+      durationSeconds: 180,
+      qualityTier: 'premium',
+    }
+    expect(() => validateMusicRequest(request)).not.toThrow()
+    expect(resolveGenre(request)).toBe('rock')
+    expect(buildLyricsPrompt(request)).toContain('Rock, Pop, Folk')
+    expect(() => validateMusicRequest({
+      ...request,
+      genres: ['rock', 'pop', 'folk', 'country', 'jazz', 'soul'],
+    })).toThrow('maximum 5 genres allowed')
+  })
+
   it('keeps Studio job and artifact truth connected to execution records', () => {
     const studio = source('src/app/api/admin/studio/execute/route.ts')
     const media = source('src/lib/media-studio.ts')
@@ -127,6 +153,14 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(engine).toContain('createArtifact')
     expect(route).toContain('jobId: job.id')
     expect(route).toContain('qualityTier: job.qualityTier')
+    expect(route).not.toContain('provider: job.provider')
+    expect(route).not.toContain('model: job.model')
+    expect(route).not.toContain('adapter: job.adapter')
+    const jobRoute = source('src/app/api/connected-apps/capabilities/jobs/[jobId]/route.ts')
+    expect(jobRoute).toContain('qualityTier: job.qualityTier')
+    expect(jobRoute).not.toContain('provider: job.provider')
+    expect(jobRoute).not.toContain('model: job.model')
+    expect(jobRoute).not.toContain('adapter: job.adapter')
   })
 
   it('keeps provider names out of the public website', () => {

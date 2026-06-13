@@ -46,6 +46,7 @@ function usableKey(raw: string | null | undefined): string | null {
 export type MusicGenre =
   | 'pop'
   | 'rock'
+  | 'folk'
   | 'hip_hop'
   | 'edm'
   | 'gospel'
@@ -328,6 +329,7 @@ async function loadMusicArtifactsFromDB(appSlug?: string, limit = 50): Promise<M
 const GENRE_DISPLAY: Record<MusicGenre, string> = {
   pop: 'Pop',
   rock: 'Rock',
+  folk: 'Folk',
   hip_hop: 'Hip Hop',
   edm: 'EDM',
   gospel: 'Gospel',
@@ -361,6 +363,7 @@ interface GenreDefaults {
 const GENRE_DEFAULTS: Record<string, GenreDefaults> = {
   pop:        { typicalBpm: 120, typicalKey: 'C major', timeSignature: '4/4', productionStyle: 'polished, hooky, radio-ready' },
   rock:       { typicalBpm: 140, typicalKey: 'G major', timeSignature: '4/4', productionStyle: 'electric guitars, powerful drums, driven mix' },
+  folk:       { typicalBpm: 105, typicalKey: 'G major', timeSignature: '4/4', productionStyle: 'acoustic guitar, organic percussion, close vocal harmonies' },
   hip_hop:    { typicalBpm: 90,  typicalKey: 'D minor', timeSignature: '4/4', productionStyle: 'boom-bap or trap drums, sub bass, sampled chops' },
   edm:        { typicalBpm: 128, typicalKey: 'A minor', timeSignature: '4/4', productionStyle: 'synthesizer leads, sidechain compression, drop builds' },
   gospel:     { typicalBpm: 80,  typicalKey: 'F major', timeSignature: '4/4', productionStyle: 'organ, choir harmonies, uplifting key changes' },

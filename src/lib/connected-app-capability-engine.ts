@@ -330,7 +330,7 @@ export async function pollConnectedAppCapabilityJob(
     inputs: job.request.inputs,
     references: job.request.references ?? [],
     context,
-    model: job.request.model,
+    model: job.model,
     endpointUrl: job.request.endpointUrl,
   }
   const result = await adapter.poll(job.providerJobId, adapterInput)
