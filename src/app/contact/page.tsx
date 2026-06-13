@@ -29,7 +29,7 @@ export default function ContactPage() {
           email: form.email,
           companyOrProject: form.organization,
           message: [
-            '[AMARKTAI NETWORK INQUIRY]',
+            '[AMARKTAI INQUIRY]',
             `Organization: ${form.organization}`,
             `Operating environment: ${form.environment}`,
             `Notes: ${form.message}`,

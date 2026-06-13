@@ -3,14 +3,14 @@ import PublicShell from '@/components/public/PublicShell'
 const principles = [
   ['Infrastructure before interface', 'Reliable AI work depends on routing discipline, durable context, explicit boundaries, and operational evidence.'],
   ['Automation with restraint', 'Agents should move quickly inside defined scopes and pause when production, policy, or ownership requires review.'],
-  ['Provider independence', 'A serious operating layer keeps model choice flexible while preserving memory, artifacts, and workflow state.'],
-  ['Truthful systems', 'Operations, approvals, queues, provider health, and deployments must be visible as system facts, not hidden side effects.'],
+  ['Capability first', 'People should ask for outcomes without needing to understand infrastructure choices.'],
+  ['Truthful systems', 'Approvals, queues, artifacts, and readiness must be visible as system facts, not hidden side effects.'],
 ]
 
 const manifesto = [
   'The platform exists because AI work now touches codebases, media systems, customer data, production releases, and institutional decision paths.',
   'That work cannot be managed as isolated chats. It needs a private operating layer with memory, routing, approvals, and runtime visibility.',
-  'AmarktAI Network is built around that premise: high-agency AI systems should be observable, governable, and useful under real operational pressure.',
+  'AmarktAI is built around that premise: capable AI systems should be observable, governable, and useful under real operational pressure.',
 ]
 
 export default function AboutPage() {
@@ -23,7 +23,7 @@ export default function AboutPage() {
             Connected digital work needs clear control before it needs more complexity.
           </h1>
           <p className="mt-7 max-w-3xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
-            AmarktAI Network is an infrastructure company building the operating architecture for AI systems that route, remember, generate, review, and deploy.
+            AmarktAI is a capability engine for AI work that must remain understandable, reusable, and governed.
           </p>
         </div>
       </section>
