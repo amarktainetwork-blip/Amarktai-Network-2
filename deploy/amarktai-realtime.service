@@ -1,7 +1,7 @@
 # ─── AmarktAI Realtime Voice Service — systemd unit ────────────────────────
 #
 # Install:
-#   cp /var/www/amarktai/repo/deploy/amarktai-realtime.service /etc/systemd/system/
+#   cp /var/www/amarktai/platform/deploy/amarktai-realtime.service /etc/systemd/system/
 #   systemctl daemon-reload
 #   systemctl enable amarktai-realtime
 #   systemctl start amarktai-realtime
@@ -23,9 +23,9 @@ Type=simple
 User=www-data
 Group=www-data
 
-WorkingDirectory=/var/www/amarktai/repo/services/realtime
+WorkingDirectory=/var/www/amarktai/platform/services/realtime
 
-ExecStart=/usr/bin/node /var/www/amarktai/repo/services/realtime/server.js
+ExecStart=/usr/bin/node /var/www/amarktai/platform/services/realtime/server.js
 
 KillMode=mixed
 KillSignal=SIGTERM
@@ -37,7 +37,7 @@ StartLimitIntervalSec=60
 StartLimitBurst=5
 
 # Environment variables — loaded from main repo .env plus any realtime-specific vars
-EnvironmentFile=-/var/www/amarktai/repo/.env
+EnvironmentFile=-/var/www/amarktai/platform/.env
 
 Environment=NODE_ENV=production
 Environment=PORT=8765
@@ -45,7 +45,7 @@ Environment=PORT=8765
 # Filesystem hardening
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/tmp
+ReadWritePaths=/var/www/amarktai/storage /var/www/amarktai/logs /tmp
 PrivateTmp=true
 NoNewPrivileges=true
 

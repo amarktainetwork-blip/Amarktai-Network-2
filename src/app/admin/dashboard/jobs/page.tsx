@@ -73,7 +73,7 @@ function formatTime(iso?: string): string {
 function sanitizeError(error?: string | null): string | null {
   if (!error) return null
   return error
-    .replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, '[redacted]')
+    .replace(/(?:mysql|mariadb):\/\/[^\s"']+/gi, '[redacted]')
     .replace(/\b(?:password|secret|token|api[-_]?key)=\S+/gi, '[redacted]')
     .slice(0, 200)
 }

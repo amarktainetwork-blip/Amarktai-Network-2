@@ -45,9 +45,8 @@ const PLACEHOLDER_DB_HOSTS = [
 /**
  * Placeholder usernames that indicate a default/example DATABASE_URL.
  *
- * Note: 'postgres' is NOT included here because it is the standard
- * superuser name in PostgreSQL and is commonly used in real deployments.
- * The user+password combo check below still catches 'postgres'+'password'.
+ * MariaDB deployments should use a dedicated application user. Generic
+ * administrative usernames remain placeholders in checked-in examples.
  */
 const PLACEHOLDER_DB_USERS = [
   'user',
@@ -78,8 +77,8 @@ const PLACEHOLDER_DB_PASSWORDS = [
  *    (localhost and 127.0.0.1 are NOT on this list — they are valid for VPS deployments)
  * 3. BOTH user AND password match known placeholder lists → placeholder
  *
- * A real local PostgreSQL URL like:
- *   postgresql://amarktai_user:RealPass@localhost:5432/amarktai_network
+ * A real local MariaDB URL like:
+ *   mysql://amarktai_app:RealPass@localhost:3306/amarktai
  * is accepted as valid.
  */
 export function isDatabaseUrlPlaceholder(url: string): boolean {
@@ -92,6 +91,8 @@ export function isDatabaseUrlPlaceholder(url: string): boolean {
     // Unparsable URL is always invalid
     return true;
   }
+
+  if (parsed.protocol !== 'mysql:') return true;
 
   const host     = parsed.hostname.toLowerCase();
   const user     = parsed.username.toLowerCase();
@@ -149,7 +150,7 @@ export function validateConfig(): ConfigValidationResult {
       severity: 'error',
       message:
         'DATABASE_URL appears to be a placeholder value. ' +
-        'Set a real PostgreSQL connection string before enabling DB-backed features.',
+        'Set a real MariaDB connection string before enabling DB-backed features.',
     });
   }
 
@@ -208,7 +209,7 @@ export async function validateConfigWithDb(): Promise<ConfigValidationResult> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     // Sanitise: remove connection string details from error messages
-    const safe = msg.replace(/postgresql:\/\/[^\s]+/gi, '[redacted]');
+    const safe = msg.replace(/(?:mysql|mariadb):\/\/[^\s]+/gi, '[redacted]');
     return {
       ...base,
       valid: false,

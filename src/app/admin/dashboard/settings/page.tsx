@@ -31,6 +31,11 @@ type StorageSetup = {
   driver: string
 }
 
+type RoutingPolicy = {
+  studio: 'cheap' | 'balanced' | 'premium' | 'auto'
+  connectedApps: 'cheap' | 'balanced' | 'premium' | 'auto'
+}
+
 const PROVIDER_DOCS: Record<string, { url: string; hint: string }> = {
   genx: { url: 'https://query.genx.sh', hint: 'Text, image, video, audio, music, avatar, TTS, and STT' },
   huggingface: { url: 'https://huggingface.co/settings/tokens', hint: 'Text, image, audio, STT, embeddings, and specialist models' },
@@ -46,18 +51,25 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [loadError, setLoadError] = useState('')
+  const [routingPolicy, setRoutingPolicy] = useState<RoutingPolicy>({
+    studio: 'auto',
+    connectedApps: 'auto',
+  })
+  const [routingMessage, setRoutingMessage] = useState('')
 
   const load = useCallback(async () => {
     setRefreshing(true)
     setLoadError('')
     try {
-      const [settingsResponse, readinessResponse] = await Promise.all([
+      const [settingsResponse, readinessResponse, routingResponse] = await Promise.all([
         fetch('/api/admin/settings/status', { cache: 'no-store' }),
         fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' }),
+        fetch('/api/admin/settings/routing-policy', { cache: 'no-store' }),
       ])
-      const [settingsData, readinessData] = await Promise.all([
+      const [settingsData, readinessData, routingData] = await Promise.all([
         settingsResponse.json().catch(() => null),
         readinessResponse.json().catch(() => null),
+        routingResponse.json().catch(() => null),
       ])
       if (!settingsResponse.ok || !settingsData?.truth) {
         throw new Error('Provider status is unavailable.')
@@ -72,6 +84,9 @@ export default function SettingsPage() {
           ? readinessData?.artifacts?.storage ?? null
           : null,
       )
+      if (routingResponse.ok && routingData?.routingPolicy) {
+        setRoutingPolicy(routingData.routingPolicy)
+      }
     } catch {
       setTruth(null)
       setStorage(null)
@@ -86,6 +101,17 @@ export default function SettingsPage() {
 
   const providers = truth?.providers ?? []
   const connectedProviders = providers.filter((provider) => provider.connected).length
+
+  async function saveRoutingPolicy() {
+    setRoutingMessage('')
+    const response = await fetch('/api/admin/settings/routing-policy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(routingPolicy),
+    })
+    const data = await response.json().catch(() => ({}))
+    setRoutingMessage(response.ok ? 'Routing defaults saved.' : data.error ?? 'Routing defaults could not be saved.')
+  }
 
   return (
     <div className="space-y-8">
@@ -143,6 +169,41 @@ export default function SettingsPage() {
           <p>{loadError}</p>
         </div>
       )}
+
+      <section>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
+          <Settings2 className="h-4 w-4" />
+          Capability Routing
+        </h2>
+        <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5">
+          <p className="text-sm text-slate-300">
+            Choose the cost and quality policy. AmarktAI still selects providers and models by capability and readiness.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <RoutingSelect
+              label="Studio default"
+              value={routingPolicy.studio}
+              onChange={(studio) => setRoutingPolicy((current) => ({ ...current, studio }))}
+            />
+            <RoutingSelect
+              label="Connected app default"
+              value={routingPolicy.connectedApps}
+              onChange={(connectedApps) => setRoutingPolicy((current) => ({ ...current, connectedApps }))}
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void saveRoutingPolicy()}
+              className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-xs font-black text-slate-950 transition hover:bg-teal-400"
+            >
+              <Save className="h-4 w-4" />
+              Save routing defaults
+            </button>
+            {routingMessage && <p className="text-xs font-semibold text-teal-200">{routingMessage}</p>}
+          </div>
+        </div>
+      </section>
 
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
@@ -239,6 +300,34 @@ export default function SettingsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function RoutingSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: RoutingPolicy['studio']
+  onChange: (value: RoutingPolicy['studio']) => void
+}) {
+  return (
+    <label>
+      <span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value as RoutingPolicy['studio'])}
+        className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none"
+      >
+        <option value="auto">Auto / mixed</option>
+        <option value="cheap">Cheap</option>
+        <option value="balanced">Balanced</option>
+        <option value="premium">Premium</option>
+      </select>
+    </label>
   )
 }
 

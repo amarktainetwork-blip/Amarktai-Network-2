@@ -97,6 +97,7 @@ function toLiveCapability(capability: CapabilityRouterCapability): AiCapability 
     adult_image: 'adult_image',
     adult_video: 'adult_video',
     adult_voice: 'adult_voice',
+    avatar_video: 'avatar_video',
     suggestive_image: 'image_generation',
     suggestive_video: 'video_generation',
     repo_edit: 'coding',
@@ -116,6 +117,7 @@ function isMediaCapability(capability: CapabilityRouterCapability): boolean {
     capability === 'tts' ||
     capability === 'stt' ||
     capability === 'voice_response' ||
-    capability === 'adult_voice'
+    capability === 'adult_voice' ||
+    capability === 'avatar_video'
   )
 }

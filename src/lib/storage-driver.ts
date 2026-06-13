@@ -4,7 +4,7 @@
  *
  * Production policy:
  *   STORAGE_DRIVER=local_vps
- *   STORAGE_ROOT=/var/www/amarktai/storage
+ *   AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage
  *
  * Required persistent directories:
  *   artifacts, uploads, repos, workspaces, logs

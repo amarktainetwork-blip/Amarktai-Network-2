@@ -31,7 +31,7 @@
 
 set -euo pipefail
 
-APP_DIR="/var/www/amarktai/repo"
+APP_DIR="/var/www/amarktai/platform"
 SERVICE_NAME="amarktai"
 NODE_BIN="/usr/bin/node"
 NPM_BIN="/usr/bin/npm"

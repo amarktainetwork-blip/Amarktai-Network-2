@@ -20,51 +20,51 @@ describe('isDatabaseUrlPlaceholder', () => {
   })
 
   it('returns true for the .env.example default URL', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://user:password@host:5432/amarktai_network')).toBe(true)
+    expect(isDatabaseUrlPlaceholder('mysql://USER:PASSWORD@127.0.0.1:3306/amarktai')).toBe(true)
   })
 
   it('returns false when host is "localhost" with real credentials (VPS deployment)', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://myuser:mypass@localhost:5432/mydb')).toBe(false)
+    expect(isDatabaseUrlPlaceholder('mysql://myuser:mypass@localhost:3306/mydb')).toBe(false)
   })
 
   it('returns false when host is "127.0.0.1" with real credentials (VPS deployment)', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://myuser:mypass@127.0.0.1:5432/mydb')).toBe(false)
+    expect(isDatabaseUrlPlaceholder('mysql://myuser:mypass@127.0.0.1:3306/mydb')).toBe(false)
   })
 
   it('returns true when user is "user" and password is "password"', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://user:password@real-db-host.com:5432/mydb')).toBe(true)
+    expect(isDatabaseUrlPlaceholder('mysql://user:password@real-db-host.com:3306/mydb')).toBe(true)
   })
 
   it('returns false for a real production-style URL', () => {
     expect(
       isDatabaseUrlPlaceholder(
-        'postgresql://appuser:Str0ngP@ssw0rd!@prod-db.us-east-1.rds.amazonaws.com:5432/amarktai',
+        'mysql://appuser:Str0ngP%40ssw0rd!@prod-db.example.com:3306/amarktai',
       ),
     ).toBe(false)
   })
 
-  it('returns false for a Neon-style URL', () => {
+  it('rejects non-MariaDB database URLs', () => {
     expect(
       isDatabaseUrlPlaceholder(
         'postgresql://jane:securePass@ep-cool-dream-123456.us-east-2.aws.neon.tech/neondb?sslmode=require',
       ),
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('returns false for the real VPS production URL (amarktai_user@localhost)', () => {
     expect(
       isDatabaseUrlPlaceholder(
-        'postgresql://amarktai_user:RealSecurePass@localhost:5432/amarktai_network',
+        'mysql://amarktai_user:RealSecurePass@localhost:3306/amarktai',
       ),
     ).toBe(false)
   })
 
   it('returns true when host is a known placeholder like "host"', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://realuser:realpass@host:5432/mydb')).toBe(true)
+    expect(isDatabaseUrlPlaceholder('mysql://realuser:realpass@host:3306/mydb')).toBe(true)
   })
 
   it('returns true for localhost with placeholder user+password combo', () => {
-    expect(isDatabaseUrlPlaceholder('postgresql://user:password@localhost:5432/mydb')).toBe(true)
+    expect(isDatabaseUrlPlaceholder('mysql://user:password@localhost:3306/mydb')).toBe(true)
   })
 
   it('returns true for unparsable URL', () => {
@@ -120,7 +120,7 @@ describe('validateConfig', () => {
   })
 
   it('reports error when DATABASE_URL is a placeholder', () => {
-    process.env.DATABASE_URL = 'postgresql://user:password@host:5432/mydb'
+    process.env.DATABASE_URL = 'mysql://user:password@host:3306/mydb'
     process.env.SESSION_SECRET = 'valid-long-enough-secret-key-here-yes-sir!'
     const result = validateConfig()
     expect(result.valid).toBe(false)
@@ -128,7 +128,7 @@ describe('validateConfig', () => {
   })
 
   it('reports error when SESSION_SECRET is missing', () => {
-    process.env.DATABASE_URL = 'postgresql://admin:realpass@real-host.example.com:5432/db'
+    process.env.DATABASE_URL = 'mysql://appuser:realpass@real-host.example.com:3306/db'
     delete process.env.SESSION_SECRET
     const result = validateConfig()
     expect(result.valid).toBe(false)
@@ -137,7 +137,7 @@ describe('validateConfig', () => {
 
   it('returns valid when both DATABASE_URL and SESSION_SECRET look real', () => {
     process.env.DATABASE_URL =
-      'postgresql://appuser:Str0ngP@ssw0rd!@prod.db.example.com:5432/amarktai'
+      'mysql://appuser:Str0ngP%40ssw0rd!@prod.db.example.com:3306/amarktai'
     process.env.SESSION_SECRET = 'totally-valid-session-secret-of-fifty-chars-long!!'
     const result = validateConfig()
     expect(result.valid).toBe(true)

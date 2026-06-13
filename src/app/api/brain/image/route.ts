@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     providerOverride?: string
     appSlug?: string
     executionId?: string
+    qualityTier?: 'cheap' | 'balanced' | 'premium' | 'auto'
   } | null
 
   if (!body?.prompt?.trim()) {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     action: 'generate',
     selectedProvider: body.providerOverride,
     selectedModel: body.modelOverride ?? body.model,
+    costMode: body.qualityTier === 'auto' ? 'balanced' : body.qualityTier,
   }, body.executionId)
   startExecution(execution.executionId)
   const result = await executeCapability({
@@ -34,6 +36,7 @@ export async function POST(request: NextRequest) {
     capability: 'image_generation',
     providerOverride: body.providerOverride,
     modelOverride: body.modelOverride ?? body.model,
+    qualityTier: body.qualityTier,
     appId: body.appSlug || 'amarktai-network',
     saveArtifact: true,
     metadata: { executionId: execution.executionId },

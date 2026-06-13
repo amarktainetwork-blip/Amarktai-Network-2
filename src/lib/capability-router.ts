@@ -9,12 +9,17 @@ import { crawlAppWebsite } from '@/lib/firecrawl'
 import {
   callGenXMedia,
   GENX_AUDIO_MODELS,
-  GENX_IMAGE_MODELS,
   GENX_TTS_MODELS,
   GENX_VIDEO_MODELS,
 } from '@/lib/genx-client'
 import { getDefaultModelForProvider } from '@/lib/model-registry'
 import { isApprovedDirectProvider } from '@/lib/provider-mesh'
+import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
+import { getProviderCapabilityAdapter } from '@/lib/ai-capability-adapters'
+import {
+  selectCapabilityRoutePlan,
+  type RoutingQualityTier,
+} from '@/lib/capability-routing-policy'
 
 export const CAPABILITY_ROUTER_CAPABILITIES = [
   'chat',
@@ -33,6 +38,7 @@ export const CAPABILITY_ROUTER_CAPABILITIES = [
   'adult_image',
   'adult_video',
   'adult_voice',
+  'avatar_video',
   'suggestive_image',
   'suggestive_video',
   'repo_edit',
@@ -66,6 +72,7 @@ export interface CapabilityRequest {
   saveArtifact?: boolean
   traceId?: string
   metadata?: Record<string, unknown>
+  qualityTier?: RoutingQualityTier
 }
 
 export interface CapabilityResponse {
@@ -291,117 +298,105 @@ async function executeImage(
 ): Promise<CapabilityResponse> {
   const override = requestedProvider(request)
   const modelOverride = requestedModel(request)
-  const attempts: NonNullable<CapabilityResponse['providerAttempts']> = []
-
-  if (capability !== 'adult_image' && (!override || override === 'genx')) {
-    const model = modelOverride ?? GENX_IMAGE_MODELS[0]
-    const result = await callGenXMedia({
-      model,
-      prompt: request.input,
-      type: 'image',
-      metadata: request.metadata,
-    })
-    attempts.push({
-      provider: 'genx',
-      model: result.model,
-      status: result.success ? result.status : 'failed',
-      error: result.error ?? undefined,
-    })
-    if (result.success && result.url) {
-      return persistOutput(
-        request,
-        {
-          success: true,
-          capability,
-          readiness: 'READY',
-          provider: 'genx',
-          model: result.model,
-          outputType: 'image',
-          output: result.url,
-          fallbackUsed: false,
-          providerAttempts: attempts,
-        },
-        result.url,
-      )
-    }
-    if (result.success && result.jobId) {
-      return {
-        success: true,
-        capability,
-        readiness: 'READY',
-        provider: 'genx',
-        model: result.model,
-        outputType: 'image',
-        output: null,
-        jobId: result.jobId,
-        status: result.status,
-        fallbackUsed: false,
-        providerAttempts: attempts,
-      }
-    }
-    if (override === 'genx') {
-      return failure(
-        capability,
-        'NEEDS_CONFIGURATION',
-        result.error ?? 'GenX image generation is not configured.',
-        'missing_key',
-        'genx',
-        model,
-      )
-    }
+  const definition = getCapabilityDefinition(
+    capability === 'image_edit' ? 'image_text_to_image' : 'text_to_image',
+  )
+  if (!definition) {
+    return failure(capability, 'UNAVAILABLE', 'Canonical image capability is missing.', 'model_not_supported')
   }
-
-  for (const provider of ['together', 'huggingface'] as const) {
-    if (override && override !== provider) continue
-    const model =
-      modelOverride ??
-      (provider === 'together'
-        ? 'black-forest-labs/FLUX.1-schnell-Free'
-        : 'stabilityai/stable-diffusion-xl-base-1.0')
-    if (!(await getVaultApiKey(provider))) {
-      attempts.push({
-        provider,
-        model,
-        status: 'needs_key',
-        error: 'Provider credential is not configured.',
-      })
-      continue
-    }
-    const result = await callProvider(provider, model, request.input)
-    attempts.push({
-      provider,
-      model,
-      status: result.ok ? 'ready' : 'failed',
-      error: result.error ?? undefined,
-    })
-    if (result.ok && result.output) {
-      return persistOutput(
-        request,
-        {
-          success: true,
-          capability,
-          readiness: 'READY',
-          provider,
-          model,
-          outputType: 'image',
-          output: result.output,
-          fallbackUsed: !override && provider !== 'together',
-          providerAttempts: attempts,
-        },
-        result.output,
-      )
-    }
+  const plan = await selectCapabilityRoutePlan({
+    capability: definition,
+    qualityTier: request.qualityTier ?? String(request.metadata?.qualityTier ?? 'auto'),
+    requestedProvider: override as never,
+    requestedModel: modelOverride,
+    allowedProviderIds: capability === 'adult_image' ? ['together', 'huggingface'] : undefined,
+  })
+  if (!plan.selected) {
+    return failure(
+      capability,
+      plan.setupRequired ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+      plan.reason,
+      plan.setupRequired ? 'missing_key' : 'model_not_supported',
+      override ?? null,
+      modelOverride ?? null,
+    )
   }
-
-  return {
-    ...failure(
+  const adapter = getProviderCapabilityAdapter(plan.selected.route.provider)
+  if (!adapter) {
+    return failure(
       capability,
       'NEEDS_CONFIGURATION',
-      'No approved image provider is currently ready.',
-      'missing_key',
-    ),
-    providerAttempts: attempts,
+      `Adapter ${plan.selected.route.adapter} is not registered.`,
+      'model_not_supported',
+      plan.selected.route.provider,
+      plan.selected.model,
+    )
   }
+  const result = await adapter.execute({
+    capability: definition,
+    route: plan.selected.route,
+    prompt: request.input,
+    inputs: request.metadata,
+    references: request.files?.map((url) => ({ kind: 'image' as const, url })) ?? [],
+    context: { appId: request.appId, workspaceId: request.workspaceId },
+    model: plan.selected.model,
+  })
+  if (result.status === 'processing' && result.providerJobId) {
+    return {
+      success: true,
+      capability,
+      readiness: 'READY',
+      provider: result.provider,
+      model: result.model,
+      outputType: 'image',
+      output: null,
+      jobId: result.providerJobId,
+      status: 'processing',
+      fallbackUsed: false,
+    }
+  }
+  if (result.status !== 'completed') {
+    return failure(
+      capability,
+      result.status === 'needs_configuration' ? 'NEEDS_CONFIGURATION' : result.status === 'blocked' ? 'BLOCKED' : 'UNAVAILABLE',
+      result.error ?? 'Image provider returned no generated output.',
+      result.status === 'needs_configuration' ? 'missing_key' : result.status === 'blocked' ? 'guardrail_block' : 'endpoint_error',
+      result.provider,
+      result.model,
+    )
+  }
+  const output = result.mediaUrl
+    ?? (result.output == null ? null : typeof result.output === 'string' ? result.output : JSON.stringify(result.output))
+  let response: CapabilityResponse = {
+    success: true,
+    capability,
+    readiness: 'READY',
+    provider: result.provider,
+    model: result.model,
+    outputType: 'image',
+    output,
+    fallbackUsed: false,
+  }
+  if (request.saveArtifact) {
+    const artifact = await createArtifact({
+      appSlug: request.appId ?? request.workspaceId ?? '__system__',
+      appId: request.appId,
+      workspaceId: request.workspaceId,
+      executionId: typeof request.metadata?.executionId === 'string' ? request.metadata.executionId : undefined,
+      type: 'image',
+      subType: capability,
+      capability,
+      provider: result.provider,
+      model: result.model,
+      mimeType: result.contentType ?? undefined,
+      content: result.bytes ?? (output && !output.startsWith('http') ? Buffer.from(output, 'utf8') : undefined),
+      contentUrl: result.mediaUrl ?? undefined,
+      allowRemoteReference: Boolean(result.mediaUrl),
+      metadata: request.metadata,
+    })
+    response = { ...response, artifactId: artifact.id, output: result.mediaUrl ?? artifact.storageUrl }
+  }
+  return response
 }
 
 async function executeMedia(
@@ -708,7 +703,8 @@ export async function executeCapability(
     capability === 'music_generation' ||
     capability === 'tts' ||
     capability === 'voice_response' ||
-    capability === 'adult_voice'
+    capability === 'adult_voice' ||
+    capability === 'avatar_video'
   ) {
     return executeMedia(request, capability)
   }

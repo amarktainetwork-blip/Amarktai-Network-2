@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import type { ProviderResultLogEntry } from '@/lib/provider-result-log'
+import { resolveStoragePath } from '@/lib/storage-root'
 
-const LOG_ROOT = process.env.PROVIDER_RESULT_LOG_ROOT || '/var/www/amarktai/repo/storage/provider-results'
+const LOG_ROOT = process.env.PROVIDER_RESULT_LOG_ROOT || resolveStoragePath('logs/provider-results')
 
 export interface ProviderScoreSummary {
   appSlug: string

@@ -6,6 +6,9 @@ import {
 } from '@/lib/execution'
 
 export type MediaStudioCapability =
+  | 'chat'
+  | 'code'
+  | 'file_analysis'
   | 'image_generation'
   | 'image_edit'
   | 'suggestive_image'
@@ -17,6 +20,7 @@ export type MediaStudioCapability =
   | 'adult_image'
   | 'adult_video'
   | 'adult_voice'
+  | 'avatar_video'
 
 export interface MediaStudioRunResponse {
   executionId: string

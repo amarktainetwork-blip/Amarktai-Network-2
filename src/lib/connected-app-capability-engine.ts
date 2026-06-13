@@ -17,6 +17,12 @@ import { loadAppSafetyConfigFromDB } from '@/lib/content-filter'
 import { prisma } from '@/lib/prisma'
 import { verifyWebhookSignature } from '@/lib/webhook-verifier'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import {
+  resolveRoutingQuality,
+  selectCapabilityRoutePlan,
+  type StoredRoutingQualityTier,
+  type RoutingQualityTier,
+} from '@/lib/capability-routing-policy'
 
 export type ConnectedAppCapabilityJobStatus =
   | 'processing'
@@ -39,6 +45,9 @@ export interface ConnectedAppCapabilityRequest {
   provider?: ApprovedDirectProviderId
   model?: string
   endpointUrl?: string
+  qualityTier?: RoutingQualityTier
+  callbackUrl?: string
+  referenceMetadata?: Record<string, unknown>
 }
 
 export interface ConnectedAppCapabilityJob {
@@ -50,6 +59,7 @@ export interface ConnectedAppCapabilityJob {
   provider: ApprovedDirectProviderId
   model: string
   adapter: string
+  qualityTier: StoredRoutingQualityTier
   status: ConnectedAppCapabilityJobStatus
   providerJobId: string | null
   artifactId: string | null
@@ -143,6 +153,9 @@ export function validateCapabilityRequest(
       return 'Reference URLs must be public HTTPS URLs'
     }
   }
+  if (request.callbackUrl && !isPublicHttpsUrl(request.callbackUrl)) {
+    return 'Callback URLs must be public HTTPS URLs'
+  }
   if (
     capability.id === 'voice_clone_or_voice_design'
     && request.inputs?.consentConfirmed !== true
@@ -179,25 +192,9 @@ export function selectCapabilityRoute(
   capability: AiCapabilityDefinition,
   requestedProvider?: ApprovedDirectProviderId,
 ): AiCapabilityProviderRoute | null {
-  if (requestedProvider) {
-    return capability.providerRoutes.find(
-      (route) => route.provider === requestedProvider && route.executable,
-    ) ?? null
-  }
-  const preferred = preferredProviderFor(capability)
-  return capability.providerRoutes.find((route) => route.provider === preferred && route.executable)
-    ?? capability.providerRoutes.find((route) => route.executable)
-    ?? null
-}
-
-function preferredProviderFor(capability: AiCapabilityDefinition): ApprovedDirectProviderId {
-  if (capability.id === 'automatic_speech_recognition' || capability.id === 'text_to_speech') return 'groq'
-  if (capability.group === 'video' || capability.group === 'multimodal') return 'qwen'
-  if (capability.group === 'computer_vision' || capability.group === 'tabular' || capability.group === 'experimental') {
-    return 'huggingface'
-  }
-  if (capability.group === 'music' || capability.group === 'avatar_voice') return 'genx'
-  return 'genx'
+  return capability.providerRoutes.find(
+    (route) => route.executable && (!requestedProvider || route.provider === requestedProvider),
+  ) ?? null
 }
 
 export async function executeConnectedAppCapability(input: {
@@ -205,16 +202,27 @@ export async function executeConnectedAppCapability(input: {
   capability: AiCapabilityDefinition
   request: ConnectedAppCapabilityRequest
 }): Promise<ConnectedAppCapabilityJob> {
-  const route = selectCapabilityRoute(input.capability, input.request.provider)
-  if (!route) {
+  const qualityTier = await resolveRoutingQuality({
+    requested: input.request.qualityTier,
+    appSlug: input.app.slug,
+    surface: 'connected_apps',
+  })
+  const routePlan = await selectCapabilityRoutePlan({
+    capability: input.capability,
+    requestedProvider: input.request.provider,
+    requestedModel: input.request.model,
+    qualityTier,
+  })
+  const selected = routePlan.selected
+  const route = selected?.route
+  if (!route || !selected) {
     return createTerminalJob(input, {
       status: 'needs_configuration',
       provider: input.request.provider ?? input.capability.defaultProviders[0] ?? 'huggingface',
       model: input.request.model ?? '',
       adapter: '',
-      error: input.request.provider
-        ? `Provider ${input.request.provider} has no executable route for ${input.capability.id}.`
-        : `No approved provider route is configured for ${input.capability.id}.`,
+      qualityTier,
+      error: routePlan.reason,
     })
   }
   const adapter = getProviderCapabilityAdapter(route.provider)
@@ -224,12 +232,13 @@ export async function executeConnectedAppCapability(input: {
       provider: route.provider,
       model: input.request.model ?? route.modelIds[0] ?? '',
       adapter: route.adapter,
+      qualityTier,
       error: `Adapter ${route.adapter} is not registered.`,
     })
   }
 
   const context = await loadExecutionContext(input.app.slug, input.request)
-  const model = input.request.model ?? route.modelIds[0] ?? ''
+  const model = selected.model
   const now = new Date().toISOString()
   let job = appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
     LOCAL_STORE_FILES.connectedAppCapabilityJobs,
@@ -241,6 +250,7 @@ export async function executeConnectedAppCapability(input: {
       provider: route.provider,
       model,
       adapter: adapter.id,
+      qualityTier,
       status: 'processing',
       providerJobId: null,
       artifactId: null,
@@ -261,7 +271,7 @@ export async function executeConnectedAppCapability(input: {
     inputs: input.request.inputs,
     references: input.request.references ?? [],
     context,
-    model: input.request.model,
+    model,
     endpointUrl: input.request.endpointUrl,
   }
   let result: CapabilityAdapterResult
@@ -288,8 +298,11 @@ export async function executeConnectedAppCapability(input: {
       jobId: job.id,
       capability: job.capability,
       provider: job.provider,
+      qualityTier: job.qualityTier,
       status: job.status,
       artifactId: job.artifactId,
+      callbackConfigured: Boolean(job.request.callbackUrl),
+      referenceMetadata: job.request.referenceMetadata ?? null,
     },
   })
   return job
@@ -465,6 +478,7 @@ function createTerminalJob(
     provider: ApprovedDirectProviderId
     model: string
     adapter: string
+    qualityTier: StoredRoutingQualityTier
     error: string
   },
 ): ConnectedAppCapabilityJob {
@@ -479,6 +493,7 @@ function createTerminalJob(
       provider: terminal.provider,
       model: terminal.model,
       adapter: terminal.adapter,
+      qualityTier: terminal.qualityTier,
       status: terminal.status,
       providerJobId: null,
       artifactId: null,
