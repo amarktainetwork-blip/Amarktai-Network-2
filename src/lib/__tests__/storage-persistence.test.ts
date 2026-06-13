@@ -57,10 +57,34 @@ describe('VPS storage persistence policy', () => {
     const health = await verifyStorage()
 
     expect(health.configured).toBe(true)
+    expect(health.ready).toBe(true)
+    expect(health.root).toBe(process.env.AMARKTAI_STORAGE_ROOT)
     expect(health.writable).toBe(true)
     expect(health.readable).toBe(true)
+    expect(health.deletable).toBe(true)
+    expect(health.checkedAt).toBeTruthy()
     expect(health.directories.map((dir) => dir.name)).toEqual(['artifacts', 'uploads', 'repos', 'workspaces', 'logs'])
-    expect(health.directories.every((dir) => dir.exists && dir.writable && dir.readable)).toBe(true)
+    expect(health.directories.every((dir) => dir.exists && dir.writable && dir.readable && dir.deletable)).toBe(true)
+  })
+
+  it('returns a structured not-ready result for an invalid storage root', async () => {
+    const invalidRoot = path.join(await makeTempStorageRoot(), 'not-a-directory')
+    await fs.writeFile(invalidRoot, 'file')
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = invalidRoot
+    vi.resetModules()
+
+    const { verifyStorage } = await import('@/lib/storage-driver')
+    const health = await verifyStorage()
+
+    expect(health).toMatchObject({
+      ready: false,
+      root: invalidRoot,
+      writable: false,
+      readable: false,
+      deletable: false,
+    })
+    expect(health.checkedAt).toBeTruthy()
   })
 
   it('writes, reads, and deletes artifact files through local_vps storage', async () => {

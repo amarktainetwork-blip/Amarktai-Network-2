@@ -138,18 +138,14 @@ describe('Phase 4 Media Studio product coverage', () => {
     expect(route).not.toContain('persistCanonicalMediaResult')
   })
 
-  it('dispatches every required JSON media flow through existing producer routes', () => {
+  it('dispatches every required JSON media flow through the canonical orchestrator', () => {
     const route = read('app/api/admin/studio/execute/route.ts')
-    for (const producer of [
-      'imagePost',
-      'imageEditPost',
-      'suggestiveImagePost',
-      'videoPlanPost',
-      'videoPost',
-      'musicPost',
-      'ttsPost',
-      'adultImagePost',
-    ]) expect(route).toContain(producer)
+    const contracts = read('lib/capability-contracts.ts')
+    expect(route).toContain('executeCapabilityOrchestration')
+    expect(route).toContain('videoPlanPost')
+    expect(route).toContain('providerAttempts')
+    expect(route).not.toContain('imagePost')
+    expect(route).not.toContain('musicPost')
     for (const capability of [
       'image_generation',
       'image_edit',
@@ -161,7 +157,7 @@ describe('Phase 4 Media Studio product coverage', () => {
       'adult_image',
       'adult_video',
       'adult_voice',
-    ]) expect(route).toContain(capability)
+    ]) expect(contracts).toContain(`'${capability}'`)
   })
 
   it('creates and links canonical STT transcript executions and artifacts', () => {

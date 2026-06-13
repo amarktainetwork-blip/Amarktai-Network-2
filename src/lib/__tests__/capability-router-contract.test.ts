@@ -34,6 +34,34 @@ vi.mock('@/lib/model-registry', () => ({
 }))
 vi.mock('@/lib/provider-mesh-status', () => ({
   getMeshCredential: (provider: string) => mocks.getVaultApiKey(provider),
+  getMeshTestNotes: vi.fn().mockResolvedValue({}),
+}))
+vi.mock('@/lib/provider-registry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/provider-registry')>()
+  return {
+    ...actual,
+    getProviderReadiness: async (provider: string) => ({
+      providerId: provider,
+      state: await mocks.getVaultApiKey(provider) ? 'ready' : 'unconfigured',
+      configured: Boolean(await mocks.getVaultApiKey(provider)),
+      tested: true,
+      healthy: Boolean(await mocks.getVaultApiKey(provider)),
+      baseUrl: 'https://provider.example/v1',
+      availableModels: 1,
+      message: '',
+      checkedAt: null,
+    }),
+    validateProviderModelAsync: vi.fn().mockResolvedValue({ valid: true, reason: null }),
+  }
+})
+vi.mock('@/lib/provider-performance', () => ({
+  rankProvidersForCapability: async (_capability: string, candidates: unknown[]) => candidates,
+  recordProviderSuccess: vi.fn().mockResolvedValue(undefined),
+  recordProviderFailure: vi.fn().mockResolvedValue(undefined),
+}))
+vi.mock('@/lib/universal-provider-call', () => ({
+  callUniversalProvider: async (request: { providerKey: string; model: string; message: string; systemPrompt?: string }) =>
+    mocks.callProvider(request.providerKey, request.model, request.message, request.systemPrompt),
 }))
 
 import {
@@ -161,7 +189,7 @@ describe('capability router contract', () => {
       readiness: 'BLOCKED',
       error_category: 'model_not_supported',
     })
-    expect(result.error).toContain('/api/brain/stt')
+    expect(result.error).toContain('audio input reference')
   })
 
   it('gates adult capabilities with request and app policy', async () => {
@@ -244,6 +272,7 @@ describe('capability router contract', () => {
   })
 
   it('does not create an artifact before an asynchronous job has output', async () => {
+    mocks.getVaultApiKey.mockResolvedValue('configured')
     mocks.callGenXMedia.mockResolvedValue({
       success: true,
       url: null,
@@ -255,6 +284,7 @@ describe('capability router contract', () => {
     const result = await executeCapability({
       input: 'create video',
       capability: 'video_generation',
+      providerOverride: 'genx',
       saveArtifact: true,
     })
     expect(result).toMatchObject({

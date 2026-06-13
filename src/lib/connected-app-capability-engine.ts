@@ -4,6 +4,7 @@ import {
   type AiCapabilityProviderRoute,
 } from '@/lib/ai-capability-taxonomy'
 import {
+  classifyProviderError,
   getProviderCapabilityAdapter,
   type CapabilityAdapterInput,
   type CapabilityAdapterResult,
@@ -23,6 +24,10 @@ import {
   type StoredRoutingQualityTier,
   type RoutingQualityTier,
 } from '@/lib/capability-routing-policy'
+import {
+  recordProviderFailure,
+  recordProviderSuccess,
+} from '@/lib/provider-performance'
 
 export type ConnectedAppCapabilityJobStatus =
   | 'processing'
@@ -66,6 +71,14 @@ export interface ConnectedAppCapabilityJob {
   artifactUrl: string | null
   result: unknown | null
   error: string | null
+  providerAttempts: Array<{
+    provider: ApprovedDirectProviderId
+    model: string
+    status: string
+    latencyMs: number
+    errorCategory: string | null
+    error: string | null
+  }>
   request: ConnectedAppCapabilityRequest
   createdAt: string
   updatedAt: string
@@ -257,40 +270,97 @@ export async function executeConnectedAppCapability(input: {
       artifactUrl: null,
       result: null,
       error: null,
+      providerAttempts: [],
       request: sanitizeRequest(input.request),
       createdAt: now,
       updatedAt: now,
     },
   ) as ConnectedAppCapabilityJob
 
-  const adapterInput: CapabilityAdapterInput = {
-    capability: input.capability,
-    route,
-    prompt: input.request.prompt?.trim() ?? '',
-    text: input.request.text,
-    inputs: input.request.inputs,
-    references: input.request.references ?? [],
-    context,
-    model,
-    endpointUrl: input.request.endpointUrl,
-  }
-  let result: CapabilityAdapterResult
-  try {
-    result = await adapter.execute(adapterInput)
-  } catch (error) {
-    result = {
-      status: 'failed',
-      provider: route.provider,
-      model,
-      output: null,
-      mediaUrl: null,
-      bytes: null,
-      contentType: null,
-      providerJobId: null,
-      error: error instanceof Error ? error.message : 'Provider adapter failed.',
+  const candidates = [selected, ...routePlan.fallback]
+  let finalResult: CapabilityAdapterResult | null = null
+  for (const candidate of candidates) {
+    const candidateAdapter = getProviderCapabilityAdapter(candidate.route.provider)
+    if (!candidateAdapter || candidateAdapter.id !== candidate.route.adapter) continue
+    const adapterInput: CapabilityAdapterInput = {
+      capability: input.capability,
+      route: candidate.route,
+      prompt: input.request.prompt?.trim() ?? '',
+      text: input.request.text,
+      inputs: input.request.inputs,
+      references: input.request.references ?? [],
+      context,
+      model: candidate.model,
+      endpointUrl: input.request.endpointUrl,
     }
+    let result: CapabilityAdapterResult
+    const startedAt = Date.now()
+    try {
+      result = await candidateAdapter.execute(adapterInput)
+    } catch (error) {
+      const classified = classifyProviderError({
+        error,
+        provider: candidate.route.provider,
+      })
+      result = {
+        status: 'failed',
+        provider: candidate.route.provider,
+        model: candidate.model,
+        output: null,
+        mediaUrl: null,
+        bytes: null,
+        contentType: null,
+        providerJobId: null,
+        latencyMs: Date.now() - startedAt,
+        rawStatus: null,
+        error: classified.message,
+        errorCategory: classified.category,
+        retryable: classified.retryable,
+        diagnostics: null,
+      }
+    }
+    job.providerAttempts.push({
+      provider: result.provider,
+      model: result.model,
+      status: result.status,
+      latencyMs: result.latencyMs,
+      errorCategory: result.errorCategory,
+      error: result.error,
+    })
+    job = updateCapabilityJob(job.id, {
+      providerAttempts: job.providerAttempts,
+      provider: result.provider,
+      model: result.model,
+      adapter: candidateAdapter.id,
+    }) ?? job
+    if (result.status === 'completed' || result.status === 'processing') {
+      await recordProviderSuccess({
+        providerId: result.provider,
+        model: result.model,
+        capability: input.capability.id,
+        latencyMs: result.latencyMs,
+      })
+      finalResult = result
+      break
+    }
+    await recordProviderFailure({
+      providerId: result.provider,
+      model: result.model,
+      capability: input.capability.id,
+      latencyMs: result.latencyMs,
+      errorCategory: result.errorCategory ?? 'unknown',
+    })
+    finalResult = result
+    if (result.status === 'blocked' || result.retryable === false) break
   }
-  job = await applyAdapterResult(job, input.capability, result)
+  if (finalResult) {
+    job = await applyAdapterResult(job, input.capability, finalResult)
+  } else {
+    job = updateCapabilityJob(job.id, {
+      status: 'failed',
+      error: 'No registered provider adapter could execute this capability.',
+    }) ?? job
+  }
   recordAcceptedEvent({
     appId: input.app.id,
     eventType: 'capability.execution',
@@ -301,6 +371,7 @@ export async function executeConnectedAppCapability(input: {
       qualityTier: job.qualityTier,
       status: job.status,
       artifactId: job.artifactId,
+      fallbackUsed: job.providerAttempts.length > 1,
       callbackConfigured: Boolean(job.request.callbackUrl),
       referenceMetadata: job.request.referenceMetadata ?? null,
     },
@@ -500,6 +571,7 @@ function createTerminalJob(
       artifactUrl: null,
       result: null,
       error: terminal.error,
+      providerAttempts: [],
       request: sanitizeRequest(input.request),
       createdAt: now,
       updatedAt: now,

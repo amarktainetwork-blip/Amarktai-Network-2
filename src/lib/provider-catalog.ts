@@ -1,4 +1,5 @@
-import { AI_PROVIDER_MESH, type ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import { PROVIDER_REGISTRY } from '@/lib/provider-registry'
 
 export interface CanonicalProviderEntry {
   readonly key: ApprovedDirectProviderId
@@ -19,12 +20,12 @@ const CAPABILITY_FAMILIES: Record<ApprovedDirectProviderId, readonly string[]> =
   together: ['chat', 'code', 'image_generation'],
 }
 
-export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = AI_PROVIDER_MESH.map((provider, sortOrder) => ({
-  key: provider.id as ApprovedDirectProviderId,
+export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = PROVIDER_REGISTRY.map((provider, sortOrder) => ({
+  key: provider.id,
   displayName: provider.displayName,
   defaultBaseUrl: provider.baseUrl,
   healthCheckSupported: true,
-  supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.id as ApprovedDirectProviderId],
+  supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.id],
   sortOrder,
   launchRequired: provider.id === 'genx',
 }))

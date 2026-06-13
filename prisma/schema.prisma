@@ -208,6 +208,26 @@ model AiProvider {
   @@map("ai_providers")
 }
 
+model ProviderPerformance {
+  id                String    @id @default(cuid())
+  providerId        String    @map("provider_id")
+  model             String
+  capability        String
+  successCount      Int       @default(0) @map("success_count")
+  failureCount      Int       @default(0) @map("failure_count")
+  avgLatency        Int       @default(0) @map("avg_latency")
+  lastSuccessAt     DateTime? @map("last_success_at")
+  lastFailureAt     DateTime? @map("last_failure_at")
+  lastErrorCategory String?   @map("last_error_category")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@unique([providerId, model, capability])
+  @@index([capability])
+  @@index([providerId])
+  @@map("provider_performance")
+}
+
 model BrainEvent {
   id                 Int      @id @default(autoincrement())
   traceId            String   @map("trace_id")

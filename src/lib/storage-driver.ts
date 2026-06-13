@@ -47,9 +47,20 @@ export interface StorageStatus {
 }
 
 export interface StorageHealth extends StorageStatus {
+  ready: boolean
+  root: string
   writable: boolean
   readable: boolean
-  directories: Array<{ name: string; path: string; exists: boolean; writable: boolean; readable: boolean }>
+  deletable: boolean
+  checkedAt: string
+  directories: Array<{
+    name: string
+    path: string
+    exists: boolean
+    writable: boolean
+    readable: boolean
+    deletable: boolean
+  }>
   error: string | null
 }
 
@@ -312,9 +323,20 @@ export async function verifyStorage(): Promise<StorageHealth> {
   const status = getStorageStatus()
   const directories: StorageHealth['directories'] = []
   let error: string | null = null
+  const checkedAt = new Date().toISOString()
 
   if (status.driver !== REQUIRED_STORAGE_DRIVER) {
-    return { ...status, writable: false, readable: false, directories, error: status.note }
+    return {
+      ...status,
+      ready: false,
+      root: status.basePath,
+      writable: false,
+      readable: false,
+      deletable: false,
+      checkedAt,
+      directories,
+      error: status.note,
+    }
   }
 
   try {
@@ -325,6 +347,7 @@ export async function verifyStorage(): Promise<StorageHealth> {
       let exists = false
       let writable = false
       let readable = false
+      let deletable = false
       try {
         await fs.mkdir(dirPath, { recursive: true })
         await fs.access(dirPath)
@@ -333,12 +356,14 @@ export async function verifyStorage(): Promise<StorageHealth> {
         await fs.writeFile(probePath, 'ok')
         readable = (await fs.readFile(probePath, 'utf8')) === 'ok'
         await fs.unlink(probePath)
+        deletable = true
         writable = true
       } catch {
         writable = false
         readable = false
+        deletable = false
       }
-      directories.push({ name, path: dirPath, exists, writable, readable })
+      directories.push({ name, path: dirPath, exists, writable, readable, deletable })
     }
   } catch (err) {
     error = err instanceof Error ? err.message : 'Storage verification failed'
@@ -346,11 +371,17 @@ export async function verifyStorage(): Promise<StorageHealth> {
 
   const writable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.writable)
   const readable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.readable)
+  const deletable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.deletable)
+  const ready = status.configured && writable && readable && deletable
   return {
     ...status,
-    configured: status.configured && writable && readable,
+    configured: ready,
+    ready,
+    root: status.basePath,
     writable,
     readable,
+    deletable,
+    checkedAt,
     directories,
     error,
   }

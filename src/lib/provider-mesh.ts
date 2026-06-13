@@ -115,7 +115,7 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     kind: 'provider',
     envAliases: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
     baseUrl: 'https://api.xiaomimimo.com/v1',
-    authMethod: 'Bearer token or api-key',
+    authMethod: 'api-key header',
     capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'audio', 'video', 'tts', 'stt', 'tools', 'web_search'],
     testRoute: '/api/admin/settings/test-provider',
     normalUserVisible: false,

@@ -1,5 +1,7 @@
 import { callProvider, type ProviderCallResult } from '@/lib/brain'
 import { getServiceKey } from '@/lib/service-vault'
+import { buildProviderAuthHeaders, getProviderInfo } from '@/lib/provider-registry'
+import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 
 interface OpenAICompatibleConfig {
   providerKey: string
@@ -141,13 +143,19 @@ async function openAICompatibleRequest(request: UniversalProviderRequest, stream
   const timeoutMs = request.timeoutMs ?? config.timeoutMs ?? 30_000
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), timeoutMs)
+  const baseUrl = getProviderInfo(
+    config.providerKey as ApprovedDirectProviderId,
+  )?.baseUrl ?? config.baseUrl
 
   try {
-    const res = await fetch(`${config.baseUrl}/chat/completions`, {
+    const res = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        ...buildProviderAuthHeaders(
+          config.providerKey as ApprovedDirectProviderId,
+          apiKey,
+        ),
         ...(config.extraHeaders ?? {}),
       },
       body: JSON.stringify({

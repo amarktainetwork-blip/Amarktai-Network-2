@@ -8,6 +8,8 @@ import type {
   AiCapabilityProviderRoute,
 } from '@/lib/ai-capability-taxonomy'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import { sanitizeProviderError } from '@/lib/provider-mesh'
+import { getProviderInfo } from '@/lib/provider-registry'
 
 export type CapabilityReferenceKind =
   | 'image'
@@ -54,8 +56,28 @@ export interface CapabilityAdapterResult {
   bytes: Buffer | null
   contentType: string | null
   providerJobId: string | null
+  latencyMs: number
+  rawStatus: number | null
   error: string | null
+  errorCategory: ProviderErrorCategory | null
+  retryable: boolean
+  diagnostics: Record<string, unknown> | null
 }
+
+export type ProviderErrorCategory =
+  | 'missing_key'
+  | 'invalid_key'
+  | 'model_not_supported'
+  | 'region_mismatch'
+  | 'provider_misconfigured'
+  | 'provider_busy'
+  | 'rate_limited'
+  | 'timeout'
+  | 'server_error'
+  | 'malformed_response'
+  | 'unsupported_endpoint'
+  | 'artifact_error'
+  | 'unknown'
 
 export interface ProviderCapabilityAdapter {
   id: string
@@ -89,8 +111,74 @@ function result(
     bytes: values.bytes ?? null,
     contentType: values.contentType ?? null,
     providerJobId: values.providerJobId ?? null,
-    error: values.error ?? null,
+    latencyMs: values.latencyMs ?? 0,
+    rawStatus: values.rawStatus ?? null,
+    error: values.error ? sanitizeProviderError(values.error) : null,
+    errorCategory: values.errorCategory ?? null,
+    retryable: values.retryable ?? false,
+    diagnostics: values.diagnostics ?? null,
   }
+}
+
+export function classifyProviderError(input: {
+  status?: number | null
+  error?: unknown
+  provider?: ApprovedDirectProviderId
+}): { category: ProviderErrorCategory; retryable: boolean; message: string } {
+  const status = input.status ?? null
+  const message = sanitizeProviderError(input.error)
+  const normalized = message.toLowerCase()
+  if (/not configured|no api key|missing .*key/.test(normalized)) {
+    return { category: 'missing_key', retryable: true, message }
+  }
+  if (status === 401 || status === 403 || /invalid.*(key|credential)|unauthori[sz]ed/.test(normalized)) {
+    return { category: 'invalid_key', retryable: true, message }
+  }
+  if (
+    /model.*(not found|does not exist|not supported|invalid)|invalid.*model|unsupported.*model/.test(normalized)
+  ) {
+    return { category: 'model_not_supported', retryable: true, message }
+  }
+  if (/region|workspace.*location|endpoint.*location/.test(normalized)) {
+    return { category: 'region_mismatch', retryable: true, message }
+  }
+  if (status === 429 || /rate.?limit|too many requests/.test(normalized)) {
+    return { category: 'rate_limited', retryable: true, message }
+  }
+  if (status === 503 || /loading|busy|temporarily unavailable|warming/.test(normalized)) {
+    return { category: 'provider_busy', retryable: true, message }
+  }
+  if (status && status >= 500) {
+    return { category: 'server_error', retryable: true, message }
+  }
+  if (/timeout|timed out|aborted/.test(normalized)) {
+    return { category: 'timeout', retryable: true, message }
+  }
+  if (/endpoint|not implemented|unsupported route/.test(normalized)) {
+    return { category: 'unsupported_endpoint', retryable: true, message }
+  }
+  if (/base url|misconfigured|configuration/.test(normalized)) {
+    return { category: 'provider_misconfigured', retryable: true, message }
+  }
+  if (/without .*data|malformed|invalid response|empty response/.test(normalized)) {
+    return { category: 'malformed_response', retryable: true, message }
+  }
+  return { category: 'unknown', retryable: true, message }
+}
+
+function failedResult(
+  provider: ApprovedDirectProviderId,
+  model: string,
+  error: unknown,
+  status?: number | null,
+): CapabilityAdapterResult {
+  const classified = classifyProviderError({ status, error, provider })
+  return result(provider, model, classified.category === 'missing_key' ? 'needs_configuration' : 'failed', {
+    error: classified.message,
+    errorCategory: classified.category,
+    retryable: classified.retryable,
+    rawStatus: status ?? null,
+  })
 }
 
 function firstReference(input: CapabilityAdapterInput, kinds: CapabilityReferenceKind[]) {
@@ -150,20 +238,12 @@ async function executeText(input: CapabilityAdapterInput): Promise<CapabilityAda
     maxTokens: 2400,
   })
   if (!response.ok) {
-    return result(input.route.provider, response.model, configurationStatus(response.error), {
-      error: response.error,
-    })
+    return failedResult(input.route.provider, response.model, response.error)
   }
   return result(input.route.provider, response.model, 'completed', {
     output: parseProviderJson(response.output),
     contentType: 'application/json',
   })
-}
-
-function configurationStatus(error: string | null): CapabilityAdapterStatus {
-  return /not configured|no api key|add .*settings/i.test(error ?? '')
-    ? 'needs_configuration'
-    : 'failed'
 }
 
 function parseProviderJson(value: string | null): unknown {
@@ -181,7 +261,7 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
   const key = await getVaultApiKey(provider)
   const specialist = resolveHfSpecialistConfig(input.capability.id, input.route)
   const model = input.model ?? specialist.model ?? 'custom:huggingface-endpoint'
-  if (!key) return result(provider, model, 'needs_configuration', { error: 'Hugging Face key not configured.' })
+  if (!key) return failedResult(provider, model, 'Hugging Face key not configured.')
   const endpoint = specialist.endpointSource === 'environment'
     ? specialist.endpoint
     : !specialist.endpointRequired && !model.startsWith('custom:')
@@ -219,9 +299,12 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
     })
     const responseType = response.headers.get('content-type') ?? 'application/octet-stream'
     if (!response.ok) {
-      return result(provider, model, 'failed', {
-        error: `Hugging Face HTTP ${response.status}: ${(await response.text().catch(() => '')).slice(0, 600)}`,
-      })
+      return failedResult(
+        provider,
+        model,
+        `Hugging Face HTTP ${response.status}: ${(await response.text().catch(() => '')).slice(0, 600)}`,
+        response.status,
+      )
     }
     if (responseType.includes('application/json')) {
       return result(provider, model, 'completed', {
@@ -234,9 +317,7 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
       contentType: responseType,
     })
   } catch (error) {
-    return result(provider, model, 'failed', {
-      error: error instanceof Error ? error.message : 'Hugging Face inference failed.',
-    })
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Hugging Face inference failed.')
   }
 }
 
@@ -284,7 +365,7 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     metadata: { capability: input.capability.id },
   })
   if (!generated.success) {
-    return result(provider, generated.model, configurationStatus(generated.error), { error: generated.error })
+    return failedResult(provider, generated.model, generated.error)
   }
   return result(provider, generated.model, generated.jobId ? 'processing' : 'completed', {
     mediaUrl: generated.url,
@@ -307,12 +388,11 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
   const key = await getVaultApiKey(provider)
   const isVideo = input.capability.group === 'video'
   const model = input.model ?? (isVideo ? 'wan2.1-i2v-turbo' : 'qwen-image-2.0')
-  if (!key) return result(provider, model, 'needs_configuration', { error: 'Qwen/DashScope key not configured.' })
+  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const imageReference = firstReference(input, ['image'])
   const videoReference = firstReference(input, ['video'])
-  const endpoint = isVideo
-    ? 'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis'
-    : 'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation'
+  const isWanxImage = !isVideo && model.startsWith('wanx')
+  const endpoint = qwenAigcEndpoint(isVideo ? 'video' : model.startsWith('wanx') ? 'wanx_image' : 'qwen_image')
   const body = isVideo
     ? {
         model,
@@ -323,6 +403,12 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
         },
         parameters: input.inputs ?? {},
       }
+    : isWanxImage
+      ? {
+          model,
+          input: { prompt: input.prompt },
+          parameters: input.inputs ?? {},
+        }
     : {
         model,
         input: {
@@ -342,16 +428,19 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
       headers: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
-        ...(isVideo ? { 'X-DashScope-Async': 'enable' } : {}),
+        ...(isVideo || isWanxImage ? { 'X-DashScope-Async': 'enable' } : {}),
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(45_000),
     })
     const json = await response.json().catch(() => null) as Record<string, unknown> | null
     if (!response.ok) {
-      return result(provider, model, 'failed', {
-        error: `Qwen HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
-      })
+      return failedResult(
+        provider,
+        model,
+        `Qwen HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
+        response.status,
+      )
     }
     const taskId = nestedString(json, ['output', 'task_id']) ?? nestedString(json, ['task_id'])
     const mediaUrl = nestedString(json, ['output', 'choices', '0', 'message', 'content', '0', 'image'])
@@ -364,17 +453,27 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
       contentType: 'application/json',
     })
   } catch (error) {
-    return result(provider, model, 'failed', {
-      error: error instanceof Error ? error.message : 'Qwen capability execution failed.',
-    })
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen capability execution failed.')
   }
+}
+
+function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image'): string {
+  const configured = process.env.DASHSCOPE_AIGC_BASE_URL?.trim().replace(/\/+$/, '')
+  const region = process.env.DASHSCOPE_REGION?.trim().toLowerCase()
+  const root = configured
+    || (region === 'cn' || region === 'beijing'
+      ? 'https://dashscope.aliyuncs.com/api/v1'
+      : 'https://dashscope-intl.aliyuncs.com/api/v1')
+  if (kind === 'video') return `${root}/services/aigc/video-generation/video-synthesis`
+  if (kind === 'wanx_image') return `${root}/services/aigc/text2image/image-synthesis`
+  return `${root}/services/aigc/multimodal-generation/generation`
 }
 
 async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'qwen' as const
   const key = await getVaultApiKey(provider)
   const model = input.model ?? 'qwen-vl-max'
-  if (!key) return result(provider, model, 'needs_configuration', { error: 'Qwen/DashScope key not configured.' })
+  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const referenceContent: Record<string, unknown>[] = []
   for (const reference of input.references) {
       const url = publicHttpsUrl(reference.url)
@@ -396,15 +495,16 @@ async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<Cap
     })
     const json = await response.json().catch(() => null)
     if (!response.ok) {
-      return result(provider, model, 'failed', {
-        error: `Qwen multimodal HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
-      })
+      return failedResult(
+        provider,
+        model,
+        `Qwen multimodal HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
+        response.status,
+      )
     }
     return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
   } catch (error) {
-    return result(provider, model, 'failed', {
-      error: error instanceof Error ? error.message : 'Qwen multimodal execution failed.',
-    })
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen multimodal execution failed.')
   }
 }
 
@@ -412,10 +512,11 @@ async function executeTogetherImage(input: CapabilityAdapterInput): Promise<Capa
   const provider = 'together' as const
   const key = await getVaultApiKey(provider)
   const model = input.model ?? input.route.modelIds[0] ?? 'black-forest-labs/FLUX.1-schnell-Free'
-  if (!key) return result(provider, model, 'needs_configuration', { error: 'Together AI key not configured.' })
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const endpoint = `${getProviderInfo(provider)?.baseUrl ?? 'https://api.together.xyz/v1'}/images/generations`
   const reference = firstReference(input, ['image'])
   try {
-    const response = await fetch('https://api.together.xyz/v1/images/generations', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -428,14 +529,17 @@ async function executeTogetherImage(input: CapabilityAdapterInput): Promise<Capa
     })
     const json = await response.json().catch(() => null)
     if (!response.ok) {
-      return result(provider, model, 'failed', {
-        error: `Together image HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
-      })
+      return failedResult(
+        provider,
+        model,
+        `Together image HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
+        response.status,
+      )
     }
     const mediaUrl = nestedString(json, ['data', '0', 'url'])
     const base64 = nestedString(json, ['data', '0', 'b64_json'])
     if (!mediaUrl && !base64) {
-      return result(provider, model, 'failed', { output: json, error: 'Together completed without image data.' })
+      return failedResult(provider, model, 'Together completed without image data.', response.status)
     }
     return result(provider, model, 'completed', {
       output: json,
@@ -444,9 +548,7 @@ async function executeTogetherImage(input: CapabilityAdapterInput): Promise<Capa
       contentType: 'image/png',
     })
   } catch (error) {
-    return result(provider, model, 'failed', {
-      error: error instanceof Error ? error.message : 'Together image execution failed.',
-    })
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together image execution failed.')
   }
 }
 
@@ -465,7 +567,7 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
   const key = await getVaultApiKey(provider)
   const isStt = input.capability.id === 'automatic_speech_recognition'
   const model = input.model ?? (isStt ? 'whisper-large-v3-turbo' : 'canopylabs/orpheus-v1-english')
-  if (!key) return result(provider, model, 'needs_configuration', { error: 'Groq key not configured.' })
+  if (!key) return failedResult(provider, model, 'Groq key not configured.')
   try {
     if (isStt) {
       const audio = firstReference(input, ['audio'])
@@ -482,7 +584,7 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
         body: form,
         signal: AbortSignal.timeout(60_000),
       })
-      if (!response.ok) return result(provider, model, 'failed', { error: `Groq STT HTTP ${response.status}.` })
+      if (!response.ok) return failedResult(provider, model, `Groq STT HTTP ${response.status}.`, response.status)
       return result(provider, model, 'completed', {
         output: await response.json().catch(() => null),
         contentType: 'application/json',
@@ -499,32 +601,34 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
       }),
       signal: AbortSignal.timeout(60_000),
     })
-    if (!response.ok) return result(provider, model, 'failed', { error: `Groq TTS HTTP ${response.status}.` })
+    if (!response.ok) return failedResult(provider, model, `Groq TTS HTTP ${response.status}.`, response.status)
     return result(provider, model, 'completed', {
       bytes: Buffer.from(await response.arrayBuffer()),
       contentType: response.headers.get('content-type') ?? 'audio/wav',
     })
   } catch (error) {
-    return result(provider, model, 'failed', {
-      error: error instanceof Error ? error.message : 'Groq audio execution failed.',
-    })
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Groq audio execution failed.')
   }
 }
 
-function adapterExecute(provider: ApprovedDirectProviderId, input: CapabilityAdapterInput) {
-  if (provider === 'huggingface') return executeHuggingFace(input)
-  if (provider === 'qwen') return executeQwen(input)
-  if (provider === 'genx' && (
+async function adapterExecute(provider: ApprovedDirectProviderId, input: CapabilityAdapterInput) {
+  const startedAt = Date.now()
+  let execution: Promise<CapabilityAdapterResult>
+  if (provider === 'huggingface') execution = executeHuggingFace(input)
+  else if (provider === 'qwen') execution = executeQwen(input)
+  else if (provider === 'genx' && (
     input.capability.longRunning
     || ['computer_vision', 'video', 'audio', 'music', 'avatar_voice'].includes(input.capability.group)
-  )) return executeGenXMedia(input)
-  if (provider === 'groq' && ['text_to_speech', 'automatic_speech_recognition'].includes(input.capability.id)) {
-    return executeGroqAudio(input)
+  )) execution = executeGenXMedia(input)
+  else if (provider === 'groq' && ['text_to_speech', 'automatic_speech_recognition'].includes(input.capability.id)) {
+    execution = executeGroqAudio(input)
   }
-  if (provider === 'together' && input.capability.outputTypes.includes('image')) {
-    return executeTogetherImage(input)
+  else if (provider === 'together' && input.capability.outputTypes.includes('image')) {
+    execution = executeTogetherImage(input)
   }
-  return executeText(input)
+  else execution = executeText(input)
+  const resolved = await execution
+  return { ...resolved, latencyMs: Date.now() - startedAt }
 }
 
 async function pollProvider(

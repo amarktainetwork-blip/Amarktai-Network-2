@@ -93,14 +93,13 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(plan.reason).toContain('No configured provider credential')
   })
 
-  it('routes Studio image work through the canonical capability router', () => {
+  it('routes Studio image work through the canonical orchestrator', () => {
     const studio = source('src/app/api/admin/studio/execute/route.ts')
     const image = source('src/app/api/brain/image/route.ts')
     const router = source('src/lib/capability-router.ts')
-    expect(studio).toContain("imagePost(jsonRequest")
+    expect(studio).toContain('executeCapabilityOrchestration')
     expect(image).toContain('executeCapability')
-    expect(router).toContain('selectCapabilityRoutePlan')
-    expect(router).toContain('getProviderCapabilityAdapter')
+    expect(router).toContain('return executeCapabilityOrchestration(request)')
   })
 
   it('supports multi-genre music blends and quality policy', () => {
@@ -139,7 +138,7 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(studio).toContain('recordExecutionResponse')
     expect(media).toContain('execution.artifacts.map')
     expect(media).toContain('execution.jobs.at(-1)')
-    expect(studio).toContain("readiness: 'NEEDS_CONFIGURATION'")
+    expect(source('src/lib/orchestrator.ts')).toContain("'NEEDS_CONFIGURATION'")
   })
 
   it('keeps connected-app capability, quality, scope, audit, job, and artifact contracts', () => {

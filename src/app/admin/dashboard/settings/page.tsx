@@ -22,6 +22,8 @@ import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
   connectedCount: number
+  vaultEncryptionConfigured: boolean
+  vaultWarning: string
 }
 
 type StorageSetup = {
@@ -78,6 +80,8 @@ export default function SettingsPage() {
       setTruth({
         providers: settingsData.truth.providers ?? [],
         connectedCount: settingsData.truth.connectedCount ?? 0,
+        vaultEncryptionConfigured: settingsData.truth.vaultEncryptionConfigured === true,
+        vaultWarning: settingsData.truth.vaultWarning ?? '',
       })
       setStorage(
         readinessResponse.ok
@@ -160,6 +164,16 @@ export default function SettingsPage() {
           ) : (
             <StatusPill label="Storage status unavailable" status="unknown" />
           )}
+          {truth && !truth.vaultEncryptionConfigured && (
+            <StatusPill label="Vault encryption needs setup" status="missing" />
+          )}
+        </div>
+      )}
+
+      {truth?.vaultWarning && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-800/30 bg-amber-900/10 p-4 text-sm text-amber-100">
+          <Shield className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+          <p>{truth.vaultWarning}</p>
         </div>
       )}
 
