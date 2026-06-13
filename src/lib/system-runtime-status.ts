@@ -1,9 +1,7 @@
 import { execFile } from 'child_process'
-import { promises as fs } from 'fs'
-import path from 'path'
 import { promisify } from 'util'
 import { getProviderKey } from '@/lib/provider-config'
-import { getStorageRoot } from '@/lib/local-json-store'
+import { getStorageRoot, verifyStorage } from '@/lib/storage-driver'
 
 const execFileAsync = promisify(execFile)
 
@@ -40,14 +38,14 @@ async function commandVersion(command: string) {
 }
 
 async function storageWritable() {
-  try {
-    const target = path.join(getStorageRoot(), 'storage-probe')
-    await fs.mkdir(target, { recursive: true })
-    const file = path.join(target, `.probe-${process.pid}-${Date.now()}`)
-    await fs.writeFile(file, 'ok', 'utf8')
-    await fs.unlink(file)
-    return { writable: true, status: 'Writable' }
-  } catch (error) {
-    return { writable: false, status: error instanceof Error ? error.message : 'Storage check failed' }
+  const storage = await verifyStorage()
+  return {
+    ready: storage.ready,
+    writable: storage.writable,
+    readable: storage.readable,
+    deletable: storage.deletable,
+    root: storage.root,
+    checkedAt: storage.checkedAt,
+    status: storage.ready ? 'Writable' : storage.error ?? storage.note,
   }
 }

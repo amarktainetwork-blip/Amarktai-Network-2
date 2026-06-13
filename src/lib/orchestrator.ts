@@ -59,6 +59,40 @@ import {
   callGenXChat,
   type GenXChatMessage,
 } from '@/lib/genx-client'
+import {
+  CAPABILITY_ROUTER_CAPABILITIES,
+  type CapabilityRequest,
+  type CapabilityResponse,
+  type CapabilityRouterCapability,
+  type ProviderAttempt,
+} from '@/lib/capability-contracts'
+import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
+import {
+  classifyProviderError,
+  getProviderCapabilityAdapter,
+  type CapabilityReference,
+} from '@/lib/ai-capability-adapters'
+import {
+  productCapabilityToTaxonomyId,
+  selectCapabilityRoutePlan,
+} from '@/lib/capability-routing-policy'
+import {
+  isApprovedDirectProvider,
+  sanitizeProviderError,
+  type ApprovedDirectProviderId,
+} from '@/lib/provider-mesh'
+import { validateProviderModelAsync } from '@/lib/provider-registry'
+import {
+  recordProviderFailure,
+  recordProviderSuccess,
+} from '@/lib/provider-performance'
+import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
+import {
+  getAppSafetyConfig,
+  loadAppSafetyConfigFromDB,
+  scanContent,
+} from '@/lib/content-filter'
+import { crawlAppWebsite } from '@/lib/firecrawl'
 
 /**
  * Check whether a model supports the given modality.
@@ -1732,4 +1766,580 @@ function detectContentType(taskType: string): import('@/lib/multimodal-router').
   if (t.includes('caption')) return 'caption'
   if (t.includes('brand') || t.includes('voice')) return 'brand_voice'
   return 'text'
+}
+
+const PRODUCT_CAPABILITY_SET = new Set<string>(CAPABILITY_ROUTER_CAPABILITIES)
+const GOVERNED_ADULT_CAPABILITIES = new Set<CapabilityRouterCapability>([
+  'adult_text',
+  'adult_image',
+  'adult_video',
+  'adult_voice',
+])
+const GOVERNED_SUGGESTIVE_CAPABILITIES = new Set<CapabilityRouterCapability>([
+  'suggestive_image',
+  'suggestive_video',
+])
+
+/**
+ * Canonical app-facing capability orchestration.
+ *
+ * Existing Brain task orchestration above remains responsible for complex
+ * agent/retrieval modes. This function owns provider/model routing, adapter
+ * execution, fallback, performance learning, artifacts, and stable product
+ * responses for Studio and capability-router callers.
+ */
+export async function executeCapabilityOrchestration(
+  request: CapabilityRequest,
+): Promise<CapabilityResponse> {
+  const capability = resolveProductCapability(request)
+  if (!capability) {
+    return capabilityFailure(
+      'chat',
+      'BLOCKED',
+      `Unknown capability "${request.capability ?? 'unspecified'}".`,
+      'model_not_supported',
+    )
+  }
+
+  const requestedProvider = request.providerOverride ?? request.provider
+  const requestedModel = request.modelOverride ?? request.model
+  if (requestedProvider && !isApprovedDirectProvider(requestedProvider)) {
+    return capabilityFailure(
+      capability,
+      'BLOCKED',
+      `Provider "${requestedProvider}" is not approved for direct execution.`,
+      'provider_policy_block',
+      requestedProvider,
+      requestedModel ?? null,
+    )
+  }
+
+  const blockedReason = await governedCapabilityBlockReason(request, capability)
+  if (blockedReason) {
+    return capabilityFailure(
+      capability,
+      'BLOCKED',
+      blockedReason,
+      'guardrail_block',
+    )
+  }
+
+  if (
+    capability === 'file_analysis'
+    && !request.files?.length
+    && !request.metadata?.fileContents
+  ) {
+    return capabilityFailure(
+      capability,
+      'BLOCKED',
+      'File analysis requires files or fileContents metadata.',
+      'model_not_supported',
+    )
+  }
+  if (capability === 'stt' && !request.files?.length) {
+    return capabilityFailure(
+      capability,
+      'BLOCKED',
+      'Speech-to-text requires an audio input reference.',
+      'model_not_supported',
+    )
+  }
+  if (capability === 'adult_video') {
+    return capabilityFailure(
+      capability,
+      'UNAVAILABLE',
+      'No approved provider contract currently permits adult-video execution.',
+      'model_not_supported',
+    )
+  }
+  if (
+    capability === 'adult_image'
+    && requestedProvider
+    && !['together', 'huggingface'].includes(requestedProvider)
+  ) {
+    return capabilityFailure(
+      capability,
+      'BLOCKED',
+      `Provider "${requestedProvider}" is not an approved adult-image executor.`,
+      'provider_policy_block',
+      requestedProvider,
+      requestedModel ?? null,
+    )
+  }
+
+  if (capability === 'scrape_website') {
+    return executeWebsiteCapability(request, capability)
+  }
+
+  const taxonomyId = taxonomyCapability(capability)
+  const definition = getCapabilityDefinition(taxonomyId)
+  if (!definition) {
+    return capabilityFailure(
+      capability,
+      'UNAVAILABLE',
+      `Canonical capability "${taxonomyId}" is not registered.`,
+      'model_not_supported',
+    )
+  }
+
+  const routePlan = await selectCapabilityRoutePlan({
+    capability: definition,
+    qualityTier: request.qualityTier ?? String(request.metadata?.qualityTier ?? 'auto'),
+    requestedProvider: requestedProvider as ApprovedDirectProviderId | undefined,
+    requestedModel,
+    allowedProviderIds: capability === 'adult_image'
+      ? ['together', 'huggingface']
+      : capability === 'adult_text'
+        ? ['together', 'huggingface']
+        : undefined,
+  })
+  const candidates = [
+    ...(routePlan.selected ? [routePlan.selected] : []),
+    ...routePlan.fallback,
+  ]
+  if (candidates.length === 0) {
+    return capabilityFailure(
+      capability,
+      routePlan.setupRequired ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+      routePlan.reason,
+      routePlan.setupRequired ? 'missing_key' : 'model_not_supported',
+      requestedProvider ?? null,
+      requestedModel ?? null,
+      [],
+    )
+  }
+
+  const attempts: ProviderAttempt[] = []
+  for (const [index, candidate] of candidates.entries()) {
+    const adapter = getProviderCapabilityAdapter(candidate.route.provider)
+    if (!adapter || adapter.id !== candidate.route.adapter) {
+      attempts.push({
+        provider: candidate.route.provider,
+        model: candidate.model,
+        status: 'failed',
+        errorCategory: 'unsupported_endpoint',
+        retryable: true,
+        error: `Adapter ${candidate.route.adapter} is not registered.`,
+      })
+      continue
+    }
+
+    const validation = await validateProviderModelAsync(
+      candidate.route.provider,
+      candidate.model,
+      taxonomyId,
+    )
+    if (!validation.valid) {
+      attempts.push({
+        provider: candidate.route.provider,
+        model: candidate.model,
+        status: 'failed',
+        errorCategory: 'model_not_supported',
+        retryable: true,
+        error: validation.reason ?? 'Provider model is not valid for this capability.',
+      })
+      await recordProviderFailure({
+        providerId: candidate.route.provider,
+        model: candidate.model,
+        capability: taxonomyId,
+        latencyMs: 0,
+        errorCategory: 'model_not_supported',
+      })
+      continue
+    }
+
+    const startedAt = Date.now()
+    let adapterResult
+    try {
+      adapterResult = await adapter.execute({
+        capability: definition,
+        route: candidate.route,
+        prompt: request.input,
+        text: request.input,
+        inputs: {
+          ...(request.metadata ?? {}),
+          files: request.files ?? [],
+        },
+        references: capabilityReferences(request, capability),
+        context: {
+          appId: request.appId ?? null,
+          workspaceId: request.workspaceId ?? null,
+          sessionId: request.metadata?.sessionId ?? null,
+        },
+        model: candidate.model,
+      })
+    } catch (error) {
+      const classified = classifyProviderError({
+        error,
+        provider: candidate.route.provider,
+      })
+      adapterResult = {
+        status: 'failed' as const,
+        provider: candidate.route.provider,
+        model: candidate.model,
+        output: null,
+        mediaUrl: null,
+        bytes: null,
+        contentType: null,
+        providerJobId: null,
+        latencyMs: Date.now() - startedAt,
+        rawStatus: null,
+        error: classified.message,
+        errorCategory: classified.category,
+        retryable: classified.retryable,
+        diagnostics: null,
+      }
+    }
+
+    const latencyMs = adapterResult.latencyMs || Date.now() - startedAt
+    attempts.push({
+      provider: adapterResult.provider,
+      model: adapterResult.model,
+      status: adapterResult.status,
+      latencyMs,
+      errorCategory: adapterResult.errorCategory ?? undefined,
+      retryable: adapterResult.retryable,
+      error: adapterResult.error ?? undefined,
+    })
+
+    if (adapterResult.status === 'completed') {
+      await recordProviderSuccess({
+        providerId: adapterResult.provider,
+        model: adapterResult.model,
+        capability: taxonomyId,
+        latencyMs,
+      })
+      return completeCapabilityResult({
+        request,
+        capability,
+        taxonomyId,
+        definitionCreatesArtifact: definition.createsArtifact,
+        adapterResult,
+        attempts,
+        fallbackUsed: index > 0,
+      })
+    }
+
+    if (adapterResult.status === 'processing' && adapterResult.providerJobId) {
+      await recordProviderSuccess({
+        providerId: adapterResult.provider,
+        model: adapterResult.model,
+        capability: taxonomyId,
+        latencyMs,
+      })
+      return {
+        success: true,
+        capability,
+        readiness: 'READY',
+        provider: adapterResult.provider,
+        model: adapterResult.model,
+        outputType: capabilityOutputType(capability),
+        output: null,
+        jobId: adapterResult.providerJobId,
+        providerJobId: adapterResult.providerJobId,
+        status: 'processing',
+        fallbackUsed: index > 0,
+        fallbackReason: index > 0 ? 'An earlier provider/model attempt failed.' : undefined,
+        providerAttempts: attempts,
+      }
+    }
+
+    await recordProviderFailure({
+      providerId: adapterResult.provider,
+      model: adapterResult.model,
+      capability: taxonomyId,
+      latencyMs,
+      errorCategory: adapterResult.errorCategory ?? 'unknown',
+    })
+    if (adapterResult.status === 'blocked' || adapterResult.retryable === false) {
+      break
+    }
+  }
+
+  const lastAttempt = attempts.at(-1)
+  const onlyConfigurationFailures = attempts.length > 0 && attempts.every(
+    (attempt) => ['missing_key', 'invalid_key', 'provider_misconfigured'].includes(
+      attempt.errorCategory ?? '',
+    ),
+  )
+  return capabilityFailure(
+    capability,
+    onlyConfigurationFailures ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+    attempts.length
+      ? 'All eligible provider/model attempts failed.'
+      : routePlan.reason,
+    (lastAttempt?.errorCategory as CapabilityResponse['error_category']) ?? 'unknown',
+    lastAttempt?.provider ?? requestedProvider ?? null,
+    lastAttempt?.model ?? requestedModel ?? null,
+    attempts,
+  )
+}
+
+function resolveProductCapability(
+  request: CapabilityRequest,
+): CapabilityRouterCapability | null {
+  const explicit = request.capability
+  if (explicit) {
+    return PRODUCT_CAPABILITY_SET.has(explicit)
+      ? explicit as CapabilityRouterCapability
+      : null
+  }
+  const value = request.input.toLowerCase()
+  if (/(scrape|crawl|extract).*(website|url|page)|^https?:\/\//.test(value)) return 'scrape_website'
+  if (/(edit|modify|change|retouch).*(image|photo|picture)/.test(value)) return 'image_edit'
+  if (/(image|photo|picture).*(into|to).*(video|animation)/.test(value)) return 'image_to_video'
+  if (/(generate|create|draw|make).*(image|photo|picture|illustration)/.test(value)) return 'image_generation'
+  if (/(generate|create|make).*(video|animation|clip)/.test(value)) return 'video_generation'
+  if (/(generate|create|compose|make).*(music|song|instrumental|beat)/.test(value)) return 'music_generation'
+  if (/(lyrics|verse|chorus|song words)/.test(value)) return 'lyrics_generation'
+  if (/(text.to.speech|read aloud|speak this|voice response)/.test(value)) return 'tts'
+  if (/(speech.to.text|transcribe|transcription)/.test(value)) return 'stt'
+  if (/(analy[sz]e|summari[sz]e|inspect).*(file|document|attachment)/.test(value)) return 'file_analysis'
+  if (/(research|investigate|deep dive|find sources)/.test(value)) return 'research'
+  if (/(deploy|deployment|release plan|rollout)/.test(value)) return 'deploy_plan'
+  if (/(build|create|scaffold).*(app|application|website)/.test(value)) return 'app_build'
+  if (/(edit|change|patch|refactor).*(repo|repository|codebase)/.test(value)) return 'repo_edit'
+  if (/(code|function|typescript|javascript|python|debug|refactor)/.test(value)) return 'code'
+  return 'chat'
+}
+
+function taxonomyCapability(capability: CapabilityRouterCapability): string {
+  return productCapabilityToTaxonomyId(capability)
+    ?? ({
+      code: 'text_generation',
+      repo_edit: 'text_generation',
+      app_build: 'text_generation',
+      deploy_plan: 'reasoning',
+      lyrics_generation: 'lyrics_generation',
+    } as Partial<Record<CapabilityRouterCapability, string>>)[capability]
+    ?? 'chat'
+}
+
+async function governedCapabilityBlockReason(
+  request: CapabilityRequest,
+  capability: CapabilityRouterCapability,
+): Promise<string | null> {
+  const isAdult = GOVERNED_ADULT_CAPABILITIES.has(capability)
+  const isSuggestive = GOVERNED_SUGGESTIVE_CAPABILITIES.has(capability)
+  if (!isAdult && !isSuggestive) return null
+  if (isAdult && (request.adultMode !== true || request.safeMode !== false)) {
+    return 'Adult capability requires explicit adult mode and safe mode off.'
+  }
+  if (isSuggestive && request.safeMode !== false) {
+    return 'Suggestive capability requires safe mode off.'
+  }
+  if (request.appId) {
+    await loadAppSafetyConfigFromDB(request.appId)
+    const safety = getAppSafetyConfig(request.appId)
+    if (safety.safeMode) return 'The app safety policy has safe mode enabled.'
+    if (isAdult && !safety.adultMode) return 'The app safety policy does not enable adult mode.'
+    if (isSuggestive && !safety.suggestiveMode) {
+      return 'The app safety policy does not enable suggestive mode.'
+    }
+  }
+  const scan = scanContent(request.input)
+  return scan.flagged ? scan.message : null
+}
+
+function capabilityReferences(
+  request: CapabilityRequest,
+  capability: CapabilityRouterCapability,
+): CapabilityReference[] {
+  const kind: CapabilityReference['kind'] =
+    capability === 'stt' ? 'audio'
+      : capability === 'file_analysis' ? 'document'
+        : capability.includes('video') && !capability.startsWith('image_to_') ? 'video'
+          : 'image'
+  return (request.files ?? []).map((url) => ({ kind, url }))
+}
+
+function capabilityOutputType(capability: CapabilityRouterCapability): string {
+  if (['code', 'repo_edit', 'app_build'].includes(capability)) return 'code'
+  if (capability.includes('image')) return 'image'
+  if (capability.includes('video') || capability === 'avatar_video') return 'video'
+  if (['tts', 'voice_response', 'adult_voice', 'music_generation'].includes(capability)) return 'audio'
+  return 'text'
+}
+
+function capabilityArtifactType(capability: CapabilityRouterCapability): ArtifactType {
+  if (capability === 'music_generation') return 'music'
+  if (capability === 'stt') return 'transcript'
+  if (capability === 'research' || capability === 'scrape_website') return 'research_result'
+  if (capability === 'deploy_plan') return 'deployment_plan'
+  if (capability === 'app_build') return 'app_blueprint'
+  if (capability === 'repo_edit') return 'repo_patch'
+  if (['tts', 'voice_response', 'adult_voice'].includes(capability)) return 'voice'
+  const outputType = capabilityOutputType(capability)
+  return ['code', 'audio', 'image', 'video'].includes(outputType)
+    ? outputType as ArtifactType
+    : 'text'
+}
+
+async function completeCapabilityResult(input: {
+  request: CapabilityRequest
+  capability: CapabilityRouterCapability
+  taxonomyId: string
+  definitionCreatesArtifact: boolean
+  adapterResult: Awaited<ReturnType<NonNullable<ReturnType<typeof getProviderCapabilityAdapter>>['execute']>>
+  attempts: ProviderAttempt[]
+  fallbackUsed: boolean
+}): Promise<CapabilityResponse> {
+  const output = input.adapterResult.mediaUrl
+    ?? (typeof input.adapterResult.output === 'string'
+      ? input.adapterResult.output
+      : input.adapterResult.output == null
+        ? null
+        : JSON.stringify(input.adapterResult.output))
+  if (!output && !input.adapterResult.bytes) {
+    return capabilityFailure(
+      input.capability,
+      'UNAVAILABLE',
+      'Provider completed without a usable result.',
+      'malformed_response',
+      input.adapterResult.provider,
+      input.adapterResult.model,
+      input.attempts,
+    )
+  }
+
+  const response: CapabilityResponse = {
+    success: true,
+    capability: input.capability,
+    readiness: 'READY',
+    provider: input.adapterResult.provider,
+    model: input.adapterResult.model,
+    outputType: capabilityOutputType(input.capability),
+    output,
+    status: 'completed',
+    fallbackUsed: input.fallbackUsed,
+    fallbackReason: input.fallbackUsed ? 'An earlier provider/model attempt failed.' : undefined,
+    providerAttempts: input.attempts,
+  }
+  if (!input.request.saveArtifact && !input.definitionCreatesArtifact) return response
+
+  try {
+    const artifact = await createArtifact({
+      appSlug: input.request.appId ?? input.request.workspaceId ?? '__system__',
+      appId: input.request.appId,
+      workspaceId: input.request.workspaceId,
+      executionId: typeof input.request.metadata?.executionId === 'string'
+        ? input.request.metadata.executionId
+        : undefined,
+      type: capabilityArtifactType(input.capability),
+      subType: input.capability,
+      capability: input.taxonomyId,
+      provider: input.adapterResult.provider,
+      model: input.adapterResult.model,
+      traceId: input.request.traceId,
+      mimeType: input.adapterResult.contentType ?? undefined,
+      content: input.adapterResult.bytes
+        ?? (output && !output.startsWith('http') ? Buffer.from(output, 'utf8') : undefined),
+      contentUrl: input.adapterResult.mediaUrl ?? undefined,
+      allowRemoteReference: Boolean(input.adapterResult.mediaUrl),
+      metadata: {
+        ...(input.request.metadata ?? {}),
+        providerAttempts: input.attempts,
+      },
+    })
+    return {
+      ...response,
+      artifactId: artifact.id,
+      artifactUrl: artifact.downloadUrl,
+      output: input.adapterResult.mediaUrl ?? artifact.storageUrl ?? output,
+    }
+  } catch (error) {
+    return {
+      ...response,
+      warning: `Provider execution succeeded but artifact persistence failed: ${sanitizeProviderError(error)}`,
+      error_category: 'artifact_error',
+      nextActions: ['Check canonical storage readiness and retry artifact persistence.'],
+    }
+  }
+}
+
+async function executeWebsiteCapability(
+  request: CapabilityRequest,
+  capability: CapabilityRouterCapability,
+): Promise<CapabilityResponse> {
+  const result = await crawlAppWebsite(request.input.trim())
+  if (!result.success) {
+    const classified = classifyProviderError({ error: result.error })
+    return capabilityFailure(
+      capability,
+      classified.category === 'missing_key' ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+      classified.message || 'Website crawl failed.',
+      classified.category,
+      'local-crawler',
+    )
+  }
+  const output = JSON.stringify({
+    summary: result.summary,
+    pages: result.pages.length,
+    niche: result.detectedNiche,
+    features: result.detectedFeatures,
+    capabilities: result.aiCapabilitiesNeeded,
+  })
+  const response: CapabilityResponse = {
+    success: true,
+    capability,
+    readiness: 'READY',
+    provider: 'local-crawler',
+    model: null,
+    outputType: 'text',
+    output,
+    status: 'completed',
+    fallbackUsed: false,
+    providerAttempts: [],
+  }
+  if (!request.saveArtifact) return response
+  try {
+    const artifact = await createArtifact({
+      appSlug: request.appId ?? request.workspaceId ?? '__system__',
+      appId: request.appId,
+      workspaceId: request.workspaceId,
+      type: 'research_result',
+      subType: capability,
+      capability,
+      content: Buffer.from(output, 'utf8'),
+      metadata: request.metadata,
+    })
+    return { ...response, artifactId: artifact.id, artifactUrl: artifact.downloadUrl }
+  } catch (error) {
+    return {
+      ...response,
+      warning: `Crawl succeeded but artifact persistence failed: ${sanitizeProviderError(error)}`,
+      error_category: 'artifact_error',
+    }
+  }
+}
+
+function capabilityFailure(
+  capability: CapabilityRouterCapability,
+  readiness: Exclude<CapabilityResponse['readiness'], 'READY'>,
+  error: string,
+  errorCategory: CapabilityResponse['error_category'],
+  provider: string | null = null,
+  model: string | null = null,
+  attempts: ProviderAttempt[] = [],
+): CapabilityResponse {
+  return {
+    success: false,
+    capability,
+    readiness,
+    provider,
+    model,
+    outputType: capabilityOutputType(capability),
+    output: null,
+    status: 'failed',
+    fallbackUsed: attempts.length > 1,
+    fallbackReason: attempts.length > 1 ? 'Every eligible provider/model attempt failed.' : undefined,
+    error: sanitizeProviderError(error),
+    error_category: errorCategory,
+    providerAttempts: attempts,
+    nextActions: readiness === 'NEEDS_CONFIGURATION'
+      ? ['Configure and live-test at least one approved provider for this capability.']
+      : readiness === 'UNAVAILABLE'
+        ? ['Review provider attempts in admin diagnostics and retry after correcting the provider contract.']
+        : [],
+  }
 }

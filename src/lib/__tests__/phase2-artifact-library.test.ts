@@ -174,7 +174,7 @@ describe('Phase 2 producer and policy coverage', () => {
   })
 
   it('persists research, STT, and video plans', () => {
-    expect(source('src/lib/capability-router.ts')).toContain("return 'research_result'")
+    expect(source('src/lib/orchestrator.ts')).toContain("return 'research_result'")
     expect(source('src/app/api/brain/stt/route.ts')).toContain("type: 'transcript'")
     expect(source('src/app/api/brain/video/route.ts')).toContain("subType: 'video_plan'")
     expect(source('src/app/api/brain/suggestive-video/route.ts')).toContain("subType: 'suggestive_video'")

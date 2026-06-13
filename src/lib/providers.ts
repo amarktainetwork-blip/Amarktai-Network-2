@@ -1,5 +1,6 @@
 import { decryptVaultKey } from '@/lib/crypto-vault'
 import { getProviderMeshNode, isApprovedDirectProvider } from '@/lib/provider-mesh'
+import { buildProviderAuthHeaders } from '@/lib/provider-registry'
 
 export function maskApiKey(key: string): string {
   const trimmed = key.trim()
@@ -34,12 +35,13 @@ function resolveStoredApiKey(rawStoredKey: string): string {
 async function probe(
   url: string,
   apiKey: string,
+  providerKey: string,
   init: RequestInit = {},
 ): Promise<Response> {
   return fetch(url, {
     ...init,
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      ...buildProviderAuthHeaders(providerKey as never, apiKey),
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
       ...(init.headers ?? {}),
     },
@@ -85,18 +87,18 @@ export async function runProviderHealthCheck(
     let response: Response
     switch (providerKey) {
       case 'genx':
-        response = await probe(`${root}/api/v1/models`, resolvedApiKey)
+        response = await probe(`${root}/api/v1/models`, resolvedApiKey, providerKey)
         break
       case 'huggingface':
-        response = await probe('https://huggingface.co/api/whoami-v2', resolvedApiKey)
+        response = await probe('https://huggingface.co/api/whoami-v2', resolvedApiKey, providerKey)
         break
       case 'qwen':
       case 'mimo':
       case 'together':
-        response = await probe(`${root}/models`, resolvedApiKey)
+        response = await probe(`${root}/models`, resolvedApiKey, providerKey)
         break
       case 'groq':
-        response = await probe(`${root}/chat/completions`, resolvedApiKey, {
+        response = await probe(`${root}/chat/completions`, resolvedApiKey, providerKey, {
           method: 'POST',
           body: JSON.stringify({
             model: 'llama-3.1-8b-instant',

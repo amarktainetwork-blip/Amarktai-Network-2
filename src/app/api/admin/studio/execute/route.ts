@@ -16,16 +16,8 @@ import {
   mediaStudioResponse,
   type MediaStudioCapability,
 } from '@/lib/media-studio'
-import { POST as imagePost } from '@/app/api/brain/image/route'
-import { POST as imageEditPost } from '@/app/api/brain/image-edit/route'
-import { POST as suggestiveImagePost } from '@/app/api/brain/suggestive-image/route'
 import { POST as videoPlanPost } from '@/app/api/brain/video/route'
-import { POST as videoPost } from '@/app/api/brain/video-generate/route'
-import { POST as musicPost } from '@/app/api/admin/music-studio/route'
-import { POST as ttsPost } from '@/app/api/brain/tts/route'
-import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
-import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
-import { executeCapability } from '@/lib/capability-router'
+import { executeCapabilityOrchestration } from '@/lib/orchestrator'
 import {
   productCapabilityToTaxonomyId,
   resolveRoutingQuality,
@@ -142,20 +134,6 @@ export async function POST(request: NextRequest) {
   if (!['planned', 'running'].includes(execution.status)) {
     return NextResponse.json(await mediaStudioResponse(execution))
   }
-  if (routePlan?.setupRequired || (routePlan && !routePlan.selected)) {
-    execution = recordExecutionResponse(execution.executionId, {
-      success: false,
-      executed: false,
-      capability,
-      readiness: 'NEEDS_CONFIGURATION',
-      jobStatus: 'needs_setup',
-      error: routePlan.reason,
-      blocker: routePlan.reason,
-      qualityTier,
-    }) ?? execution
-    return NextResponse.json(await mediaStudioResponse(execution), { status: 503 })
-  }
-
   execution = startExecution(execution.executionId) ?? execution
   try {
     const response = await dispatchStudio(request, body, execution, safety, qualityTier)
@@ -186,29 +164,6 @@ async function dispatchStudio(
   const capability = execution.detectedCapability
   const selectedProvider = execution.providerPlan.provider ?? undefined
   const selectedModel = execution.modelPlan.model ?? undefined
-  const common = {
-    prompt: execution.input.prompt,
-    appSlug: execution.appSlug,
-    executionId: execution.executionId,
-    providerOverride: selectedProvider,
-    modelOverride: selectedModel,
-  }
-  if (capability === 'image_generation') {
-    return imagePost(jsonRequest(original, '/api/brain/image', {
-      ...common,
-      size: imageSize(body.aspectRatio, body.quality),
-      qualityTier,
-    }))
-  }
-  if (capability === 'image_edit') {
-    return imageEditPost(jsonRequest(original, '/api/brain/image-edit', {
-      ...common,
-      image: body.source,
-    }))
-  }
-  if (capability === 'suggestive_image') {
-    return suggestiveImagePost(jsonRequest(original, '/api/brain/suggestive-image', common))
-  }
   if (capability === 'video_generation' && body.scenePlanOnly) {
     return videoPlanPost(jsonRequest(original, '/api/brain/video', {
       script: execution.input.prompt,
@@ -219,105 +174,53 @@ async function dispatchStudio(
       aspectRatio: body.aspectRatio,
     }))
   }
-  if (capability === 'video_generation' || capability === 'adult_video') {
-    return videoPost(jsonRequest(original, '/api/brain/video-generate', {
-      prompt: execution.input.prompt,
-      appSlug: execution.appSlug,
-      executionId: execution.executionId,
-      provider: selectedProvider ?? 'auto',
-      model: selectedModel,
-      capability,
-      style: normalizeVideoStyle(body.style),
-      duration: Math.min(Math.max(Number(body.duration ?? 4), 1), 30),
-      aspectRatio: normalizeAspect(body.aspectRatio),
-    }))
-  }
-  if (capability === 'music_generation' || capability === 'lyrics_generation') {
-    return musicPost(jsonRequest(original, '/api/admin/music-studio', {
-      action: capability === 'lyrics_generation' ? 'lyrics_only' : 'create_async',
-      request: {
-        appSlug: execution.appSlug,
-        executionId: execution.executionId,
-        theme: execution.input.prompt,
-        genre: normalizeGenre(body.genre),
-        genres: normalizeGenres(body.genres, body.genre),
-        moods: body.moods ?? [],
-        vocalStyle: normalizeVocalStyle(body.vocalStyle, body.instrumental),
-        instrumental: Boolean(body.instrumental),
-        durationSeconds: Math.min(Math.max(Number(body.duration ?? 180), 15), 600),
-        language: body.language ?? 'English',
-        existingLyrics: body.lyrics,
-        productionNotes: normalizeGenres(body.genres, body.genre).length > 1
-          ? `Blend styles: ${normalizeGenres(body.genres, body.genre).join(' + ')}`
-          : undefined,
-        qualityTier,
-        provider: selectedProvider,
-        model: selectedModel,
-      },
-    }))
-  }
-  if (capability === 'tts' || capability === 'adult_voice') {
-    return ttsPost(jsonRequest(original, '/api/brain/tts', {
-      text: execution.input.prompt,
-      appSlug: execution.appSlug,
-      executionId: execution.executionId,
-      provider: selectedProvider ?? 'auto',
-      model: selectedModel,
-      capability,
-      voiceId: body.voiceId,
-      language: body.language,
-    }))
-  }
-  if (capability === 'adult_image') {
-    return adultImagePost(jsonRequest(original, '/api/brain/adult-image', {
-      prompt: execution.input.prompt,
-      appSlug: execution.appSlug,
-      executionId: execution.executionId,
-      provider: selectedProvider ?? 'auto',
-      model: selectedModel,
-      size: imageSize(body.aspectRatio, body.quality),
-    }))
-  }
-  if (capability === 'avatar_video') {
-    return avatarVideoPost(jsonRequest(original, '/api/brain/avatar-video', {
-      prompt: execution.input.prompt,
-      appSlug: execution.appSlug,
+  const result = await executeCapabilityOrchestration({
+    input: execution.input.prompt,
+    capability,
+    files: body.source ? [body.source] : execution.input.files,
+    appId: execution.appSlug,
+    providerOverride: selectedProvider,
+    modelOverride: selectedModel,
+    qualityTier,
+    adultMode: safety.adultMode,
+    suggestiveMode: safety.suggestiveMode,
+    safeMode: safety.safeMode,
+    saveArtifact: true,
+    metadata: {
       executionId: execution.executionId,
       source: body.source,
+      style: body.style,
+      aspectRatio: body.aspectRatio,
+      quality: body.quality,
+      duration: body.duration,
+      genre: normalizeGenre(body.genre),
+      genres: normalizeGenres(body.genres, body.genre),
+      productionNotes: normalizeGenres(body.genres, body.genre).length > 1
+        ? `Blend styles: ${normalizeGenres(body.genres, body.genre).join(' + ')}`
+        : undefined,
+      moods: body.moods ?? [],
+      vocalStyle: normalizeVocalStyle(body.vocalStyle, body.instrumental),
+      instrumental: Boolean(body.instrumental),
+      language: body.language,
+      lyrics: body.lyrics,
       voiceId: body.voiceId,
-      provider: selectedProvider ?? 'auto',
-      model: selectedModel,
-    }))
-  }
-  if (capability === 'chat' || capability === 'code' || capability === 'file_analysis') {
-    const result = await executeCapability({
-      input: execution.input.prompt,
-      capability,
-      files: execution.input.files,
-      appId: execution.appSlug,
-      providerOverride: selectedProvider,
-      modelOverride: selectedModel,
-      saveArtifact: true,
-      metadata: {
-        executionId: execution.executionId,
-        source: body.source,
-        qualityTier,
-      },
-    })
-    return NextResponse.json({
-      ...result,
-      executed: result.success,
-      jobStatus: result.status ?? (result.success ? 'completed' : 'needs_setup'),
-    }, { status: result.success ? 200 : result.readiness === 'NEEDS_CONFIGURATION' ? 503 : 409 })
-  }
+      qualityTier,
+    },
+  })
   return NextResponse.json({
-    success: false,
-    executed: false,
-    capability,
-    readiness: capability.startsWith('adult_') && !safety.adultMode ? 'BLOCKED' : 'UNAVAILABLE',
-    jobStatus: 'unavailable',
-    error: `${capability} is not available through the JSON Studio route.`,
-  }, { status: 501 })
+    ...result,
+    executed: result.success,
+    jobStatus: result.status ?? (result.success ? 'completed' : 'failed'),
+    storageUrl: result.artifactUrl,
+    mediaUrl: result.output?.startsWith('https://') ? result.output : undefined,
+    providerAttempts: result.providerAttempts ?? [],
+  }, {
+    status: result.status === 'processing'
+      ? 202
+      : result.readiness === 'BLOCKED'
+        ? 403
+        : 200,
+  })
 }
 
 function jsonRequest(original: NextRequest, path: string, body: Record<string, unknown>) {
@@ -344,22 +247,6 @@ function studioParameters(body: StudioBody) {
     voiceId: body.voiceId,
     qualityTier: body.qualityTier,
   }
-}
-
-function imageSize(aspect = '1:1', quality = 'standard') {
-  if (aspect === '16:9') return quality === 'high' ? '1024x576' : '768x432'
-  if (aspect === '9:16') return quality === 'high' ? '576x1024' : '432x768'
-  return quality === 'high' ? '1024x1024' : '768x768'
-}
-
-function normalizeAspect(value?: string): '16:9' | '9:16' | '1:1' {
-  return value === '9:16' || value === '1:1' ? value : '16:9'
-}
-
-function normalizeVideoStyle(value?: string): 'cinematic' | 'animated' | 'realistic' | 'documentary' | 'commercial' {
-  return ['animated', 'realistic', 'documentary', 'commercial'].includes(value ?? '')
-    ? value as 'animated' | 'realistic' | 'documentary' | 'commercial'
-    : 'cinematic'
 }
 
 function normalizeGenre(value?: string) {

@@ -3,8 +3,9 @@ import {
   type AiCapabilityDefinition,
   type AiCapabilityProviderRoute,
 } from '@/lib/ai-capability-taxonomy'
-import { getMeshCredential } from '@/lib/provider-mesh-status'
 import { prisma } from '@/lib/prisma'
+import { getProviderReadiness } from '@/lib/provider-registry'
+import { rankProvidersForCapability } from '@/lib/provider-performance'
 import {
   UNIVERSAL_MODEL_ROUTES,
   type UniversalCostTier,
@@ -153,20 +154,26 @@ export async function selectCapabilityRoutePlan(input: {
   const configured = input.configuredProviderIds
     ? new Set(input.configuredProviderIds)
     : new Set(await configuredProviders(capability))
-  const candidates = capability.providerRoutes
+  let candidates = capability.providerRoutes
     .filter((route) => route.executable)
     .filter((route) => !input.allowedProviderIds || input.allowedProviderIds.includes(route.provider))
-    .filter((route) => !input.requestedProvider || route.provider === input.requestedProvider)
     .map((route) => {
-      const model = selectModel(route, qualityTier, input.requestedModel)
+      const model = selectModel(
+        capability,
+        route,
+        qualityTier,
+        route.provider === input.requestedProvider ? input.requestedModel : undefined,
+      )
       return {
         route,
         model,
         configured: configured.has(route.provider),
-        rank: routeRank(capability, route, model, qualityTier),
+        rank: routeRank(capability, route, model, qualityTier)
+          + (route.provider === input.requestedProvider ? -100_000 : 0),
       }
     })
     .sort((left, right) => left.rank - right.rank)
+  candidates = await rankProvidersForCapability(capability.id, candidates)
 
   const selected = candidates.find((candidate) => candidate.configured) ?? null
   const fallback = selected
@@ -193,7 +200,9 @@ async function configuredProviders(
   const providers = [...new Set(capability.providerRoutes.map((route) => route.provider))]
   const checks = await Promise.all(providers.map(async (provider) => ({
     provider,
-    configured: Boolean(await getMeshCredential(provider)),
+    configured: ['ready', 'configured_untested'].includes(
+      (await getProviderReadiness(provider)).state,
+    ),
   })))
   return checks.filter((entry) => entry.configured).map((entry) => entry.provider)
 }
@@ -215,11 +224,21 @@ function routeRank(
 }
 
 function selectModel(
+  capability: AiCapabilityDefinition,
   route: AiCapabilityProviderRoute,
   qualityTier: StoredRoutingQualityTier,
   requestedModel?: string,
 ): string {
-  if (requestedModel && route.modelIds.includes(requestedModel)) return requestedModel
+  if (requestedModel) return requestedModel
+  if (
+    route.provider === 'qwen'
+    && capability.outputTypes.includes('image')
+    && route.modelIds.includes('qwen-image-2.0')
+  ) {
+    return qualityTier === 'premium' && route.modelIds.includes('qwen-image-2.0-pro')
+      ? 'qwen-image-2.0-pro'
+      : 'qwen-image-2.0'
+  }
   return [...route.modelIds].sort((left, right) => {
     const leftCost = UNIVERSAL_MODEL_ROUTES.find(
       (entry) => entry.provider === route.provider && entry.modelId === left,

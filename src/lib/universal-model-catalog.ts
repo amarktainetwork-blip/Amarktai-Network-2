@@ -137,7 +137,12 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('qwen', 'qwen-turbo', 'Qwen Turbo', 'Qwen', ['chat', 'coding'], ['text', 'code'], { costTier: 'very_low', latencyTier: 'low', recommendedFor: ['repo_workbench'] }),
   route('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant'] }),
   route('qwen', 'qwen-max', 'Qwen Max', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'vision'], { costTier: 'medium' }),
-  route('qwen', 'wanx2.1-t2i-turbo', 'Wan Image Turbo', 'Wan', ['image'], ['image', 'async_jobs'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('qwen', 'qwen-image', 'Qwen Image', 'Qwen Image', ['image'], ['image'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('qwen', 'qwen-image-plus', 'Qwen Image Plus', 'Qwen Image', ['image'], ['image'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
+  route('qwen', 'qwen-image-max', 'Qwen Image Max', 'Qwen Image', ['image'], ['image'], { costTier: 'high', recommendedFor: ['media_studio'] }),
+  route('qwen', 'qwen-image-2.0', 'Qwen Image 2.0', 'Qwen Image', ['image'], ['image'], { costTier: 'low', recommendedFor: ['media_studio'] }),
+  route('qwen', 'qwen-image-2.0-pro', 'Qwen Image 2.0 Pro', 'Qwen Image', ['image'], ['image'], { costTier: 'premium', recommendedFor: ['media_studio'] }),
+  route('qwen', 'wanx2.1-t2i-turbo', 'Wan Image Turbo', 'Wan', ['image'], ['image', 'async_jobs'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
   route('qwen', 'wan2.1-i2v-turbo', 'Wan Image to Video', 'Wan', ['video'], ['video', 'image_to_video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
 
   route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
@@ -146,8 +151,9 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B on Groq', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'low', latencyTier: 'ultra_low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('groq', 'whisper-large-v3-turbo', 'Whisper Large v3 Turbo on Groq', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),
 
-  route('together', 'meta-llama/Llama-3-70b-chat-hf', 'Llama 3 70B Chat on Together', 'Llama 3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo', 'Llama 3.3 70B on Together', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('together', 'black-forest-labs/FLUX.1-schnell', 'FLUX.1 Schnell on Together', 'FLUX', ['image'], ['image'], { costTier: 'medium', supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('together', 'black-forest-labs/FLUX.1.1-pro', 'FLUX 1.1 Pro on Together', 'FLUX', ['image'], ['image'], { costTier: 'high', supportsAdult: true, recommendedFor: ['media_studio'] }),
 ] as const
 
 export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog> {

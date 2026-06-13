@@ -1,6 +1,7 @@
-import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
+import { getProviderReadiness } from '@/lib/provider-registry'
+import { verifyStorage } from '@/lib/storage-driver'
 
 export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
 
@@ -27,11 +28,19 @@ async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
   const node = PROVIDER_MESH.find((item) => item.id === id)!
   const notes = await getMeshTestNotes(id)
   const localRuntime = id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage'
-  const storageWritable = id === 'storage' ? checkWritable(LOCAL_STORE_FILES.artifacts).writable : false
+  const storageHealth = id === 'storage' ? await verifyStorage().catch(() => null) : null
+  const storageWritable = storageHealth?.ready === true
+  const providerReadiness = node.kind === 'provider'
+    ? await getProviderReadiness(node.id as never)
+    : null
   const credential = localRuntime ? 'local-runtime' : await getMeshCredential(id)
   const configured = Boolean(credential) || storageWritable
-  const connected = Boolean(configured && notes.lastTestPassed)
-  const failed = configured && notes.lastTestStatus === 'failed'
+  const connected = providerReadiness
+    ? providerReadiness.state === 'ready'
+    : Boolean(configured && (notes.lastTestPassed || storageWritable))
+  const failed = providerReadiness
+    ? providerReadiness.state === 'misconfigured'
+    : configured && notes.lastTestStatus === 'failed'
   const status: SettingsTruthStatus = connected
     ? 'Connected'
     : failed
@@ -55,7 +64,8 @@ async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
     envVars: [...node.envAliases],
     capabilities: [...node.capabilities],
     lastTestResult: connected ? 'Live test passed' : failed ? 'Live test failed' : 'Not tested',
-    lastTestedAt: typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null,
+    lastTestedAt: providerReadiness?.checkedAt
+      ?? (typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null),
     blocker: connected
       ? ''
       : failed
@@ -82,5 +92,13 @@ export async function getPlatformSettingsTruth() {
     storage,
     connectedCount: entries.filter((entry) => entry.connected).length,
     connectedProviderIds: providers.filter((entry) => entry.connected).map((entry) => entry.key),
+    vaultEncryptionConfigured: /^[a-f0-9]{64}$/i.test(
+      process.env.VAULT_ENCRYPTION_KEY?.trim() ?? '',
+    ),
+    vaultWarning: /^[a-f0-9]{64}$/i.test(
+      process.env.VAULT_ENCRYPTION_KEY?.trim() ?? '',
+    )
+      ? ''
+      : 'VAULT_ENCRYPTION_KEY is missing or invalid. Stored provider credentials are not encrypted at rest.',
   }
 }
