@@ -85,7 +85,7 @@ async function probeTextProvider(
       body: JSON.stringify({
         model,
         messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
-        max_tokens: 4,
+        max_tokens: 32,
         stream: false,
       }),
       signal: AbortSignal.timeout(15000),
@@ -105,8 +105,13 @@ async function probeTextProvider(
  * GenX smoke test — uses the GenX /chat/completions endpoint with the smallest model.
  */
 async function smokeTestGenX(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const baseUrl = process.env.GENX_BASE_URL?.trim() || process.env.GENX_API_URL?.trim() || 'https://query.genx.sh'
-  const model = process.env.GENX_SMOKE_MODEL?.trim() || 'genx-mini'
+  let baseUrl = process.env.GENX_BASE_URL?.trim() || process.env.GENX_API_URL?.trim() || 'https://query.genx.sh/v1'
+  baseUrl = baseUrl.replace(/\/+$/, '')
+  baseUrl = baseUrl.replace(/\/api\/v1(?:\/models)?$/, '/v1')
+  baseUrl = baseUrl.replace(/\/v1\/models$/, '/v1')
+  if (baseUrl === 'https://query.genx.sh') baseUrl = `${baseUrl}/v1`
+
+  const model = process.env.GENX_SMOKE_MODEL?.trim() || 'gpt-5.4-mini'
   const result = await probeTextProvider(baseUrl, apiKey, model)
   return { ...result, model }
 }
@@ -115,7 +120,7 @@ async function smokeTestGenX(apiKey: string): Promise<{ ok: boolean; latencyMs: 
  * Hugging Face smoke test — uses the HF Inference API with a small text model.
  */
 async function smokeTestHuggingFace(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const model = process.env.HF_SMOKE_MODEL?.trim() || 'HuggingFaceTB/SmolLM2-135M-Instruct'
+  const model = process.env.HF_SMOKE_MODEL?.trim() || 'meta-llama/Llama-3.1-8B-Instruct'
   const start = Date.now()
   try {
     const res = await fetch(`https://router.huggingface.co/v1/chat/completions`, {
@@ -127,7 +132,7 @@ async function smokeTestHuggingFace(apiKey: string): Promise<{ ok: boolean; late
       body: JSON.stringify({
         model,
         messages: [{ role: 'user', content: 'Reply with the single word: ok' }],
-        max_tokens: 4,
+        max_tokens: 32,
         stream: false,
       }),
       signal: AbortSignal.timeout(20000),
@@ -148,7 +153,8 @@ async function smokeTestHuggingFace(apiKey: string): Promise<{ ok: boolean; late
  */
 async function smokeTestQwen(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
   const model = process.env.QWEN_SMOKE_MODEL?.trim() || 'qwen-turbo'
-  const result = await probeTextProvider('https://dashscope-intl.aliyuncs.com/compatible-mode/v1', apiKey, model)
+  const baseUrl = process.env.QWEN_BASE_URL?.trim() || process.env.DASHSCOPE_BASE_URL?.trim() || 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
+  const result = await probeTextProvider(baseUrl, apiKey, model)
   return { ...result, model }
 }
 
@@ -156,8 +162,9 @@ async function smokeTestQwen(apiKey: string): Promise<{ ok: boolean; latencyMs: 
  * MiMo smoke test — uses the Xiaomi MiMo OpenAI-compatible endpoint.
  */
 async function smokeTestMiMo(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const model = process.env.MIMO_SMOKE_MODEL?.trim() || 'MiMo-7B-RL'
-  const result = await probeTextProvider('https://api.xiaomimimo.com/v1', apiKey, model)
+  const model = process.env.MIMO_SMOKE_MODEL?.trim() || 'mimo-v2.5'
+  const baseUrl = process.env.MIMO_BASE_URL?.trim() || 'https://token-plan-sgp.xiaomimimo.com/v1'
+  const result = await probeTextProvider(baseUrl, apiKey, model)
   return { ...result, model }
 }
 
@@ -174,7 +181,7 @@ async function smokeTestGroq(apiKey: string): Promise<{ ok: boolean; latencyMs: 
  * Together AI smoke test — uses the Together OpenAI-compatible endpoint.
  */
 async function smokeTestTogether(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const model = process.env.TOGETHER_SMOKE_MODEL?.trim() || 'meta-llama/Llama-3.2-3B-Instruct-Turbo'
+  const model = process.env.TOGETHER_SMOKE_MODEL?.trim() || 'meta-llama/Llama-3.3-70B-Instruct-Turbo'
   const result = await probeTextProvider('https://api.together.xyz/v1', apiKey, model)
   return { ...result, model }
 }
