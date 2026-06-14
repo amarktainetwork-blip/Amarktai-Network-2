@@ -39,7 +39,7 @@ type StorageSetup = {
   driver: string
 }
 type RuntimeTool = { id: string; connected: boolean; capabilities: string[]; detail: string }
-type CapabilityEntry = { id?: string; capability?: string; label?: string; status?: string; createsArtifact?: boolean; longRunning?: boolean; blocker?: string | null; providers?: unknown[] }
+type CapabilityEntry = { id?: string; capability?: string; label?: string; status?: string; readiness?: string; createsArtifact?: boolean; longRunning?: boolean; blocker?: string | null; providers?: unknown[] }
 
 type RoutingPolicy = {
   studio: 'cheap' | 'balanced' | 'premium' | 'auto'
@@ -342,7 +342,7 @@ export default function SettingsPage() {
       <section>
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Settings2 className="h-4 w-4" />Capability Matrix</h2>
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
-          {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
+          {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.readiness ?? entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
         </div>
       </section>
     </div>

@@ -139,8 +139,9 @@ describe('V1 AmarktAI product truth', () => {
   })
 
   it('keeps canonical provider, model, and capability truth singular', () => {
-    expect(source('src/lib/ai-capability-taxonomy.ts')).toContain("from '@/lib/provider-mesh'")
-    expect(source('src/lib/ai-capability-taxonomy.ts')).toContain("from '@/lib/universal-model-catalog'")
+    expect(source('src/lib/ai-capability-taxonomy.ts')).toContain("from '@/lib/brain/v1-capability-matrix'")
+    expect(source('src/lib/brain/v1-capability-matrix.ts')).toContain("from '@/lib/provider-mesh'")
+    expect(source('src/lib/brain/v1-capability-matrix.ts')).toContain("from '@/lib/universal-model-catalog'")
     expect(source('src/lib/model-registry.ts')).toContain('UNIVERSAL_MODEL_ROUTES.map(toLegacyModel)')
     expect(source('src/lib/product-contract.ts')).toContain("from '@/lib/provider-mesh'")
     expect(fs.existsSync(path.join(ROOT, 'src/lib/platform-route-registry.ts'))).toBe(false)

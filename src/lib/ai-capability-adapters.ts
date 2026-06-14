@@ -387,9 +387,30 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
   const provider = 'qwen' as const
   const key = await getVaultApiKey(provider)
   const isVideo = input.capability.group === 'video'
-  const model = input.model ?? (isVideo ? 'wan2.1-i2v-turbo' : 'qwen-image-2.0')
-  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const imageReference = firstReference(input, ['image'])
+  const isImageToVideo = isVideo && (
+    input.capability.id === 'image_to_video'
+    || input.capability.id === 'image_text_to_video'
+  )
+  if (isImageToVideo && !imageReference?.url) {
+    return result(provider, input.model ?? 'wan2.1-i2v-turbo', 'blocked', {
+      error: 'Image-to-video requires a source image.',
+      errorCategory: 'model_not_supported',
+    })
+  }
+  const model = input.model ?? (
+    isVideo
+      ? isImageToVideo ? 'wan2.1-i2v-turbo' : 'wan2.1-t2v-turbo'
+      : 'qwen-image-2.0'
+  )
+  if (isVideo && !isImageToVideo && /i2v|image.to.video/i.test(model)) {
+    return result(provider, model, 'failed', {
+      error: 'Text-to-video cannot execute an image-to-video model without image input.',
+      errorCategory: 'model_not_supported',
+      retryable: true,
+    })
+  }
+  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const videoReference = firstReference(input, ['video'])
   const isWanxImage = !isVideo && model.startsWith('wanx')
   const endpoint = qwenAigcEndpoint(isVideo ? 'video' : model.startsWith('wanx') ? 'wanx_image' : 'qwen_image')

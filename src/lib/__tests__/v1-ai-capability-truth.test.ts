@@ -122,7 +122,7 @@ describe('V1 universal AI capability truth', () => {
       }
     }
 
-    const source = fs.readFileSync(path.join(ROOT, 'src/lib/ai-capability-taxonomy.ts'), 'utf8')
+    const source = fs.readFileSync(path.join(ROOT, 'src/lib/brain/v1-capability-matrix.ts'), 'utf8')
     expect(source).toContain("from '@/lib/provider-mesh'")
     expect(source).toContain("from '@/lib/universal-model-catalog'")
     expect(source).not.toMatch(/openai|anthropic|gemini|deepseek|minimax|cohere|elevenlabs|replicate/i)
@@ -142,10 +142,10 @@ describe('V1 universal AI capability truth', () => {
     expect(getAiCapabilityTruthSummary()).toMatchObject({
       total: 62,
       byStatus: {
-        working: 62,
-        partially_wired: 0,
-        provider_available_not_wired: 0,
-        unavailable: 0,
+        working: 12,
+        partially_wired: 12,
+        provider_available_not_wired: 35,
+        unavailable: 3,
       },
     })
   })

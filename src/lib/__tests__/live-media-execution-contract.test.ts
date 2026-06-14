@@ -47,7 +47,6 @@ import {
 } from '@/lib/media-job-store'
 import { normalizeGovernedCapability } from '@/lib/provider-capability-governance'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
-import { routeLiveModel } from '@/lib/live-ai-routing'
 
 const ROOT = path.resolve(__dirname, '../../')
 const read = (relativePath: string) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -151,10 +150,10 @@ describe('live media route contracts', () => {
     expect(read('app/api/brain/avatar-video/route.ts')).toContain('avatar video provider unavailable')
   })
 
-  it('does not advertise Groq as a canonical TTS provider', () => {
-    expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).not.toContain('groq')
-    expect(routeLiveModel({ capability: 'tts' }).selectedProvider).not.toBe('groq')
-    expect(read('app/api/brain/tts/route.ts')).toContain('Groq TTS is not an approved working audio execution route.')
+  it('advertises Groq only because the canonical TTS endpoint implements it', () => {
+    expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).toContain('groq')
+    expect(read('app/api/brain/tts/route.ts')).toContain('api.groq.com/openai/v1/audio/speech')
+    expect(read('app/api/brain/tts/route.ts')).toContain("getVaultApiKey('groq')")
   })
 
   it('uses canonical video capability and exposes local polling in Studio', () => {

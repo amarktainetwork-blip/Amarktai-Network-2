@@ -27,7 +27,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const readiness = truth?.systemReadiness
       setStatus({
         appStatus: readiness?.ready
-          ? 'System ready'
+          ? 'Core system ready'
           : readiness?.storageReady === false
             ? 'Storage needs setup'
             : readiness?.providersReady === false

@@ -157,7 +157,7 @@ describe('capability router contract', () => {
             ? false
             : undefined,
       })
-      expect(['READY', 'NEEDS_CONFIGURATION', 'BLOCKED', 'UNAVAILABLE']).toContain(
+      expect(['READY', 'NEEDS_INPUT', 'NEEDS_CONFIGURATION', 'BLOCKED', 'UNAVAILABLE']).toContain(
         result.readiness,
       )
       expect(result.capability).toBe(capability)
@@ -190,7 +190,7 @@ describe('capability router contract', () => {
     })
     expect(result).toMatchObject({
       success: false,
-      readiness: 'BLOCKED',
+      readiness: 'NEEDS_INPUT',
       error_category: 'model_not_supported',
     })
     expect(result.error).toContain('audio input reference')

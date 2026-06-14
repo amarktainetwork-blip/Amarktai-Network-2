@@ -61,7 +61,7 @@ export interface ConnectedAppCapabilityJob {
   appSlug: string
   capability: string
   requiredScope: string
-  provider: ApprovedDirectProviderId
+  provider: ApprovedDirectProviderId | 'amarktai'
   model: string
   adapter: string
   qualityTier: StoredRoutingQualityTier
@@ -74,6 +74,8 @@ export interface ConnectedAppCapabilityJob {
   providerAttempts: Array<{
     provider: ApprovedDirectProviderId
     model: string
+    adapter: string
+    outputType: string
     status: string
     latencyMs: number
     errorCategory: string | null
@@ -181,7 +183,36 @@ export function validateCapabilityRequest(
   ) {
     return 'Robotics execution is limited to planning or simulation; physical actuation is blocked'
   }
+  if (capability.requiredSourceInput && !hasRequiredSource(request, capability.requiredSourceInput)) {
+    return `${capability.label} requires a ${capability.requiredSourceInput} reference or input.`
+  }
   return null
+}
+
+function hasRequiredSource(
+  request: ConnectedAppCapabilityRequest,
+  required: NonNullable<AiCapabilityDefinition['requiredSourceInput']>,
+): boolean {
+  const referenceKinds = required === 'avatar' ? ['image'] : [required]
+  if ((request.references ?? []).some((reference) =>
+    referenceKinds.includes(reference.kind)
+    && Boolean(reference.url || reference.artifactId || reference.data),
+  )) return true
+
+  const inputs = request.inputs ?? {}
+  const candidateKeys = required === 'avatar'
+    ? ['avatar', 'avatarUrl', 'avatarArtifactId', 'sourceImage', 'sourceImageUrl']
+    : [
+        required,
+        `${required}Url`,
+        `${required}ArtifactId`,
+        `source${required[0].toUpperCase()}${required.slice(1)}`,
+        `source${required[0].toUpperCase()}${required.slice(1)}Url`,
+      ]
+  return candidateKeys.some((key) => {
+    const value = inputs[key]
+    return typeof value === 'string' ? value.trim().length > 0 : value !== null && value !== undefined
+  })
 }
 
 function isPublicHttpsUrl(raw: string): boolean {
@@ -220,6 +251,9 @@ export async function executeConnectedAppCapability(input: {
     appSlug: input.app.slug,
     surface: 'connected_apps',
   })
+  if (input.capability.fallbackArtifactType) {
+    return createDeclaredFallbackArtifact(input, qualityTier)
+  }
   const routePlan = await selectCapabilityRoutePlan({
     capability: input.capability,
     requestedProvider: input.request.provider,
@@ -230,12 +264,12 @@ export async function executeConnectedAppCapability(input: {
   const route = selected?.route
   if (!route || !selected) {
     return createTerminalJob(input, {
-      status: 'needs_configuration',
+      status: input.capability.adapterImplemented ? 'needs_configuration' : 'blocked',
       provider: input.request.provider ?? input.capability.defaultProviders[0] ?? 'huggingface',
       model: input.request.model ?? '',
       adapter: '',
       qualityTier,
-      error: routePlan.reason,
+      error: input.capability.blocker ?? routePlan.reason,
     })
   }
   const adapter = getProviderCapabilityAdapter(route.provider)
@@ -322,6 +356,8 @@ export async function executeConnectedAppCapability(input: {
     job.providerAttempts.push({
       provider: result.provider,
       model: result.model,
+      adapter: candidateAdapter.id,
+      outputType: candidate.route.outputType,
       status: result.status,
       latencyMs: result.latencyMs,
       errorCategory: result.errorCategory,
@@ -351,7 +387,6 @@ export async function executeConnectedAppCapability(input: {
       errorCategory: result.errorCategory ?? 'unknown',
     })
     finalResult = result
-    if (result.status === 'blocked' || result.retryable === false) break
   }
   if (finalResult) {
     job = await applyAdapterResult(job, input.capability, finalResult)
@@ -384,6 +419,7 @@ export async function pollConnectedAppCapabilityJob(
 ): Promise<ConnectedAppCapabilityJob> {
   if (job.status !== 'processing' || !job.providerJobId) return job
   const capability = AI_CAPABILITY_TAXONOMY.find((entry) => entry.id === job.capability)
+  if (job.provider === 'amarktai') return job
   const route = capability?.providerRoutes.find((entry) => entry.provider === job.provider)
   const adapter = getProviderCapabilityAdapter(job.provider)
   if (!capability || !route || !adapter?.poll) {
@@ -577,6 +613,89 @@ function createTerminalJob(
       updatedAt: now,
     },
   ) as ConnectedAppCapabilityJob
+}
+
+async function createDeclaredFallbackArtifact(
+  input: {
+    app: ConnectedApp
+    capability: AiCapabilityDefinition
+    request: ConnectedAppCapabilityRequest
+  },
+  qualityTier: StoredRoutingQualityTier,
+): Promise<ConnectedAppCapabilityJob> {
+  const fallbackType = input.capability.fallbackArtifactType
+  if (!fallbackType) {
+    throw new Error('A declared fallback artifact type is required.')
+  }
+  const now = new Date().toISOString()
+  let job = appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
+    LOCAL_STORE_FILES.connectedAppCapabilityJobs,
+    {
+      appId: input.app.id,
+      appSlug: input.app.slug,
+      capability: input.capability.id,
+      requiredScope: input.capability.requiredScope,
+      provider: 'amarktai',
+      model: `${fallbackType}-v1`,
+      adapter: 'declared_fallback_artifact',
+      qualityTier,
+      status: 'processing',
+      providerJobId: null,
+      artifactId: null,
+      artifactUrl: null,
+      result: null,
+      error: null,
+      providerAttempts: [],
+      request: sanitizeRequest(input.request),
+      createdAt: now,
+      updatedAt: now,
+    },
+  ) as ConnectedAppCapabilityJob
+  const report = {
+    kind: fallbackType,
+    capability: input.capability.id,
+    prompt: input.request.prompt ?? input.request.text ?? '',
+    generatedMedia: false,
+    readiness: input.capability.readiness,
+    blocker: input.capability.blocker,
+    sections: fallbackType === 'music_blueprint'
+      ? ['concept', 'lyrics_direction', 'arrangement', 'tempo_and_key', 'production_notes']
+      : ['scene_plan', 'voice_direction', 'timing', 'visual_notes', 'production_requirements'],
+  }
+  try {
+    const artifact = await createArtifact({
+      appSlug: input.app.slug,
+      appId: input.app.id,
+      jobId: job.id,
+      type: 'report',
+      subType: fallbackType,
+      title: `${input.capability.label} ${fallbackType === 'music_blueprint' ? 'Blueprint' : 'Storyboard'}`,
+      description: `Planning artifact only. ${input.capability.blocker ?? 'Generated media is not available in V1.'}`,
+      provider: 'amarktai',
+      model: `${fallbackType}-v1`,
+      capability: input.capability.id,
+      mimeType: 'application/json',
+      content: Buffer.from(JSON.stringify(report, null, 2), 'utf8'),
+      metadata: {
+        connectedAppId: input.app.id,
+        generatedMedia: false,
+        declaredFallback: true,
+      },
+    })
+    job = updateCapabilityJob(job.id, {
+      status: 'completed',
+      artifactId: artifact.id,
+      artifactUrl: artifact.downloadUrl,
+      result: report,
+      error: null,
+    }) ?? job
+  } catch (error) {
+    job = updateCapabilityJob(job.id, {
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Fallback artifact persistence failed.',
+    }) ?? job
+  }
+  return job
 }
 
 function updateCapabilityJob(

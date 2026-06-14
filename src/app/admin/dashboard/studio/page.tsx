@@ -18,7 +18,13 @@ import {
 
 type AppOption = { slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
-type CapabilityTruth = { capability: string; status: string; blocker?: string | null }
+type CapabilityTruth = {
+  id: string
+  readiness: string
+  blocker?: string | null
+  requiredSourceInput?: string | null
+  adapterImplemented: boolean
+}
 type CreativeOption = { id: string; name: string }
 type VideoProject = {
   id: string
@@ -134,8 +140,8 @@ export default function StudioPage() {
       const values = Array.isArray(data) ? data : data.apps ?? []
       setApps(values)
     }).catch(() => null)
-    fetch('/api/admin/ai-routing', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
-      setCapabilityTruth(Array.isArray(data.mediaCapabilities) ? data.mediaCapabilities : [])
+    fetch('/api/admin/system/v1-brain-route-matrix', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
+      setCapabilityTruth(Array.isArray(data.capabilities) ? data.capabilities : [])
     }).catch(() => null)
     fetch('/api/admin/creative-workspaces', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
       setProjects(data.projects ?? [])
@@ -332,13 +338,18 @@ export default function StudioPage() {
   const isMusic = capability === 'music_generation' || capability === 'lyrics_generation'
   const isVoice = capability === 'tts' || capability === 'adult_voice'
   const isVideo = capability.includes('video')
-  const truthCapability = capability === 'suggestive_image'
-    ? 'image_generation'
-    : capability === 'lyrics_generation'
-      ? 'music_generation'
-      : capability
-  const runtimeTruth = capabilityTruth.find((entry) => entry.capability === truthCapability)
+  const truthCapability = taxonomyCapability(capability)
+  const runtimeTruth = capabilityTruth.find((entry) => entry.id === truthCapability)
+  const missingRequiredSource = runtimeTruth?.requiredSourceInput && !sourceArtifact && !source.trim() && !audioFile
+  const routeBlocker = missingRequiredSource
+    ? `Needs ${runtimeTruth?.requiredSourceInput} input.`
+    : runtimeTruth?.readiness === 'adapter_missing' && capability !== 'avatar_video'
+      ? runtimeTruth.blocker || 'No implemented V1 adapter is available.'
+      : runtimeTruth?.readiness === 'provider_config_missing'
+        ? runtimeTruth.blocker || 'No configured provider can execute this capability.'
+        : ''
   const activeResultMessage = active ? resultMessage(active.result) : ''
+  const activeAttempts = active ? resultAttempts(active.result) : []
 
   return (
     <div className="space-y-5">
@@ -367,7 +378,8 @@ export default function StudioPage() {
             {(capability === 'image_edit' || isVideo) && <Field label="Source artifact, image, or reference"><input value={source} onChange={(event) => { setSource(event.target.value); setSourceArtifact(null) }} placeholder="artifact:id, URL, or existing reference" className="control" /></Field>}
             {sourceArtifact && <button onClick={() => { setSourceArtifact(null); setSource('') }} className="rounded-full border border-fuchsia-400/25 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-bold text-fuchsia-200">Using {sourceArtifact.title} x</button>}
             {policyBlocker && <ErrorPanel message={policyBlocker} />}
-            <button onClick={() => run()} disabled={loading || Boolean(policyBlocker) || (capability === 'stt' ? !audioFile : !prompt.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-40">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Run media task</button>
+            {routeBlocker && <ErrorPanel message={routeBlocker} />}
+            <button onClick={() => run()} disabled={loading || Boolean(policyBlocker) || Boolean(routeBlocker) || (capability === 'stt' ? !audioFile : !prompt.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-40">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Run media task</button>
             {error && <ErrorPanel message={error} />}
           </Panel>
 
@@ -381,7 +393,8 @@ export default function StudioPage() {
           </Panel>
 
           <Panel title="Capability readiness">
-            <Fact label="Runtime truth" value={capability === 'image_edit' ? 'UNAVAILABLE - source adapter missing' : runtimeTruth?.status === 'available' ? 'READY' : runtimeTruth?.blocker ?? 'Readiness will be verified at execution time'} />
+            <Fact label="V1 route state" value={friendly(runtimeTruth?.readiness ?? 'Readiness will be verified at execution time')} />
+            {runtimeTruth?.blocker && <p className="text-xs leading-5 text-amber-300">{runtimeTruth.blocker}</p>}
             <p className="text-xs leading-5 text-slate-400">AmarktAI selects infrastructure automatically after validating this capability.</p>
           </Panel>
         </aside>
@@ -401,6 +414,7 @@ export default function StudioPage() {
               {active.approval.status === 'rejected' && <StatusLine kind="error" title="Rejected" detail="No provider execution occurred." />}
             </Panel>
             <Panel title="Execution / job progress"><div className="space-y-3">{active.execution.events.map((event) => <StatusLine key={event.id} kind={event.level === 'error' ? 'error' : event.level === 'warning' ? 'wait' : 'ok'} title={friendly(event.type)} detail={event.message} />)}{active.status === 'queued' && <StatusLine kind="wait" title="Provider job pending" detail="Media Studio will not show a completed artifact until polling returns real media." />}</div></Panel>
+            {activeAttempts.length > 0 && <Panel title="Provider attempts"><div className="space-y-3">{activeAttempts.map((attempt, index) => <StatusLine key={`${attempt.provider}:${attempt.model}:${index}`} kind={attempt.status === 'completed' ? 'ok' : 'error'} title={`${attempt.provider} / ${attempt.model || 'automatic'}`} detail={`${attempt.adapter || 'adapter'} - ${attempt.status}${attempt.error ? `: ${attempt.error}` : ''}`} />)}</div></Panel>}
             {active.error && <ErrorPanel message={active.error} />}
             {!active.error && activeResultMessage && <ErrorPanel message={activeResultMessage} />}
             <Panel title="Artifact result">
@@ -487,6 +501,35 @@ function resultMessage(result: unknown): string {
       .join(' ')
   }
   return ''
+}
+
+function resultAttempts(result: unknown): Array<Record<string, string>> {
+  if (!result || typeof result !== 'object') return []
+  const attempts = (result as Record<string, unknown>).providerAttempts
+  if (!Array.isArray(attempts)) return []
+  return attempts.filter((attempt): attempt is Record<string, string> =>
+    Boolean(attempt && typeof attempt === 'object'),
+  )
+}
+
+function taxonomyCapability(capability: string) {
+  const map: Record<string, string> = {
+    chat: 'chat',
+    image_generation: 'text_to_image',
+    image_edit: 'image_text_to_image',
+    video_generation: 'text_to_video',
+    image_to_video: 'image_to_video',
+    music_generation: 'music_generation',
+    lyrics_generation: 'lyrics_generation',
+    tts: 'text_to_speech',
+    stt: 'automatic_speech_recognition',
+    avatar_video: 'avatar_video',
+    adult_image: 'text_to_image',
+    adult_video: 'text_to_video',
+    adult_voice: 'text_to_speech',
+    suggestive_image: 'text_to_image',
+  }
+  return map[capability] ?? capability
 }
 
 function friendly(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) }

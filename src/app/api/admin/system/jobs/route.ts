@@ -28,6 +28,12 @@ export async function GET() {
     })),
     ...executions.map((execution) => {
       const artifact = execution.artifacts.at(-1)
+      const result = execution.result && typeof execution.result === 'object'
+        ? execution.result as Record<string, unknown>
+        : null
+      const providerAttempts = Array.isArray(result?.providerAttempts)
+        ? result.providerAttempts
+        : []
       return {
         id: execution.executionId,
         type: 'execution',
@@ -42,6 +48,7 @@ export async function GET() {
         artifactUrl: artifact?.url ?? null,
         appSlug: execution.appSlug,
         promptSummary: execution.input.prompt.slice(0, 140),
+        providerAttempts,
       }
     }),
   ]

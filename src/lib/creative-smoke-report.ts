@@ -5,7 +5,18 @@ export const CREATIVE_SMOKE_KEY = 'live_creative_smoke_test'
 export type CreativeSmokeStatus = 'pass' | 'pending' | 'blocked' | 'fail'
 
 export interface CreativeSmokeWorkflow {
-  workflow: 'text' | 'image' | 'video' | 'music' | 'artifact_persistence'
+  workflow:
+    | 'text'
+    | 'image'
+    | 'image_edit'
+    | 'video'
+    | 'image_to_video'
+    | 'tts'
+    | 'stt'
+    | 'music'
+    | 'avatar'
+    | 'artifact_persistence'
+    | 'artifact_media_contract'
   capability: string
   status: CreativeSmokeStatus
   provider: string | null
@@ -18,6 +29,15 @@ export interface CreativeSmokeWorkflow {
   artifactsEntryVisible: boolean
   error: string | null
   blocker: string | null
+  artifactMimeType: string | null
+  providerAttempts: Array<{
+    provider: string
+    model: string
+    adapter?: string
+    outputType?: string
+    status: string
+    error?: string
+  }>
 }
 
 export interface CreativeSmokeReport {

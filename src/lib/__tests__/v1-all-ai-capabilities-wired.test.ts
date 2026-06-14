@@ -15,20 +15,27 @@ import { CONNECTED_APP_SCOPES } from '@/lib/connected-apps'
 const ROOT = path.resolve(__dirname, '../../..')
 const source = (relativePath: string) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
 
-describe('V1 all AI capabilities wired', () => {
-  it('routes every canonical capability through an approved executable adapter', () => {
+describe('V1 AI capability routing truth', () => {
+  it('routes only adapter-backed capabilities through approved executable adapters', () => {
     expect(AI_CAPABILITY_TAXONOMY).toHaveLength(62)
     for (const capability of AI_CAPABILITY_TAXONOMY) {
-      expect(capability.status).toBe('working')
-      expect(capability.blocker).toBeNull()
-      expect(capability.exposeToConnectedAppsV1).toBe(true)
-      expect(capability.executableEndpoint).toBe('/api/connected-apps/capabilities/execute')
-      expect(capability.providerRoutes.length).toBeGreaterThan(0)
       for (const route of capability.providerRoutes) {
         expect(APPROVED_DIRECT_PROVIDER_IDS).toContain(route.provider)
-        expect(route.executable).toBe(true)
-        expect(route.route).toBe('/api/connected-apps/capabilities/execute')
-        expect(getProviderCapabilityAdapter(route.provider)?.id).toBe(route.adapter)
+        if (route.executable) {
+          expect(route.route).toBeTruthy()
+          expect(route.adapterImplemented).toBe(true)
+          expect(getProviderCapabilityAdapter(route.provider)?.id).toBe(route.adapter)
+        } else {
+          expect(route.adapterImplemented).toBe(false)
+        }
+      }
+      if (capability.readiness === 'ready' || capability.readiness === 'ready_with_fallback') {
+        expect(capability.adapterImplemented).toBe(true)
+        expect(capability.providerRoutes.some((route) => route.executable)).toBe(true)
+      } else if (capability.readiness === 'needs_input') {
+        expect(capability.requiredSourceInput).toBeTruthy()
+      } else {
+        expect(capability.blocker?.trim().length).toBeGreaterThan(0)
       }
     }
   })
@@ -100,16 +107,18 @@ describe('V1 all AI capabilities wired', () => {
     expect(engine).toContain('physical actuation is blocked')
   })
 
-  it('does not expose provider-available-not-wired truth or duplicate registries', () => {
+  it('exposes unwired and unavailable truth without creating duplicate registries', () => {
     expect(AI_CAPABILITY_TAXONOMY.some(
       (capability) => capability.status === 'provider_available_not_wired',
-    )).toBe(false)
+    )).toBe(true)
     expect(AI_CAPABILITY_TAXONOMY.some(
       (capability) => capability.status === 'unavailable',
-    )).toBe(false)
+    )).toBe(true)
     const engine = source('src/lib/connected-app-capability-engine.ts')
     expect(engine).toContain("from '@/lib/ai-capability-taxonomy'")
     expect(engine).not.toMatch(/CAPABILITY_(REGISTRY|MATRIX)\s*=/)
+    expect(source('src/lib/ai-capability-taxonomy.ts'))
+      .toContain("from '@/lib/brain/v1-capability-matrix'")
   })
 
   it('keeps prohibited systems and providers out of the execution implementation', () => {
