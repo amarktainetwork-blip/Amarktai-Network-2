@@ -1,4 +1,5 @@
 import { getGenXJobStatus } from '@/lib/genx-client'
+import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
 import {
   appendRecord,
   findRecord,
@@ -86,39 +87,49 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
   if (!job || job.status === 'completed' || job.status === 'failed') return job
 
   if (Date.now() - new Date(job.createdAt).getTime() > MAX_PROCESSING_MS) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Media provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
-  if (job.provider !== 'genx') {
-    return saveJob(job, {
+  if (!['genx', 'qwen'].includes(job.provider)) {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Provider "${job.provider}" does not have a local media polling contract.`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
-  const providerResult = await getGenXJobStatus(job.providerJobId)
+  const providerResult = job.provider === 'qwen'
+    ? await qwenJobStatus(job.providerJobId, job.model)
+    : await getGenXJobStatus(job.providerJobId)
   if (!providerResult) return job
   if (providerResult.status === 'failed') {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: providerResult.error ?? 'Media provider job failed.',
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
   if (!['completed', 'succeeded'].includes(providerResult.status)) {
     return saveJob(job, { status: 'processing', error: null })
   }
   if (!providerResult.resultUrl) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: 'Media provider reported completion without a usable media URL.',
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
   try {
@@ -142,7 +153,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         localJobId: job.id,
       },
     })
-    return saveJob(job, {
+    const completed = saveJob(job, {
       status: 'completed',
       artifactId: persisted.artifactId,
       storageUrl: persisted.storageUrl,
@@ -150,13 +161,66 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
       error: null,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(completed)
+    return completed
   } catch (error) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
+}
+
+async function qwenJobStatus(providerJobId: string, model: string) {
+  const taskId = providerJobId.replace(/^qwen-wan:/, '')
+  const result = await pollQwenWanxTask({ taskId, model })
+  if (!result.ok) {
+    return { status: 'failed', resultUrl: null, error: result.error ?? 'Qwen task polling failed.' }
+  }
+  const payload = result.json as Record<string, unknown> | undefined
+  const output = record(payload?.output)
+  const status = String(output?.task_status ?? output?.status ?? 'processing').toLowerCase()
+  const resultUrl = nestedUrl(output)
+  return {
+    status: ['succeeded', 'completed', 'success'].includes(status) ? 'completed'
+      : ['failed', 'canceled', 'cancelled'].includes(status) ? 'failed'
+        : 'processing',
+    resultUrl,
+    error: status === 'failed' ? String(output?.message ?? 'Qwen task failed.') : null,
+  }
+}
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+}
+
+function nestedUrl(output: Record<string, unknown> | null): string | null {
+  if (!output) return null
+  for (const value of [output.video_url, output.url]) {
+    if (typeof value === 'string' && value) return value
+  }
+  const results = Array.isArray(output.results) ? output.results : []
+  for (const item of results) {
+    const row = record(item)
+    for (const value of [row?.url, row?.video_url]) {
+      if (typeof value === 'string' && value) return value
+    }
+  }
+  return null
+}
+
+async function reconcileExecution(job: LocalMediaJob | null) {
+  const executionId = typeof job?.metadata.executionId === 'string'
+    ? job.metadata.executionId
+    : null
+  if (!job || !executionId || !['completed', 'failed'].includes(job.status)) return
+  const { recordExecutionResponse } = await import('@/lib/execution')
+  recordExecutionResponse(executionId, localMediaJobResponse(job))
 }
 
 export function localMediaJobResponse(job: LocalMediaJob) {

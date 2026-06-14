@@ -115,7 +115,7 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     kind: 'provider',
     envAliases: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
     baseUrl: 'https://api.xiaomimimo.com/v1',
-    authMethod: 'Bearer token or api-key',
+    authMethod: 'api-key header',
     capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'audio', 'video', 'tts', 'stt', 'tools', 'web_search'],
     testRoute: '/api/admin/settings/test-provider',
     normalUserVisible: false,
@@ -308,6 +308,20 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
 ] as const
 
 export const AI_PROVIDER_MESH = PROVIDER_MESH.filter((node) => node.kind === 'provider')
+export type ApprovedDirectProviderId = Extract<
+  ProviderMeshId,
+  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together'
+>
+
+export const APPROVED_DIRECT_PROVIDER_IDS = AI_PROVIDER_MESH.map(
+  (node) => node.id as ApprovedDirectProviderId,
+)
+
+const APPROVED_DIRECT_PROVIDER_SET = new Set<string>(APPROVED_DIRECT_PROVIDER_IDS)
+
+export function isApprovedDirectProvider(id: string): id is ApprovedDirectProviderId {
+  return APPROVED_DIRECT_PROVIDER_SET.has(id)
+}
 
 export function getProviderMeshNode(id: string) {
   return PROVIDER_MESH.find((node) => node.id === id)

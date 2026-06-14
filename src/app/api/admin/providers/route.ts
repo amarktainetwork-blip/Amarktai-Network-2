@@ -6,6 +6,11 @@ import { maskApiKey } from '@/lib/providers'
 import { validateConfig, classifyDbError, configErrorResponse } from '@/lib/config-validator'
 import { encryptVaultKey } from '@/lib/crypto-vault'
 import { getCanonicalProvider } from '@/lib/provider-catalog'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
+import {
+  PROVIDER_REGISTRY,
+  getProviderReadiness,
+} from '@/lib/provider-registry'
 
 const createSchema = z.object({
   providerKey: z.string().min(1).max(50),
@@ -51,14 +56,37 @@ export async function GET() {
         // apiKey intentionally excluded
       },
     })
-    // Augment each provider with catalog metadata (launchRequired, etc.)
-    const augmented = providers.map((p) => {
-      const catalog = getCanonicalProvider(p.providerKey)
+    const rows = new Map(
+      providers
+        .filter((provider) => isApprovedDirectProvider(provider.providerKey))
+        .map((provider) => [provider.providerKey, provider]),
+    )
+    const augmented = await Promise.all(PROVIDER_REGISTRY.map(async (provider) => {
+      const row = rows.get(provider.id)
+      const catalog = getCanonicalProvider(provider.id)
+      const readiness = await getProviderReadiness(provider.id)
       return {
-        ...p,
+        id: row?.id ?? `canonical:${provider.id}`,
+        providerKey: provider.id,
+        displayName: provider.displayName,
+        enabled: row?.enabled ?? readiness.configured,
+        maskedPreview: row?.maskedPreview ?? '',
+        baseUrl: row?.baseUrl || readiness.baseUrl,
+        defaultModel: row?.defaultModel || provider.defaultModelsByCapability.text || '',
+        fallbackModel: row?.fallbackModel ?? '',
+        healthStatus: readiness.state,
+        healthMessage: readiness.message,
+        lastCheckedAt: readiness.checkedAt,
+        notes: row?.notes ?? '',
+        sortOrder: row?.sortOrder ?? 99,
+        createdAt: row?.createdAt ?? null,
+        updatedAt: row?.updatedAt ?? null,
+        dbRowExists: Boolean(row),
+        configured: readiness.configured,
+        supportedModels: provider.supportedModels,
         launchRequired: catalog?.launchRequired ?? false,
       }
-    })
+    }))
     return NextResponse.json(augmented)
   } catch (error) {
     const { category, message } = classifyDbError(error)
@@ -83,12 +111,19 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     const data = createSchema.parse(body)
+    const catalog = getCanonicalProvider(data.providerKey)
+    if (!catalog || !isApprovedDirectProvider(data.providerKey)) {
+      return NextResponse.json({ error: 'Provider is not approved for direct configuration' }, { status: 422 })
+    }
     const normalizedApiKey = data.apiKey.trim()
     const masked = maskApiKey(normalizedApiKey)
     const encryptedKey = normalizedApiKey ? encryptVaultKey(normalizedApiKey) : ''
     const provider = await prisma.aiProvider.create({
       data: {
         ...data,
+        displayName: catalog.displayName,
+        baseUrl: catalog.defaultBaseUrl,
+        sortOrder: catalog.sortOrder,
         apiKey: encryptedKey,
         maskedPreview: masked,
         healthStatus: normalizedApiKey ? 'configured' : 'unconfigured',

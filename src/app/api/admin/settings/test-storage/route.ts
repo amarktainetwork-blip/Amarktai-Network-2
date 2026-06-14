@@ -80,9 +80,15 @@ export async function POST(req: NextRequest) {
     const health = await verifyStorage()
     return NextResponse.json({
       success: health.writable,
+      ready: health.ready,
       driver: 'local_vps',
       persistent: true,
+      root: health.root,
       basePath: getStorageRoot(),
+      writable: health.writable,
+      readable: health.readable,
+      deletable: health.deletable,
+      checkedAt: health.checkedAt,
       subdirectories: health.requiredDirectories,
       error: health.error,
       latencyMs: Date.now() - start,

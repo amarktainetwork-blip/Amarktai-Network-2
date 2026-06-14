@@ -2,14 +2,12 @@
  * POST /api/admin/research/opportunity
  *
  * Save a differentiated product opportunity derived from research.
- * Stores as an Artifact (type=document, subType=research_opportunity).
- * Falls back to local VPS store if artifact-store unavailable.
+ * Stores as a canonical research artifact.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
-import { appendRecord, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,17 +30,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
 
-    // Try artifact-store first
     try {
       const artifact = await createArtifact({
         appSlug: appSlug ?? 'admin',
-        type: 'document',
+        type: 'research_result',
         subType: 'research_opportunity',
+        capability: 'research',
         title,
         description: description ?? '',
         provider: 'manual',
         model: '',
-        content: productPlan ?? description ?? '',
+        mimeType: 'application/json',
+        content: Buffer.from(JSON.stringify({
+          title,
+          description: description ?? '',
+          productPlan: productPlan ?? '',
+          sourceArtifactIds: sourceArtifactIds ?? [],
+          tags: tags ?? [],
+        }, null, 2)),
         metadata: {
           sourceArtifactIds: sourceArtifactIds ?? [],
           tags: tags ?? [],
@@ -50,25 +55,14 @@ export async function POST(req: NextRequest) {
         },
       })
       return NextResponse.json({ success: true, artifact, driver: 'db' })
-    } catch { /* Fall through to local */ }
-
-    // Local VPS fallback
-    const localOpportunity = appendRecord(LOCAL_STORE_FILES.research, {
-      url: '',
-      appSlug: appSlug ?? 'admin',
-      title,
-      notes: description ?? '',
-      tags: tags ?? [],
-      scrapedMethod: 'manual',
-      firecrawlAvailable: false,
-      content: productPlan ?? description ?? '',
-      status: 'completed',
-      subType: 'research_opportunity',
-      sourceArtifactIds: sourceArtifactIds ?? [],
-      createdAt: new Date().toISOString(),
-      driver: 'local_vps',
-    })
-    return NextResponse.json({ success: true, opportunity: localOpportunity, driver: 'local_vps' })
+    } catch (error) {
+      return NextResponse.json({
+        success: false,
+        error: `Research opportunity could not be persisted as an artifact: ${
+          error instanceof Error ? error.message : 'unknown error'
+        }`,
+      }, { status: 503 })
+    }
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to save opportunity' }, { status: 500 })
   }

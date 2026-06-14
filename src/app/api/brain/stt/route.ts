@@ -1,352 +1,171 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getVaultApiKey } from '@/lib/brain';
-
-/**
- * POST /api/brain/stt — Speech-to-Text endpoint
- *
- * Multi-provider support:
- *   - Groq STT (low-cost, fast — whisper-large-v3 / distil-whisper-large-v3-en / whisper-large-v3-turbo)
- *   - OpenAI STT (premium — whisper-1)
- *   - Gemini STT (premium multimodal — gemini-2.0-flash-live-001)
- *   - Hugging Face STT (free fallback — openai/whisper-large-v3 / openai/whisper-small)
- *
- * API keys are resolved from the DB vault first, then env var fallback.
- *
- * Accepts multipart/form-data with:
- *   - file (audio file, required) — audio to transcribe
- *   - model (string, optional) — Whisper model (default: auto-selected by provider)
- *   - language (string, optional) — ISO language code
- *   - provider (string, optional) — 'groq' | 'openai' | 'gemini' | 'huggingface' | 'auto' (default: 'auto')
- *
- * Returns:
- *   { transcript, model, language, provider, executed: true }
- *   or { error, executed: false } on failure.
- *
- * STRICT RULE: Never fakes success. Returns error if no provider configured.
- */
+import { NextRequest, NextResponse } from 'next/server'
+import { createArtifact } from '@/lib/artifact-store'
+import { getVaultApiKey } from '@/lib/brain'
+import { callGenXMedia, GENX_STT_MODELS } from '@/lib/genx-client'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 export async function POST(request: NextRequest) {
-  const unavailable = (
-    reason: 'provider_not_configured' | 'all_providers_unavailable' | 'invalid_request' | 'transcription_failed',
-    error: string,
-    status: number,
-    provider?: string,
-  ) => NextResponse.json(
-    {
-      error,
-      executed: false,
-      capability: 'voice_input',
-      available: false,
-      reason,
-      ...(provider ? { provider } : {}),
-    },
-    { status },
-  );
+  const unavailable = (error: string, status = 503, provider?: string) =>
+    NextResponse.json(
+      { error, executed: false, capability: 'voice_input', available: false, provider },
+      { status },
+    )
 
-  try {
-    const contentType = request.headers.get('content-type') ?? '';
+  if (!(request.headers.get('content-type') ?? '').includes('multipart/form-data')) {
+    return unavailable('Content-Type must be multipart/form-data with an audio file.', 400)
+  }
 
-    if (!contentType.includes('multipart/form-data')) {
-      return unavailable('invalid_request', 'Content-Type must be multipart/form-data with an audio file', 400);
+  const formData = await request.formData()
+  const file = formData.get('file')
+  if (!(file instanceof Blob)) return unavailable('An audio file is required in the "file" field.', 400)
+
+  const requestedProvider = String(formData.get('provider') ?? 'auto')
+  if (requestedProvider !== 'auto' && !isApprovedDirectProvider(requestedProvider)) {
+    return unavailable(`Provider "${requestedProvider}" is not approved for direct STT.`, 400, requestedProvider)
+  }
+
+  const requestedModel = formData.get('model')?.toString()
+  const language = formData.get('language')?.toString()
+  const appSlug = formData.get('appSlug')?.toString() || 'media-studio'
+  const executionId = formData.get('executionId')?.toString()
+  const bytes = Buffer.from(await file.arrayBuffer())
+  const mimeType = (file as File).type || 'audio/webm'
+
+  if (requestedProvider === 'auto' || requestedProvider === 'genx') {
+    const model = requestedModel ?? GENX_STT_MODELS[0]
+    const result = await callGenXMedia({
+      model,
+      prompt: bytes.toString('base64'),
+      type: 'audio',
+      metadata: { task: 'transcribe', mimeType, language },
+    })
+    if (result.success && result.url) {
+      return persistTranscript({
+        transcript: result.url,
+        model: result.model,
+        language,
+        provider: 'genx',
+        appSlug,
+        sourceMimeType: mimeType,
+        fallbackUsed: false,
+        executionId,
+      })
     }
+    if (requestedProvider === 'genx') return unavailable('GenX STT is not configured or returned no transcript.', 503, 'genx')
+  }
 
-    const formData = await request.formData();
-    const file = formData.get('file');
+  const candidates = requestedProvider === 'auto'
+    ? ['groq', 'qwen', 'huggingface'] as const
+    : [requestedProvider] as const
 
-    if (!file || !(file instanceof Blob)) {
-      return unavailable('invalid_request', 'An audio file is required in the "file" field', 400);
-    }
-
-    const requestedModel = formData.get('model') as string | null;
-    const language = formData.get('language') as string | null;
-    const requestedProvider = (formData.get('provider') as string | null) ?? 'auto';
-
-    // Resolve API keys from DB vault (with env fallback)
-    const groqKey  = await getVaultApiKey('groq');
-    const openaiKey = await getVaultApiKey('openai');
-    const geminiKey = await getVaultApiKey('gemini');
-    const hfKey    = await getVaultApiKey('huggingface');
-    const qwenKey  = await getVaultApiKey('qwen');
-
-    // ── GenX STT first attempt ────────────────────────────────────────────────
-    // GenX STT accepts audio as base64 via the media generate endpoint.
-    if (requestedProvider === 'auto' || requestedProvider === 'genx') {
-      try {
-        const { callGenXMedia, GENX_STT_MODELS } = await import('@/lib/genx-client');
-        const genxModel = requestedModel ?? GENX_STT_MODELS[0];
-        const audioBytes = await file.arrayBuffer();
-        const audioBase64 = Buffer.from(audioBytes).toString('base64');
-        const mimeType = (file as File).type || 'audio/mpeg';
-        const genxResult = await callGenXMedia({
-          model: genxModel,
-          prompt: audioBase64,
-          type: 'audio',
-          metadata: { task: 'transcribe', mimeType, language: language ?? undefined },
-        });
-        if (genxResult.success && genxResult.url) {
-          // GenX STT returns the transcript text in the url field for text-mode outputs
-          const transcript = genxResult.url;
-          return NextResponse.json({
-            transcript,
-            model: genxResult.model,
-            language,
-            provider: 'genx',
-            executed: true,
-            fallback_used: false,
-            capability: 'voice_input',
-          });
-        }
-        // GenX STT failed — fall through to other providers
-      } catch { /* fall through */ }
-      if (requestedProvider === 'genx') {
-        return unavailable('provider_not_configured', 'GenX STT requested but GenX is not configured or returned no transcript. Add GENX_API_URL/GENX_API_KEY.', 503, 'genx');
-      }
-    }
-
-    // Determine provider
-    let provider: 'groq' | 'openai' | 'gemini' | 'huggingface' | 'qwen';
-    if (requestedProvider === 'groq') {
-      if (!groqKey) {
-        return unavailable('provider_not_configured', 'Groq STT requested but no Groq API key is configured. Add it via Admin → AI Providers.', 503, 'groq');
-      }
-      provider = 'groq';
-    } else if (requestedProvider === 'openai') {
-      if (!openaiKey) {
-        return unavailable('provider_not_configured', 'OpenAI STT requested but no OpenAI API key is configured. Add it via Admin → AI Providers.', 503, 'openai');
-      }
-      provider = 'openai';
-    } else if (requestedProvider === 'gemini') {
-      if (!geminiKey) {
-        return unavailable('provider_not_configured', 'Gemini STT requested but no Gemini API key is configured. Add it via Admin → AI Providers.', 503, 'gemini');
-      }
-      provider = 'gemini';
-    } else if (requestedProvider === 'huggingface') {
-      if (!hfKey) {
-        return unavailable('provider_not_configured', 'Hugging Face STT requested but no Hugging Face API key is configured. Add it via Admin → AI Providers.', 503, 'huggingface');
-      }
-      provider = 'huggingface';
-    } else if (requestedProvider === 'qwen') {
-      if (!qwenKey) {
-        return unavailable('provider_not_configured', 'Qwen STT requested but no Qwen/DashScope API key is configured. Add it via Admin → AI Providers.', 503, 'qwen');
-      }
-      provider = 'qwen';
-    } else {
-      // Auto: OpenAI is the golden-path baseline. Groq is used as fallback when
-      // OpenAI is not configured. Gemini, Qwen, and Hugging Face are last-resort options.
-      if (openaiKey) {
-        provider = 'openai';
-      } else if (groqKey) {
-        provider = 'groq';
-      } else if (geminiKey) {
-        provider = 'gemini';
-      } else if (qwenKey) {
-        provider = 'qwen';
-      } else if (hfKey) {
-        provider = 'huggingface';
-      } else {
-        return unavailable(
-          'all_providers_unavailable',
-          'Voice input is currently unavailable: no STT provider is configured. Add an API key via Admin → AI Providers (OpenAI, Groq, Gemini, Qwen, or Hugging Face).',
-          503,
-        );
-      }
-    }
-
-    // Select model
-    const model = requestedModel
-      ?? (provider === 'groq' ? 'whisper-large-v3' : provider === 'gemini' ? 'gemini-2.0-flash-live-001' : provider === 'qwen' ? 'qwen-audio-turbo' : provider === 'huggingface' ? 'openai/whisper-large-v3' : 'whisper-1');
+  for (const provider of candidates) {
+    const key = await getVaultApiKey(provider)
+    if (!key) continue
 
     if (provider === 'groq') {
-      // Groq STT via OpenAI-compatible endpoint
-      const upstream = new FormData();
-      upstream.append('file', file, 'audio.webm');
-      upstream.append('model', model);
-      if (language) upstream.append('language', language);
-
+      const model = requestedModel ?? 'whisper-large-v3'
+      const upstream = new FormData()
+      upstream.append('file', file, 'audio.webm')
+      upstream.append('model', model)
+      if (language) upstream.append('language', language)
       const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${groqKey}` },
+        headers: { Authorization: `Bearer ${key}` },
         body: upstream,
-      });
-
-        if (!response.ok) {
-          const err = await response.text();
-          return unavailable('transcription_failed', `Groq transcription failed: ${err}`, response.status, 'groq');
-        }
-
-      const result = await response.json();
-      return NextResponse.json({
-        transcript: result.text,
-        model,
-        language,
-        provider: 'groq',
-        executed: true,
-        fallback_used: false,
-        capability: 'voice_input',
-      });
-    }
-
-    if (provider === 'gemini') {
-      // Gemini STT via Google Generative Language API
-      const audioBytes = Buffer.from(await file.arrayBuffer());
-      const audioBase64 = audioBytes.toString('base64');
-      const mimeType = (file as File).type || 'audio/webm';
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { inline_data: { mime_type: mimeType, data: audioBase64 } },
-                  { text: language ? `Transcribe this audio. The language is ${language}.` : 'Transcribe this audio accurately.' },
-                ],
-              },
-            ],
-            generationConfig: { temperature: 0, maxOutputTokens: 8192 },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.text();
-        return unavailable('transcription_failed', `Gemini transcription failed: ${err}`, response.status, 'gemini');
+      })
+      if (response.ok) {
+        const result = await response.json() as { text?: string }
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
       }
-
-      const result = await response.json();
-      const transcript = result?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      return NextResponse.json({
-        transcript,
-        model,
-        language,
-        provider: 'gemini',
-        executed: true,
-        fallback_used: false,
-        capability: 'voice_input',
-      });
-    }
-
-    if (provider === 'huggingface') {
-      // Hugging Face Inference API — free fallback STT
-      const ALLOWED_HF_STT_MODELS = ['openai/whisper-large-v3', 'openai/whisper-small', 'openai/whisper-base'] as const;
-      const matched = ALLOWED_HF_STT_MODELS.find((m) => m === model);
-      const hfModel = matched ?? 'openai/whisper-large-v3';
-      const audioBytes = Buffer.from(await file.arrayBuffer());
-
-      const response = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${hfKey}`,
-          'Content-Type': (file as File).type || 'audio/webm',
-        },
-        body: audioBytes,
-      });
-
-      if (!response.ok) {
-        const err = await response.text();
-        return unavailable('transcription_failed', `Hugging Face transcription failed: ${err}`, response.status, 'huggingface');
-      }
-
-      const result = await response.json();
-      return NextResponse.json({
-        transcript: result.text ?? '',
-        model: hfModel,
-        language,
-        provider: 'huggingface',
-        executed: true,
-        fallback_used: true,
-        capability: 'voice_input',
-      });
     }
 
     if (provider === 'qwen') {
-      // Qwen Audio (qwen-audio-turbo / qwen-audio-chat) via DashScope compatible-mode.
-      // The model accepts audio inline_data as base64 in the messages content array.
-      const audioBytes = Buffer.from(await file.arrayBuffer());
-      const audioBase64 = audioBytes.toString('base64');
-      const mimeType = (file as File).type || 'audio/webm';
-      const transcribeInstruction = language
-        ? `Transcribe this audio accurately. The spoken language is ${language}. Output only the transcribed text.`
-        : 'Transcribe this audio accurately. Output only the transcribed text.';
-
-      const response = await fetch(
-        'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${qwenKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'audio_url',
-                    audio_url: { url: `data:${mimeType};base64,${audioBase64}` },
-                  },
-                  { type: 'text', text: transcribeInstruction },
-                ],
-              },
+      const model = requestedModel ?? 'qwen-audio-turbo'
+      const response = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'audio_url', audio_url: { url: `data:${mimeType};base64,${bytes.toString('base64')}` } },
+              { type: 'text', text: language ? `Transcribe this ${language} audio.` : 'Transcribe this audio accurately.' },
             ],
-          }),
-          signal: AbortSignal.timeout(30_000),
-        },
-      );
-
-      if (!response.ok) {
-        const err = await response.text();
-        return unavailable('transcription_failed', `Qwen Audio transcription failed: ${err}`, response.status, 'qwen');
+          }],
+        }),
+      })
+      if (response.ok) {
+        const result = await response.json() as { choices?: Array<{ message?: { content?: string } }> }
+        const transcript = result.choices?.[0]?.message?.content
+        if (transcript) return persistTranscript({ transcript, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
       }
-
-      const result = await response.json() as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-      const transcript = result?.choices?.[0]?.message?.content ?? '';
-      return NextResponse.json({
-        transcript,
-        model,
-        language,
-        provider: 'qwen',
-        executed: true,
-        fallback_used: false,
-        capability: 'voice_input',
-      });
     }
 
-    // OpenAI STT (premium path)
-    const upstream = new FormData();
-    upstream.append('file', file, 'audio.webm');
-    upstream.append('model', model);
-    if (language) upstream.append('language', language);
-
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: upstream,
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return unavailable('transcription_failed', `OpenAI transcription failed: ${err}`, response.status, 'openai');
+    if (provider === 'huggingface') {
+      const model = requestedModel ?? 'openai/whisper-large-v3'
+      const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': mimeType },
+        body: bytes,
+      })
+      if (response.ok) {
+        const result = await response.json() as { text?: string }
+        if (result.text) return persistTranscript({ transcript: result.text, model, language, provider, appSlug, sourceMimeType: mimeType, executionId })
+      }
     }
+  }
 
-    const result = await response.json();
+  return unavailable('No approved STT provider is currently ready.')
+}
+
+async function persistTranscript(input: {
+  transcript: string
+  model: string
+  language?: string
+  provider: string
+  appSlug: string
+  sourceMimeType: string
+  fallbackUsed?: boolean
+  executionId?: string
+}) {
+  try {
+    const artifact = await createArtifact({
+      appSlug: input.appSlug,
+      executionId: input.executionId,
+      type: 'transcript',
+      subType: 'stt',
+      capability: 'stt',
+      title: 'Speech transcription',
+      description: input.transcript.slice(0, 240),
+      provider: input.provider,
+      model: input.model,
+      mimeType: 'text/plain',
+      content: Buffer.from(input.transcript, 'utf8'),
+      metadata: {
+        language: input.language ?? null,
+        sourceMimeType: input.sourceMimeType,
+        executionId: input.executionId,
+      },
+    })
     return NextResponse.json({
-      transcript: result.text,
-      model,
-      language,
-      provider: 'openai',
+      transcript: input.transcript,
+      model: input.model,
+      language: input.language,
+      provider: input.provider,
       executed: true,
-      fallback_used: false,
+      fallback_used: input.fallbackUsed ?? false,
       capability: 'voice_input',
-    });
-  } catch (err) {
-    return unavailable('transcription_failed', `Internal server error: ${String(err)}`, 500);
+      artifactId: artifact.id,
+      storageUrl: artifact.storageUrl,
+    })
+  } catch (error) {
+    return NextResponse.json({
+      executed: false,
+      capability: 'voice_input',
+      error: `Transcription completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`,
+    }, { status: 503 })
   }
 }

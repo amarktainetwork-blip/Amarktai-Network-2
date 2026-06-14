@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import type { AppAiPackage } from '@/lib/app-ai-package'
+import { resolveStoragePath } from '@/lib/storage-root'
 
-const STORE_ROOT = process.env.APP_AI_PACKAGE_STORE_ROOT || '/var/www/amarktai/repo/storage/app-ai-packages'
+const STORE_ROOT = process.env.APP_AI_PACKAGE_STORE_ROOT || resolveStoragePath('app-ai-packages')
 
 function safeSegment(input: string) {
   return input.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100) || 'default'

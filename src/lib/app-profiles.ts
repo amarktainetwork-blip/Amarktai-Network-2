@@ -221,7 +221,7 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['audit', 'decision', 'report', 'system'],
-      escalate_to_provider: 'openai',
+      escalate_to_provider: 'genx',
       escalate_to_model: 'gpt-4o',
     }],
     validator_rules: [{
@@ -264,13 +264,13 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
       {
         when_complexity: ['moderate', 'complex'],
         when_task_types: ['analysis', 'forecast', 'strategy', 'trading', 'recommendation'],
-        escalate_to_provider: 'openai',
+        escalate_to_provider: 'genx',
         escalate_to_model: 'gpt-4o',
       },
       {
         when_complexity: ['complex'],
         when_task_types: ['audit', 'decision', 'report'],
-        escalate_to_provider: 'grok',
+        escalate_to_provider: 'genx',
         escalate_to_model: 'grok-3-mini-beta',
       },
     ],
@@ -320,7 +320,7 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['strategy', 'campaign', 'brand', 'report'],
-      escalate_to_provider: 'openai',
+      escalate_to_provider: 'genx',
       escalate_to_model: 'gpt-4o',
     }],
     validator_rules: [{
@@ -350,7 +350,7 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     default_routing_mode: 'specialist',
 
-    allowed_providers: [...BACKBONE_PROVIDERS, 'openai'],
+    allowed_providers: [...BACKBONE_PROVIDERS],
     allowed_models: [
       'gpt-4o-mini',
       'llama-3.3-70b-versatile', 'deepseek-chat',
@@ -362,7 +362,7 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['itinerary', 'recommendation', 'analysis', 'booking'],
-      escalate_to_provider: 'openai',
+      escalate_to_provider: 'genx',
       escalate_to_model: 'gpt-4o-mini',
     }],
     validator_rules: [{
@@ -403,7 +403,7 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['health', 'diagnosis', 'recommendation', 'report'],
-      escalate_to_provider: 'deepseek',
+      escalate_to_provider: 'genx',
       escalate_to_model: 'deepseek-chat',
     }],
     validator_rules: [{

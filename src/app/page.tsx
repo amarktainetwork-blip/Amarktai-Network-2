@@ -1,114 +1,139 @@
 import Link from 'next/link'
-import { ArrowRight, Boxes, BrainCircuit, CheckCircle2, Command, Film, GitPullRequest, Layers3, Rocket, Wrench } from 'lucide-react'
-import PublicShell from '@/components/public/PublicShell'
-import IntelligenceFabric from '@/components/public/IntelligenceFabric'
+import {
+  ArrowRight,
+  AudioLines,
+  Brain,
+  CheckCircle2,
+  FileText,
+  Film,
+  Image,
+  Layers3,
+  Lock,
+  Music,
+  Puzzle,
+  Sparkles,
+} from 'lucide-react'
 import BrandName from '@/components/BrandName'
-import { NETWORK_APPS } from '@/lib/network-apps-registry'
+import PublicShell from '@/components/public/PublicShell'
+
+const CAPABILITY_FAMILIES = [
+  { icon: Brain, label: 'Text and reasoning', detail: 'Chat, research, summarization, classification, and structured answers.' },
+  { icon: Image, label: 'Images and vision', detail: 'Create, edit, understand, and transform visual content.' },
+  { icon: Film, label: 'Video', detail: 'Plan and generate video with truthful long-running job status.' },
+  { icon: AudioLines, label: 'Voice and audio', detail: 'Speech generation, transcription, and audio understanding.' },
+  { icon: Music, label: 'Music and lyrics', detail: 'Create songs, instrumentals, lyrics, and reusable audio artifacts.' },
+  { icon: FileText, label: 'Documents and data', detail: 'Analyze files, answer document questions, and return structured results.' },
+] as const
+
+const FLOW = [
+  ['Describe the outcome', 'Start with what you need, not a vendor or model name.'],
+  ['AmarktAI selects a capability', 'The request is validated against the canonical capability catalog.'],
+  ['Review when required', 'Risky or policy-sensitive actions wait for explicit approval.'],
+  ['Receive a truthful result', 'Completed outputs become reusable artifacts; pending work stays pending.'],
+] as const
 
 export default function HomePage() {
   return (
     <PublicShell>
-      <section className="relative min-h-[720px] overflow-hidden bg-[#03050a]">
-        <div className="absolute inset-0 opacity-95"><IntelligenceFabric className="h-full w-full" /></div>
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,5,10,.97)_0%,rgba(3,5,10,.78)_38%,rgba(3,5,10,.16)_72%,rgba(3,5,10,.03)_100%),linear-gradient(180deg,transparent_65%,#03050a)]" />
-        <div className="relative z-10 mx-auto flex min-h-[720px] max-w-7xl items-center px-5 py-20 lg:px-8">
-          <div className="max-w-3xl [text-shadow:0_2px_24px_rgba(0,0,0,.9)]">
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">One intelligent command layer</p>
-            <h1 className="mt-5 text-5xl font-black leading-[.96] tracking-[-0.05em] text-white sm:text-6xl lg:text-8xl"><BrandName /></h1>
-            <p className="mt-6 text-xl font-bold leading-8 text-slate-100 sm:text-2xl">The AI operating system for connected digital businesses.</p>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-slate-200">Plan, build, launch, monitor, and improve apps, agents, media, workflows, and business modules from one intelligent command layer.</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950">Open Command <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/platform" className="rounded-xl border border-white/20 bg-slate-950/55 px-5 py-3 text-sm font-black text-white backdrop-blur-md">Explore the platform</Link>
-            </div>
+      <section className="relative overflow-hidden bg-[#07111F] py-28 text-white lg:py-36">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute -left-48 -top-48 h-[680px] w-[680px] rounded-full bg-teal-900/30 blur-[140px]" />
+          <div className="absolute -right-32 top-1/4 h-[480px] w-[480px] rounded-full bg-cyan-900/20 blur-[120px]" />
+        </div>
+        <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="inline-flex items-center gap-2 rounded-full border border-teal-400/30 bg-teal-400/10 px-4 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-teal-300">
+            <Sparkles className="h-3.5 w-3.5" />
+            The creative AI operating system for modern teams
+          </p>
+          <h1 className="mt-7 max-w-5xl text-5xl font-black leading-[0.96] tracking-[-0.045em] sm:text-6xl lg:text-8xl">
+            <BrandName />
+            <span className="mt-2 block bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text text-transparent">
+              moves ideas into finished work.
+            </span>
+          </h1>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
+            Build campaigns, branded images, long and short video, music, avatars, voice, and connected product experiences without juggling AI vendors.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-xl bg-teal-400 px-6 py-3.5 text-sm font-black text-slate-950 transition hover:bg-teal-300">
+              Open AmarktAI <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link href="/platform" className="rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-black text-white transition hover:bg-white/10">
+              Explore capabilities
+            </Link>
           </div>
         </div>
       </section>
 
-      <LightSection eyebrow="What Amarktai Network is" title="Tell Amarktai Network what you want to create, fix, launch, or monitor.">
-        <p className="max-w-3xl text-lg leading-8 text-slate-600">It chooses the right agents, models, tools, and workflow, then keeps the work, approvals, outputs, and next step together.</p>
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          <LightCard icon={<Command />} title="Describe the outcome" body="Use natural language instead of learning a different control panel for every capability." />
-          <LightCard icon={<Layers3 />} title="Coordinate the work" body="Creative, repository, app, research, and operating tasks move through one clear flow." />
-          <LightCard icon={<CheckCircle2 />} title="See what is true" body="Connected means a live test passed. Missing setup stays clear without fake green lights." />
+      <section className="bg-[#F4F8FA] py-20 text-slate-950 lg:py-28">
+        <div className="mx-auto max-w-7xl px-5 lg:px-8">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-700">Capability first</p>
+          <h2 className="mt-3 max-w-3xl text-4xl font-black tracking-tight lg:text-5xl">
+            One clear product for many kinds of AI work.
+          </h2>
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {CAPABILITY_FAMILIES.map(({ icon: Icon, label, detail }) => (
+              <article key={label} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <Icon className="h-7 w-7 text-teal-600" />
+                <h3 className="mt-5 text-lg font-black">{label}</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{detail}</p>
+              </article>
+            ))}
+          </div>
         </div>
-      </LightSection>
+      </section>
 
-      <section className="bg-cyan-50 py-20 text-slate-950 lg:py-28">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-center lg:px-8">
+      <section className="bg-[#07111F] py-20 text-white lg:py-28">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 lg:grid-cols-2 lg:items-center lg:px-8">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">One command window</p>
-            <h2 className="mt-4 text-4xl font-black tracking-tight lg:text-6xl">Start with what you want done.</h2>
-            <p className="mt-5 text-base leading-8 text-slate-600">Amarktai Network asks only for missing information, selects tested capabilities, and starts the right job or guarded workspace.</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-cyan-300">How it works</p>
+            <h2 className="mt-3 text-4xl font-black tracking-tight lg:text-5xl">Ask once. Follow the work.</h2>
+            <p className="mt-5 max-w-xl text-base leading-8 text-slate-400">
+              AmarktAI keeps capability selection, approvals, jobs, and artifacts in one understandable flow.
+            </p>
           </div>
-          <div className="rounded-3xl border border-cyan-200 bg-white p-5 shadow-[0_30px_90px_rgba(8,145,178,.14)]">
-            <div className="rounded-2xl bg-slate-950 p-5 text-white">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Command</p>
-              <p className="mt-5 text-lg font-bold">Create a 3 minute rock, pop, and rasta song with female vocals.</p>
-              <div className="mt-6 grid gap-2 sm:grid-cols-3">
-                {['Intent understood', 'Live provider selected', 'Song job started'].map((item) => <div key={item} className="rounded-xl border border-white/10 bg-white/5 p-3 text-xs font-bold text-slate-300">{item}</div>)}
+          <div className="space-y-3">
+            {FLOW.map(([title, detail], index) => (
+              <div key={title} className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-teal-400 text-sm font-black text-slate-950">{index + 1}</span>
+                <div>
+                  <h3 className="font-black">{title}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-400">{detail}</p>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <LightSection eyebrow="From idea to operation" title="Plan, build, launch, monitor, and improve.">
-        <div className="grid gap-4 md:grid-cols-5">
-          {[
-            ['Plan', BrainCircuit],
-            ['Build', Wrench],
-            ['Launch', Rocket],
-            ['Monitor', Boxes],
-            ['Improve', CheckCircle2],
-          ].map(([label, Icon]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><Icon className="h-6 w-6 text-cyan-600" /><p className="mt-6 font-black">{String(label)}</p></div>)}
-        </div>
-      </LightSection>
-
-      <section className="bg-slate-100 py-20 text-slate-950 lg:py-28">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">Connected apps</p>
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-6xl">Your apps share memory, outputs, and learning.</h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {NETWORK_APPS.slice(0, 6).map((app) => <div key={app.slug} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-center justify-between gap-3"><h3 className="font-black">{app.displayName}</h3><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black">{app.status}</span></div><p className="mt-3 text-sm leading-6 text-slate-600">{app.purpose}</p></div>)}
+      <section className="bg-white py-20 text-slate-950 lg:py-28">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-2 lg:items-center lg:px-8">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-700">Connected apps</p>
+            <h2 className="mt-3 text-4xl font-black tracking-tight lg:text-5xl">Bring AmarktAI capabilities into your products.</h2>
+            <p className="mt-5 text-base leading-8 text-slate-600">
+              Registered apps request only the capabilities they are allowed to use. Every request is signed, scoped, and recorded.
+            </p>
           </div>
-        </div>
-      </section>
-
-      <section className="bg-[#050a12] py-20 text-white lg:py-28">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Create media, apps, and workflows</p>
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-6xl">Media, apps, workflows, and repository fixes from the same command layer.</h2>
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            <DarkCard icon={<Film />} title="Media" body="Create songs, images, movies, avatars, and voices with real provider jobs and saved outputs." />
-            <DarkCard icon={<GitPullRequest />} title="Repositories" body="Audit code, prepare a fix, review a diff, run checks, and create a pull request with approval." />
-            <DarkCard icon={<Rocket />} title="Apps and workflows" body="Plan and build apps, coordinate automations, and hand off deployment through guarded steps." />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              [Lock, 'Signed requests', 'Secure app identity and replay protection.'],
+              [Puzzle, 'Capability scopes', 'Explicit access for each connected product.'],
+              [Layers3, 'Reusable artifacts', 'Outputs remain available for later work.'],
+              [CheckCircle2, 'Honest status', 'Unavailable work never appears completed.'],
+            ].map(([Icon, title, detail]) => {
+              const ItemIcon = Icon as typeof Lock
+              return (
+                <article key={title as string} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <ItemIcon className="h-5 w-5 text-teal-600" />
+                  <h3 className="mt-3 font-black">{title as string}</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">{detail as string}</p>
+                </article>
+              )
+            })}
           </div>
-        </div>
-      </section>
-
-      <LightSection eyebrow="Runtime truth" title="Setup details stay where they belong.">
-        <p className="max-w-3xl text-lg leading-8 text-slate-600">Add your keys once, test them, and the connected capabilities become available across Command, media, repository work, App Builder, Network Apps, and Outputs. Technical diagnostics remain in Settings and System.</p>
-      </LightSection>
-
-      <section className="bg-cyan-300 py-20 text-slate-950">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div><p className="text-sm font-black uppercase tracking-[0.16em]">Amarktai Network</p><h2 className="mt-3 text-4xl font-black tracking-tight">One command layer. Connected work. Honest results.</h2></div>
-          <Link href="/admin/login" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white">Open private access <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </section>
     </PublicShell>
   )
-}
-
-function LightSection({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
-  return <section className="bg-white py-20 text-slate-950 lg:py-28"><div className="mx-auto max-w-7xl px-5 lg:px-8"><p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-4 max-w-5xl text-4xl font-black tracking-tight lg:text-6xl">{title}</h2><div className="mt-8">{children}</div></div></section>
-}
-
-function LightCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="h-6 w-6 text-cyan-600">{icon}</div><h3 className="mt-6 text-xl font-black">{title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{body}</p></article>
-}
-
-function DarkCard({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return <article className="rounded-2xl border border-white/10 bg-white/5 p-6"><div className="h-6 w-6 text-cyan-300">{icon}</div><h3 className="mt-6 text-xl font-black">{title}</h3><p className="mt-3 text-sm leading-7 text-slate-300">{body}</p></article>
 }

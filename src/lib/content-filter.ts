@@ -19,18 +19,17 @@
  *  - SUGGESTIVE MODE — allows tasteful suggestive content (lingerie, topless, etc.)
  */
 
-import { prisma } from '@/lib/prisma'
-import { getVaultApiKey } from '@/lib/brain'
+import { prisma } from "@/lib/prisma";
 
 // ── Types ────────────────────────────────────────────────────────────
 
 export type FlagCategory =
-  | 'csam'
-  | 'non_consensual'
-  | 'hate_speech'
-  | 'violence'
-  | 'self_harm'
-  | 'terrorism';
+  | "csam"
+  | "non_consensual"
+  | "hate_speech"
+  | "violence"
+  | "self_harm"
+  | "terrorism";
 
 export interface ContentFilterResult {
   flagged: boolean;
@@ -39,7 +38,7 @@ export interface ContentFilterResult {
   /** Confidence 0-1 (keyword match always returns 1.0) */
   confidence: number;
   /** Which scanner produced the result. */
-  scanner: 'openai_moderation' | 'keyword_fallback';
+  scanner: "openai_moderation" | "keyword_fallback";
 }
 
 export interface ModerationAlert {
@@ -72,15 +71,19 @@ const DEFAULT_SAFETY_CONFIG: SafetyConfig = {
   suggestiveMode: false,
 };
 
-const ADMIN_ALWAYS_ADULT_APPS = new Set(['workspace', '__workspace__', '__admin_test__'])
+const ADMIN_ALWAYS_ADULT_APPS = new Set([
+  "workspace",
+  "__workspace__",
+  "__admin_test__",
+]);
 
 function getAdminSafetyOverride(appSlug: string): SafetyConfig | null {
-  if (!ADMIN_ALWAYS_ADULT_APPS.has(appSlug)) return null
+  if (!ADMIN_ALWAYS_ADULT_APPS.has(appSlug)) return null;
   return {
     safeMode: false,
     adultMode: true,
     suggestiveMode: true,
-  }
+  };
 }
 
 // ── Global platform adult mode toggle ────────────────────────────────────────
@@ -108,10 +111,10 @@ function getAdminSafetyOverride(appSlug: string): SafetyConfig | null {
  * the admin UI simultaneously. The DB value wins once loadGlobalAdultModeFromDB runs.
  */
 let globalAdultModeState: boolean =
-  process.env.GLOBAL_ADULT_MODE?.trim().toLowerCase() === 'true';
+  process.env.GLOBAL_ADULT_MODE?.trim().toLowerCase() === "true";
 
 /** Sentinel appSlug used to persist the platform-level adult mode flag in the DB. */
-const PLATFORM_SENTINEL_SLUG = '__platform__';
+const PLATFORM_SENTINEL_SLUG = "__platform__";
 
 /**
  * Set the global adult mode toggle for the entire platform.
@@ -130,11 +133,18 @@ export function setGlobalAdultMode(enabled: boolean): void {
     .upsert({
       where: { appSlug: PLATFORM_SENTINEL_SLUG },
       update: { adultMode: enabled },
-      create: { appSlug: PLATFORM_SENTINEL_SLUG, appName: PLATFORM_SENTINEL_SLUG, adultMode: enabled },
+      create: {
+        appSlug: PLATFORM_SENTINEL_SLUG,
+        appName: PLATFORM_SENTINEL_SLUG,
+        adultMode: enabled,
+      },
     })
     .catch((err: unknown) => {
-      console.error('[content-filter] Failed to persist global adult mode:', err)
-    })
+      console.error(
+        "[content-filter] Failed to persist global adult mode:",
+        err,
+      );
+    });
 }
 
 /** Return the current global adult mode state from the in-process cache. */
@@ -152,15 +162,17 @@ export async function loadGlobalAdultModeFromDB(): Promise<boolean> {
     const row = await prisma.appAiProfile.findUnique({
       where: { appSlug: PLATFORM_SENTINEL_SLUG },
       select: { adultMode: true },
-    })
+    });
     if (row !== null) {
-      globalAdultModeState = row.adultMode
+      globalAdultModeState = row.adultMode;
     }
   } catch {
     // DB unavailable — keep current in-process state; log but don't throw
-    console.warn('[content-filter] Could not load global adult mode from DB; using in-process state.')
+    console.warn(
+      "[content-filter] Could not load global adult mode from DB; using in-process state.",
+    );
   }
-  return globalAdultModeState
+  return globalAdultModeState;
 }
 
 /** Runtime per-app safety overrides (write-through cache). */
@@ -170,11 +182,14 @@ const appSafetyConfigs = new Map<string, SafetyConfig>();
  * Set the safety configuration for an app and persist it to the database.
  * Adult mode can only be enabled when safe mode is explicitly disabled.
  */
-export function setAppSafetyConfig(appSlug: string, config: Partial<SafetyConfig>): SafetyConfig {
+export function setAppSafetyConfig(
+  appSlug: string,
+  config: Partial<SafetyConfig>,
+): SafetyConfig {
   const current = appSafetyConfigs.get(appSlug) ?? { ...DEFAULT_SAFETY_CONFIG };
   const updated: SafetyConfig = {
-    safeMode:       config.safeMode       ?? current.safeMode,
-    adultMode:      config.adultMode      ?? current.adultMode,
+    safeMode: config.safeMode ?? current.safeMode,
+    adultMode: config.adultMode ?? current.adultMode,
     suggestiveMode: config.suggestiveMode ?? current.suggestiveMode,
   };
   // Adult mode and suggestive mode both require safe mode to be off
@@ -192,21 +207,25 @@ export function setAppSafetyConfig(appSlug: string, config: Partial<SafetyConfig
     .upsert({
       where: { appSlug },
       update: {
-        safeMode:       updated.safeMode,
-        adultMode:      updated.adultMode,
+        safeMode: updated.safeMode,
+        adultMode: updated.adultMode,
         suggestiveMode: updated.suggestiveMode,
       },
       create: {
         appSlug,
         appName: appSlug,
-        safeMode:       updated.safeMode,
-        adultMode:      updated.adultMode,
+        safeMode: updated.safeMode,
+        adultMode: updated.adultMode,
         suggestiveMode: updated.suggestiveMode,
       },
     })
     .catch((err: unknown) => {
-      console.error('[content-filter] Failed to persist safety config for', appSlug, err)
-    })
+      console.error(
+        "[content-filter] Failed to persist safety config for",
+        appSlug,
+        err,
+      );
+    });
 
   return updated;
 }
@@ -219,8 +238,8 @@ export function setAppSafetyConfig(appSlug: string, config: Partial<SafetyConfig
  * and the app has safeMode=false. Does not override safeMode=true apps.
  */
 export function getAppSafetyConfig(appSlug: string): SafetyConfig {
-  const adminOverride = getAdminSafetyOverride(appSlug)
-  if (adminOverride) return adminOverride
+  const adminOverride = getAdminSafetyOverride(appSlug);
+  if (adminOverride) return adminOverride;
   const base = appSafetyConfigs.get(appSlug) ?? { ...DEFAULT_SAFETY_CONFIG };
   // Apply global adult mode: when the platform flag is set and the app has safeMode=false,
   // treat adultMode as enabled regardless of the per-app setting.
@@ -236,11 +255,13 @@ export function getAppSafetyConfig(appSlug: string): SafetyConfig {
  *
  * Call this from any GET endpoint that needs to return the persisted state.
  */
-export async function loadAppSafetyConfigFromDB(appSlug: string): Promise<SafetyConfig> {
-  const adminOverride = getAdminSafetyOverride(appSlug)
+export async function loadAppSafetyConfigFromDB(
+  appSlug: string,
+): Promise<SafetyConfig> {
+  const adminOverride = getAdminSafetyOverride(appSlug);
   if (adminOverride) {
-    appSafetyConfigs.set(appSlug, adminOverride)
-    return adminOverride
+    appSafetyConfigs.set(appSlug, adminOverride);
+    return adminOverride;
   }
   try {
     const row = await prisma.appAiProfile.findUnique({
@@ -249,15 +270,19 @@ export async function loadAppSafetyConfigFromDB(appSlug: string): Promise<Safety
     });
     if (row) {
       const cfg: SafetyConfig = {
-        safeMode:       row.safeMode,
-        adultMode:      row.adultMode,
+        safeMode: row.safeMode,
+        adultMode: row.adultMode,
         suggestiveMode: row.suggestiveMode,
       };
       appSafetyConfigs.set(appSlug, cfg);
       return cfg;
     }
   } catch (err) {
-    console.error('[content-filter] Failed to load safety config from DB for', appSlug, err)
+    console.error(
+      "[content-filter] Failed to load safety config from DB for",
+      appSlug,
+      err,
+    );
   }
   return appSafetyConfigs.get(appSlug) ?? { ...DEFAULT_SAFETY_CONFIG };
 }
@@ -274,7 +299,7 @@ const CATEGORY_PATTERNS: Record<FlagCategory, RegExp[]> = {
     /\bkiddie\s+porn/i,
     /\blolicon\b/i,
     /\bshota(con)?\b/i,
-    /\bmap\s+(community|rights|attraction)\b/i,       // "minor-attracted person" euphemism
+    /\bmap\s+(community|rights|attraction)\b/i, // "minor-attracted person" euphemism
     /\bage\s+of\s+consent\s+(lower|change|remove)/i,
     /\bchild\s+molest/i,
     /\bgrooming\s+(child|minor|teen|kid)/i,
@@ -371,13 +396,20 @@ const CATEGORY_PATTERNS: Record<FlagCategory, RegExp[]> = {
 
 // ── Always-blocked categories (even in adult mode) ───────────────────
 
-const ALWAYS_BLOCKED: FlagCategory[] = ['csam', 'non_consensual', 'violence', 'self_harm', 'hate_speech', 'terrorism'];
+const ALWAYS_BLOCKED: FlagCategory[] = [
+  "csam",
+  "non_consensual",
+  "violence",
+  "self_harm",
+  "hate_speech",
+  "terrorism",
+];
 
 // ── Public helpers ───────────────────────────────────────────────────
 
 const BLOCKED_MESSAGE =
-  'This content has been blocked by our safety filter. If you believe this is an error, ' +
-  'please contact support with your trace ID to request a review.';
+  "This content has been blocked by our safety filter. If you believe this is an error, " +
+  "please contact support with your trace ID to request a review.";
 
 /**
  * Keyword-based content scanner (fallback).
@@ -385,10 +417,16 @@ const BLOCKED_MESSAGE =
  * This is a lightweight keyword-based classifier. For production use,
  * the OpenAI Moderation API is preferred (see scanContentWithModeration).
  */
-export function scanContent(text: string, appSlug?: string): ContentFilterResult {
+export function scanContent(
+  text: string,
+  appSlug?: string,
+): ContentFilterResult {
   const flagged: FlagCategory[] = [];
 
-  for (const [category, patterns] of Object.entries(CATEGORY_PATTERNS) as [FlagCategory, RegExp[]][]) {
+  for (const [category, patterns] of Object.entries(CATEGORY_PATTERNS) as [
+    FlagCategory,
+    RegExp[],
+  ][]) {
     for (const re of patterns) {
       if (re.test(text)) {
         flagged.push(category);
@@ -398,7 +436,13 @@ export function scanContent(text: string, appSlug?: string): ContentFilterResult
   }
 
   if (flagged.length === 0) {
-    return { flagged: false, categories: [], message: '', confidence: 0, scanner: 'keyword_fallback' };
+    return {
+      flagged: false,
+      categories: [],
+      message: "",
+      confidence: 0,
+      scanner: "keyword_fallback",
+    };
   }
 
   // Apply per-app safety config if provided
@@ -408,7 +452,7 @@ export function scanContent(text: string, appSlug?: string): ContentFilterResult
       categories: flagged,
       message: BLOCKED_MESSAGE,
       confidence: 1.0,
-      scanner: 'keyword_fallback',
+      scanner: "keyword_fallback",
     };
     return applySafetyConfig(result, appSlug);
   }
@@ -418,7 +462,7 @@ export function scanContent(text: string, appSlug?: string): ContentFilterResult
     categories: flagged,
     message: BLOCKED_MESSAGE,
     confidence: 1.0,
-    scanner: 'keyword_fallback',
+    scanner: "keyword_fallback",
   };
 }
 
@@ -433,16 +477,16 @@ export async function scanContentWithModeration(
   text: string,
   appSlug?: string,
 ): Promise<ContentFilterResult> {
-  const apiKey = await getVaultApiKey('openai');
+  const apiKey: string | null = null;
 
   // Try OpenAI Moderation API first
   if (apiKey) {
     try {
-      const response = await fetch('https://api.openai.com/v1/moderations', {
-        method: 'POST',
+      const response = await fetch("", {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ input: text }),
       });
@@ -459,7 +503,9 @@ export async function scanContentWithModeration(
           // secondary check to catch content OpenAI may have missed.
           const keywordResult = scanContent(text);
           if (keywordResult.flagged) {
-            return appSlug ? applySafetyConfig(keywordResult, appSlug) : keywordResult;
+            return appSlug
+              ? applySafetyConfig(keywordResult, appSlug)
+              : keywordResult;
           }
           return openAiResult;
         }
@@ -488,20 +534,34 @@ function mapOpenAIModerationResult(
   appSlug?: string,
 ): ContentFilterResult {
   if (!result.flagged) {
-    return { flagged: false, categories: [], message: '', confidence: 0, scanner: 'openai_moderation' };
+    return {
+      flagged: false,
+      categories: [],
+      message: "",
+      confidence: 0,
+      scanner: "openai_moderation",
+    };
   }
 
   const flagged: FlagCategory[] = [];
 
   // Map OpenAI categories to our categories
-  if (result.categories['sexual/minors']) flagged.push('csam');
-  if (result.categories['harassment/threatening'] || result.categories['hate/threatening']) {
-    flagged.push('hate_speech');
+  if (result.categories["sexual/minors"]) flagged.push("csam");
+  if (
+    result.categories["harassment/threatening"] ||
+    result.categories["hate/threatening"]
+  ) {
+    flagged.push("hate_speech");
   }
-  if (result.categories['hate']) flagged.push('hate_speech');
-  if (result.categories['violence/graphic'] || result.categories['violence']) flagged.push('violence');
-  if (result.categories['self-harm'] || result.categories['self-harm/instructions'] || result.categories['self-harm/intent']) {
-    flagged.push('self_harm');
+  if (result.categories["hate"]) flagged.push("hate_speech");
+  if (result.categories["violence/graphic"] || result.categories["violence"])
+    flagged.push("violence");
+  if (
+    result.categories["self-harm"] ||
+    result.categories["self-harm/instructions"] ||
+    result.categories["self-harm/intent"]
+  ) {
+    flagged.push("self_harm");
   }
   // OpenAI does not have a dedicated terrorism category — extremist content is
   // typically caught under harassment/threatening or violence.  Our keyword
@@ -511,7 +571,13 @@ function mapOpenAIModerationResult(
   const unique = [...new Set(flagged)];
 
   if (unique.length === 0) {
-    return { flagged: false, categories: [], message: '', confidence: 0, scanner: 'openai_moderation' };
+    return {
+      flagged: false,
+      categories: [],
+      message: "",
+      confidence: 0,
+      scanner: "openai_moderation",
+    };
   }
 
   const filterResult: ContentFilterResult = {
@@ -519,7 +585,7 @@ function mapOpenAIModerationResult(
     categories: unique,
     message: BLOCKED_MESSAGE,
     confidence: 0.95,
-    scanner: 'openai_moderation',
+    scanner: "openai_moderation",
   };
 
   // Apply per-app safety config
@@ -541,9 +607,14 @@ function mapOpenAIModerationResult(
  * OpenAI Moderation's "sexual" flag (which we don't map to our categories) is
  * not escalated, and guardrails toxicity checks do not block suggestive language.
  */
-function applySafetyConfig(result: ContentFilterResult, appSlug: string): ContentFilterResult {
+function applySafetyConfig(
+  result: ContentFilterResult,
+  appSlug: string,
+): ContentFilterResult {
   // Always block these categories regardless of mode
-  const alwaysBlockedCategories = result.categories.filter(c => ALWAYS_BLOCKED.includes(c));
+  const alwaysBlockedCategories = result.categories.filter((c) =>
+    ALWAYS_BLOCKED.includes(c),
+  );
   if (alwaysBlockedCategories.length > 0) {
     return result; // Cannot bypass these
   }
@@ -552,17 +623,29 @@ function applySafetyConfig(result: ContentFilterResult, appSlug: string): Conten
 
   // In suggestive mode (non-safe), allow suggestive content that doesn't hit ALWAYS_BLOCKED
   if (!config.safeMode && config.suggestiveMode) {
-    const blocked = result.categories.filter(c => ALWAYS_BLOCKED.includes(c));
+    const blocked = result.categories.filter((c) => ALWAYS_BLOCKED.includes(c));
     if (blocked.length === 0) {
-      return { flagged: false, categories: [], message: '', confidence: 0, scanner: result.scanner };
+      return {
+        flagged: false,
+        categories: [],
+        message: "",
+        confidence: 0,
+        scanner: result.scanner,
+      };
     }
   }
 
   // In adult mode (non-safe), relax non-harmful adult content blocks
   if (!config.safeMode && config.adultMode) {
-    const blocked = result.categories.filter(c => ALWAYS_BLOCKED.includes(c));
+    const blocked = result.categories.filter((c) => ALWAYS_BLOCKED.includes(c));
     if (blocked.length === 0) {
-      return { flagged: false, categories: [], message: '', confidence: 0, scanner: result.scanner };
+      return {
+        flagged: false,
+        categories: [],
+        message: "",
+        confidence: 0,
+        scanner: result.scanner,
+      };
     }
   }
 
@@ -595,20 +678,23 @@ export function buildModerationAlert(
  */
 export function blockedExplanation(categories: FlagCategory[]): string {
   const explanations: Record<FlagCategory, string> = {
-    csam: 'Content involving minors in sexual contexts is strictly prohibited.',
-    non_consensual: 'Non-consensual sexual content is not permitted.',
-    hate_speech: 'Content promoting hatred or violence against groups is not allowed.',
-    violence: 'Instructions for creating weapons or causing harm are prohibited.',
-    self_harm: 'Content promoting self-harm or suicide is not permitted.',
-    terrorism: 'Content promoting terrorism or violent extremism is strictly prohibited.',
+    csam: "Content involving minors in sexual contexts is strictly prohibited.",
+    non_consensual: "Non-consensual sexual content is not permitted.",
+    hate_speech:
+      "Content promoting hatred or violence against groups is not allowed.",
+    violence:
+      "Instructions for creating weapons or causing harm are prohibited.",
+    self_harm: "Content promoting self-harm or suicide is not permitted.",
+    terrorism:
+      "Content promoting terrorism or violent extremism is strictly prohibited.",
   };
 
   const reasons = categories.map((c) => explanations[c]).filter(Boolean);
   return (
-    'Your request was blocked for the following reason(s):\n' +
-    reasons.map((r) => `• ${r}`).join('\n') +
-    '\n\nIf you believe this is a false positive, please contact support with your trace ID ' +
-    'to request a manual review. Our team will respond within 24 hours.'
+    "Your request was blocked for the following reason(s):\n" +
+    reasons.map((r) => `• ${r}`).join("\n") +
+    "\n\nIf you believe this is a false positive, please contact support with your trace ID " +
+    "to request a manual review. Our team will respond within 24 hours."
   );
 }
 
@@ -644,9 +730,9 @@ const SUGGESTIVE_BLOCKED_TERMS: RegExp[] = [
 
 /** Terms to replace with safe alternatives when auto-rewriting a prompt. */
 const SUGGESTIVE_REPLACEMENTS: [RegExp, string][] = [
-  [/\bsexy\b/gi, 'attractive'],
-  [/\bseductive\b/gi, 'confident'],
-  [/\bprovocative\b/gi, 'stylish'],
+  [/\bsexy\b/gi, "attractive"],
+  [/\bseductive\b/gi, "confident"],
+  [/\bprovocative\b/gi, "stylish"],
 ];
 
 export interface SuggestivePromptValidation {
@@ -683,13 +769,15 @@ export interface SuggestivePromptValidation {
  * Use this before sending a prompt to any image generation provider in
  * suggestive mode. If `allowed` is false, do NOT proceed with generation.
  */
-export function validateSuggestivePrompt(prompt: string): SuggestivePromptValidation {
+export function validateSuggestivePrompt(
+  prompt: string,
+): SuggestivePromptValidation {
   // 1. Check ALWAYS_BLOCKED categories first
   const categoryResult = scanContent(prompt);
   if (categoryResult.flagged) {
     return {
       allowed: false,
-      reason: `Prompt blocked: contains always-prohibited content (${categoryResult.categories.join(', ')}).`,
+      reason: `Prompt blocked: contains always-prohibited content (${categoryResult.categories.join(", ")}).`,
       sanitized: prompt,
     };
   }

@@ -165,4 +165,12 @@ export const LOCAL_STORE_FILES = {
   agents: 'agents/agents.json',
   jobs: 'jobs/jobs.json',
   mediaJobs: 'jobs/media-jobs.json',
+  executions: 'jobs/executions.json',
+  creativeProjects: 'creative/projects.json',
+  brandKits: 'creative/brand-kits.json',
+  avatars: 'creative/avatars.json',
+  videoProjects: 'creative/video-projects.json',
+  connectedApps: 'connected-apps/apps.json',
+  connectedAppEvents: 'connected-apps/events.json',
+  connectedAppCapabilityJobs: 'connected-apps/capability-jobs.json',
 } as const

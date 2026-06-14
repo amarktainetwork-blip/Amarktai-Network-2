@@ -4,7 +4,7 @@
  *
  * Production policy:
  *   STORAGE_DRIVER=local_vps
- *   STORAGE_ROOT=/var/www/amarktai/storage
+ *   AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage
  *
  * Required persistent directories:
  *   artifacts, uploads, repos, workspaces, logs
@@ -12,6 +12,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'node:crypto'
 import { DEFAULT_VPS_STORAGE_ROOT, getUnifiedStorageRoot } from '@/lib/storage-root'
 
 export const REQUIRED_STORAGE_DRIVER = 'local_vps'
@@ -47,8 +48,21 @@ export interface StorageStatus {
 }
 
 export interface StorageHealth extends StorageStatus {
+  ready: boolean
+  root: string
   writable: boolean
-  directories: Array<{ name: string; path: string; exists: boolean; writable: boolean }>
+  readable: boolean
+  deletable: boolean
+  checkedAt: string
+  directories: Array<{
+    name: string
+    path: string
+    exists: boolean
+    writable: boolean
+    readable: boolean
+    deletable: boolean
+    error: string | null
+  }>
   error: string | null
 }
 
@@ -311,40 +325,83 @@ export async function verifyStorage(): Promise<StorageHealth> {
   const status = getStorageStatus()
   const directories: StorageHealth['directories'] = []
   let error: string | null = null
+  const checkedAt = new Date().toISOString()
 
   if (status.driver !== REQUIRED_STORAGE_DRIVER) {
-    return { ...status, writable: false, directories, error: status.note }
+    return {
+      ...status,
+      ready: false,
+      root: status.basePath,
+      writable: false,
+      readable: false,
+      deletable: false,
+      checkedAt,
+      directories,
+      error: status.note,
+    }
   }
 
   try {
     const driver = getStorageDriver()
     await driver.ensureDirectories?.()
+    const verificationId = randomUUID()
     for (const name of REQUIRED_STORAGE_DIRS) {
       const dirPath = path.join(status.basePath, name)
       let exists = false
       let writable = false
+      let readable = false
+      let deletable = false
+      let directoryError: string | null = null
+      const probePath = path.join(
+        dirPath,
+        `.amarktai-write-test-${process.pid}-${verificationId}-${name}-${randomUUID()}`,
+      )
       try {
         await fs.mkdir(dirPath, { recursive: true })
         await fs.access(dirPath)
         exists = true
-        const probePath = path.join(dirPath, `.amarktai-write-test-${process.pid}`)
         await fs.writeFile(probePath, 'ok')
-        await fs.unlink(probePath)
         writable = true
-      } catch {
-        writable = false
+        readable = (await fs.readFile(probePath, 'utf8')) === 'ok'
+        await fs.unlink(probePath)
+        deletable = true
+      } catch (directoryFailure) {
+        directoryError = directoryFailure instanceof Error
+          ? directoryFailure.message
+          : 'Storage directory verification failed'
+        await fs.unlink(probePath).catch(() => undefined)
       }
-      directories.push({ name, path: dirPath, exists, writable })
+      directories.push({
+        name,
+        path: dirPath,
+        exists,
+        writable,
+        readable,
+        deletable,
+        error: directoryError,
+      })
     }
   } catch (err) {
     error = err instanceof Error ? err.message : 'Storage verification failed'
   }
 
   const writable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.writable)
+  const readable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.readable)
+  const deletable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.deletable)
+  const ready = status.configured && writable && readable && deletable
+  error ??= directories
+    .filter((directory) => directory.error)
+    .map((directory) => `${directory.name}: ${directory.error}`)
+    .join(' | ') || null
   return {
     ...status,
-    configured: status.configured && writable,
+    configured: ready,
+    ready,
+    root: status.basePath,
     writable,
+    readable,
+    deletable,
+    checkedAt,
     directories,
     error,
   }

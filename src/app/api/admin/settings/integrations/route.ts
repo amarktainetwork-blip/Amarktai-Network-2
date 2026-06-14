@@ -222,7 +222,7 @@ const patchSchema = z.object({
   }).optional(),
   adult: z.object({
     mode: z.enum(['specialist', 'disabled']).optional(),
-    providerType: z.enum(['together', 'huggingface', 'xai', 'custom']).optional(),
+    providerType: z.enum(['together', 'huggingface']).optional(),
     specialistEndpoint: z.string().optional(),
     specialistKey: z.string().optional(),
     providerModel: z.string().optional(),

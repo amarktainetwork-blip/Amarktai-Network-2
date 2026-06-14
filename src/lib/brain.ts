@@ -185,17 +185,6 @@ export async function getVaultApiKey(providerKey: string): Promise<string | null
 
 */
 /**
- * OpenAI image generation models that require /v1/images/generations instead of /v1/chat/completions.
- * These models MUST NEVER be routed to the chat/completions endpoint.
- * Only real, currently-valid OpenAI model IDs are included here.
- */
-export const OPENAI_IMAGE_MODELS = new Set([
-  'gpt-image-1',
-  'dall-e-3',
-  'dall-e-2',
-])
-
-/**
  * Together AI image generation model prefixes.
  * Models matching these prefixes require /v1/images/generations, not /v1/chat/completions.
  */
@@ -306,31 +295,15 @@ export async function callProvider(
   try {
     switch (providerKey) {
       // ── OpenAI-compatible: OpenAI, Groq, DeepSeek, OpenRouter, Together AI, xAI/Grok, Qwen ──
-      case 'openai':
+      case 'genx':
       case 'groq':
-      case 'deepseek':
-      case 'openrouter':
       case 'together':
-      case 'grok':
-      case 'qwen': {
-        const baseMap: Record<string, string> = {
-          openai:     'https://api.openai.com',
-          groq:       'https://api.groq.com/openai',
-          deepseek:   'https://api.deepseek.com',
-          openrouter: 'https://openrouter.ai/api',
-          together:   'https://api.together.xyz',
-          grok:       'https://api.x.ai',
-          qwen:       'https://dashscope-intl.aliyuncs.com/compatible-mode',
-        }
-        const base = meshNode.baseUrl || baseMap[providerKey] || 'https://api.openai.com'
+      case 'qwen':
+      case 'mimo': {
+        const base = meshNode.baseUrl.replace(/\/v1\/?$/, '')
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${resolvedApiKey}`,
-        }
-        // OpenRouter requires a site URL header
-        if (providerKey === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://amarktai.network'
-          headers['X-Title'] = 'AmarktAI Network'
         }
         // ── Phase 5: Wanx guard ──────────────────────────────────────────
         // Wanx image/video models require DashScope AIGC endpoint, NOT the
@@ -368,27 +341,6 @@ export async function callProvider(
           const imageUrl = imgData?.data?.[0]?.url ?? imgData?.data?.[0]?.b64_json ?? null
           return { ok: true, output: imageUrl, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
         }
-        // Image models require the images/generations endpoint, not chat/completions
-        if (providerKey === 'openai' && OPENAI_IMAGE_MODELS.has(resolvedModel)) {
-          const imgRes = await fetch(`${base}/v1/images/generations`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              model: resolvedModel,
-              prompt: message,
-              n: 1,
-              size: '1024x1024',
-            }),
-            signal: AbortSignal.timeout(timeout),
-          })
-          if (!imgRes.ok) {
-            const errBody = await imgRes.json().catch(() => ({})) as { error?: { message?: string } }
-            return { ok: false, output: null, error: `OpenAI Images API HTTP ${imgRes.status}: ${errBody?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-          }
-          const imgData = await imgRes.json() as { data?: Array<{ url?: string; b64_json?: string }> }
-          const imageUrl = imgData?.data?.[0]?.url ?? imgData?.data?.[0]?.b64_json ?? null
-          return { ok: true, output: imageUrl, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
         const res = await fetch(`${base}/v1/chat/completions`, {
           method: 'POST',
           headers,
@@ -411,29 +363,6 @@ export async function callProvider(
       }
 
       // ── Gemini ──────────────────────────────────────────────────────────────
-      case 'gemini': {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${encodeURIComponent(resolvedApiKey)}`
-        const geminiBody: Record<string, unknown> = {
-          contents: [{ parts: [{ text: message }] }],
-        }
-        if (systemPrompt) {
-          geminiBody.systemInstruction = { parts: [{ text: systemPrompt }] }
-        }
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiBody),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
-          return { ok: false, output: null, error: `Gemini HTTP ${res.status}: ${body?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       // ── Hugging Face Inference ──────────────────────────────────────────────
       case 'huggingface': {
         const base = meshNode.baseUrl || 'https://api-inference.huggingface.co'
@@ -498,112 +427,9 @@ export async function callProvider(
       }
 
       // ── NVIDIA NIM (OpenAI-compatible) ──────────────────────────────────────
-      case 'nvidia': {
-        const base = meshNode.baseUrl || 'https://integrate.api.nvidia.com/v1'
-        const res = await fetch(`${base}/chat/completions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resolvedApiKey}` },
-          body: JSON.stringify({
-            model: resolvedModel,
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: message },
-            ],
-            max_tokens: 1024,
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          return { ok: false, output: null, error: `NVIDIA HTTP ${res.status}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-        return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       // ── Anthropic (Claude) ────────────────────────────────────────────────
-      case 'anthropic': {
-        const base = meshNode.baseUrl || 'https://api.anthropic.com'
-        const anthropicBody: Record<string, unknown> = {
-          model: resolvedModel,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: message }],
-        }
-        if (systemPrompt) {
-          anthropicBody.system = systemPrompt
-        }
-        const res = await fetch(`${base}/v1/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': resolvedApiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify(anthropicBody),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
-          return { ok: false, output: null, error: `Anthropic HTTP ${res.status}: ${body?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { content?: Array<{ text?: string }> }
-        const text = data?.content?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       // ── Cohere ────────────────────────────────────────────────────────────
-      case 'cohere': {
-        const base = meshNode.baseUrl || 'https://api.cohere.com'
-        const res = await fetch(`${base}/v2/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resolvedApiKey}`,
-          },
-          body: JSON.stringify({
-            model: resolvedModel,
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: message },
-            ],
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { message?: string }
-          return { ok: false, output: null, error: `Cohere HTTP ${res.status}: ${body?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { message?: { content?: Array<{ text?: string }> } }
-        const text = data?.message?.content?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       // ── Mistral AI (OpenAI-compatible) ─────────────────────────────────────
-      case 'mistral': {
-        const base = meshNode.baseUrl || 'https://api.mistral.ai'
-        const res = await fetch(`${base}/v1/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resolvedApiKey}`,
-          },
-          body: JSON.stringify({
-            model: resolvedModel,
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: message },
-            ],
-            max_tokens: 1024,
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { message?: string }
-          return { ok: false, output: null, error: `Mistral HTTP ${res.status}: ${body?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
-        return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
       // ── Replicate ──────────────────────────────────────────────────────────
       default:
         return { ok: false, output: null, error: `Unknown provider: "${providerKey}"`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }

@@ -2,28 +2,67 @@
 
 Use this checklist before restarting the VPS service.
 
-1. Confirm the target branch and commit:
+1. Install and start MariaDB:
+   `apt-get update && apt-get install -y mariadb-server`
+   `systemctl enable --now mariadb`
+
+2. Create the production database and least-privilege application user:
+   `sudo mariadb`
+
+   ```sql
+   CREATE DATABASE amarktai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   CREATE USER 'amarktai'@'127.0.0.1' IDENTIFIED BY 'STRONG_PASSWORD';
+   GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai'@'127.0.0.1';
+   FLUSH PRIVILEGES;
+   ```
+
+3. Set a real URL in `/var/www/amarktai/platform/.env`. The required format is:
+   `DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"`
+
+   Replace `STRONG_PASSWORD` with a unique generated secret; do not deploy the
+   template literally.
+
+4. Prepare persistent local storage:
+   `install -d -o www-data -g www-data -m 0750 /var/www/amarktai/storage/{artifacts,uploads,repos,workspaces,logs}`
+
+   Set:
+   `STORAGE_DRIVER="local_vps"`
+   `AMARKTAI_STORAGE_ROOT="/var/www/amarktai/storage"`
+
+   Keep the VPS layout:
+   `/var/www/amarktai/platform`
+   `/var/www/amarktai/apps/<app-slug>`
+   `/var/www/amarktai/storage`
+   `/var/www/amarktai/logs`
+   `/var/www/amarktai/backups`
+
+5. Confirm the target branch and commit:
    `git status --short --branch`
    `git rev-parse HEAD`
 
-2. Install dependencies:
+6. Install dependencies:
    `npm ci`
 
-3. Generate Prisma client:
+7. Generate and validate the MariaDB Prisma client:
    `npm exec -- prisma generate`
+   `npm exec -- prisma validate`
 
-4. Apply schema safely:
+8. Apply the schema:
    `npm exec -- prisma db push`
 
-5. Verify locally on the VPS:
-   `npm run lint`
+9. Verify the database and storage before building:
+   `printf 'SELECT 1;' | npm exec -- prisma db execute --stdin`
+   `sudo -u www-data test -w /var/www/amarktai/storage/artifacts`
+
+10. Run repository proof:
+   `npx tsc --noEmit`
    `npm test`
    `npm run build`
 
-6. Confirm systemd service is canonical:
+11. Confirm systemd service is canonical:
    `systemctl status amarktai-web`
 
-7. Restart and verify:
+12. Restart and verify:
    `systemctl restart amarktai-web`
    `curl -sf --max-time 10 http://localhost:3000/api/health/ping`
 

@@ -1,7 +1,7 @@
 import PublicShell from '@/components/public/PublicShell'
 
 const sections = [
-  ['Use', 'Use of AmarktAI Network systems must remain lawful, responsible, and aligned with applicable agreements.'],
+  ['Use', 'Use of AmarktAI systems must remain lawful, responsible, and aligned with applicable agreements.'],
   ['Responsibility', 'Operators remain responsible for submitted instructions, connected systems, and downstream use of produced artifacts.'],
   ['Controls', 'Infrastructure controls, approval flows, and policy checks may limit or block unsafe or non-compliant operations.'],
   ['Liability', 'Service availability and liability are governed by applicable contract terms and law.'],

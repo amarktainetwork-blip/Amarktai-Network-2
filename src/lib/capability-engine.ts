@@ -75,72 +75,72 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   general_chat: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'general chat',
-    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini', 'huggingface'],
+    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
   },
   deep_reasoning: {
     anyCapabilityFlag: ['supports_reasoning'],
     label: 'deep reasoning',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   coding: {
     anyCapabilityFlag: ['supports_code'],
     label: 'code generation / editing',
-    suggestedProviders: ['openai', 'deepseek', 'groq'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   retrieval: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'retrieval / RAG',
-    suggestedProviders: ['openai', 'huggingface', 'nvidia'],
+    suggestedProviders: ['huggingface', 'together', 'qwen'],
   },
   embeddings: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'text embeddings',
-    suggestedProviders: ['openai', 'qwen', 'gemini', 'huggingface'],
+    suggestedProviders: ['huggingface', 'together', 'qwen'],
   },
   reranking: {
     anyCapabilityFlag: ['supports_reranking'],
     label: 'reranking',
-    suggestedProviders: ['nvidia', 'huggingface'],
+    suggestedProviders: ['together', 'huggingface'],
   },
   summarization: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'summarization',
-    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
   },
   classification: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'text classification',
-    suggestedProviders: ['openai', 'groq', 'deepseek'],
+    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
   },
   validation: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'output validation',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   agent_planning: {
     anyCapabilityFlag: ['supports_agent_planning'],
     label: 'agent planning',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   multimodal_understanding: {
     anyCapabilityFlag: ['supports_vision'],
     label: 'multimodal / vision understanding',
-    suggestedProviders: ['openai', 'gemini', 'huggingface'],
+    suggestedProviders: ['qwen', 'mimo', 'together', 'huggingface', 'genx'],
   },
   image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image generation',
-    suggestedProviders: ['openai', 'together', 'gemini', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
   },
   image_editing: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image editing',
-    suggestedProviders: ['openai', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
   },
   video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'video planning / storyboarding',
-    suggestedProviders: ['gemini', 'groq', 'openai', 'deepseek'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
@@ -153,18 +153,18 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
     anyCapabilityFlag: ['supports_stt', 'supports_voice_interaction'],
     anyRole: ['voice_interaction'],
     label: 'voice / speech input (STT)',
-    suggestedProviders: ['groq', 'openai', 'gemini', 'qwen', 'huggingface'],
+    suggestedProviders: ['groq', 'genx', 'qwen', 'mimo', 'huggingface'],
   },
   voice_output: {
     anyCapabilityFlag: ['supports_tts'],
     anyRole: ['tts'],
     label: 'voice / speech output (TTS)',
-    suggestedProviders: ['groq', 'openai', 'gemini', 'huggingface'],
+    suggestedProviders: ['groq', 'genx', 'mimo', 'huggingface'],
   },
   realtime_voice: {
     anyCapabilityFlag: ['supports_voice_interaction'],
     label: 'realtime voice interaction',
-    suggestedProviders: ['openai'],
+    suggestedProviders: ['genx', 'mimo', 'groq'],
   },
   adult_18plus_image: {
     anyCapabilityFlag: ['supports_image_generation'],
@@ -174,37 +174,37 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   moderation: {
     anyCapabilityFlag: ['supports_moderation'],
     label: 'content moderation',
-    suggestedProviders: ['openai'],
+    suggestedProviders: ['huggingface', 'together', 'genx'],
   },
   app_analysis: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'app analysis / crawl',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   research_search: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'research / web search',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   deep_research: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'deep multi-step research',
-    suggestedProviders: ['openai', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'together'],
   },
   scraping_extraction: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'web scraping / data extraction',
-    suggestedProviders: ['openai', 'deepseek'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
   },
   suggestive_image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'suggestive image generation (non-explicit)',
-    suggestedProviders: ['openai', 'together', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
   },
   suggestive_video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'suggestive video planning (non-explicit)',
-    suggestedProviders: ['openai', 'gemini'],
+    suggestedProviders: ['genx', 'qwen', 'mimo', 'together'],
   },
   suggestive_video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
@@ -803,7 +803,7 @@ export function getDetailedCapabilityStatus(): CapabilityStatusEntry[] {
  *  5. If a specific model is named, that model must satisfy the capability.
  *
  * @param capability - The CapabilityClass being requested.
- * @param provider   - The provider key (e.g. 'openai', 'replicate').
+ * @param provider   - An approved provider key.
  * @param model      - The specific model ID to validate, or empty string for any.
  */
 export function resolveExecution(

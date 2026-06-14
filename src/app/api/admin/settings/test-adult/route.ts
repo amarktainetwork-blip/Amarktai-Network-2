@@ -1,762 +1,117 @@
-/**
- * POST /api/admin/settings/test-adult
- *
- * Test the adult content specialist provider — performs a REAL generation test,
- * not just a connection probe.
- *
- * The AI Engine (GenX) is NEVER used for adult content generation.
- * Only specialist providers are supported: xAI/Grok, Together AI, HuggingFace, Custom.
- *
- * Returns:
- *   { provider, model, success, outputType, status, error_category?, message, latencyMs }
- *
- * error_category values:
- *   missing_key | provider_policy_block | model_not_supported |
- *   endpoint_error | guardrail_block | unknown
- *
- * Returns truthful status — never faked.
- */
-
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { decryptVaultKey } from '@/lib/crypto-vault'
-import { getVaultApiKey } from '@/lib/brain'
-import { getProviderKey, type CoreProvider } from '@/lib/provider-config'
-import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
+import { getSession } from '@/lib/session'
+import { getProviderKey } from '@/lib/provider-config'
+import { getProviderMeshNode, isApprovedDirectProvider } from '@/lib/provider-mesh'
+import { runProviderHealthCheck } from '@/lib/providers'
+import { normalizeAdultPolicy } from '@/lib/universal-model-catalog'
 
-type ProviderType = 'together' | 'huggingface' | 'xai' | 'custom'
+const requestSchema = z.object({
+  mode: z.string().optional(),
+  providerType: z.string().optional(),
+  model: z.string().optional(),
+  outputType: z.enum(['text', 'image', 'video', 'audio']).optional(),
+})
 
-type ErrorCategory =
-  | 'missing_key'
-  | 'provider_policy_block'
-  | 'model_not_supported'
-  | 'endpoint_error'
-  | 'guardrail_block'
-  | 'unknown'
+const ADULT_PROVIDER_IDS = new Set(['genx', 'huggingface', 'together'])
 
-/** Classify an HTTP status into a structured error category */
-function classifyHttpError(status: number, body: string): ErrorCategory {
-  if (status === 401 || status === 403) return 'missing_key'
-  if (status === 404) return 'model_not_supported'
-  if (status === 429) return 'endpoint_error'
-  if (status === 422) {
-    const lower = body.toLowerCase()
-    if (lower.includes('safety') || lower.includes('policy') || lower.includes('content')) return 'provider_policy_block'
-    return 'model_not_supported'
-  }
-  if (status >= 500) return 'endpoint_error'
-  return 'unknown'
-}
-
-/** Safe test prompt used for all adult generation tests — not stored after test */
-const ADULT_TEST_PROMPT = 'a tasteful artistic portrait of a woman in soft studio lighting'
-const ADULT_TEXT_TEST_PROMPT =
-  'Write one short noir romance paragraph about two consenting adult characters. Keep it non-explicit.'
-
-/** Block SSRF: only allow http/https and block private/loopback in production */
-function validateUrl(raw: string): { url: URL; error: string | null } {
-  let url: URL
-  try { url = new URL(raw) } catch { return { url: new URL('about:blank'), error: 'Invalid URL' } }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    return { url, error: 'URL must use http or https' }
-  }
-  const h = url.hostname.toLowerCase()
-  if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(h) && process.env.NODE_ENV === 'production') {
-    return { url, error: 'Private or loopback URLs are not allowed' }
-  }
-  return { url, error: null }
-}
-
-async function runAdultTest(req: NextRequest): Promise<NextResponse> {
-  // ── Parse request body ──
-  let inlineMode         = ''
-  let inlineProviderType = ''
-  let inlineEndpoint     = ''
-  let inlineKey          = ''
-  let inlineModel        = ''
-  let inlineOutputType   = ''
-
-  try {
-    const body = await req.json()
-    inlineMode         = typeof body.mode         === 'string' ? body.mode.trim()         : ''
-    inlineProviderType = typeof body.providerType === 'string' ? body.providerType.trim() : ''
-    inlineEndpoint     = typeof body.endpoint     === 'string' ? body.endpoint.trim()     : ''
-    inlineKey          = typeof body.apiKey       === 'string' ? body.apiKey.trim()       : ''
-    inlineModel        = typeof body.model        === 'string' ? body.model.trim()        : ''
-    inlineOutputType   = typeof body.outputType   === 'string' ? body.outputType.trim()   : ''
-  } catch { /* ignore */ }
-
-  // ── Resolve from DB if not provided inline ──
-  let mode         = inlineMode
-  let providerType = inlineProviderType as ProviderType
-  let endpoint     = inlineEndpoint
-  let apiKey       = inlineKey
-  let providerModel = inlineModel
-  let outputType    = inlineOutputType || 'image'
-
-  if (!mode) {
-    try {
-      const row = await prisma.integrationConfig.findUnique({ where: { key: 'adult_mode' } })
-      if (row) {
-        let notes: Record<string, string> = {}
-        try { notes = JSON.parse(row.notes) } catch { /* ignore */ }
-        if (!mode)         mode         = notes.mode             || ''
-        if (!providerType) providerType = (notes.providerType || 'together') as ProviderType
-        if (!endpoint)     endpoint     = notes.specialistEndpoint || ''
-        if (!providerModel) providerModel = notes.providerModel   || ''
-        if (!inlineOutputType) outputType = notes.outputType || outputType
-        if (!apiKey && row.apiKey) apiKey = decryptVaultKey(row.apiKey) ?? ''
-      }
-    } catch { /* ignore */ }
-  }
-
-  if (!mode) mode = 'disabled'
-
-  // ── Vault key fallback ──────────────────────────────────────────────────────
-  // When no inline key and no key in the adult_mode integration config, check
-  // the provider vault (aiProvider table — shared key store for all features).
-  // This lets users reuse the same Together/HuggingFace/xAI key they already
-  // saved in Admin → AI Providers, without entering it a second time.
-  if (!apiKey && mode === 'specialist') {
-    if (!providerType) providerType = 'together'
-    const vaultKeyMap: Record<string, CoreProvider> = {
-      together: 'together',
-      huggingface: 'huggingface',
-      xai: 'xai',
-    }
-    // 'custom' has no corresponding vault key — skip vault lookup for it
-    if (providerType !== 'custom') {
-      const vaultKey = vaultKeyMap[providerType] ?? providerType
-      const resolved = await getProviderKey(vaultKey as CoreProvider).catch(() => null)
-        ?? await getVaultApiKey(vaultKey).catch(() => null)
-      if (resolved) apiKey = resolved
-    }
-  }
-
-  // ── Disabled / off ──
-  if (mode === 'disabled' || mode === 'off') {
-    return NextResponse.json({
-      mode,
-      supported: false,
-      status: 'disabled',
-      message: 'Adult Creative Mode is disabled. Enable a specialist provider in Settings to use adult content generation.',
-    })
-  }
-
-  // ── Policy mode normalisation ──
-  // Accept the full app-level policy vocabulary and map it to specialist provider routing.
-  // "specialist" is kept as the internal routing mode for backwards compatibility.
-  // All other non-disabled policy levels route through the specialist provider stack.
-  // Legacy alias: "full_adult" is treated as "full_adult_app_mode" for backward compatibility.
-  if (mode === 'full_adult') mode = 'full_adult_app_mode'
-
-  const ACCEPTED_ADULT_MODES = new Set([
-    'specialist',
-    'suggestive',
-    'adult_text',
-    'adult_image',
-    'adult_video',
-    'adult_voice',
-    'full_adult_app_mode',
-  ])
-
-  if (!ACCEPTED_ADULT_MODES.has(mode)) {
-    return NextResponse.json({
-      mode,
-      supported: false,
-      status: 'unknown_mode',
-      message: `Unknown adult policy mode "${mode}". Accepted modes: off, suggestive, adult_text, adult_image, adult_video, adult_voice, full_adult_app_mode, specialist.`,
-    })
-  }
-
-  // Normalise — all non-disabled modes use the specialist provider stack.
-  // The outputType defaults based on the policy level when not explicitly set.
-  if (mode !== 'specialist') {
-    if (!inlineOutputType) {
-      const modeOutputMap: Record<string, string> = {
-        adult_image:         'image',
-        suggestive:          'image',
-        adult_text:          'text',
-        adult_video:         'video',
-        adult_voice:         'audio',
-        full_adult_app_mode: 'image',
-      }
-      if (modeOutputMap[mode]) outputType = modeOutputMap[mode]
-    }
-  }
-
-  // ── Specialist provider ──
-  if (!providerType) providerType = 'together'
-
-  // ── Together AI — real generation test ──
-  if (providerType === 'together') {
-    if (!apiKey) {
-      return NextResponse.json({
-        provider: 'together',
-        mode: 'specialist', providerType: 'together',
-        success: false, supported: false, status: 'not_configured',
-        outputType: 'image',
-        error_category: 'missing_key' as ErrorCategory,
-        message: 'Together AI API key is required. Enter it here or save it via Admin → AI Providers → Together AI.',
-      })
-    }
-
-    const testModel = providerModel || 'black-forest-labs/FLUX.1-schnell-Free'
-    const start = Date.now()
-    try {
-      // Real generation test: attempt a minimal 512×512 image with a safe suggestive-adjacent prompt.
-      // disable_safety_checker is sent so we can verify adult content support.
-      // Test output is NOT stored — discarded immediately after status check.
-      // lgtm[js/request-forgery] — hardcoded Together AI URL; admin-only endpoint
-      const res = await fetch('https://api.together.xyz/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: testModel,
-          prompt: ADULT_TEST_PROMPT,
-          n: 1,
-          steps: 4,
-          width: 512,
-          height: 512,
-          disable_safety_checker: true,
-        }),
-        signal: AbortSignal.timeout(30_000),
-      })
-      const latencyMs = Date.now() - start
-      const bodyText = await res.text().catch(() => '')
-
-      if (res.ok) {
-        let imageGenerated = false
-        try {
-          const parsed = JSON.parse(bodyText) as { data?: Array<{ url?: string; b64_json?: string }> }
-          imageGenerated = !!(parsed.data?.[0]?.url || parsed.data?.[0]?.b64_json)
-        } catch { /* non-JSON ok response */ }
-
-        return NextResponse.json({
-          provider: 'together',
-          model: testModel,
-          success: imageGenerated,
-          supported: true,
-          status: imageGenerated ? 'ready' : 'connected_no_output',
-          outputType: 'image',
-          mode: 'specialist', providerType: 'together',
-          message: imageGenerated
-            ? `Together AI generation test passed — image returned (${latencyMs}ms)`
-            : `Together AI connected but no image data returned (${latencyMs}ms) — model may not support image output`,
-          error_category: imageGenerated ? undefined : ('model_not_supported' as ErrorCategory),
-          latencyMs,
-        })
-      }
-
-      const errCat = classifyHttpError(res.status, bodyText)
-      let errMsg = `Together AI generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
-      if (errCat === 'missing_key') errMsg += ' — authentication failed, check API key'
-      else if (errCat === 'provider_policy_block') errMsg += ' — provider safety policy blocked the test prompt'
-      else if (errCat === 'model_not_supported') errMsg += ' — model does not support this operation or disable_safety_checker is not allowed'
-      else if (errCat === 'endpoint_error') errMsg += ' — Together AI server error'
-
-      return NextResponse.json({
-        provider: 'together',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: errCat,
-        outputType: 'image',
-        mode: 'specialist', providerType: 'together',
-        error_category: errCat,
-        message: errMsg,
-        providerError: bodyText.slice(0, 2000),
-        suggestedModels: [
-          'black-forest-labs/FLUX.1-schnell-Free',
-          'black-forest-labs/FLUX.1-schnell',
-          'black-forest-labs/FLUX.1-dev',
-          'stabilityai/stable-diffusion-xl-base-1.0',
-        ],
-        latencyMs,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        provider: 'together',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: 'unreachable',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'together',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach Together AI: ${err instanceof Error ? err.message : 'network error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
-  }
-
-  // ── HuggingFace private endpoint — real generation test ──
-  if (providerType === 'huggingface') {
-    if (outputType === 'text' || outputType === 'chat' || outputType === 'roleplay') {
-      const defaultAdultModel = getDefaultAdultTextModel()
-      const testModel = providerModel || defaultAdultModel.id
-      const modelSpec = getAdultTextModel(testModel)
-
-      if (!apiKey && !endpoint) {
-        return NextResponse.json({
-          provider: 'huggingface',
-          model: testModel,
-          success: false,
-          supported: false,
-          status: 'not_configured',
-          outputType: 'text',
-          mode: 'specialist', providerType: 'huggingface',
-          error_category: 'missing_key' as ErrorCategory,
-          message: 'HuggingFace adult text requires either a HuggingFace API key plus a compatible hosted model, or a private/local endpoint for GGUF models.',
-        })
-      }
-
-      if (modelSpec && !endpoint) {
-        return NextResponse.json({
-          provider: 'huggingface',
-          model: testModel,
-          success: false,
-          supported: false,
-          status: 'endpoint_required',
-          outputType: 'text',
-          mode: 'specialist', providerType: 'huggingface',
-          error_category: 'endpoint_error' as ErrorCategory,
-          message: `${modelSpec.label} is cataloged from the DavidAU collection, but it is a GGUF model. Configure a HuggingFace private endpoint or local GGUF runtime endpoint before marking it READY.`,
-          runtime_required: modelSpec.runtime,
-        })
-      }
-
-      const start = Date.now()
-      try {
-        const hHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (apiKey) hHeaders['Authorization'] = `Bearer ${apiKey}`
-        const targetUrl = endpoint
-          ? validateUrl(endpoint)
-          : { url: new URL(`https://api-inference.huggingface.co/models/${testModel}`), error: null }
-        if (targetUrl.error) {
-          return NextResponse.json({
-            provider: 'huggingface',
-            model: testModel,
-            success: false,
-            supported: false,
-            status: 'invalid',
-            outputType: 'text',
-            mode: 'specialist', providerType: 'huggingface',
-            error_category: 'endpoint_error' as ErrorCategory,
-            message: targetUrl.error,
-          })
-        }
-
-        const res = await fetch(targetUrl.url.href, {
-          method: 'POST',
-          headers: hHeaders,
-          body: JSON.stringify({
-            inputs: ADULT_TEXT_TEST_PROMPT,
-            parameters: { max_new_tokens: 120, return_full_text: false, temperature: 0.8 },
-          }),
-          signal: AbortSignal.timeout(60_000),
-        })
-        const latencyMs = Date.now() - start
-        const bodyText = await res.text().catch(() => '')
-
-        if (res.ok) {
-          let textGenerated = false
-          try {
-            const parsed = JSON.parse(bodyText) as Array<{ generated_text?: string }> | { generated_text?: string }
-            textGenerated = Array.isArray(parsed) ? Boolean(parsed[0]?.generated_text) : Boolean(parsed.generated_text)
-          } catch {
-            textGenerated = bodyText.trim().length > 0
-          }
-
-          return NextResponse.json({
-            provider: 'huggingface',
-            model: testModel,
-            success: textGenerated,
-            supported: true,
-            status: textGenerated ? 'ready' : 'connected_no_text',
-            outputType: 'text',
-            mode: 'specialist', providerType: 'huggingface',
-            error_category: textGenerated ? undefined : ('model_not_supported' as ErrorCategory),
-            message: textGenerated
-              ? `HuggingFace adult text test passed (${latencyMs}ms)`
-              : `HuggingFace endpoint connected but returned no generated text (${latencyMs}ms)`,
-            latencyMs,
-          })
-        }
-
-        const errCat = classifyHttpError(res.status, bodyText)
-        return NextResponse.json({
-          provider: 'huggingface',
-          model: testModel,
-          success: false,
-          supported: false,
-          status: errCat,
-          outputType: 'text',
-          mode: 'specialist', providerType: 'huggingface',
-          error_category: errCat,
-          message: `HuggingFace adult text test failed (HTTP ${res.status}, ${latencyMs}ms)`,
-          latencyMs,
-        })
-      } catch (err) {
-        return NextResponse.json({
-          provider: 'huggingface',
-          model: testModel,
-          success: false,
-          supported: false,
-          status: 'unreachable',
-          outputType: 'text',
-          mode: 'specialist', providerType: 'huggingface',
-          error_category: 'endpoint_error' as ErrorCategory,
-          message: `Cannot reach HuggingFace adult text endpoint: ${err instanceof Error ? err.message : 'network error'}`,
-          latencyMs: Date.now() - start,
-        })
-      }
-    }
-
-    if (!endpoint) {
-      return NextResponse.json({
-        provider: 'huggingface',
-        model: providerModel || 'private-endpoint',
-        success: false,
-        supported: false,
-        status: 'not_configured',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'huggingface',
-        error_category: 'missing_key' as ErrorCategory,
-        message: 'HuggingFace private endpoint URL is required for adult generation. For unrestricted adult content, use a private HuggingFace Inference Endpoint (not the public API).',
-      })
-    }
-
-    const { url: hfUrl, error: hfErr } = validateUrl(endpoint)
-    if (hfErr) {
-      return NextResponse.json({
-        provider: 'huggingface',
-        model: providerModel || 'private-endpoint',
-        success: false,
-        supported: false,
-        status: 'invalid',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'huggingface',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: hfErr,
-      })
-    }
-
-    const testModel = providerModel || hfUrl.href
-    const start = Date.now()
-    try {
-      const hHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (apiKey) hHeaders['Authorization'] = `Bearer ${apiKey}`
-      // Real generation test: send a minimal image generation prompt.
-      // Test output is NOT stored — discarded immediately after status check.
-      // lgtm[js/request-forgery] — URL validated above; admin-only endpoint
-      const res = await fetch(hfUrl.href, {
-        method: 'POST',
-        headers: hHeaders,
-        body: JSON.stringify({ inputs: ADULT_TEST_PROMPT, parameters: { num_inference_steps: 4 } }),
-        signal: AbortSignal.timeout(60_000),
-      })
-      const latencyMs = Date.now() - start
-      const bodyBuf = await res.arrayBuffer().catch(() => new ArrayBuffer(0))
-      const bodyText = Buffer.from(bodyBuf).toString('utf8', 0, 500)
-
-      if (res.ok) {
-        const contentType = res.headers.get('content-type') ?? ''
-        const imageGenerated = contentType.startsWith('image/') || contentType === 'application/octet-stream'
-          ? bodyBuf.byteLength > 0
-          : false
-
-        return NextResponse.json({
-          provider: 'huggingface',
-          model: testModel,
-          success: imageGenerated,
-          supported: true,
-          status: imageGenerated ? 'ready' : 'connected_no_image',
-          outputType: 'image',
-          mode: 'specialist', providerType: 'huggingface',
-          error_category: imageGenerated ? undefined : ('model_not_supported' as ErrorCategory),
-          message: imageGenerated
-            ? `HuggingFace endpoint generation test passed — image returned (${latencyMs}ms)`
-            : `HuggingFace endpoint reachable but returned non-image response (content-type: ${contentType}) — verify model supports image generation`,
-          latencyMs,
-        })
-      }
-
-      const errCat = classifyHttpError(res.status, bodyText)
-      return NextResponse.json({
-        provider: 'huggingface',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: errCat,
-        outputType: 'image',
-        mode: 'specialist', providerType: 'huggingface',
-        error_category: errCat,
-        message: `HuggingFace endpoint generation test failed (HTTP ${res.status}, ${latencyMs}ms)`,
-        latencyMs,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        provider: 'huggingface',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: 'unreachable',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'huggingface',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach HuggingFace endpoint: ${err instanceof Error ? err.message : 'network error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
-  }
-
-  // ── xAI / Grok Imagine — real generation test ──
-  if (providerType === 'xai') {
-    if (!apiKey) {
-      return NextResponse.json({
-        provider: 'xai',
-        model: providerModel || 'grok-2-image',
-        success: false,
-        supported: false,
-        status: 'not_configured',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
-        error_category: 'missing_key' as ErrorCategory,
-        message: 'xAI API key is required. Enter it here or save it via Admin → AI Providers → xAI / Grok.',
-      })
-    }
-
-    const testModel = providerModel || 'grok-2-image'
-    const start = Date.now()
-    try {
-      // Real generation test with a safe test prompt.
-      // Test output is NOT stored — discarded immediately after status check.
-      // lgtm[js/request-forgery] — hardcoded xAI URL; admin-only endpoint
-      const res = await fetch('https://api.x.ai/v1/images/generations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: testModel, prompt: ADULT_TEST_PROMPT, n: 1 }),
-        signal: AbortSignal.timeout(30_000),
-      })
-      const latencyMs = Date.now() - start
-      const bodyText = await res.text().catch(() => '')
-
-      if (res.ok) {
-        let imageGenerated = false
-        try {
-          const parsed = JSON.parse(bodyText) as { data?: Array<{ url?: string; b64_json?: string }> }
-          imageGenerated = !!(parsed.data?.[0]?.url || parsed.data?.[0]?.b64_json)
-        } catch { /* non-JSON ok response */ }
-
-        return NextResponse.json({
-          provider: 'xai',
-          model: testModel,
-          success: imageGenerated,
-          supported: true,
-          status: imageGenerated ? 'ready' : 'connected_no_output',
-          outputType: 'image',
-          mode: 'specialist', providerType: 'xai',
-          error_category: imageGenerated ? undefined : ('model_not_supported' as ErrorCategory),
-          message: imageGenerated
-            ? `xAI/Grok generation test passed — image returned (${latencyMs}ms)`
-            : `xAI/Grok connected but no image data returned (${latencyMs}ms)`,
-          latencyMs,
-        })
-      }
-
-      const errCat = classifyHttpError(res.status, bodyText)
-      let errMsg = `xAI/Grok generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
-      if (errCat === 'missing_key') errMsg += ' — authentication failed, check API key'
-      else if (errCat === 'provider_policy_block') errMsg += ' — xAI safety policy blocked the test prompt; adult access may not be enabled for this key'
-      else if (errCat === 'model_not_supported') errMsg += ` — model "${testModel}" may not be available for this key`
-
-      return NextResponse.json({
-        provider: 'xai',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: errCat,
-        outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
-        error_category: errCat,
-        message: errMsg,
-        latencyMs,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        provider: 'xai',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: 'unreachable',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach xAI API: ${err instanceof Error ? err.message : 'network error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
-  }
-
-  // ── Custom (OpenAI-compatible) — real generation test ──
-  if (providerType === 'custom') {
-    if (!endpoint) {
-      return NextResponse.json({
-        provider: 'custom',
-        model: providerModel || 'custom',
-        success: false,
-        supported: false,
-        status: 'not_configured',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'custom',
-        error_category: 'missing_key' as ErrorCategory,
-        message: 'Custom provider endpoint URL is required.',
-      })
-    }
-
-    const { url: customUrl, error: customErr } = validateUrl(endpoint)
-    if (customErr) {
-      return NextResponse.json({
-        provider: 'custom',
-        model: providerModel || 'custom',
-        success: false,
-        supported: false,
-        status: 'invalid',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'custom',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: customErr,
-      })
-    }
-
-    const testModel = providerModel || 'default'
-    const start = Date.now()
-    try {
-      const cHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (apiKey) cHeaders['Authorization'] = `Bearer ${apiKey}`
-      // Real generation test.
-      // Test output is NOT stored — discarded immediately after status check.
-      // lgtm[js/request-forgery] — URL validated above; admin-only endpoint
-      const res = await fetch(customUrl.href, {
-        method: 'POST',
-        headers: cHeaders,
-        body: JSON.stringify({ prompt: ADULT_TEST_PROMPT, model: testModel, n: 1 }),
-        signal: AbortSignal.timeout(30_000),
-      })
-      const latencyMs = Date.now() - start
-      const bodyText = await res.text().catch(() => '')
-
-      if (res.ok) {
-        return NextResponse.json({
-          provider: 'custom',
-          model: testModel,
-          success: true,
-          supported: true,
-          status: 'ready',
-          outputType: 'image',
-          mode: 'specialist', providerType: 'custom',
-          message: `Custom endpoint generation test passed (HTTP 200, ${latencyMs}ms)`,
-          latencyMs,
-        })
-      }
-
-      const errCat = classifyHttpError(res.status, bodyText)
-      return NextResponse.json({
-        provider: 'custom',
-        model: testModel,
-        success: false,
-        supported: errCat !== 'missing_key' && errCat !== 'endpoint_error',
-        status: errCat,
-        outputType: 'image',
-        mode: 'specialist', providerType: 'custom',
-        error_category: errCat,
-        message: `Custom endpoint generation test failed (HTTP ${res.status}, ${latencyMs}ms)`,
-        latencyMs,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        provider: 'custom',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: 'unreachable',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'custom',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach custom endpoint: ${err instanceof Error ? err.message : 'network error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
-  }
-
-  return NextResponse.json({
-    provider: null,
-    model: null,
-    success: false,
-    supported: false,
-    status: 'unknown_provider',
-    outputType: 'image',
-    mode: 'specialist',
-    error_category: 'unknown' as ErrorCategory,
-    message: `Unknown provider type: ${providerType}. Supported: xai, together, huggingface, custom`,
-  })
-}
-
-// ── Persist last adult test status ───────────────────────────────────────────
-// Writes `lastTestStatus` and `lastTestAt` to the adult_mode integration config
-// notes so that runtime-capability-truth.ts can read the same value, keeping
-// the Settings page and all dashboard sections in sync.
-
-async function persistAdultTestStatus(passed: boolean, details?: { provider?: string; model?: string; message?: string; status?: string }): Promise<void> {
-  try {
-    const existing = await prisma.integrationConfig.findUnique({ where: { key: 'adult_mode' } })
-    let notes: Record<string, string> = {}
-    try { notes = JSON.parse(existing?.notes ?? '{}') } catch { /* ignore */ }
-    notes.lastTestStatus = passed ? 'passed' : 'failed'
-    notes.lastTestAt = new Date().toISOString()
-    if (details?.provider) notes.providerType = details.provider
-    if (details?.model) notes.providerModel = details.model
-    notes.lastError = passed ? '' : (details?.message || details?.status || 'Adult provider test failed')
-    await prisma.integrationConfig.upsert({
-      where: { key: 'adult_mode' },
-      update: { notes: JSON.stringify(notes) },
-      create: {
-        key: 'adult_mode',
-        displayName: 'Adult Content Provider',
-        apiKey: '',
-        notes: JSON.stringify(notes),
-        enabled: true,
-      },
-    })
-  } catch {
-    // Non-fatal — do not let persistence failure break the test response
-  }
-}
-
-/**
- * POST /api/admin/settings/test-adult
- *
- * Wrapper that calls runAdultTest() and persists the result status to the
- * adult_mode integration config so runtime-capability-truth.ts always reads
- * the same lastTestStatus as Settings shows.
- */
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const result = await runAdultTest(request)
-  const body = await result.json()
-  const passed = body.success === true
-  // Fire-and-forget — never let persistence delay the response
-  persistAdultTestStatus(passed, {
-    provider: typeof body.providerType === 'string' ? body.providerType : typeof body.provider === 'string' ? body.provider : undefined,
-    model: typeof body.model === 'string' ? body.model : undefined,
-    message: typeof body.message === 'string' ? body.message : undefined,
-    status: typeof body.status === 'string' ? body.status : undefined,
-  }).catch(() => {})
-  return NextResponse.json(body, { status: result.status })
+  const parsed = requestSchema.safeParse(await request.json().catch(() => ({})))
+  if (!parsed.success) {
+    return NextResponse.json({ success: false, status: 'BLOCKED', error: 'Invalid adult test request' }, { status: 422 })
+  }
+
+  const stored = await prisma.integrationConfig.findUnique({ where: { key: 'adult_mode' } }).catch(() => null)
+  let storedNotes: Record<string, string> = {}
+  try {
+    storedNotes = JSON.parse(stored?.notes ?? '{}') as Record<string, string>
+  } catch {
+    storedNotes = {}
+  }
+
+  const policy = normalizeAdultPolicy(parsed.data.mode ?? storedNotes.mode)
+  const provider = parsed.data.providerType ?? storedNotes.providerType ?? 'huggingface'
+  const outputType = parsed.data.outputType ?? storedNotes.outputType ?? 'image'
+  const model = parsed.data.model ?? storedNotes.providerModel ?? null
+
+  if (policy === 'off') {
+    return NextResponse.json({
+      success: false,
+      status: 'BLOCKED',
+      policy,
+      enabled: false,
+      message: 'Adult mode is off. Explicit operator opt-in is required.',
+    })
+  }
+
+  if (!isApprovedDirectProvider(provider) || !ADULT_PROVIDER_IDS.has(provider)) {
+    return NextResponse.json({
+      success: false,
+      status: 'BLOCKED',
+      policy,
+      provider,
+      message: 'Adult mode may use only approved GenX, Hugging Face, or Together AI routes.',
+    }, { status: 422 })
+  }
+
+  const node = getProviderMeshNode(provider)!
+  const key = await getProviderKey(provider)
+  if (!key) {
+    return NextResponse.json({
+      success: false,
+      status: 'NEEDS_CONFIGURATION',
+      policy,
+      provider,
+      outputType,
+      model,
+      message: `${node.displayName} is not configured.`,
+    })
+  }
+
+  const health = await runProviderHealthCheck(provider, key, node.baseUrl)
+  const ready = health.status === 'healthy'
+  const status = ready ? 'DEGRADED' : health.status === 'error' ? 'BLOCKED' : 'DEGRADED'
+  const message = ready
+    ? `${node.displayName} is connected. Adult ${outputType} still requires an app-authorized generation request before it can be marked READY.`
+    : health.message
+
+  const notes = {
+    ...storedNotes,
+    mode: policy,
+    providerType: provider,
+    providerModel: model ?? '',
+    outputType,
+    lastTestStatus: status,
+    lastTestAt: new Date().toISOString(),
+    lastError: ready ? '' : message,
+  }
+  await prisma.integrationConfig.upsert({
+    where: { key: 'adult_mode' },
+    update: { enabled: true, notes: JSON.stringify(notes) },
+    create: {
+      key: 'adult_mode',
+      displayName: 'Adult Mode',
+      apiKey: '',
+      enabled: true,
+      notes: JSON.stringify(notes),
+    },
+  }).catch(() => null)
+
+  return NextResponse.json({
+    success: false,
+    status,
+    policy,
+    enabled: true,
+    provider,
+    outputType,
+    model,
+    connected: ready,
+    message,
+  })
 }

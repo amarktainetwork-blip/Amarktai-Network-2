@@ -5,6 +5,10 @@ import { getVaultApiKey } from '@/lib/brain'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultImageModels } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+} from '@/lib/adult-app-capabilities'
 
 const CAPABILITY = 'adult_image'
 const ALLOWED_SIZES = ['512x512', '768x768', '1024x1024'] as const
@@ -48,10 +52,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
     const appSlug = typeof body.appSlug === 'string' ? body.appSlug : ''
+    const executionId = typeof body.executionId === 'string' ? body.executionId : undefined
     if (!prompt || !appSlug) {
       return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
     }
 
+    const adultProfile = await getAdultAppCapabilityProfile(appSlug)
+    const adultPolicy = validateAdultCapabilityRequest(adultProfile, 'adult_image', prompt)
+    if (!adultPolicy.allowed) {
+      return NextResponse.json(payload({
+        success: false,
+        traceId,
+        jobStatus: 'blocked',
+        error: adultPolicy.blocker,
+      }), { status: 403 })
+    }
     await loadAppSafetyConfigFromDB(appSlug)
     const safety = getAppSafetyConfig(appSlug)
     if (safety.safeMode || !safety.adultMode) {
@@ -91,8 +106,15 @@ export async function POST(request: NextRequest) {
     const route = getMediaCapabilityRoute(CAPABILITY)!
     const attempts: Array<Record<string, unknown>> = []
 
-    for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
+    for (const entry of route.providers.filter((candidate) =>
+      adultProfile.approvedProviders.includes(candidate.provider)
+      && (requestedProvider === 'auto' || candidate.provider === requestedProvider),
+    )) {
       const model = requestedModel ?? entry.model
+      if (!adultProfile.approvedModels.includes(model)) {
+        attempts.push({ provider: entry.provider, model, status: 'needs_approval' })
+        continue
+      }
       if (entry.provider === 'together') {
         const apiKey = await getVaultApiKey('together')
         if (!apiKey) {
@@ -110,7 +132,7 @@ export async function POST(request: NextRequest) {
           const imageUrl = data.data?.[0]?.url
           const imageBase64 = data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : undefined
           if (res.ok && (imageUrl || imageBase64)) {
-            return persistImage({ appSlug, prompt, provider: entry.provider, model, traceId, imageUrl, imageBase64, attempts })
+            return persistImage({ appSlug, prompt, provider: entry.provider, model, traceId, imageUrl, imageBase64, attempts, executionId })
           }
           attempts.push({ provider: entry.provider, model, status: 'test_failed', httpStatus: res.status })
         } catch (error) {
@@ -125,8 +147,14 @@ export async function POST(request: NextRequest) {
           continue
         }
         const hfModel = requestedModel ?? getAdultImageModels()[0]?.id ?? entry.model
+        if (!adultProfile.approvedModels.includes(hfModel)) {
+          attempts.push({ provider: entry.provider, model: hfModel, status: 'needs_approval' })
+          continue
+        }
         try {
-          const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+          const endpoint = process.env.HF_ENDPOINT_ADULT_IMAGE?.trim()
+            || `https://router.huggingface.co/hf-inference/models/${hfModel}`
+          const res = await fetch(endpoint, {
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -144,7 +172,7 @@ export async function POST(request: NextRequest) {
             const bytes = Buffer.from(await res.arrayBuffer())
             if (bytes.length > 0) {
               const imageBase64 = `data:${contentType.startsWith('image/') ? contentType : 'image/png'};base64,${bytes.toString('base64')}`
-              return persistImage({ appSlug, prompt, provider: entry.provider, model: hfModel, traceId, imageBase64, attempts })
+              return persistImage({ appSlug, prompt, provider: entry.provider, model: hfModel, traceId, imageBase64, attempts, executionId })
             }
           }
           attempts.push({ provider: entry.provider, model: hfModel, status: 'test_failed', httpStatus: res.status })
@@ -180,11 +208,13 @@ async function persistImage(input: {
   imageUrl?: string
   imageBase64?: string
   attempts: Array<Record<string, unknown>>
+  executionId?: string
 }) {
   try {
     const match = input.imageBase64?.match(/^data:([^;]+);base64,(.+)$/)
     const artifact = await createArtifact({
       appSlug: input.appSlug,
+      executionId: input.executionId,
       type: 'image',
       subType: CAPABILITY,
       title: `Adult image: ${input.prompt.slice(0, 80)}`,
@@ -194,7 +224,7 @@ async function persistImage(input: {
       content: match ? Buffer.from(match[2], 'base64') : undefined,
       contentUrl: input.imageUrl,
       mimeType: match?.[1] ?? 'image/png',
-      metadata: { capability: CAPABILITY },
+      metadata: { capability: CAPABILITY, executionId: input.executionId },
     })
     return NextResponse.json(payload({
       success: true,

@@ -1,13 +1,26 @@
-import { Blocks, Library, Settings2, Shield, Sparkles, Wrench } from 'lucide-react'
+import {
+  AppWindow,
+  BriefcaseBusiness,
+  Library,
+  ListChecks,
+  Music2,
+  Palette,
+  Settings2,
+  Sparkles,
+  UserRound,
+} from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 export type DashboardSectionId =
-  | 'app-builder'
-  | 'repo-workbench'
-  | 'media-studio'
-  | 'outputs'
+  | 'command-center'
+  | 'studio'
+  | 'projects'
+  | 'avatars'
+  | 'music'
+  | 'connected-apps'
+  | 'artifacts'
+  | 'jobs'
   | 'settings'
-  | 'advanced-admin'
 
 export type DashboardNavItem = {
   id: DashboardSectionId
@@ -18,10 +31,13 @@ export type DashboardNavItem = {
 }
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
-  { id: 'app-builder', href: '/admin/dashboard/app-builder', label: 'App Builder', description: 'Clarify ideas and prepare approved future build plans.', icon: Blocks },
-  { id: 'repo-workbench', href: '/admin/dashboard/workbench', label: 'Repo Workbench', description: 'Import, audit, patch, test, commit, push, and create PRs.', icon: Wrench },
-  { id: 'media-studio', href: '/admin/dashboard/studio', label: 'Media Studio / Playground', description: 'Generate and inspect real media through connected providers.', icon: Sparkles },
-  { id: 'outputs', href: '/admin/dashboard/outputs', label: 'Outputs', description: 'Media, reports, app builds, diffs, PRs, and artifacts.', icon: Library },
-  { id: 'settings', href: '/admin/dashboard/settings', label: 'Settings', description: 'Keys, connections, storage, queues, and service setup.', icon: Settings2 },
-  { id: 'advanced-admin', href: '/admin/dashboard/system', label: 'Advanced Admin', description: 'System, operations, VPS, queues, logs, and diagnostics.', icon: Shield },
+  { id: 'command-center', href: '/admin/dashboard/command', label: 'Command Center', description: 'Capability-first command and execution workspace.', icon: BriefcaseBusiness },
+  { id: 'studio', href: '/admin/dashboard/studio', label: 'Create Studio', description: 'Create text, image, video, music, avatar, and voice work.', icon: Sparkles },
+  { id: 'projects', href: '/admin/dashboard/projects', label: 'Projects & Brand Kits', description: 'Organize work and reusable brand context.', icon: Palette },
+  { id: 'avatars', href: '/admin/dashboard/avatars', label: 'Avatar Library', description: 'Manage avatar references and generated avatar media.', icon: UserRound },
+  { id: 'music', href: '/admin/dashboard/music-studio', label: 'Music Studio', description: 'Create songs, lyrics, and instrumentals.', icon: Music2 },
+  { id: 'jobs', href: '/admin/dashboard/jobs', label: 'Jobs', description: 'Track queued, running, completed, and failed work.', icon: ListChecks },
+  { id: 'artifacts', href: '/admin/dashboard/artifacts', label: 'Artifacts', description: 'Preview, download, and reuse generated outputs.', icon: Library },
+  { id: 'connected-apps', href: '/admin/dashboard/connected-apps', label: 'Connected Apps', description: 'Register apps and manage scoped access.', icon: AppWindow },
+  { id: 'settings', href: '/admin/dashboard/settings', label: 'Settings', description: 'Keys, connections, storage, queues, and policy.', icon: Settings2 },
 ] as const

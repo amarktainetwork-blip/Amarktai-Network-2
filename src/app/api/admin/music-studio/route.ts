@@ -15,8 +15,11 @@ import {
   type MusicCreationRequest,
 } from '@/lib/music-studio'
 import { callGenXMedia, GENX_AUDIO_MODELS } from '@/lib/genx-client'
+import { createArtifact } from '@/lib/artifact-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
+import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
+import { getProviderCapabilityAdapter } from '@/lib/ai-capability-adapters'
 
 /**
  * GET /api/admin/music-studio
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { action?: string; request?: Partial<MusicCreationRequest> }
+  let body: { action?: string; request?: Partial<MusicCreationRequest> & { executionId?: string } }
   try {
     body = await request.json()
   } catch {
@@ -127,6 +130,7 @@ export async function POST(request: NextRequest) {
   }
 
   const musicRequest = req as MusicCreationRequest
+  const executionId = req.executionId
 
   // Validate genre/mood limits before any processing
   try {
@@ -141,13 +145,125 @@ export async function POST(request: NextRequest) {
   try {
     if (action === 'lyrics_only') {
       const lyrics = await generateLyrics(musicRequest)
+      const artifact = await createArtifact({
+        appSlug: musicRequest.appSlug,
+        executionId,
+        type: 'text',
+        subType: 'lyrics',
+        capability: 'lyrics_generation',
+        title: lyrics.title,
+        description: `${musicRequest.genre} / ${musicRequest.vocalStyle}`,
+        model: lyrics.model,
+        mimeType: 'text/plain',
+        content: Buffer.from(lyrics.lyrics, 'utf8'),
+        metadata: {
+          theme: musicRequest.theme,
+          genre: musicRequest.genre,
+          vocalStyle: musicRequest.vocalStyle,
+        },
+      })
       return NextResponse.json({
-        success: true, capability: 'music_generation', provider: null, model: null,
-        jobStatus: 'completed', artifactId: null, storageUrl: null, error: null, blocker: null, lyrics,
+        success: true, capability: 'lyrics_generation', provider: null, model: null,
+        jobStatus: 'completed', artifactId: artifact.id, storageUrl: artifact.storageUrl,
+        error: null, blocker: null, lyrics,
       })
     }
 
     if (action === 'create_async') {
+      const selectedProvider = musicRequest.provider ?? 'genx'
+      if (selectedProvider === 'huggingface') {
+        const capability = getCapabilityDefinition('music_generation')!
+        const route = capability.providerRoutes.find((entry) => entry.provider === 'huggingface')
+        const adapter = getProviderCapabilityAdapter('huggingface')
+        if (!route || !adapter) {
+          return NextResponse.json({
+            success: false,
+            capability: 'music_generation',
+            provider: null,
+            model: null,
+            jobStatus: 'needs_setup',
+            artifactId: null,
+            storageUrl: null,
+            error: 'The Hugging Face music adapter is not registered.',
+            blocker: 'The Hugging Face music adapter is not registered.',
+          }, { status: 503 })
+        }
+        const result = await adapter.execute({
+          capability,
+          route,
+          prompt: musicRequest.existingLyrics?.trim()
+            ? `${musicRequest.theme}\n\nLyrics:\n${musicRequest.existingLyrics}`
+            : musicRequest.theme,
+          inputs: {
+            genres: musicRequest.genres ?? [musicRequest.genre],
+            moods: musicRequest.moods ?? [],
+            vocalStyle: musicRequest.vocalStyle,
+            instrumental: musicRequest.instrumental,
+            durationSeconds: musicRequest.durationSeconds,
+            productionNotes: musicRequest.productionNotes,
+          },
+          references: [],
+          context: { appSlug: musicRequest.appSlug },
+          model: musicRequest.model,
+        })
+        if (result.status !== 'completed' || (!result.bytes && !result.mediaUrl && result.output == null)) {
+          const blocker = result.error ?? 'Hugging Face returned no playable music output.'
+          return NextResponse.json({
+            success: false,
+            capability: 'music_generation',
+            provider: result.provider,
+            model: result.model,
+            jobStatus: result.status === 'needs_configuration' ? 'needs_setup' : 'failed',
+            artifactId: null,
+            storageUrl: null,
+            error: blocker,
+            blocker,
+          }, { status: result.status === 'needs_configuration' ? 503 : 502 })
+        }
+        const artifact = await createArtifact({
+          appSlug: musicRequest.appSlug,
+          executionId,
+          type: 'music',
+          subType: 'generated_audio',
+          capability: 'music_generation',
+          title: musicRequest.title ?? musicRequest.theme.slice(0, 80),
+          description: `${(musicRequest.genres ?? [musicRequest.genre]).join(' + ')} / ${musicRequest.vocalStyle}`,
+          provider: result.provider,
+          model: result.model,
+          mimeType: result.contentType ?? 'audio/mpeg',
+          content: result.bytes ?? (
+            result.output == null
+              ? undefined
+              : Buffer.from(typeof result.output === 'string' ? result.output : JSON.stringify(result.output))
+          ),
+          contentUrl: result.mediaUrl ?? undefined,
+          allowRemoteReference: Boolean(result.mediaUrl),
+          metadata: {
+            capability: 'music_generation',
+            genres: musicRequest.genres ?? [musicRequest.genre],
+            qualityTier: musicRequest.qualityTier ?? 'auto',
+          },
+        })
+        return NextResponse.json({
+          success: true,
+          executed: true,
+          capability: 'music_generation',
+          provider: result.provider,
+          model: result.model,
+          jobStatus: 'completed',
+          status: 'completed',
+          jobId: null,
+          pollUrl: null,
+          artifactId: artifact.id,
+          storageUrl: artifact.storageUrl,
+          audioUrl: artifact.storageUrl,
+          musicUrl: artifact.storageUrl,
+          error: null,
+          blocker: null,
+          artifact,
+        }, { status: 201 })
+      }
+
       const status = await getMusicStudioStatusAsync()
       if (!status.audioProviderConfigured) {
         const blocker = 'No connected music/audio provider can start real song generation. Configure and test GenX audio generation.'
@@ -195,7 +311,7 @@ export async function POST(request: NextRequest) {
           description: `${musicRequest.genre} / ${musicRequest.vocalStyle} / ${musicRequest.theme}`,
           provider: 'genx',
           model: generated.model,
-          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre },
+          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre, executionId },
         })
         return NextResponse.json({
           success: true,
@@ -227,7 +343,7 @@ export async function POST(request: NextRequest) {
         provider: 'genx',
         model: generated.model,
         providerJobId: generated.jobId!,
-        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle },
+        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle, executionId },
       })
       return NextResponse.json(localMediaJobResponse(job), { status: 202 })
     }

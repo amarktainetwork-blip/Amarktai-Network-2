@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { routeLiveModel } from '@/lib/live-ai-routing'
 import { recordEstimatedCost } from '@/lib/cost-tracking'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 export async function POST(request: NextRequest) {
   const session = await getSession()
@@ -14,7 +15,9 @@ export async function POST(request: NextRequest) {
   }
   if (!body.text?.trim()) return NextResponse.json({ success: false, error: 'text is required' }, { status: 400 })
 
-  const selectedProvider = body.voiceId && ['minimax', 'genx', 'groq', 'openai'].includes(body.voiceId) ? body.voiceId : 'auto'
+  const selectedProvider = body.voiceId && isApprovedDirectProvider(body.voiceId)
+    ? body.voiceId
+    : 'auto'
   const route = routeLiveModel({
     capability: 'voice_tts',
     appSlug: 'assistant',

@@ -18,8 +18,6 @@ const BASE_VOICES: VoiceOption[] = [
   { id: 'genx:grok-tts:neutral', label: 'AmarktAI Neutral', provider: 'genx', model: 'grok-tts', verified: false, blocker: null },
   { id: 'genx:aura-2:warm', label: 'AmarktAI Warm', provider: 'genx', model: 'aura-2', verified: false, blocker: null },
   { id: 'genx:genxlm-voice-v1:premium', label: 'AmarktAI Premium', provider: 'genx', model: 'genxlm-voice-v1', verified: false, blocker: null },
-  { id: 'elevenlabs:default:studio', label: 'ElevenLabs Studio Voice', provider: 'elevenlabs', model: 'default', verified: false, blocker: null },
-  { id: 'deepgram:aura-2:fast', label: 'Deepgram Aura Fast', provider: 'deepgram', model: 'aura-2', verified: false, blocker: null },
 ]
 
 export async function GET() {
@@ -34,7 +32,7 @@ export async function GET() {
   const voices = BASE_VOICES.map((voice) => {
     const providerReady = configuredProviders.has(voice.provider)
     const genxModelKnown = voice.provider !== 'genx' || GENX_TTS_MODELS.includes(voice.model as (typeof GENX_TTS_MODELS)[number])
-    const capabilityReady = voiceCapability?.status === 'available'
+    const capabilityReady = voiceCapability?.status === 'READY'
     const verified = providerReady && genxModelKnown && capabilityReady
     return {
       ...voice,

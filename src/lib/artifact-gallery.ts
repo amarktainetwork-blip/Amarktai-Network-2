@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import type { MediaArtifactRecord } from '@/lib/media-artifacts'
+import { resolveStoragePath } from '@/lib/storage-root'
 
-const ARTIFACT_ROOT = process.env.MEDIA_ARTIFACT_ROOT || '/var/www/amarktai/repo/public/generated-artifacts'
+const ARTIFACT_ROOT = process.env.MEDIA_ARTIFACT_ROOT || resolveStoragePath('artifacts/media')
 
 function safeSegment(input: string) {
   return input.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'default'

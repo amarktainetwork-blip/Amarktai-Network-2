@@ -1,268 +1,443 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, CheckCircle2, ChevronDown, Clock3, Loader2, Send, Sparkles } from 'lucide-react'
+import Image from 'next/image'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  AVATAR_STYLES,
-  IMAGE_STYLES,
-  MOVIE_STYLES,
-  RESEARCH_DEPTHS,
-  SONG_DURATIONS,
-  SONG_GENRES,
-  SONG_LANGUAGES,
-  SONG_MOODS,
-  SONG_STRUCTURES,
-  SONG_VOCALS,
-  VOICE_STYLES,
-  type StudioCommandOptions,
-} from '@/lib/studio-options'
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  RefreshCw,
+  RotateCcw,
+  Send,
+  Sparkles,
+  XCircle,
+} from 'lucide-react'
 
-type Capability = 'song' | 'avatar' | 'voice' | 'movie' | 'image' | 'research'
-
-type CommandJob = {
+type AppOption = { id?: string; slug: string; name: string }
+type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
+type Artifact = {
   id: string
-  prompt: string
+  title: string
+  type: string
   status: string
-  route: {
-    intent: string
-    surface: string
-    agentTeam: string[]
-    providerStrategy: string[]
-    approvalRequired: boolean
-    approvalReason: string | null
-    artifacts: string[]
-    nextVisibleStep: string
-    executionRoute: string
-    options?: StudioCommandOptions
-    selectedProviders?: string[]
+  previewUrl: string
+  downloadUrl: string
+  mimeType: string
+}
+type Execution = {
+  executionId: string
+  status: string
+  readiness: string | null
+  capability: string
+  providerPlan: { provider: string | null; fallbackProviders: string[]; reason: string }
+  modelPlan: { model: string | null; fallbackModels: string[]; task: string | null; costMode: string }
+  approval: { required: boolean; status: string; reason: string | null; approvalId: string | null }
+  job: { jobId: string; status?: string; pollUrl?: string | null } | null
+  jobs: Array<{ jobId: string; status?: string; pollUrl?: string | null }>
+  artifacts: Artifact[]
+  result: unknown
+  error: string | null
+  execution: {
+    input: { prompt: string; files: string[]; metadata: Record<string, unknown> }
+    events: Array<{ id: string; type: string; message: string; level: string; at: string }>
+    error: string | null
+    createdAt: string
   }
-  timeline: Array<{ type: string; title: string; detail: string; timestamp: string }>
-  execution?: { error?: string; detail?: string; imageUrl?: string; pollUrl?: string; jobId?: string }
 }
 
-const starters = [
-  'Create song',
-  'Create image',
-  'Create video',
-  'Create avatar',
-  'Generate voice',
-  'Build app',
-  'Audit repo',
-  'Fix repo',
-  'Create PR',
-  'Check system',
-]
+const capabilityOptions = [
+  ['auto', 'Auto-detect'],
+  ['chat', 'Chat'],
+  ['code', 'Code'],
+  ['file_analysis', 'File analysis'],
+  ['research', 'Research'],
+  ['image_generation', 'Image generation'],
+  ['image_edit', 'Image edit'],
+  ['video_generation', 'Video generation'],
+  ['image_to_video', 'Image to video'],
+  ['music_generation', 'Music generation'],
+  ['lyrics_generation', 'Lyrics'],
+  ['tts', 'Text to speech'],
+  ['voice_response', 'Voice response'],
+  ['scrape_website', 'Website research'],
+] as const
 
-const capabilities: Array<{ value: Capability; label: string }> = [
-  { value: 'song', label: 'Song' },
-  { value: 'avatar', label: 'Avatar' },
-  { value: 'voice', label: 'Voice' },
-  { value: 'movie', label: 'Movie' },
-  { value: 'image', label: 'Image' },
-  { value: 'research', label: 'Research' },
-]
+const adultCapabilities = [
+  ['adult_text', 'Adult text'],
+  ['adult_image', 'Adult image'],
+  ['adult_video', 'Adult video'],
+  ['adult_voice', 'Adult voice'],
+] as const
 
+const activeStatuses = new Set(['planned', 'queued', 'running'])
 export default function CommandCenter() {
+  const [apps, setApps] = useState<AppOption[]>([])
+  const [appSlug, setAppSlug] = useState('amarktai-network')
+  const [policy, setPolicy] = useState<SafetyPolicy>({ safeMode: true, adultMode: false, suggestiveMode: false })
+  const [capability, setCapability] = useState('auto')
   const [prompt, setPrompt] = useState('')
-  const [jobs, setJobs] = useState<CommandJob[]>([])
-  const [active, setActive] = useState<CommandJob | null>(null)
+  const [references, setReferences] = useState('')
+  const [active, setActive] = useState<Execution | null>(null)
+  const [history, setHistory] = useState<Execution[]>([])
+  const [reusedArtifacts, setReusedArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(false)
-  const [advanced, setAdvanced] = useState(false)
-  const [controlsOpen, setControlsOpen] = useState(false)
-  const [capability, setCapability] = useState<Capability>('song')
-  const [options, setOptions] = useState<StudioCommandOptions>({
-    costMode: 'balanced',
-    duration: '180',
-    genres: ['rock'],
-    combineGenres: false,
-    vocals: 'female',
-    mood: 'uplifting',
-    language: 'English',
-    cleanLyrics: true,
-    structure: 'auto',
-    avatarStyle: AVATAR_STYLES[0],
-    voiceStyle: VOICE_STYLES[0],
-    movieStyle: MOVIE_STYLES[0],
-    imageStyle: IMAGE_STYLES[0],
-    researchDepth: RESEARCH_DEPTHS[1],
-  })
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
-  useEffect(() => {
-    fetch('/api/admin/command').then((response) => response.json()).then((data) => setJobs(data.jobs ?? [])).catch(() => null)
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const response = await fetch('/api/admin/playground?limit=30', { cache: 'no-store' })
+      const data = await response.json()
+      if (response.ok) setHistory(data.runs ?? [])
+    } finally {
+      setHistoryLoading(false)
+    }
   }, [])
 
-  async function submit(text = prompt) {
-    if (!text.trim()) return
+  useEffect(() => {
+    fetch('/api/admin/apps', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        const nextApps = Array.isArray(data) ? data : data.apps ?? []
+        setApps(nextApps)
+        if (nextApps.length && !nextApps.some((app: AppOption) => app.slug === appSlug)) {
+          setAppSlug(nextApps[0].slug)
+        }
+      })
+      .catch(() => null)
+    loadHistory()
+  }, [appSlug, loadHistory])
+
+  useEffect(() => {
+    fetch(`/api/admin/app-safety?appSlug=${encodeURIComponent(appSlug)}`, { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        if (typeof data.safeMode === 'boolean') {
+          setPolicy({
+            safeMode: data.safeMode,
+            adultMode: Boolean(data.adultMode),
+            suggestiveMode: Boolean(data.suggestiveMode),
+          })
+        }
+      })
+      .catch(() => setPolicy({ safeMode: true, adultMode: false, suggestiveMode: false }))
+  }, [appSlug])
+
+  useEffect(() => {
+    if (!active || !activeStatuses.has(active.status)) return
+    const timer = window.setInterval(async () => {
+      const response = await fetch(
+        `/api/admin/playground?executionId=${encodeURIComponent(active.executionId)}`,
+        { cache: 'no-store' },
+      )
+      if (!response.ok) return
+      const run = await response.json()
+      setActive(run)
+      setHistory((items) => [run, ...items.filter((item) => item.executionId !== run.executionId)])
+    }, 3000)
+    return () => window.clearInterval(timer)
+  }, [active])
+
+  async function submit(quickAction?: string, executionId?: string) {
+    const text = prompt.trim()
+    if (!executionId && !text) return
     setLoading(true)
+    setSubmitError('')
     try {
-      const response = await fetch('/api/admin/command', {
+      const response = await fetch('/api/admin/playground', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: text, options }),
+        body: JSON.stringify(executionId ? { executionId } : {
+          prompt: text,
+          appSlug,
+          capability: capability === 'auto' ? undefined : capability,
+          quickAction,
+          references: references.split('\n').map((value) => value.trim()).filter(Boolean),
+          artifactIds: reusedArtifacts.map((artifact) => artifact.id),
+        }),
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.error || 'Command routing failed')
-      setActive(data.job)
-      setJobs((current) => [data.job, ...current])
-      setPrompt('')
+      if (!response.ok) throw new Error(data.error || 'Command Center execution failed')
+      setActive(data)
+      setHistory((items) => [data, ...items.filter((item) => item.executionId !== data.executionId)])
+      if (!executionId) {
+        setPrompt('')
+        setReferences('')
+        setReusedArtifacts([])
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Command Center execution failed')
     } finally {
       setLoading(false)
     }
   }
 
-  const attachedHref = useMemo(() => {
-    if (!active) return ''
-    if (active.route.surface === 'Workbench') return '/admin/dashboard/workbench'
-    if (active.route.surface === 'System') return '/admin/dashboard/system'
-    if (active.route.surface === 'Network Apps') return '/admin/dashboard/workspace'
-    return active.route.executionRoute
-  }, [active])
+  async function decideApproval(decision: 'approve' | 'reject') {
+    const approvalId = active?.approval.approvalId
+    if (!approvalId) return
+    setLoading(true)
+    setSubmitError('')
+    try {
+      const response = await fetch(`/api/admin/approvals/${approvalId}/${decision}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(decision === 'approve' ? { note: 'Approved in Command Center' } : { reason: 'Rejected in Command Center' }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || `Could not ${decision} execution`)
+      if (decision === 'approve') await submit(undefined, active.executionId)
+      else {
+        const refreshed = await fetch(`/api/admin/playground?executionId=${active.executionId}`).then((item) => item.json())
+        setActive(refreshed)
+        setHistory((items) => [refreshed, ...items.filter((item) => item.executionId !== refreshed.executionId)])
+      }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Approval update failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function reuseArtifact(artifact: Artifact) {
+    setSubmitError('')
+    const response = await fetch(`/api/admin/artifacts/${encodeURIComponent(artifact.id)}/reuse`, {
+      method: 'POST',
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSubmitError(data.error || 'Artifact cannot be reused')
+      return
+    }
+    setReusedArtifacts((items) => [
+      ...items.filter((item) => item.id !== artifact.id),
+      artifact,
+    ])
+  }
+
+  const visibleCapabilities = useMemo(
+    () => policy.adultMode
+      ? [...capabilityOptions, ...adultCapabilities]
+      : capabilityOptions,
+    [policy.adultMode],
+  )
+  const activeResult = resultText(active?.result)
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="overflow-hidden rounded-3xl border border-cyan-400/20 bg-slate-900/70">
-        <div className="border-b border-slate-700/50 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.12),transparent_40%)] p-5 lg:p-7">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Workspace</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Say what you want done.</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Describe the outcome naturally. Amarktai selects the capability, coordinates the work, and keeps progress understandable.</p>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {starters.map((starter) => <button key={starter} onClick={() => setPrompt(starter)} className="rounded-full border border-slate-700/60 bg-slate-950/50 px-3 py-2 text-left text-xs font-semibold text-slate-300 hover:border-cyan-400/30 hover:text-cyan-200">{starter}</button>)}
-          </div>
+    <div className="space-y-5">
+      <header className="rounded-3xl border border-cyan-400/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.14),transparent_42%)] p-5 lg:p-7">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Command Center</p>
+        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Say what you want done.</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">A focused assistant workspace for questions, research, planning, and capability execution.</p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Field label="App context">
+            <select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="command-control">
+              {apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}
+              {apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}
+            </select>
+          </Field>
+          <Field label="Capability">
+            <select value={capability} onChange={(event) => setCapability(event.target.value)} className="command-control">
+              {visibleCapabilities.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </Field>
+          <Fact label="App policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
+          <Fact label="Workspace" value="Conversation, result, and reusable artifacts" />
         </div>
+      </header>
 
-        <div className="min-h-[350px] space-y-4 p-5 lg:p-7">
-          {!active && <div className="grid min-h-[290px] place-items-center text-center"><div><Sparkles className="mx-auto h-9 w-9 text-cyan-300/60" /><p className="mt-3 font-bold text-slate-300">Your plan, progress, and outputs appear here.</p></div></div>}
+      <div className="space-y-5">
+        <main className="flex flex-col gap-5">
+          <section className="order-last sticky bottom-4 z-20 rounded-2xl border border-cyan-400/25 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-2xl lg:p-5">
+            <textarea
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              rows={5}
+              placeholder="Create, research, explain, generate, plan, inspect, or check..."
+              className="w-full resize-y rounded-2xl border border-slate-700/60 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/50"
+            />
+            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+              <input
+                value={references}
+                onChange={(event) => setReferences(event.target.value)}
+                placeholder="File paths or reference URLs, one per line"
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none placeholder:text-slate-500"
+              />
+              <button
+                onClick={() => submit()}
+                disabled={loading || !prompt.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 disabled:opacity-40"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                Run
+              </button>
+            </div>
+            {reusedArtifacts.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {reusedArtifacts.map((artifact) => (
+                  <button key={artifact.id} onClick={() => setReusedArtifacts((items) => items.filter((item) => item.id !== artifact.id))} className="rounded-full border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5 text-xs font-bold text-cyan-200">
+                    Context: {artifact.title} x
+                  </button>
+                ))}
+              </div>
+            )}
+            {submitError && <ErrorPanel message={submitError} />}
+          </section>
+
+          {!active && (
+            <section className="grid min-h-72 place-items-center rounded-2xl border border-dashed border-slate-700/60 bg-slate-900/30 text-center">
+              <div><Sparkles className="mx-auto h-9 w-9 text-cyan-300/60" /><p className="mt-3 font-bold text-slate-300">Plan, progress, results, and artifacts appear here.</p></div>
+            </section>
+          )}
+
           {active && (
             <>
-              <div className="ml-auto max-w-[85%] rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-50">{active.prompt}</div>
-              <div className="max-w-[92%] rounded-2xl border border-slate-700/50 bg-slate-950/60 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-300">Ready to continue</p>
-                <p className="mt-4 text-sm leading-6 text-slate-300">{active.route.nextVisibleStep}</p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <Fact label="Working team" value={active.route.agentTeam.join(' + ')} />
-                  <Fact label="Expected outputs" value={active.route.artifacts.join(', ')} />
+              <section className="grid gap-3 md:grid-cols-2">
+                <Panel title="Route plan">
+                  <Fact label="Detected capability" value={friendly(active.capability)} />
+                  <Fact label="Status" value={friendly(active.status)} />
+                  {active.readiness && <Fact label="Readiness" value={friendly(active.readiness)} />}
+                  <p className="text-xs leading-5 text-slate-400">{active.providerPlan.reason}</p>
+                </Panel>
+                <Panel title="Provider / model">
+                  <Fact label="Connected route" value={active.providerPlan.provider ?? 'No executable provider selected'} />
+                  <Fact label="Model" value={active.modelPlan.model ?? active.modelPlan.task ?? 'No executable model selected'} />
+                  <p className="text-xs leading-5 text-slate-400">Fallbacks: {active.providerPlan.fallbackProviders.join(' -> ') || 'None'}</p>
+                </Panel>
+              </section>
+
+              <Panel title="Approval status">
+                {!active.approval.required && <StatusLine icon="ok" title="No approval required" detail="This action is allowed to run automatically." />}
+                {active.approval.status === 'pending' && (
+                  <>
+                    <StatusLine icon="wait" title="Approval required" detail={active.approval.reason ?? 'Review before continuing.'} />
+                    <div className="flex gap-2">
+                      <button onClick={() => decideApproval('approve')} disabled={loading} className="rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-slate-950">Approve and run</button>
+                      <button onClick={() => decideApproval('reject')} disabled={loading} className="rounded-xl border border-red-400/30 px-4 py-2 text-xs font-black text-red-200">Reject</button>
+                    </div>
+                  </>
+                )}
+                {active.approval.status === 'approved' && <StatusLine icon="ok" title="Approved" detail="The approved execution may continue through the canonical runner." />}
+                {active.approval.status === 'rejected' && <StatusLine icon="error" title="Rejected" detail="The execution was cancelled without running." />}
+              </Panel>
+
+              <Panel title="Job / execution progress">
+                <div className="space-y-3">
+                  {active.execution.events.map((event) => (
+                    <StatusLine key={event.id} icon={event.level === 'error' ? 'error' : event.level === 'warning' ? 'wait' : 'ok'} title={friendly(event.type)} detail={event.message} />
+                  ))}
+                  {active.job?.pollUrl && <a href={active.job.pollUrl} className="inline-flex items-center gap-2 text-xs font-black text-cyan-300">Open provider job <ArrowRight className="h-3.5 w-3.5" /></a>}
                 </div>
-                {active.route.approvalRequired && <div className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/8 p-3 text-sm font-semibold text-amber-200">{active.route.approvalReason}</div>}
-                {active.execution?.error && <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/8 p-3 text-sm font-semibold text-red-200">{active.execution.error}</div>}
-                {active.execution?.detail && <div className="mt-3 rounded-xl border border-emerald-400/20 bg-emerald-400/8 p-3 text-sm font-semibold text-emerald-200">{active.execution.detail}</div>}
-                {active.execution?.imageUrl && <a href={active.execution.imageUrl} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-emerald-300 px-4 py-2 text-xs font-black text-slate-950">Open image <ArrowRight className="h-4 w-4" /></a>}
-                {attachedHref.startsWith('/admin') && <Link href={attachedHref} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2 text-xs font-black text-slate-950">Open attached workspace <ArrowRight className="h-4 w-4" /></Link>}
-              </div>
-              <div className="max-w-[92%] rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">Progress</p>
-                <div className="mt-3 space-y-3">
-                  {active.timeline.map((item) => <div key={`${item.type}-${item.title}`} className="flex gap-3"><div className="mt-0.5">{item.type === 'waiting_for_approval' ? <Clock3 className="h-4 w-4 text-amber-300" /> : <CheckCircle2 className="h-4 w-4 text-cyan-300" />}</div><div><p className="text-sm font-bold text-slate-200">{friendlyTitle(item.title)}</p><p className="mt-0.5 text-xs leading-5 text-slate-400">{friendlyDetail(item.detail)}</p></div></div>)}
+              </Panel>
+
+              {(active.error || active.execution?.error) && <ErrorPanel message={active.error ?? active.execution?.error ?? 'Execution failed'} />}
+
+              <Panel title="Result and artifacts">
+                {activeResult && <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">{activeResult}</p>}
+                {!activeResult && active.status === 'queued' && <StatusLine icon="wait" title="Provider job pending" detail="No completed artifact is shown until the provider returns one." />}
+                {!activeResult && !active.artifacts.length && active.status !== 'queued' && <p className="text-sm text-slate-400">No result or completed artifact is available.</p>}
+                <div className="grid gap-3 md:grid-cols-2">
+                  {active.artifacts.map((artifact) => <ArtifactCard key={artifact.id} artifact={artifact} onReuse={reuseArtifact} />)}
                 </div>
-              </div>
+              </Panel>
             </>
           )}
-        </div>
+        </main>
 
-        <div className="border-t border-slate-700/50 bg-slate-950/40 p-4">
-          <div className="flex gap-2">
-            <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submit() } }} rows={3} placeholder="Create, build, audit, repair, research, monitor, or explain..." className="min-h-24 flex-1 resize-none rounded-2xl border border-slate-700/60 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-400/50" />
-            <button onClick={() => submit()} disabled={loading || !prompt.trim()} className="grid w-14 place-items-center rounded-2xl bg-cyan-300 text-slate-950 disabled:opacity-40" aria-label="Send command">{loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}</button>
-          </div>
-        </div>
-      </section>
-
-      <aside className="space-y-4">
-        <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
-          <button onClick={() => setControlsOpen((value) => !value)} className="flex w-full items-center justify-between text-left">
-            <span><span className="block font-black text-white">Creative options</span><span className="mt-1 block text-xs leading-5 text-slate-400">Open only when you want precise control.</span></span>
-            <ChevronDown className={`h-4 w-4 text-slate-400 transition ${controlsOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {controlsOpen && (
-            <div className="mt-4 space-y-4">
-              <div className="flex flex-wrap gap-1.5">{capabilities.map((item) => <button key={item.value} onClick={() => setCapability(item.value)} className={`rounded-lg border px-2.5 py-1.5 text-xs font-bold ${capability === item.value ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>{item.label}</button>)}</div>
-              <CapabilityControls capability={capability} options={options} setOptions={setOptions} />
+        <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+          <summary className="cursor-pointer text-sm font-black text-slate-200">Recent work and shortcuts</summary>
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_260px]">
+          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+            <div className="flex items-center justify-between">
+              <div><h2 className="font-black text-white">Run history</h2><p className="mt-1 text-xs text-slate-400">Execution-store records only.</p></div>
+              <button onClick={loadHistory} aria-label="Refresh history" className="rounded-lg border border-slate-700 p-2 text-slate-400 hover:text-cyan-200">
+                <RefreshCw className={`h-4 w-4 ${historyLoading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
-          <h2 className="font-black text-white">Active and recent jobs</h2>
-          <div className="mt-3 space-y-2">
-            {jobs.length === 0 && <p className="text-xs leading-5 text-slate-400">No commands yet.</p>}
-            {jobs.slice(0, 5).map((job) => <button key={job.id} onClick={() => setActive(job)} className="block w-full rounded-xl border border-slate-700/40 bg-slate-950/40 p-3 text-left"><p className="truncate text-xs font-bold text-slate-300">{job.prompt}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">{friendlyStatus(job.status)}</p></button>)}
+            <div className="mt-3 space-y-2">
+              {history.length === 0 && <p className="text-xs leading-5 text-slate-400">No Command Center executions yet.</p>}
+              {history.map((run) => (
+                <button key={run.executionId} onClick={() => setActive(run)} className="block w-full rounded-xl border border-slate-700/40 bg-slate-950/40 p-3 text-left hover:border-cyan-400/25">
+                  <p className="truncate text-xs font-bold text-slate-200">{run.execution.input.prompt}</p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                    <span>{friendly(run.capability)}</span><span>{friendly(run.status)}</span>
+                  </div>
+                  {run.artifacts.length > 0 && <span className="mt-2 block text-[11px] font-bold text-cyan-300">{run.artifacts.length} reusable artifact{run.artifacts.length === 1 ? '' : 's'}</span>}
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="grid grid-cols-2 gap-2">
+            <SummaryLink href="/admin/dashboard/artifacts" label="Artifacts" />
+            <SummaryLink href="/admin/dashboard/jobs" label="Jobs" />
+          </section>
+          <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 text-xs leading-5 text-slate-400">
+            <p className="font-black text-slate-200">Creative options</p>
+            <p className="mt-2">Media controls remain capability-specific. Command Center submits task context and records honest readiness.</p>
+          </section>
           </div>
-        </section>
-
-        <section className="grid grid-cols-2 gap-2">
-          <SummaryLink href="/admin/dashboard/outputs" label="Recent outputs" />
-          <SummaryLink href="/admin/dashboard/network-apps" label="Connected apps" />
-        </section>
-
-        <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
-          <button onClick={() => setAdvanced((value) => !value)} className="flex w-full items-center justify-between text-sm font-black text-slate-300">Advanced <ChevronDown className={`h-4 w-4 transition ${advanced ? 'rotate-180' : ''}`} /></button>
-          {advanced && <div className="mt-4 space-y-2 text-xs leading-5 text-slate-400"><p>Provider overrides, deployment controls, merge controls, and model selection stay here.</p><p>Connected route: {active?.route.selectedProviders?.join(' → ') || 'Resolved after live connection checks.'}</p></div>}
-        </section>
-      </aside>
+        </details>
+      </div>
     </div>
   )
 }
 
-function CapabilityControls({ capability, options, setOptions }: { capability: Capability; options: StudioCommandOptions; setOptions: React.Dispatch<React.SetStateAction<StudioCommandOptions>> }) {
-  const update = (patch: Partial<StudioCommandOptions>) => setOptions((current) => ({ ...current, ...patch }))
-  if (capability === 'song') {
-    return (
-      <div className="space-y-3">
-        <Field label="Duration"><select value={options.duration} onChange={(event) => update({ duration: event.target.value })} className="command-select">{SONG_DURATIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></Field>
-        <Field label="Genres"><div className="rounded-xl border border-slate-700/60 bg-slate-950/50 p-2"><div className="flex flex-wrap gap-1.5">{SONG_GENRES.map((genre) => <button key={genre} onClick={() => update({ genres: options.genres?.includes(genre) ? options.genres.filter((item) => item !== genre) : [...(options.genres ?? []), genre] })} className={`rounded-full border px-2 py-1 text-[11px] font-bold ${options.genres?.includes(genre) ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-200' : 'border-slate-700 text-slate-400'}`}>{genre}</button>)}</div></div></Field>
-        <Toggle label="Combine selected genres" checked={Boolean(options.combineGenres)} onChange={(checked) => update({ combineGenres: checked })} />
-        <div className="grid grid-cols-2 gap-2">
-          <Field label="Vocals"><Select values={SONG_VOCALS} value={options.vocals} onChange={(value) => update({ vocals: value })} /></Field>
-          <Field label="Mood"><Select values={SONG_MOODS} value={options.mood} onChange={(value) => update({ mood: value })} /></Field>
-          <Field label="Language"><Select values={SONG_LANGUAGES} value={options.language} onChange={(value) => update({ language: value })} /></Field>
-          <Field label="Structure"><Select values={SONG_STRUCTURES} value={options.structure} onChange={(value) => update({ structure: value })} /></Field>
-        </div>
-        <Toggle label={options.cleanLyrics ? 'Clean lyrics' : 'Explicit lyrics allowed'} checked={Boolean(options.cleanLyrics)} onChange={(checked) => update({ cleanLyrics: checked })} />
-      </div>
-    )
-  }
-
-  const configuration = {
-    avatar: { label: 'Avatar style', values: AVATAR_STYLES, value: options.avatarStyle, key: 'avatarStyle' },
-    voice: { label: 'Voice style', values: VOICE_STYLES, value: options.voiceStyle, key: 'voiceStyle' },
-    movie: { label: 'Movie style', values: MOVIE_STYLES, value: options.movieStyle, key: 'movieStyle' },
-    image: { label: 'Image style', values: IMAGE_STYLES, value: options.imageStyle, key: 'imageStyle' },
-    research: { label: 'Research depth', values: RESEARCH_DEPTHS, value: options.researchDepth, key: 'researchDepth' },
-  }[capability]
-
-  return <Field label={configuration.label}><Select values={configuration.values} value={configuration.value} onChange={(value) => update({ [configuration.key]: value })} /></Field>
-}
-
-function Select({ values, value, onChange }: { values: readonly string[]; value?: string; onChange: (value: string) => void }) {
-  return <select value={value} onChange={(event) => onChange(event.target.value)} className="command-select">{values.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-}
-
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/50 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-300"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-cyan-300" /></label>
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4"><h2 className="font-black text-white">{title}</h2>{children}</section>
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</span><span className="mt-1.5 block [&_.command-select]:w-full [&_.command-select]:rounded-xl [&_.command-select]:border [&_.command-select]:border-slate-700 [&_.command-select]:bg-slate-950 [&_.command-select]:px-3 [&_.command-select]:py-2.5 [&_.command-select]:text-sm [&_.command-select]:text-slate-300">{children}</span></label>
+  return <label className="block"><span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span><span className="[&_.command-control]:w-full [&_.command-control]:rounded-xl [&_.command-control]:border [&_.command-control]:border-slate-700 [&_.command-control]:bg-slate-950 [&_.command-control]:px-3 [&_.command-control]:py-2.5 [&_.command-control]:text-sm [&_.command-control]:text-slate-200 [&_.command-control]:outline-none">{children}</span></label>
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-slate-700/40 bg-slate-900/60 p-3"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p><p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{value}</p></div>
+  return <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-3"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p><p className="mt-1 text-xs font-semibold leading-5 text-slate-300">{value}</p></div>
+}
+
+function StatusLine({ icon, title, detail }: { icon: 'ok' | 'wait' | 'error'; title: string; detail: string }) {
+  const Icon = icon === 'ok' ? CheckCircle2 : icon === 'wait' ? Clock3 : XCircle
+  return <div className="flex gap-3"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${icon === 'ok' ? 'text-cyan-300' : icon === 'wait' ? 'text-amber-300' : 'text-red-300'}`} /><div><p className="text-sm font-bold text-slate-200">{title}</p><p className="mt-0.5 text-xs leading-5 text-slate-400">{detail}</p></div></div>
+}
+
+function ErrorPanel({ message }: { message: string }) {
+  return <section className="mt-3 flex gap-3 rounded-xl border border-red-400/25 bg-red-400/8 p-3 text-sm text-red-200"><AlertTriangle className="h-4 w-4 shrink-0" /><span>{message}</span></section>
+}
+
+function ArtifactCard({ artifact, onReuse }: { artifact: Artifact; onReuse: (artifact: Artifact) => void }) {
+  return (
+    <article className="overflow-hidden rounded-xl border border-slate-700/50 bg-slate-950/45">
+      {artifact.type === 'image' && artifact.previewUrl && <Image unoptimized width={640} height={352} src={artifact.previewUrl} alt={artifact.title} className="h-44 w-full object-cover" />}
+      {['audio', 'music', 'voice'].includes(artifact.type) && artifact.previewUrl && <audio controls className="w-full p-3" src={artifact.previewUrl} />}
+      {artifact.type === 'video' && artifact.previewUrl && <video controls className="h-44 w-full bg-black object-contain" src={artifact.previewUrl} />}
+      <div className="p-3">
+        <p className="truncate text-sm font-black text-slate-200">{artifact.title}</p>
+        <p className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">{friendly(artifact.type)} / {friendly(artifact.status)}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a href={artifact.previewUrl || artifact.downloadUrl} className="inline-flex items-center gap-1 rounded-lg border border-slate-700 px-2.5 py-1.5 text-xs font-bold text-slate-300">Open <ArrowRight className="h-3 w-3" /></a>
+          <button onClick={() => onReuse(artifact)} className="inline-flex items-center gap-1 rounded-lg bg-cyan-300 px-2.5 py-1.5 text-xs font-black text-slate-950"><RotateCcw className="h-3 w-3" />Reuse</button>
+        </div>
+      </div>
+    </article>
+  )
 }
 
 function SummaryLink({ href, label }: { href: string; label: string }) {
   return <Link href={href} className="rounded-xl border border-slate-700/50 bg-slate-900/60 p-3 text-xs font-black text-slate-300 hover:border-cyan-400/30 hover:text-cyan-200">{label}<ArrowRight className="mt-3 h-4 w-4" /></Link>
 }
 
-function friendlyStatus(status: string) {
-  if (status === 'waiting_for_approval') return 'Approval needed'
-  return status.replaceAll('_', ' ')
+function resultText(value: unknown) {
+  if (!value || typeof value !== 'object') return typeof value === 'string' ? value : ''
+  const result = value as Record<string, unknown>
+  for (const key of ['output', 'detail', 'message', 'error', 'blocker']) {
+    if (typeof result[key] === 'string') return result[key] as string
+  }
+  if (typeof result.readiness === 'string') return `Readiness: ${result.readiness}`
+  return ''
 }
 
-function friendlyTitle(title: string) {
-  return title.replace('Studio plan ready', 'Creative plan ready').replace('Workbench plan ready', 'Repository plan ready')
-}
-
-function friendlyDetail(detail: string) {
-  if (detail.startsWith('Routed as ')) return 'The right capability has been selected.'
-  return detail
+function friendly(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }

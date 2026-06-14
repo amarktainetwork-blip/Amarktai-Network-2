@@ -21,6 +21,8 @@ export interface PersistMediaResultInput {
   model: string
   traceId?: string
   metadata?: JsonRecord
+  executionId?: string
+  jobId?: string
 }
 
 const URL_KEYS = [
@@ -123,6 +125,10 @@ export async function persistCanonicalMediaResult(input: PersistMediaResultInput
 
   const artifact = await createArtifact({
     appSlug: input.appSlug,
+    executionId: input.executionId ?? (
+      typeof input.metadata?.executionId === 'string' ? input.metadata.executionId : undefined
+    ),
+    jobId: input.jobId,
     type: input.type,
     subType: input.subType,
     title: input.title,

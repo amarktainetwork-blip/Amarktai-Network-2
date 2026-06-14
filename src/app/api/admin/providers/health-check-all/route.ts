@@ -19,6 +19,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession } from '@/lib/session'
 import { mapHealthStatusToTruthState, runProviderHealthCheck } from '@/lib/providers'
 import { syncProviderHealthFromDB } from '@/lib/sync-provider-health'
+import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 // Next.js route-segment cache — GET results are revalidated every 60 seconds.
 export const revalidate = 60
@@ -58,7 +59,10 @@ export async function GET(req: NextRequest) {
     orderBy: { providerKey: 'asc' },
   })
 
-  return NextResponse.json({ providers, cachedAt: new Date().toISOString() })
+  return NextResponse.json({
+    providers: providers.filter((provider) => isApprovedDirectProvider(provider.providerKey)),
+    cachedAt: new Date().toISOString(),
+  })
 }
 
 /** POST — run a live health check against every provider in parallel. */
@@ -71,8 +75,9 @@ export async function POST(req: NextRequest) {
     select: { id: true, providerKey: true, apiKey: true, baseUrl: true, enabled: true },
   })
 
+  const approvedProviders = providers.filter((provider) => isApprovedDirectProvider(provider.providerKey))
   const results = await Promise.allSettled(
-    providers.map(async (provider) => {
+    approvedProviders.map(async (provider) => {
       let status: string
       let message: string
 
