@@ -313,13 +313,15 @@ describe('Studio E2E — capability taxonomy proof', () => {
     expect(stt!.createsArtifact).toBe(true)
   })
 
-  it('music_generation is post-launch while the blueprint artifact remains available', () => {
+  it('music_generation uses real playable-audio adapters', () => {
     const music = AI_CAPABILITY_TAXONOMY.find((c) => c.id === 'music_generation')
     expect(music).toBeDefined()
-    expect(music!.status).toBe('unavailable')
-    expect(music!.readiness).toBe('post_launch')
-    expect(music!.adapterImplemented).toBe(false)
-    expect(music!.fallbackArtifactType).toBe('music_blueprint')
+    expect(music!.status).toBe('working')
+    expect(music!.readiness).toBe('ready_with_fallback')
+    expect(music!.adapterImplemented).toBe(true)
+    expect(music!.executableEndpoint).toBe('/api/admin/music-studio')
+    expect(music!.providerRoutes.filter((route) => route.executable).map((route) => route.provider))
+      .toEqual(expect.arrayContaining(['genx', 'huggingface']))
     expect(music!.createsArtifact).toBe(true)
   })
 

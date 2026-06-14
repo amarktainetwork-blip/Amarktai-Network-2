@@ -10,6 +10,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "proof:v1-control-plane": "node scripts/v1-operational-proof.mjs",
+    "proof:production-capabilities": "tsx scripts/production-capabilities-proof.ts",
     "test:watch": "vitest",
     "db:push": "prisma db push",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",

@@ -21,10 +21,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { getSession } from '@/lib/session'
 import { runAllProviderSmokeTests, runProviderSmokeTestById } from '@/lib/live-smoke-tests'
 import { isApprovedDirectProvider, type ApprovedDirectProviderId } from '@/lib/provider-mesh'
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const session = await getSession()
+  if (!session.isLoggedIn) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
   const providerParam = req.nextUrl.searchParams.get('provider')
 
   if (providerParam) {

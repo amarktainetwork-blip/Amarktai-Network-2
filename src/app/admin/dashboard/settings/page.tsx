@@ -78,6 +78,8 @@ export default function SettingsPage() {
   const [safetyMessage, setSafetyMessage] = useState('')
   const [runtimeTools, setRuntimeTools] = useState<RuntimeTool[]>([])
   const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
+  const [resetBusy, setResetBusy] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
 
   const load = useCallback(async () => {
     setRefreshing(true)
@@ -161,6 +163,31 @@ export default function SettingsPage() {
     })
     const data = await response.json().catch(() => ({}))
     setSafetyMessage(response.ok ? 'Content safety policy saved.' : data.error || 'Policy could not be saved.')
+  }
+
+  async function hardResetRuntime() {
+    const confirmation = window.prompt(
+      'This permanently removes all jobs, attempts, traces, and artifacts. Type HARD RESET JOBS AND ARTIFACTS to continue.',
+    )
+    if (confirmation !== 'HARD RESET JOBS AND ARTIFACTS') {
+      setResetMessage('Hard reset cancelled. The confirmation text did not match.')
+      return
+    }
+    setResetBusy(true)
+    setResetMessage('')
+    try {
+      const response = await fetch('/api/admin/system/hard-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation }),
+      })
+      const result = await response.json().catch(() => ({}))
+      setResetMessage(response.ok && result.success
+        ? 'Jobs, attempts, traces, artifacts, and queue state were reset.'
+        : result.error || 'Hard reset failed.')
+    } finally {
+      setResetBusy(false)
+    }
   }
 
   return (
@@ -374,6 +401,33 @@ export default function SettingsPage() {
         <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Settings2 className="h-4 w-4" />Capability Matrix</h2>
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
           {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.readiness ?? entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-red-300">
+          <AlertTriangle className="h-4 w-4" />
+          Destructive Maintenance
+        </h2>
+        <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-5">
+          <p className="font-black text-white">Hard reset jobs and artifacts</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+            Permanently deletes control-plane jobs, provider attempts, traces, video jobs,
+            artifact records and files, and queued BullMQ work. Provider credentials and policy
+            settings are not changed.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void hardResetRuntime()}
+              disabled={resetBusy}
+              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-red-500 disabled:opacity-50"
+            >
+              {resetBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              Hard reset
+            </button>
+            {resetMessage && <p className="text-xs font-semibold text-slate-300">{resetMessage}</p>}
+          </div>
         </div>
       </section>
     </div>

@@ -116,10 +116,12 @@ describe('V1 API control plane foundation', () => {
     expect(page).toContain('/cancel')
   })
 
-  it('keeps every Studio capability visible and points unavailable paths to setup/test truth', () => {
+  it('keeps task-driven Studio choices visible and points setup paths to canonical truth', () => {
     const studio = read('src/app/admin/dashboard/studio/page.tsx')
     const matrix = read('src/app/api/admin/system/v1-brain-route-matrix/route.ts')
-    expect(studio).toContain('{capabilities.map')
+    expect(studio).toContain('{TASKS.map')
+    expect(studio).toContain('Capability readiness')
+    expect(studio).toContain("setMode('adult')")
     expect(matrix).toContain('executionControlPlane')
     expect(matrix).toContain('videoContracts')
     expect(matrix).toContain('gatewayAliases')

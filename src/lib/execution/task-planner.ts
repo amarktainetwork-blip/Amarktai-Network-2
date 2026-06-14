@@ -108,6 +108,8 @@ function toLiveCapability(capability: CapabilityRouterCapability): AiCapability 
     adult_image: 'adult_image',
     adult_video: 'adult_video',
     adult_voice: 'adult_voice',
+    avatar_generation: 'image_generation',
+    adult_avatar: 'adult_image',
     avatar_video: 'avatar_video',
     suggestive_image: 'image_generation',
     suggestive_video: 'video_generation',

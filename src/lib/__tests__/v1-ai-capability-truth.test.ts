@@ -142,10 +142,10 @@ describe('V1 universal AI capability truth', () => {
     expect(getAiCapabilityTruthSummary()).toMatchObject({
       total: 62,
       byStatus: {
-        working: 12,
+        working: 14,
         partially_wired: 12,
-        provider_available_not_wired: 35,
-        unavailable: 3,
+        provider_available_not_wired: 34,
+        unavailable: 2,
       },
     })
   })

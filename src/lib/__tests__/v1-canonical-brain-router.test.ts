@@ -85,28 +85,16 @@ describe('canonical V1 brain capability router', () => {
     })
   })
 
-  it('marks music audio post-launch and creates a truthful blueprint artifact', async () => {
+  it('routes music to real audio adapters without a completed blueprint fallback', () => {
     expect(getCapabilityDefinition('music_generation')).toMatchObject({
-      readiness: 'post_launch',
-      adapterImplemented: false,
-      fallbackArtifactType: 'music_blueprint',
+      status: 'working',
+      readiness: 'ready_with_fallback',
+      adapterImplemented: true,
+      executableEndpoint: '/api/admin/music-studio',
+      createsArtifact: true,
     })
-    const result = await executeCapabilityOrchestration({
-      input: 'Create an uplifting amapiano launch song.',
-      capability: 'music_generation',
-      appId: 'marketing',
-      saveArtifact: true,
-    })
-    expect(result).toMatchObject({
-      success: true,
-      outputType: 'text',
-      artifactId: 'artifact-blueprint',
-      diagnostics: {
-        routeReadiness: 'post_launch',
-        fallbackArtifact: 'music_blueprint',
-      },
-    })
-    expect(result.warning).toContain('not generated audio')
+    expect(fs.readFileSync(path.join(process.cwd(), 'src/lib/orchestrator.ts'), 'utf8'))
+      .not.toContain('createPlanningFallback')
   })
 
   it('detects real media bytes and unwraps JSON base64 instead of saving image JSON', () => {

@@ -13,14 +13,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
   Clock,
   Layers3,
   Loader2,
-  RefreshCw,
   XCircle,
   Zap,
 } from 'lucide-react'
@@ -98,6 +97,7 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [filter, setFilter] = useState<'active' | 'completed' | 'failed' | 'archived' | 'all'>('active')
 
   const load = async () => {
     setRefreshing(true)
@@ -115,7 +115,11 @@ export default function JobsPage() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    void load()
+    const timer = window.setInterval(() => void load(), 5000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   const cancel = async (id: string) => {
     await fetch(`/api/admin/system/jobs/${id}/cancel`, { method: 'POST' })
@@ -125,6 +129,13 @@ export default function JobsPage() {
   const runningCount = jobs.filter((j) => ['running', 'processing', 'queued', 'planned', 'generating_scenes', 'stitching', 'saving_artifact'].includes(j.status?.toLowerCase())).length
   const completedCount = jobs.filter((j) => j.status?.toLowerCase() === 'completed').length
   const failedCount = jobs.filter((j) => j.status?.toLowerCase() === 'failed').length
+  const visibleJobs = useMemo(() => jobs.filter((job) => {
+    const status = job.status?.toLowerCase()
+    if (filter === 'all') return true
+    if (filter === 'active') return ['running', 'processing', 'queued', 'planned', 'pending', 'generating_scenes', 'stitching', 'saving_artifact'].includes(status)
+    if (filter === 'archived') return ['archived', 'cancelled'].includes(status)
+    return status === filter
+  }), [filter, jobs])
 
   return (
     <div className="space-y-8">
@@ -140,14 +151,7 @@ export default function JobsPage() {
             Track running and recent AI execution jobs.
           </p>
         </div>
-        <button
-          onClick={load}
-          disabled={refreshing}
-          className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <p className="text-xs font-bold text-slate-500">{refreshing ? 'Updating...' : 'Updates every 5 seconds'}</p>
       </div>
 
       {/* ── Summary cards ──────────────────────────────────────────────────── */}
@@ -179,16 +183,25 @@ export default function JobsPage() {
 
       {/* ── Job list ───────────────────────────────────────────────────────── */}
       <section>
-        <h2 className="mb-4 text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-          Recent Jobs {jobs.length > 0 && `(${jobs.length})`}
-        </h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+            Recent Jobs {visibleJobs.length > 0 && `(${visibleJobs.length})`}
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {(['active', 'completed', 'failed', 'archived', 'all'] as const).map((value) => (
+              <button key={value} onClick={() => setFilter(value)} className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${filter === value ? 'border-teal-400/50 bg-teal-400/10 text-teal-200' : 'border-slate-700 text-slate-500'}`}>
+                {value}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {loading ? (
           <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
             <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
             <p className="text-sm text-slate-500">Loading jobs…</p>
           </div>
-        ) : jobs.length === 0 ? (
+        ) : visibleJobs.length === 0 ? (
           <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-8 text-center">
             <Clock className="mx-auto h-8 w-8 text-slate-600" />
             <p className="mt-3 font-bold text-slate-400">No jobs yet</p>
@@ -204,7 +217,7 @@ export default function JobsPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {jobs.map((job) => {
+            {visibleJobs.map((job) => {
               const statusCfg = getStatusConfig(job.status)
               const StatusIcon = statusCfg.icon
               const isRunning = ['running', 'processing'].includes(job.status?.toLowerCase())
@@ -244,15 +257,17 @@ export default function JobsPage() {
                       )}
                     </div>
                     {job.promptSummary && <p className="mt-1 truncate text-xs text-slate-400">{job.promptSummary}</p>}
-                    {job.providerAttempts && job.providerAttempts.length > 0 && (
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Attempts: {job.providerAttempts.map((attempt) => `${attempt.provider ?? 'provider'} ${attempt.status ?? ''}`.trim()).join(' -> ')}
-                      </p>
-                    )}
-                    {job.providerJobIds && job.providerJobIds.length > 0 && (
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Provider jobs: {job.providerJobIds.join(', ')}
-                      </p>
+                    {((job.providerAttempts?.length ?? 0) > 0 || (job.providerJobIds?.length ?? 0) > 0) && (
+                      <details className="mt-2 text-[11px] text-slate-500">
+                        <summary className="cursor-pointer">Provider attempt details</summary>
+                        {job.providerAttempts?.map((attempt, index) => (
+                          <p key={index} className="mt-1">
+                            {attempt.provider ?? 'provider'} / {attempt.model ?? 'automatic'}: {attempt.status ?? 'unknown'}
+                            {attempt.error ? ` - ${sanitizeError(attempt.error)}` : ''}
+                          </p>
+                        ))}
+                        {job.providerJobIds?.map((id) => <p key={id} className="mt-1 font-mono">Provider job: {id}</p>)}
+                      </details>
                     )}
                     {job.charged && (
                       <p className="mt-1 text-[11px] font-bold text-amber-300">Provider charge recorded</p>
