@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Command OS</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Creative OS</p>
             </div>
           </div>
         </Link>

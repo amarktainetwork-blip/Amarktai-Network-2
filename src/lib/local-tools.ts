@@ -5,7 +5,7 @@ import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 const execFileAsync = promisify(execFile)
 
 export type LocalToolResult = {
-  id: 'local-crawler' | 'playwright' | 'scrapy' | 'trafilatura' | 'ffmpeg' | 'rhubarb' | 'storage'
+  id: 'local-crawler' | 'playwright' | 'scrapy' | 'trafilatura' | 'ffmpeg' | 'ffprobe' | 'rhubarb' | 'storage'
   connected: boolean
   capabilities: string[]
   detail: string
@@ -34,6 +34,12 @@ export async function testLocalTool(id: LocalToolResult['id']): Promise<LocalToo
     const binary = process.env.FFMPEG_PATH || 'ffmpeg'
     const result = await commandAvailable(binary, ['-version'])
     return { id, connected: result.ok, capabilities: ['video', 'audio'], detail: result.output }
+  }
+
+  if (id === 'ffprobe') {
+    const binary = process.env.FFPROBE_PATH || 'ffprobe'
+    const result = await commandAvailable(binary, ['-version'])
+    return { id, connected: result.ok, capabilities: ['video_metadata'], detail: result.output }
   }
 
   if (id === 'rhubarb') {

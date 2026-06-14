@@ -43,16 +43,16 @@ export default function HomePage() {
         <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
           <p className="inline-flex items-center gap-2 rounded-full border border-teal-400/30 bg-teal-400/10 px-4 py-1.5 text-xs font-black uppercase tracking-[0.18em] text-teal-300">
             <Sparkles className="h-3.5 w-3.5" />
-            Universal AI capability engine
+            The creative AI operating system for modern teams
           </p>
           <h1 className="mt-7 max-w-5xl text-5xl font-black leading-[0.96] tracking-[-0.045em] sm:text-6xl lg:text-8xl">
             <BrandName />
             <span className="mt-2 block bg-gradient-to-r from-teal-300 to-cyan-300 bg-clip-text text-transparent">
-              turns intent into finished work.
+              moves ideas into finished work.
             </span>
           </h1>
           <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-            Create, analyze, research, automate, and connect products through one capability-first command layer.
+            Build campaigns, branded images, long and short video, music, avatars, voice, and connected product experiences without juggling AI vendors.
           </p>
           <div className="mt-9 flex flex-wrap gap-3">
             <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-xl bg-teal-400 px-6 py-3.5 text-sm font-black text-slate-950 transition hover:bg-teal-300">

@@ -37,6 +37,7 @@ type Job = {
   completedAt?: string
   error?: string | null
   artifactId?: string
+  finalArtifactId?: string | null
   appSlug?: string
 }
 
@@ -46,6 +47,10 @@ const JOB_STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType
   completed: { label: 'Completed', icon: CheckCircle2, color: 'text-emerald-400', dot: 'bg-emerald-400' },
   running: { label: 'Running', icon: Loader2, color: 'text-teal-400', dot: 'bg-teal-400' },
   processing: { label: 'Processing', icon: Loader2, color: 'text-teal-400', dot: 'bg-teal-400' },
+  generating_scenes: { label: 'Generating scenes', icon: Loader2, color: 'text-teal-400', dot: 'bg-teal-400' },
+  stitching: { label: 'Stitching', icon: Loader2, color: 'text-cyan-400', dot: 'bg-cyan-400' },
+  saving_artifact: { label: 'Saving artifact', icon: Loader2, color: 'text-cyan-400', dot: 'bg-cyan-400' },
+  planned: { label: 'Planned', icon: Clock, color: 'text-cyan-400', dot: 'bg-cyan-400' },
   queued: { label: 'Queued', icon: Clock, color: 'text-cyan-400', dot: 'bg-cyan-400' },
   pending: { label: 'Pending', icon: Clock, color: 'text-slate-400', dot: 'bg-slate-400' },
   failed: { label: 'Failed', icon: XCircle, color: 'text-red-400', dot: 'bg-red-400' },
@@ -91,7 +96,17 @@ export default function JobsPage() {
       const res = await fetch('/api/admin/system/jobs')
       const data = await res.json()
       // Accept various response shapes
-      const jobList = data.jobs ?? data.executions ?? data.items ?? []
+      const executions = Array.isArray(data.executions) ? data.executions : []
+      const recent = Array.isArray(data.recent) ? data.recent : []
+      const videoProjects = Array.isArray(data.videoProjects)
+        ? data.videoProjects.map((project: Job) => ({
+            ...project,
+            type: 'long_form_video',
+            capability: 'video_generation',
+            artifactId: project.finalArtifactId ?? undefined,
+          }))
+        : []
+      const jobList = [...videoProjects, ...executions, ...recent]
       setJobs(Array.isArray(jobList) ? jobList.slice(0, 50) : [])
     } catch {
       setJobs([])
@@ -103,7 +118,7 @@ export default function JobsPage() {
 
   useEffect(() => { load() }, [])
 
-  const runningCount = jobs.filter((j) => ['running', 'processing', 'queued'].includes(j.status?.toLowerCase())).length
+  const runningCount = jobs.filter((j) => ['running', 'processing', 'queued', 'planned', 'generating_scenes', 'stitching', 'saving_artifact'].includes(j.status?.toLowerCase())).length
   const completedCount = jobs.filter((j) => j.status?.toLowerCase() === 'completed').length
   const failedCount = jobs.filter((j) => j.status?.toLowerCase() === 'failed').length
 

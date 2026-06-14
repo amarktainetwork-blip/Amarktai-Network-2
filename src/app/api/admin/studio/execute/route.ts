@@ -49,6 +49,8 @@ type StudioBody = {
   language?: string
   lyrics?: string
   voiceId?: string
+  projectId?: string
+  brandKitId?: string
 }
 
 export async function GET(request: NextRequest) {
@@ -189,6 +191,8 @@ async function dispatchStudio(
     metadata: {
       executionId: execution.executionId,
       source: body.source,
+      projectId: body.projectId,
+      brandKitId: body.brandKitId,
       style: body.style,
       aspectRatio: body.aspectRatio,
       quality: body.quality,
@@ -245,6 +249,8 @@ function studioParameters(body: StudioBody) {
     instrumental: body.instrumental,
     language: body.language,
     voiceId: body.voiceId,
+    projectId: body.projectId,
+    brandKitId: body.brandKitId,
     qualityTier: body.qualityTier,
   }
 }

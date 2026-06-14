@@ -76,6 +76,9 @@ export interface CapabilityResponse {
   artifactUrl?: string | null
   providerJobId?: string | null
   jobId?: string
+  pollUrl?: string | null
+  storageUrl?: string | null
+  mediaUrl?: string | null
   status?: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'
   artifactId?: string
   fallbackUsed: boolean
