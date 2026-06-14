@@ -200,7 +200,7 @@ model AiProvider {
   healthStatus  String    @default("unconfigured") @map("health_status") // unconfigured|configured|healthy|degraded|error|disabled
   healthMessage String    @default("") @map("health_message")
   lastCheckedAt DateTime? @map("last_checked_at")
-  notes         String    @default("")
+  notes         String    @default("") @db.Text
   sortOrder     Int       @default(99) @map("sort_order")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -925,7 +925,7 @@ model IntegrationConfig {
   apiKey      String   @default("") @map("api_key") // encrypted via crypto-vault
   apiUrl      String   @default("") @map("api_url")
   enabled     Boolean  @default(true)
-  notes       String   @default("")
+  notes       String   @default("") @db.Text
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

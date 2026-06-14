@@ -67,6 +67,7 @@ vi.mock('@/lib/session', () => ({
 }))
 
 import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
+import { settingsRuntimeTools } from '@/lib/settings-runtime-tools'
 import { recordMeshTestResult } from '@/lib/provider-mesh-status'
 import { POST as testProvider } from '@/app/api/admin/settings/test-provider/route'
 
@@ -104,6 +105,32 @@ describe('platform Settings readiness truth', () => {
     })
     expect(truth.vaultEncryptionConfigured).toBe(true)
     expect(truth.vaultWarning).toBe('')
+  })
+
+  it('cannot render a contradictory runtime storage status beside ready Settings storage', async () => {
+    const truth = await getPlatformSettingsTruth()
+    const runtimeTools = settingsRuntimeTools([
+      {
+        id: 'storage',
+        connected: false,
+        detail: 'Read no, write no, delete no.',
+      },
+      {
+        id: 'ffmpeg',
+        connected: true,
+        detail: 'Available',
+      },
+    ])
+
+    expect(truth.storage.ready).toBe(true)
+    expect(runtimeTools).toEqual([
+      {
+        id: 'ffmpeg',
+        connected: true,
+        detail: 'Available',
+      },
+    ])
+    expect(runtimeTools.some((tool) => tool.id === 'storage')).toBe(false)
   })
 
   it('persists a passed GenX test and treats notes as authoritative over a stale provider row', async () => {
