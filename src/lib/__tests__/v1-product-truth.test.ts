@@ -86,16 +86,14 @@ describe('V1 AmarktAI product truth', () => {
   it('uses exactly the approved V1 dashboard navigation', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
-      'Create Studio',
-      'Projects & Brand Kits',
-      'Avatar Library',
-      'Music Studio',
+      'Studio',
+      'Apps',
       'Jobs',
       'Artifacts',
-      'Connected Apps',
+      'Providers',
       'Settings',
     ])
-    expect(new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href)).size).toBe(9)
+    expect(new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href)).size).toBe(7)
   })
 
   it('keeps every required V1 route and removes legacy page routes', () => {

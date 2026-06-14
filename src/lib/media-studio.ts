@@ -20,6 +20,8 @@ export type MediaStudioCapability =
   | 'adult_image'
   | 'adult_video'
   | 'adult_voice'
+  | 'adult_avatar'
+  | 'avatar_generation'
   | 'avatar_video'
 
 export interface MediaStudioRunResponse {

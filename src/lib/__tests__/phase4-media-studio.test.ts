@@ -104,27 +104,25 @@ describe('Phase 4 Media Studio product coverage', () => {
     const page = read('app/admin/dashboard/studio/page.tsx')
     for (const term of [
       'App context',
-      'Create Studio',
+      'Choose a task and create.',
       'Project',
       'Brand kit',
       'Image edit',
-      'Suggestive image',
-      'Music / song',
-      'Lyrics',
-      'TTS / voice',
-      'STT / transcription',
-      'Adult image',
-      'Adult video',
-      'Adult voice',
+      "label: 'Music'",
+      "label: 'Voice'",
+      "label: 'Avatar'",
+      "setMode('normal')",
+      "setMode('adult')",
       'Capability readiness',
       'Approval',
       'Execution / job progress',
       'Artifact result',
-      'Media job history',
-      'Reusable artifacts',
       'Long-form / multi-scene',
       'Scene count',
     ]) expect(page).toContain(term)
+    expect(page).not.toContain('Media job history')
+    expect(page).not.toContain('Reusable artifacts')
+    expect(page).not.toContain('Model, optional')
   })
 
   it('wires Studio execution to the canonical execution and artifact systems', () => {

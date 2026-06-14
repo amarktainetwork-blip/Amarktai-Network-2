@@ -182,6 +182,8 @@ describe('capability router contract', () => {
     expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual([
       ...REQUIRED_CAPABILITIES.slice(0, 15),
       'adult_voice',
+      'adult_avatar',
+      'avatar_generation',
       'avatar_video',
       ...REQUIRED_CAPABILITIES.slice(15),
     ])

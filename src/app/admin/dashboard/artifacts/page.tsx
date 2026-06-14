@@ -15,23 +15,20 @@ type ArtifactResponse = {
 
 const TYPES = [
   'all',
-  'text',
-  'report',
   'image',
-  'audio',
-  'music',
   'video',
-  'voice',
+  'audio / music',
+  'text / report',
   'avatar',
-  'repo_patch',
-  'repo_diff',
-  'app_blueprint',
-  'deployment_plan',
-  'research_result',
-  'code',
-  'document',
-  'transcript',
 ]
+
+const TYPE_GROUPS: Record<string, string[]> = {
+  image: ['image'],
+  video: ['video'],
+  'audio / music': ['audio', 'music', 'voice'],
+  'text / report': ['text', 'report', 'research_result', 'transcript', 'document', 'code', 'deployment_plan', 'repo_patch', 'repo_diff', 'app_blueprint'],
+  avatar: ['avatar'],
+}
 
 const STATUSES = ['all', 'completed', 'pending', 'processing', 'failed', 'archived']
 
@@ -50,7 +47,6 @@ export default function ArtifactsPage() {
     setLoading(true)
     setError('')
     const params = new URLSearchParams({ limit: '200' })
-    if (type !== 'all') params.set('type', type)
     if (status !== 'all') params.set('status', status)
     if (appSlug.trim()) params.set('appSlug', appSlug.trim())
     if (capability.trim()) params.set('capability', capability.trim())
@@ -65,7 +61,7 @@ export default function ArtifactsPage() {
     } finally {
       setLoading(false)
     }
-  }, [appSlug, capability, status, type])
+  }, [appSlug, capability, status])
 
   useEffect(() => {
     void load()
@@ -74,6 +70,12 @@ export default function ArtifactsPage() {
   const apps = useMemo(
     () => Array.from(new Set(artifacts.map((artifact) => artifact.appSlug).filter(Boolean))).sort(),
     [artifacts],
+  )
+  const visibleArtifacts = useMemo(
+    () => type === 'all'
+      ? artifacts
+      : artifacts.filter((artifact) => TYPE_GROUPS[type]?.includes(artifact.type)),
+    [artifacts, type],
   )
 
   async function reuseArtifact(artifact: ArtifactRecord) {
@@ -120,13 +122,13 @@ export default function ArtifactsPage() {
       {actionMessage && <p className="rounded-xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-200">{actionMessage}</p>}
       {error && <EmptyState title="Artifact Library unavailable" detail={error} />}
       {loading && <EmptyState title="Loading persisted artifacts" detail="Reading the canonical artifact store." />}
-      {!loading && !error && artifacts.length === 0 && (
+      {!loading && !error && visibleArtifacts.length === 0 && (
         <EmptyState title="No artifacts match these filters" detail="Completed persisted outputs will appear here. No demo outputs are inserted." />
       )}
 
-      {!loading && artifacts.length > 0 && (
+      {!loading && visibleArtifacts.length > 0 && (
         <section className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {artifacts.map((artifact) => (
+          {visibleArtifacts.map((artifact) => (
             <article key={artifact.id} className="overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/60">
               <ArtifactPreview artifact={artifact} />
               <div className="space-y-4 p-4">

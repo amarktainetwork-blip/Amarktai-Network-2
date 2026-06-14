@@ -86,7 +86,7 @@ import {
   recordProviderFailure,
   recordProviderSuccess,
 } from '@/lib/provider-performance'
-import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
+import { ARTIFACT_TYPES, createArtifact, type ArtifactType } from '@/lib/artifact-store'
 import { createLocalMediaJob } from '@/lib/media-job-store'
 import {
   getAppSafetyConfig,
@@ -1786,6 +1786,7 @@ const GOVERNED_ADULT_CAPABILITIES = new Set<CapabilityRouterCapability>([
   'adult_image',
   'adult_video',
   'adult_voice',
+  'adult_avatar',
 ])
 const GOVERNED_SUGGESTIVE_CAPABILITIES = new Set<CapabilityRouterCapability>([
   'suggestive_image',
@@ -1912,8 +1913,13 @@ export async function executeCapabilityOrchestration(
     )
   }
 
-  if (capability === 'music_generation' || capability === 'avatar_video') {
-    return createPlanningFallback(request, capability, definition.id)
+  if (capability === 'avatar_video') {
+    return capabilityFailure(
+      capability,
+      'NEEDS_CONFIGURATION',
+      'Avatar video generation requires a configured talking-avatar provider route. No completed video or artifact was created.',
+      'provider_misconfigured',
+    )
   }
 
   const routePlan = await selectCapabilityRoutePlan({
@@ -1921,7 +1927,7 @@ export async function executeCapabilityOrchestration(
     qualityTier: request.qualityTier ?? String(request.metadata?.qualityTier ?? 'auto'),
     requestedProvider: requestedProvider as ApprovedDirectProviderId | undefined,
     requestedModel,
-    allowedProviderIds: capability === 'adult_image'
+    allowedProviderIds: capability === 'adult_image' || capability === 'adult_avatar'
       ? ['together', 'huggingface']
       : capability === 'adult_text'
         ? ['together', 'huggingface']
@@ -2224,90 +2230,6 @@ function hasRequiredSource(
   ].some((value) => typeof value === 'string' && value.trim())
 }
 
-async function createPlanningFallback(
-  request: CapabilityRequest,
-  capability: 'music_generation' | 'avatar_video',
-  taxonomyId: string,
-): Promise<CapabilityResponse> {
-  const isMusic = capability === 'music_generation'
-  const blueprint = isMusic
-    ? {
-        kind: 'music_blueprint',
-        title: 'Music production blueprint',
-        brief: request.input,
-        style: request.metadata?.genres ?? request.metadata?.genre ?? null,
-        mood: request.metadata?.moods ?? null,
-        structure: ['intro', 'verse', 'chorus', 'verse', 'chorus', 'bridge', 'final chorus', 'outro'],
-        productionNotes: request.metadata?.productionNotes ?? 'Use this blueprint with an approved audio generator when a verified adapter is available.',
-        audioGeneration: 'post_launch',
-      }
-    : {
-        kind: 'avatar_storyboard',
-        title: 'Avatar video storyboard',
-        brief: request.input,
-        source: request.files?.[0] ?? request.metadata?.source ?? null,
-        scenes: [
-          { order: 1, direction: 'Establish the avatar and setting.' },
-          { order: 2, direction: 'Deliver the core message with clear framing.' },
-          { order: 3, direction: 'Close with the requested call to action.' },
-        ],
-        videoGeneration: 'adapter_missing',
-      }
-  const output = JSON.stringify(blueprint, null, 2)
-  try {
-    const artifact = await createArtifact({
-      appSlug: request.appId ?? request.workspaceId ?? '__system__',
-      appId: request.appId,
-      workspaceId: request.workspaceId,
-      executionId: typeof request.metadata?.executionId === 'string'
-        ? request.metadata.executionId
-        : undefined,
-      type: 'report',
-      subType: isMusic ? 'music_blueprint' : 'avatar_storyboard',
-      title: blueprint.title,
-      capability: taxonomyId,
-      mimeType: 'application/json',
-      content: Buffer.from(output),
-      metadata: {
-        ...(request.metadata ?? {}),
-        requestedCapability: capability,
-        routeReadiness: isMusic ? 'post_launch' : 'adapter_missing',
-      },
-    })
-    return {
-      success: true,
-      capability,
-      readiness: 'READY',
-      provider: null,
-      model: null,
-      outputType: 'text',
-      output,
-      status: 'completed',
-      artifactId: artifact.id,
-      artifactUrl: artifact.downloadUrl,
-      fallbackUsed: true,
-      fallbackReason: isMusic
-        ? 'Real music audio generation is post-launch; a production blueprint was created.'
-        : 'No approved avatar-video adapter is wired; a storyboard was created.',
-      warning: isMusic
-        ? 'This is a music blueprint, not generated audio.'
-        : 'This is an avatar storyboard, not a generated video.',
-      providerAttempts: [],
-      diagnostics: {
-        routeReadiness: isMusic ? 'post_launch' : 'adapter_missing',
-        fallbackArtifact: isMusic ? 'music_blueprint' : 'avatar_storyboard',
-      },
-    }
-  } catch (error) {
-    return capabilityFailure(
-      capability,
-      'UNAVAILABLE',
-      `Fallback artifact persistence failed: ${sanitizeProviderError(error)}`,
-      'artifact_error',
-    )
-  }
-}
-
 function resolveProductCapability(
   request: CapabilityRequest,
 ): CapabilityRouterCapability | null {
@@ -2368,6 +2290,7 @@ async function governedCapabilityBlockReason(
         adult_text: 'adult_text',
         adult_image: 'adult_image',
         adult_voice: 'adult_voice',
+        adult_avatar: 'adult_avatar',
         adult_video: 'adult_short_video',
       } as Partial<Record<CapabilityRouterCapability, AdultCapabilityId>>)[capability]
       if (policyCapability) {
@@ -2407,6 +2330,7 @@ function capabilityReferences(
 
 function capabilityOutputType(capability: CapabilityRouterCapability): string {
   if (['code', 'repo_edit', 'app_build'].includes(capability)) return 'code'
+  if (capability === 'avatar_generation' || capability === 'adult_avatar') return 'image'
   if (capability.includes('image')) return 'image'
   if (capability.includes('video') || capability === 'avatar_video') return 'video'
   if (['tts', 'voice_response', 'adult_voice', 'music_generation'].includes(capability)) return 'audio'
@@ -2420,6 +2344,7 @@ function capabilityArtifactType(capability: CapabilityRouterCapability): Artifac
   if (capability === 'deploy_plan') return 'deployment_plan'
   if (capability === 'app_build') return 'app_blueprint'
   if (capability === 'repo_edit') return 'repo_patch'
+  if (capability === 'avatar_generation' || capability === 'adult_avatar') return 'avatar'
   if (['tts', 'voice_response', 'adult_voice'].includes(capability)) return 'voice'
   const outputType = capabilityOutputType(capability)
   return ['code', 'audio', 'image', 'video'].includes(outputType)
@@ -2485,6 +2410,18 @@ async function completeCapabilityResult(input: {
   }
 
   try {
+    const requestedArtifactType = typeof input.request.metadata?.artifactTypeOverride === 'string'
+      ? input.request.metadata.artifactTypeOverride
+      : null
+    const artifactType = requestedArtifactType && ARTIFACT_TYPES.includes(requestedArtifactType as ArtifactType)
+      ? requestedArtifactType as ArtifactType
+      : capabilityArtifactType(input.capability)
+    const artifactCapability = typeof input.request.metadata?.artifactCapabilityOverride === 'string'
+      ? input.request.metadata.artifactCapabilityOverride
+      : input.taxonomyId
+    const artifactSubType = typeof input.request.metadata?.artifactSubTypeOverride === 'string'
+      ? input.request.metadata.artifactSubTypeOverride
+      : input.capability
     const artifact = await createArtifact({
       appSlug,
       appId: input.request.appId,
@@ -2492,9 +2429,9 @@ async function completeCapabilityResult(input: {
       executionId: typeof input.request.metadata?.executionId === 'string'
         ? input.request.metadata.executionId
         : undefined,
-      type: capabilityArtifactType(input.capability),
-      subType: input.capability,
-      capability: input.taxonomyId,
+      type: artifactType,
+      subType: artifactSubType,
+      capability: artifactCapability,
       provider: input.adapterResult.provider,
       model: input.adapterResult.model,
       traceId: input.request.traceId,

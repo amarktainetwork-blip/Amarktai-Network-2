@@ -281,6 +281,8 @@ export function productCapabilityToTaxonomyId(capability: string): string | null
     adult_image: 'text_to_image',
     adult_video: 'text_to_video',
     adult_voice: 'text_to_speech',
+    adult_avatar: 'avatar_generation',
+    avatar_generation: 'avatar_generation',
     avatar_video: 'avatar_video',
     suggestive_image: 'text_to_image',
     suggestive_video: 'text_to_video',

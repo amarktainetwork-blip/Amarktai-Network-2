@@ -17,13 +17,11 @@ describe('V1 capability recovery and visible product replacement', () => {
   it('exposes only the requested visible V1 navigation', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
-      'Create Studio',
-      'Projects & Brand Kits',
-      'Avatar Library',
-      'Music Studio',
+      'Studio',
+      'Apps',
       'Jobs',
       'Artifacts',
-      'Connected Apps',
+      'Providers',
       'Settings',
     ])
     for (const hidden of ['Capabilities', 'Repo Workbench', 'App Builder', 'MCP']) {
@@ -59,21 +57,19 @@ describe('V1 capability recovery and visible product replacement', () => {
   })
 
   it('renders the recovered product surfaces and preview modes', () => {
-    for (const file of [
-      'src/app/admin/dashboard/projects/page.tsx',
-      'src/app/admin/dashboard/avatars/page.tsx',
-      'src/app/admin/dashboard/music-studio/page.tsx',
-    ]) expect(fs.existsSync(path.join(ROOT, file)), file).toBe(true)
     const studio = read('src/app/admin/dashboard/studio/page.tsx')
     for (const term of [
-      'Text / copy / chat',
+      'Chat / text',
       'Image edit',
       'Long-form / multi-scene',
-      'Music / song',
-      'Avatar / talking video',
-      'TTS / voice',
+      "label: 'Music'",
+      "label: 'Avatar'",
+      "label: 'Voice'",
+      "setMode('adult')",
       'LongFormVideoPanel',
     ]) expect(studio).toContain(term)
+    expect(studio).not.toContain('Media job history')
+    expect(studio).not.toContain('Reusable artifacts')
   })
 
   it('keeps settings truth consolidated and adult mode accessible', () => {

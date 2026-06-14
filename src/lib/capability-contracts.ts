@@ -17,6 +17,8 @@ export const CAPABILITY_ROUTER_CAPABILITIES = [
   'adult_image',
   'adult_video',
   'adult_voice',
+  'adult_avatar',
+  'avatar_generation',
   'avatar_video',
   'suggestive_image',
   'suggestive_video',

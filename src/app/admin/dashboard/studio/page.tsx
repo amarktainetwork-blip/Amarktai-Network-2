@@ -2,14 +2,13 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
   Clock3,
   Loader2,
-  RefreshCw,
   RotateCcw,
   Send,
   Upload,
@@ -26,6 +25,7 @@ type CapabilityTruth = {
   adapterImplemented: boolean
 }
 type CreativeOption = { id: string; name: string }
+type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string }
 type VideoProject = {
   id: string
   title: string
@@ -65,20 +65,14 @@ type StudioRun = {
   }
 }
 
-const capabilities = [
-  ['chat', 'Text / copy / chat'],
-  ['image_generation', 'Image'],
-  ['image_edit', 'Image edit'],
-  ['suggestive_image', 'Suggestive image'],
-  ['music_generation', 'Music / song'],
-  ['lyrics_generation', 'Lyrics'],
-  ['tts', 'TTS / voice'],
-  ['stt', 'STT / transcription'],
-  ['video_generation', 'Video'],
-  ['avatar_video', 'Avatar / talking video'],
-  ['adult_image', 'Adult image'],
-  ['adult_video', 'Adult video'],
-  ['adult_voice', 'Adult voice'],
+const TASKS = [
+  { id: 'chat', label: 'Chat / text', normal: 'chat', adult: 'adult_text' },
+  { id: 'image', label: 'Image', normal: 'image_generation', adult: 'adult_image' },
+  { id: 'image_edit', label: 'Image edit', normal: 'image_edit', adult: 'image_edit' },
+  { id: 'video', label: 'Video', normal: 'video_generation', adult: 'adult_video' },
+  { id: 'music', label: 'Music', normal: 'music_generation', adult: 'music_generation' },
+  { id: 'voice', label: 'Voice', normal: 'tts', adult: 'adult_voice' },
+  { id: 'avatar', label: 'Avatar', normal: 'avatar_generation', adult: 'adult_avatar' },
 ] as const
 
 const activeStatuses = new Set(['planned', 'queued', 'running'])
@@ -88,17 +82,15 @@ export default function StudioPage() {
   const [appSlug, setAppSlug] = useState('amarktai-network')
   const [policy, setPolicy] = useState<SafetyPolicy>({ safeMode: true, adultMode: false, suggestiveMode: false })
   const [capabilityTruth, setCapabilityTruth] = useState<CapabilityTruth[]>([])
-  const [capability, setCapability] = useState('image_generation')
+  const [task, setTask] = useState<(typeof TASKS)[number]['id']>('image')
+  const [mode, setMode] = useState<'normal' | 'adult'>('normal')
   const [projects, setProjects] = useState<CreativeOption[]>([])
   const [brandKits, setBrandKits] = useState<CreativeOption[]>([])
   const [projectId, setProjectId] = useState('')
   const [brandKitId, setBrandKitId] = useState('')
-  const [provider, setProvider] = useState('auto')
-  const [model, setModel] = useState('')
   const [prompt, setPrompt] = useState('')
   const [source, setSource] = useState('')
   const [sourceArtifact, setSourceArtifact] = useState<Artifact | null>(null)
-  const [audioFile, setAudioFile] = useState<File | null>(null)
   const [style, setStyle] = useState('cinematic')
   const [aspectRatio, setAspectRatio] = useState('1:1')
   const [quality, setQuality] = useState('standard')
@@ -115,25 +107,17 @@ export default function StudioPage() {
   const [instrumental, setInstrumental] = useState(false)
   const [language, setLanguage] = useState('English')
   const [voiceId, setVoiceId] = useState('auto')
+  const [voiceFlow, setVoiceFlow] = useState<'tts' | 'stt'>('tts')
+  const [audioFile, setAudioFile] = useState<File | null>(null)
   const [lyrics, setLyrics] = useState('')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [active, setActive] = useState<StudioRun | null>(null)
   const [videoProject, setVideoProject] = useState<VideoProject | null>(null)
-  const [history, setHistory] = useState<StudioRun[]>([])
-  const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const loadHistory = useCallback(async () => {
-    const response = await fetch('/api/admin/studio/execute?limit=30', { cache: 'no-store' })
-    const data = await response.json().catch(() => ({}))
-    if (response.ok) setHistory(data.runs ?? [])
-  }, [])
-
-  const loadArtifacts = useCallback(async () => {
-    const response = await fetch(`/api/admin/artifacts?appSlug=${encodeURIComponent(appSlug)}&status=completed&limit=50`, { cache: 'no-store' })
-    const data = await response.json().catch(() => ({}))
-    if (response.ok) setArtifacts(data.artifacts ?? [])
-  }, [appSlug])
+  const selectedCapability = TASKS.find((entry) => entry.id === task)![mode]
+  const capability = task === 'voice' && voiceFlow === 'stt' ? 'stt' : selectedCapability
 
   useEffect(() => {
     fetch('/api/admin/apps', { cache: 'no-store' }).then((response) => response.json()).then((data) => {
@@ -147,21 +131,18 @@ export default function StudioPage() {
       setProjects(data.projects ?? [])
       setBrandKits(data.brandKits ?? [])
     }).catch(() => null)
-    loadHistory()
-  }, [loadHistory])
+  }, [])
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/admin/app-safety?appSlug=${encodeURIComponent(appSlug)}`, { cache: 'no-store' }).then((response) => response.json()),
-      loadArtifacts(),
-    ]).then(([data]) => {
+    fetch(`/api/admin/app-safety?appSlug=${encodeURIComponent(appSlug)}`, { cache: 'no-store' })
+      .then((response) => response.json()).then((data) => {
       setPolicy({
         safeMode: data.safeMode !== false,
         adultMode: Boolean(data.adultMode),
         suggestiveMode: Boolean(data.suggestiveMode),
       })
     }).catch(() => setPolicy({ safeMode: true, adultMode: false, suggestiveMode: false }))
-  }, [appSlug, loadArtifacts])
+  }, [appSlug])
 
   useEffect(() => {
     if (!active || !activeStatuses.has(active.status)) return
@@ -171,11 +152,9 @@ export default function StudioPage() {
       if (!response.ok) return
       const run = await response.json()
       setActive(run)
-      setHistory((items) => [run, ...items.filter((item) => item.executionId !== run.executionId)])
-      if (!activeStatuses.has(run.status)) loadArtifacts()
     }, 3000)
     return () => window.clearInterval(timer)
-  }, [active, loadArtifacts])
+  }, [active])
 
   useEffect(() => {
     if (!videoProject || ['completed', 'failed', 'blocked'].includes(videoProject.status)) return
@@ -183,17 +162,24 @@ export default function StudioPage() {
       const response = await fetch(`/api/admin/video-projects?id=${encodeURIComponent(videoProject.id)}`, { cache: 'no-store' })
       const data = await response.json()
       if (data.project) setVideoProject(data.project)
-      if (data.project?.status === 'completed') await loadArtifacts()
     }, 4000)
     return () => window.clearInterval(timer)
-  }, [videoProject, loadArtifacts])
+  }, [videoProject])
 
   async function run(executionId?: string) {
     if (!executionId && capability === 'stt') return runStt()
     if (!executionId && !prompt.trim()) return
     if (!executionId && capability === 'video_generation' && longForm) return runLongFormVideo()
+    const submittedPrompt = prompt.trim()
     setLoading(true)
     setError('')
+    if (!executionId && task === 'chat') {
+      setMessages((current) => [...current, {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content: submittedPrompt,
+      }])
+    }
     try {
       const response = await fetch('/api/admin/studio/execute', {
         method: 'POST',
@@ -208,8 +194,6 @@ export default function StudioPage() {
           aspectRatio,
           quality,
           qualityTier,
-          provider: provider === 'auto' ? undefined : provider,
-          model: model || undefined,
           duration,
           scenePlanOnly,
           genre,
@@ -227,9 +211,17 @@ export default function StudioPage() {
       const data = await response.json()
       if (!response.ok && !data.executionId) throw new Error(data.error || 'Media Studio execution failed')
       setActive(data)
-      setHistory((items) => [data, ...items.filter((item) => item.executionId !== data.executionId)])
+      if (!executionId && task === 'chat') {
+        const assistantOutput = resultOutput(data.result)
+        if (assistantOutput) {
+          setMessages((current) => [...current, {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: assistantOutput,
+          }])
+        }
+      }
       if (!executionId) setPrompt('')
-      await loadArtifacts()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Media Studio execution failed')
     } finally {
@@ -256,8 +248,6 @@ export default function StudioPage() {
           sceneCount: sceneCount || undefined,
           brandKitId: brandKitId || undefined,
           qualityTier,
-          provider: provider === 'auto' ? undefined : provider,
-          model: model || undefined,
           projectId: projectId || undefined,
           audioReference: source || undefined,
         }),
@@ -273,10 +263,7 @@ export default function StudioPage() {
   }
 
   async function runStt() {
-    if (!audioFile) {
-      setError('Select an audio file before transcription.')
-      return
-    }
+    if (!audioFile) return
     setLoading(true)
     setError('')
     try {
@@ -287,12 +274,10 @@ export default function StudioPage() {
       form.append('qualityTier', qualityTier)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json()
-      if (!response.ok && !data.executionId) throw new Error(data.error || 'Transcription failed')
+      if (!response.ok && !data.executionId) throw new Error(data.error || 'Audio transcription failed')
       setActive(data)
-      setHistory((items) => [data, ...items.filter((item) => item.executionId !== data.executionId)])
-      await loadArtifacts()
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Transcription failed')
+      setError(cause instanceof Error ? cause.message : 'Audio transcription failed')
     } finally {
       setLoading(false)
     }
@@ -329,21 +314,18 @@ export default function StudioPage() {
     if (capability.startsWith('adult_') && (policy.safeMode || !policy.adultMode)) {
       return 'Adult media requires explicit app opt-in with safe mode disabled.'
     }
-    if (capability === 'suggestive_image' && (policy.safeMode || !policy.suggestiveMode)) {
-      return 'Suggestive media requires explicit app opt-in with safe mode disabled.'
-    }
     return ''
   }, [capability, policy])
-  const isImage = capability.includes('image')
-  const isMusic = capability === 'music_generation' || capability === 'lyrics_generation'
-  const isVoice = capability === 'tts' || capability === 'adult_voice'
+  const isImage = capability.includes('image') || capability.includes('avatar')
+  const isMusic = capability === 'music_generation'
+  const isVoice = capability === 'tts' || capability === 'stt' || capability === 'adult_voice'
   const isVideo = capability.includes('video')
   const truthCapability = taxonomyCapability(capability)
   const runtimeTruth = capabilityTruth.find((entry) => entry.id === truthCapability)
-  const missingRequiredSource = runtimeTruth?.requiredSourceInput && !sourceArtifact && !source.trim() && !audioFile
+  const missingRequiredSource = runtimeTruth?.requiredSourceInput && capability !== 'stt' && !sourceArtifact && !source.trim()
   const routeBlocker = missingRequiredSource
     ? `Needs ${runtimeTruth?.requiredSourceInput} input.`
-    : runtimeTruth?.readiness === 'adapter_missing' && capability !== 'avatar_video'
+    : runtimeTruth?.readiness === 'adapter_missing'
       ? runtimeTruth.blocker || 'No implemented V1 adapter is available.'
       : runtimeTruth?.readiness === 'provider_config_missing'
         ? runtimeTruth.blocker || 'No configured provider can execute this capability.'
@@ -354,13 +336,16 @@ export default function StudioPage() {
   return (
     <div className="space-y-5">
       <header className="rounded-3xl border border-fuchsia-400/20 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.13),transparent_42%)] p-5 lg:p-7">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Create Studio</p>
-        <h1 className="mt-2 text-3xl font-black text-white">One workspace for every creative capability.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Brief the work, add project and brand context, then follow real provider jobs and persisted artifacts in one preview-first workspace.</p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          {capabilities.map(([value, label]) => (
-            <button key={value} onClick={() => setCapability(value)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${capability === value ? 'border-fuchsia-300/50 bg-fuchsia-300/15 text-fuchsia-100' : 'border-slate-700 text-slate-500'}`}>{label}</button>
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Studio</p>
+        <h1 className="mt-2 text-3xl font-black text-white">Choose a task and create.</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">AmarktAI selects an approved provider route, tracks real jobs, and saves completed output to Artifacts.</p>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {TASKS.map((entry) => (
+            <button key={entry.id} onClick={() => setTask(entry.id)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${task === entry.id ? 'border-fuchsia-300/50 bg-fuchsia-300/15 text-fuchsia-100' : 'border-slate-700 text-slate-500'}`}>{entry.label}</button>
           ))}
+          <span className="mx-1 h-5 w-px bg-slate-700" />
+          <button onClick={() => setMode('normal')} className={`rounded-full border px-3 py-1.5 text-xs font-black ${mode === 'normal' ? 'border-teal-300/50 bg-teal-300/15 text-teal-100' : 'border-slate-700 text-slate-500'}`}>Normal</button>
+          <button onClick={() => setMode('adult')} className={`rounded-full border px-3 py-1.5 text-xs font-black ${mode === 'adult' ? 'border-rose-300/50 bg-rose-300/15 text-rose-100' : 'border-slate-700 text-slate-500'}`}>Adult</button>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="App context"><select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="control">{apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}{apps.map((app) => <option key={app.slug} value={app.slug}>{app.name}</option>)}</select></Field>
@@ -370,25 +355,31 @@ export default function StudioPage() {
         </div>
       </header>
 
-      <div className="grid gap-5 xl:grid-cols-[340px_minmax(0,1fr)] 2xl:grid-cols-[340px_minmax(0,1fr)_320px]">
+      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-4">
           <Panel title="Input">
-            {capability !== 'stt' && <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={7} placeholder={placeholder(capability)} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none" />}
-            {capability === 'stt' && <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-600 p-4 text-sm text-slate-300"><Upload className="h-4 w-4" /><span>{audioFile?.name ?? 'Choose audio file'}</span><input type="file" accept="audio/*" className="hidden" onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)} /></label>}
+            {capability === 'stt'
+              ? <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-slate-600 bg-slate-950/60 px-4 py-8 text-center">
+                  <Upload className="h-6 w-6 text-fuchsia-300" />
+                  <span className="text-sm font-black text-slate-200">{audioFile?.name ?? 'Choose an audio file'}</span>
+                  <span className="text-xs text-slate-500">The transcript and its artifact are created by the existing Studio execution route.</span>
+                  <input type="file" accept="audio/*" className="sr-only" onChange={(event) => setAudioFile(event.target.files?.[0] ?? null)} />
+                </label>
+              : <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} rows={7} placeholder={placeholder(capability)} className="w-full resize-y rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-sm text-white outline-none" />}
             {(capability === 'image_edit' || isVideo) && <Field label="Source artifact, image, or reference"><input value={source} onChange={(event) => { setSource(event.target.value); setSourceArtifact(null) }} placeholder="artifact:id, URL, or existing reference" className="control" /></Field>}
             {sourceArtifact && <button onClick={() => { setSourceArtifact(null); setSource('') }} className="rounded-full border border-fuchsia-400/25 bg-fuchsia-400/10 px-3 py-1.5 text-xs font-bold text-fuchsia-200">Using {sourceArtifact.title} x</button>}
             {policyBlocker && <ErrorPanel message={policyBlocker} />}
             {routeBlocker && <ErrorPanel message={routeBlocker} />}
-            <button onClick={() => run()} disabled={loading || Boolean(policyBlocker) || Boolean(routeBlocker) || (capability === 'stt' ? !audioFile : !prompt.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-40">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Run media task</button>
+            <button onClick={() => run()} disabled={loading || Boolean(policyBlocker) || Boolean(routeBlocker) || (capability === 'stt' ? !audioFile : !prompt.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-fuchsia-300 px-4 py-3 text-sm font-black text-slate-950 disabled:opacity-40">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Run task</button>
             {error && <ErrorPanel message={error} />}
           </Panel>
 
           <Panel title="Parameters">
             <Field label="Routing quality"><select value={qualityTier} onChange={(event) => setQualityTier(event.target.value as typeof qualityTier)} className="control"><option value="auto">Auto / mixed</option><option value="cheap">Cheap</option><option value="balanced">Balanced</option><option value="premium">Premium</option></select></Field>
-            <div className="grid grid-cols-2 gap-2"><Field label="Provider"><select value={provider} onChange={(event) => setProvider(event.target.value)} className="control"><option value="auto">Automatic</option><option value="genx">GenX</option><option value="qwen">Qwen / Wan</option><option value="together">Together AI</option><option value="huggingface">Hugging Face</option><option value="groq">Groq</option><option value="mimo">MiMo</option></select></Field><Field label="Model, optional"><input value={model} onChange={(event) => setModel(event.target.value)} placeholder="Automatic" className="control" /></Field></div>
             {isImage && <><Field label="Style"><input value={style} onChange={(event) => setStyle(event.target.value)} className="control" /></Field><div className="grid grid-cols-2 gap-2"><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>1:1</option><option>16:9</option><option>9:16</option></select></Field><Field label="Quality"><select value={quality} onChange={(event) => setQuality(event.target.value)} className="control"><option value="standard">Standard</option><option value="high">High</option></select></Field></div></>}
             {isMusic && <><Field label="Genres / style blend"><select multiple value={genres} onChange={(event) => { const values = Array.from(event.target.selectedOptions, (option) => option.value).slice(0, 5); setGenres(values); setGenre(values[0] ?? 'cinematic') }} className="control min-h-32"><option>cinematic</option><option>pop</option><option>rock</option><option value="hip_hop">Hip hop</option><option>folk</option><option>amapiano</option><option>afrobeats</option><option>ambient</option></select></Field><p className="text-[11px] text-slate-500">Select up to five styles. The backend blends them in the order selected.</p><Field label="Mood"><input value={mood} onChange={(event) => setMood(event.target.value)} className="control" /></Field><Field label="Vocal style"><select value={vocalStyle} onChange={(event) => setVocalStyle(event.target.value)} className="control"><option value="female_lead">Female lead</option><option value="male_lead">Male lead</option><option>choir</option><option>rap</option><option value="spoken_word">Spoken word</option></select></Field><Toggle label="Instrumental" checked={instrumental} onChange={setInstrumental} />{capability === 'music_generation' && <Field label="Existing lyrics"><textarea value={lyrics} onChange={(event) => setLyrics(event.target.value)} rows={3} className="control" /></Field>}</>}
-            {(isVoice || capability === 'stt') && <><Field label="Language"><input value={language} onChange={(event) => setLanguage(event.target.value)} className="control" /></Field>{isVoice && <Field label="Voice / style"><input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} className="control" /></Field>}</>}
+            {task === 'voice' && <Field label="Voice task"><select value={voiceFlow} onChange={(event) => setVoiceFlow(event.target.value as typeof voiceFlow)} className="control"><option value="tts">Text to speech</option><option value="stt">Speech to text</option></select></Field>}
+            {isVoice && <><Field label="Language"><input value={language} onChange={(event) => setLanguage(event.target.value)} className="control" /></Field>{capability !== 'stt' && <Field label="Voice / style"><input value={voiceId} onChange={(event) => setVoiceId(event.target.value)} className="control" /></Field>}</>}
             {isVideo && <><Field label="Video style"><select value={style} onChange={(event) => setStyle(event.target.value)} className="control"><option>cinematic</option><option>animated</option><option>realistic</option><option>documentary</option><option>commercial</option></select></Field><Field label="Tone / mood"><input value={tone} onChange={(event) => setTone(event.target.value)} className="control" /></Field><div className="grid grid-cols-2 gap-2"><Field label="Duration"><input type="number" min={1} max={longForm ? 240 : 30} value={duration} onChange={(event) => setDuration(Number(event.target.value))} className="control" /></Field><Field label="Aspect"><select value={aspectRatio} onChange={(event) => setAspectRatio(event.target.value)} className="control"><option>16:9</option><option>9:16</option><option>1:1</option></select></Field></div>{capability === 'video_generation' && <><Toggle label="Long-form / multi-scene" checked={longForm} onChange={(value) => { setLongForm(value); if (value && duration < 90) setDuration(90) }} />{longForm && <Field label="Scene count, 0 = automatic"><input type="number" min={0} max={30} value={sceneCount} onChange={(event) => setSceneCount(Number(event.target.value))} className="control" /></Field>}<Toggle label="Scene plan only" checked={scenePlanOnly} onChange={setScenePlanOnly} /></>}</>}
           </Panel>
 
@@ -400,6 +391,14 @@ export default function StudioPage() {
         </aside>
 
         <main className="space-y-4">
+          {task === 'chat' && messages.length > 0 && <Panel title="Conversation">
+            <div className="space-y-3">
+              {messages.map((message) => <div key={message.id} className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 ${message.role === 'user' ? 'ml-auto bg-fuchsia-300 text-slate-950' : 'border border-slate-700 bg-slate-950/60 text-slate-200'}`}>
+                <p className="mb-1 text-[10px] font-black uppercase tracking-wider opacity-60">{message.role}</p>
+                <p className="whitespace-pre-wrap">{message.content}</p>
+              </div>)}
+            </div>
+          </Panel>}
           {!active && !videoProject && <section className="grid min-h-[560px] place-items-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 text-center text-slate-400">Your result preview, job progress, and persisted artifacts appear here.</section>}
           {videoProject && <LongFormVideoPanel project={videoProject} />}
           {active && <>
@@ -424,17 +423,8 @@ export default function StudioPage() {
           </>}
         </main>
 
-        <aside className="space-y-4 xl:col-span-2 2xl:col-span-1">
-          <Panel title="Media job history">
-            <button onClick={loadHistory} className="flex items-center gap-2 text-xs font-black text-fuchsia-300"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
-            <div className="space-y-2">{history.length === 0 && <p className="text-xs text-slate-400">No Studio executions yet.</p>}{history.map((runItem) => <button key={runItem.executionId} onClick={() => setActive(runItem)} className="block w-full rounded-xl border border-slate-700/50 bg-slate-950/40 p-3 text-left"><p className="truncate text-xs font-bold text-slate-200">{runItem.execution.input.prompt}</p><p className="mt-1 text-[10px] font-black uppercase tracking-wide text-slate-500">{friendly(runItem.capability)} / {friendly(runItem.status)}</p></button>)}</div>
-          </Panel>
-          <Panel title="Reusable artifacts">
-            <div className="max-h-96 space-y-2 overflow-auto">{artifacts.length === 0 && <p className="text-xs text-slate-400">No completed app artifacts.</p>}{artifacts.map((artifact) => <button key={artifact.id} onClick={() => reuseArtifact(artifact)} className="block w-full rounded-xl border border-slate-700/50 p-3 text-left"><p className="truncate text-xs font-bold text-slate-200">{artifact.title}</p><p className="mt-1 text-[10px] uppercase text-slate-500">{friendly(artifact.type)}</p></button>)}</div>
-          </Panel>
-          <div className="grid grid-cols-2 gap-2"><SummaryLink href="/admin/dashboard/artifacts" label="Artifacts" /><SummaryLink href="/admin/dashboard/jobs" label="Jobs" /></div>
-        </aside>
       </div>
+      <div className="grid grid-cols-2 gap-3"><SummaryLink href="/admin/dashboard/artifacts" label="Open Artifacts" /><SummaryLink href="/admin/dashboard/jobs" label="Open Jobs" /></div>
     </div>
   )
 }
@@ -503,6 +493,16 @@ function resultMessage(result: unknown): string {
   return ''
 }
 
+function resultOutput(result: unknown): string {
+  if (typeof result === 'string') return result
+  if (!result || typeof result !== 'object') return ''
+  const value = result as Record<string, unknown>
+  for (const key of ['output', 'text', 'content', 'message', 'transcript']) {
+    if (typeof value[key] === 'string' && value[key].trim()) return value[key]
+  }
+  return ''
+}
+
 function resultAttempts(result: unknown): Array<Record<string, string>> {
   if (!result || typeof result !== 'object') return []
   const attempts = (result as Record<string, unknown>).providerAttempts
@@ -527,6 +527,8 @@ function taxonomyCapability(capability: string) {
     adult_image: 'text_to_image',
     adult_video: 'text_to_video',
     adult_voice: 'text_to_speech',
+    avatar_generation: 'avatar_generation',
+    adult_avatar: 'avatar_generation',
     suggestive_image: 'text_to_image',
   }
   return map[capability] ?? capability
