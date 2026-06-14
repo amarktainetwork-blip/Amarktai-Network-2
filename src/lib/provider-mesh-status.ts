@@ -89,36 +89,69 @@ export async function recordMeshTestResult(input: {
 }) {
   const node = getProviderMeshNode(input.id)
   if (!node) return
-  const current = await prisma.integrationConfig.findUnique({
-    where: { key: input.id },
-    select: { notes: true },
-  }).catch(() => null)
-  const previous = parseNotes(current?.notes)
   const lastError = input.success ? '' : sanitizeProviderError(input.error)
-  const notes: MeshTestNotes = {
-    ...previous,
-    ...input.metadata,
-    lastTestStatus: input.success ? 'passed' : 'failed',
-    lastTestPassed: input.success,
-    lastTestedAt: new Date().toISOString(),
-    capabilities: input.success ? [...input.capabilities] : [],
-    lastError,
-    detail: input.detail?.slice(0, 280) ?? '',
-  }
+  const lastTestedAt = new Date()
 
-  await prisma.integrationConfig.upsert({
-    where: { key: input.id },
-    create: {
-      key: input.id,
-      displayName: node.displayName,
-      apiKey: '',
-      enabled: true,
-      notes: JSON.stringify(notes),
-    },
-    update: {
-      displayName: node.displayName,
-      enabled: true,
-      notes: JSON.stringify(notes),
-    },
-  }).catch(() => null)
+  await prisma.$transaction(async (transaction) => {
+    const current = await transaction.integrationConfig.findUnique({
+      where: { key: input.id },
+      select: { notes: true },
+    })
+    const notes: MeshTestNotes = {
+      ...parseNotes(current?.notes),
+      ...input.metadata,
+      lastTestStatus: input.success ? 'passed' : 'failed',
+      lastTestPassed: input.success,
+      lastTestedAt: lastTestedAt.toISOString(),
+      capabilities: [...input.capabilities],
+      lastError,
+      detail: (input.detail || lastError).slice(0, 280),
+    }
+    const serializedNotes = JSON.stringify(notes)
+
+    await transaction.integrationConfig.upsert({
+      where: { key: input.id },
+      create: {
+        key: input.id,
+        displayName: node.displayName,
+        apiKey: '',
+        enabled: true,
+        notes: serializedNotes,
+      },
+      update: {
+        displayName: node.displayName,
+        enabled: true,
+        notes: serializedNotes,
+      },
+    })
+
+    if (node.kind === 'provider') {
+      const baseUrl = input.id === 'mimo'
+        ? process.env.MIMO_BASE_URL?.trim() || node.baseUrl
+        : node.baseUrl
+      const normalizedBaseUrl = baseUrl.replace(/\/+$/, '')
+      await transaction.aiProvider.upsert({
+        where: { providerKey: input.id },
+        create: {
+          providerKey: input.id,
+          displayName: node.displayName,
+          enabled: true,
+          baseUrl: normalizedBaseUrl,
+          healthStatus: input.success ? 'healthy' : 'error',
+          healthMessage: input.detail?.slice(0, 280) || lastError,
+          lastCheckedAt: lastTestedAt,
+          notes: serializedNotes,
+        },
+        update: {
+          displayName: node.displayName,
+          enabled: true,
+          baseUrl: normalizedBaseUrl,
+          healthStatus: input.success ? 'healthy' : 'error',
+          healthMessage: input.detail?.slice(0, 280) || lastError,
+          lastCheckedAt: lastTestedAt,
+          notes: serializedNotes,
+        },
+      })
+    }
+  })
 }

@@ -29,7 +29,8 @@ async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
   if (!credential) return { success: false, error: 'Key not present' }
 
   if (id === 'mimo') {
-    const response = await fetch(`${process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1'}/chat/completions`, {
+    const baseUrl = (process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1').trim().replace(/\/+$/, '')
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: process.env.MIMO_TEST_MODEL || 'mimo-v2.5', messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
@@ -74,26 +75,56 @@ export async function POST(request: NextRequest) {
     const result = await runExistingTest(node.id, request) ?? await runNewTest(node.id)
     const success = result.success === true && (node.id !== 'redis' || result.connected === true)
     const error = success ? '' : sanitizeProviderError(result.error || result.detail || result.note || 'Live test failed')
-    await recordMeshTestResult({
-      id: node.id,
-      success,
-      capabilities: node.capabilities,
-      detail: String(result.detail || result.note || ''),
-      error,
-      metadata: { latencyMs: Date.now() - startedAt },
-    })
+    const detail = success
+      ? String(result.detail || result.note || `${node.displayName} live test passed.`)
+      : error
+    try {
+      await recordMeshTestResult({
+        id: node.id,
+        success,
+        capabilities: node.capabilities,
+        detail,
+        error,
+        metadata: { latencyMs: Date.now() - startedAt },
+      })
+    } catch (persistenceError) {
+      console.error(`[settings/test-provider] Failed to persist ${node.id} live-test status:`, persistenceError)
+      return NextResponse.json({
+        success: false,
+        connected: false,
+        providerTestPassed: success,
+        error: `The ${node.displayName} live test completed, but its status could not be saved.`,
+        latencyMs: Date.now() - startedAt,
+      }, { status: 500 })
+    }
     return NextResponse.json({
       success,
       connected: success,
       capabilities: success ? node.capabilities : [],
       lastTestedAt: new Date().toISOString(),
-      detail: success ? String(result.detail || result.note || 'Live test passed.') : undefined,
+      detail: success ? detail : undefined,
       error: success ? undefined : error,
       latencyMs: Date.now() - startedAt,
     })
   } catch (error) {
     const sanitized = sanitizeProviderError(error)
-    await recordMeshTestResult({ id: node.id, success: false, capabilities: [], error: sanitized })
+    try {
+      await recordMeshTestResult({
+        id: node.id,
+        success: false,
+        capabilities: node.capabilities,
+        detail: sanitized,
+        error: sanitized,
+      })
+    } catch (persistenceError) {
+      console.error(`[settings/test-provider] Failed to persist ${node.id} live-test failure:`, persistenceError)
+      return NextResponse.json({
+        success: false,
+        connected: false,
+        error: `${sanitized} The failed status could not be saved.`,
+        latencyMs: Date.now() - startedAt,
+      }, { status: 500 })
+    }
     return NextResponse.json({ success: false, connected: false, error: sanitized, latencyMs: Date.now() - startedAt })
   }
 }
