@@ -33,12 +33,15 @@ type Job = {
   status: string
   capability?: string
   provider?: string
+  model?: string
   createdAt?: string
   completedAt?: string
   error?: string | null
   artifactId?: string
   finalArtifactId?: string | null
   appSlug?: string
+  artifactUrl?: string | null
+  promptSummary?: string
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -96,17 +99,7 @@ export default function JobsPage() {
       const res = await fetch('/api/admin/system/jobs')
       const data = await res.json()
       // Accept various response shapes
-      const executions = Array.isArray(data.executions) ? data.executions : []
-      const recent = Array.isArray(data.recent) ? data.recent : []
-      const videoProjects = Array.isArray(data.videoProjects)
-        ? data.videoProjects.map((project: Job) => ({
-            ...project,
-            type: 'long_form_video',
-            capability: 'video_generation',
-            artifactId: project.finalArtifactId ?? undefined,
-          }))
-        : []
-      const jobList = [...videoProjects, ...executions, ...recent]
+      const jobList = Array.isArray(data.jobs) ? data.jobs : []
       setJobs(Array.isArray(jobList) ? jobList.slice(0, 50) : [])
     } catch {
       setJobs([])
@@ -233,7 +226,13 @@ export default function JobsPage() {
                           {job.appSlug}
                         </span>
                       )}
+                      {job.provider && (
+                        <span className="text-[10px] font-bold text-slate-500">
+                          {job.provider}{job.model ? ` / ${job.model}` : ''}
+                        </span>
+                      )}
                     </div>
+                    {job.promptSummary && <p className="mt-1 truncate text-xs text-slate-400">{job.promptSummary}</p>}
                     <p className="mt-1 font-mono text-[11px] text-slate-500">{job.id}</p>
                     <p className="text-[11px] text-slate-600">{formatTime(job.createdAt)}</p>
 
@@ -247,13 +246,13 @@ export default function JobsPage() {
 
                   {/* Artifact link */}
                   {job.artifactId && (
-                    <Link
-                      href="/admin/dashboard/artifacts"
+                    <a
+                      href={job.artifactUrl || '/admin/dashboard/artifacts'}
                       className="flex shrink-0 items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-bold text-teal-300 transition hover:bg-teal-500/20"
                     >
                       <Layers3 className="h-3.5 w-3.5" />
                       View artifact
-                    </Link>
+                    </a>
                   )}
                 </div>
               )

@@ -12,6 +12,7 @@
 
 import fs from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'node:crypto'
 import { DEFAULT_VPS_STORAGE_ROOT, getUnifiedStorageRoot } from '@/lib/storage-root'
 
 export const REQUIRED_STORAGE_DRIVER = 'local_vps'
@@ -60,6 +61,7 @@ export interface StorageHealth extends StorageStatus {
     writable: boolean
     readable: boolean
     deletable: boolean
+    error: string | null
   }>
   error: string | null
 }
@@ -342,28 +344,42 @@ export async function verifyStorage(): Promise<StorageHealth> {
   try {
     const driver = getStorageDriver()
     await driver.ensureDirectories?.()
+    const verificationId = randomUUID()
     for (const name of REQUIRED_STORAGE_DIRS) {
       const dirPath = path.join(status.basePath, name)
       let exists = false
       let writable = false
       let readable = false
       let deletable = false
+      let directoryError: string | null = null
+      const probePath = path.join(
+        dirPath,
+        `.amarktai-write-test-${process.pid}-${verificationId}-${name}-${randomUUID()}`,
+      )
       try {
         await fs.mkdir(dirPath, { recursive: true })
         await fs.access(dirPath)
         exists = true
-        const probePath = path.join(dirPath, `.amarktai-write-test-${process.pid}`)
         await fs.writeFile(probePath, 'ok')
+        writable = true
         readable = (await fs.readFile(probePath, 'utf8')) === 'ok'
         await fs.unlink(probePath)
         deletable = true
-        writable = true
-      } catch {
-        writable = false
-        readable = false
-        deletable = false
+      } catch (directoryFailure) {
+        directoryError = directoryFailure instanceof Error
+          ? directoryFailure.message
+          : 'Storage directory verification failed'
+        await fs.unlink(probePath).catch(() => undefined)
       }
-      directories.push({ name, path: dirPath, exists, writable, readable, deletable })
+      directories.push({
+        name,
+        path: dirPath,
+        exists,
+        writable,
+        readable,
+        deletable,
+        error: directoryError,
+      })
     }
   } catch (err) {
     error = err instanceof Error ? err.message : 'Storage verification failed'
@@ -373,6 +389,10 @@ export async function verifyStorage(): Promise<StorageHealth> {
   const readable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.exists && dir.readable)
   const deletable = directories.length === REQUIRED_STORAGE_DIRS.length && directories.every((dir) => dir.deletable)
   const ready = status.configured && writable && readable && deletable
+  error ??= directories
+    .filter((directory) => directory.error)
+    .map((directory) => `${directory.name}: ${directory.error}`)
+    .join(' | ') || null
   return {
     ...status,
     configured: ready,

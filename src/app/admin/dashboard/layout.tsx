@@ -24,10 +24,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     fetch('/api/admin/settings/status').then((res) => res.json()).catch(() => null).then((response) => {
       if (!mounted) return
       const truth = response?.truth
-      const connected = Number(truth?.connectedCount ?? 0)
-      const storageConnected = Boolean(truth?.storage?.connected)
+      const readiness = truth?.systemReadiness
       setStatus({
-        appStatus: storageConnected ? `${connected} connections ready` : 'Storage needs setup',
+        appStatus: readiness?.ready
+          ? 'System ready'
+          : readiness?.storageReady === false
+            ? 'Storage needs setup'
+            : readiness?.providersReady === false
+              ? 'Provider setup incomplete'
+              : 'Creative smoke test required',
       })
       setPulse(true)
     })

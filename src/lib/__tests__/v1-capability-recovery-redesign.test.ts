@@ -50,10 +50,12 @@ describe('V1 capability recovery and visible product replacement', () => {
   })
 
   it('surfaces long-form projects in the canonical Jobs view', () => {
-    expect(read('src/app/api/admin/system/jobs/route.ts')).toContain('listVideoProjects')
+    const jobsRoute = read('src/app/api/admin/system/jobs/route.ts')
+    expect(jobsRoute).toContain('listVideoProjects')
+    expect(jobsRoute).toContain("type: 'long_form_video'")
     const jobs = read('src/app/admin/dashboard/jobs/page.tsx')
-    expect(jobs).toContain('data.videoProjects')
-    expect(jobs).toContain("type: 'long_form_video'")
+    expect(jobs).toContain('data.jobs')
+    expect(jobs).toContain('View artifact')
   })
 
   it('renders the recovered product surfaces and preview modes', () => {

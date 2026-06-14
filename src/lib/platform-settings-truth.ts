@@ -1,7 +1,12 @@
-import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+import {
+  APPROVED_DIRECT_PROVIDER_IDS,
+  PROVIDER_MESH,
+  type ProviderMeshId,
+} from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
 import { getProviderReadiness } from '@/lib/provider-registry'
 import { verifyStorage, type StorageHealth } from '@/lib/storage-driver'
+import { getLatestCreativeSmokeReport } from '@/lib/creative-smoke-report'
 
 export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
 
@@ -81,17 +86,46 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
 }
 
 export async function getPlatformSettingsTruth() {
-  const verifiedStorage = await verifyStorage()
+  const [verifiedStorage, creativeSmoke] = await Promise.all([
+    verifyStorage(),
+    getLatestCreativeSmokeReport().catch(() => null),
+  ])
   const entries = await Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id, verifiedStorage)))
   const providers = entries.filter((entry) => entry.kind === 'provider')
   const tools = entries.filter((entry) => entry.kind === 'tool')
   const storageEntry = entries.find((entry) => entry.kind === 'storage')!
+  const providersReady = APPROVED_DIRECT_PROVIDER_IDS.every((id) =>
+    providers.some((provider) => provider.key === id && provider.connected),
+  )
+  const artifactPersistenceReady = creativeSmoke?.artifactPersistencePassed === true
+  const creativeSmokePassed = creativeSmoke?.creativeWorkflowPassed === true
+  const systemReady = verifiedStorage.ready
+    && providersReady
+    && artifactPersistenceReady
+    && creativeSmokePassed
   return {
     entries,
     providers,
     tools,
     storage: verifiedStorage,
     storageEntry,
+    systemReadiness: {
+      ready: systemReady,
+      storageReady: verifiedStorage.ready,
+      providersReady,
+      artifactPersistenceReady,
+      creativeSmokePassed,
+      lastCreativeSmokeTestAt: creativeSmoke?.testedAt ?? null,
+      blocker: systemReady
+        ? ''
+        : !verifiedStorage.ready
+          ? verifiedStorage.error || 'Storage is not ready.'
+          : !providersReady
+            ? 'All approved providers must be configured and live-tested.'
+            : !artifactPersistenceReady
+              ? 'Run the Live Creative Smoke Test to verify artifact persistence.'
+              : 'At least one real creative workflow must pass.',
+    },
     connectedCount: entries.filter((entry) => entry.connected).length,
     connectedProviderIds: providers.filter((entry) => entry.connected).map((entry) => entry.key),
     vaultEncryptionConfigured: /^[a-f0-9]{64}$/i.test(

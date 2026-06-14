@@ -338,6 +338,7 @@ export default function StudioPage() {
       ? 'music_generation'
       : capability
   const runtimeTruth = capabilityTruth.find((entry) => entry.capability === truthCapability)
+  const activeResultMessage = active ? resultMessage(active.result) : ''
 
   return (
     <div className="space-y-5">
@@ -401,6 +402,7 @@ export default function StudioPage() {
             </Panel>
             <Panel title="Execution / job progress"><div className="space-y-3">{active.execution.events.map((event) => <StatusLine key={event.id} kind={event.level === 'error' ? 'error' : event.level === 'warning' ? 'wait' : 'ok'} title={friendly(event.type)} detail={event.message} />)}{active.status === 'queued' && <StatusLine kind="wait" title="Provider job pending" detail="Media Studio will not show a completed artifact until polling returns real media." />}</div></Panel>
             {active.error && <ErrorPanel message={active.error} />}
+            {!active.error && activeResultMessage && <ErrorPanel message={activeResultMessage} />}
             <Panel title="Artifact result">
               {active.artifacts.length === 0 && <p className="text-sm text-slate-400">{active.status === 'queued' ? 'Output pending. No completed artifact exists yet.' : 'No completed artifact is available.'}</p>}
               <div className="grid gap-3 md:grid-cols-2">{active.artifacts.map((artifact) => <ArtifactCard key={artifact.id} artifact={artifact} onReuse={reuseArtifact} />)}</div>
@@ -472,4 +474,19 @@ function placeholder(capability: string) {
   if (capability.includes('video')) return 'Describe the video, movement, scenes, and visual direction...'
   return 'Describe the media you want to create...'
 }
+
+function resultMessage(result: unknown): string {
+  if (!result || typeof result !== 'object') return ''
+  const value = result as Record<string, unknown>
+  const direct = [value.error, value.blocker, value.warning]
+    .find((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  if (direct) return direct
+  if (Array.isArray(value.nextActions)) {
+    return value.nextActions
+      .filter((item): item is string => typeof item === 'string')
+      .join(' ')
+  }
+  return ''
+}
+
 function friendly(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) }
