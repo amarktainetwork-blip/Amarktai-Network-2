@@ -17,6 +17,7 @@ import {
   TestTube2,
 } from 'lucide-react'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
+import { settingsRuntimeTools } from '@/lib/settings-runtime-tools'
 
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
@@ -108,7 +109,7 @@ export default function SettingsPage() {
         suggestiveMode: Boolean(safetyData.suggestiveMode),
         adultMode: Boolean(safetyData.adultMode),
       })
-      if (runtimeResponse.ok) setRuntimeTools(runtimeData.tools ?? [])
+      if (runtimeResponse.ok) setRuntimeTools(settingsRuntimeTools(runtimeData.tools ?? []))
       if (capabilityResponse.ok) setCapabilities(capabilityData.capabilities ?? capabilityData.matrix ?? [])
     } catch {
       setTruth(null)
