@@ -9,6 +9,11 @@ const mocks = vi.hoisted(() => ({
   scanContent: vi.fn(),
   crawlAppWebsite: vi.fn(),
   callGenXMedia: vi.fn(),
+  appAiProfileFindUnique: vi.fn(),
+  recordCapabilityTraceSafe: vi.fn(),
+  createControlPlaneJob: vi.fn(),
+  startControlPlaneAttempt: vi.fn(),
+  finishControlPlaneAttempt: vi.fn(),
 }))
 
 vi.mock('@/lib/artifact-store', () => ({ createArtifact: mocks.createArtifact }))
@@ -18,8 +23,25 @@ vi.mock('@/lib/brain', () => ({
 }))
 vi.mock('@/lib/content-filter', () => ({
   getAppSafetyConfig: mocks.getAppSafetyConfig,
+  getGlobalAdultMode: () => true,
   loadAppSafetyConfigFromDB: mocks.loadAppSafetyConfigFromDB,
+  loadGlobalAdultModeFromDB: vi.fn().mockResolvedValue(true),
   scanContent: mocks.scanContent,
+}))
+vi.mock('@/lib/prisma', () => ({
+  prisma: {
+    appAiProfile: {
+      findUnique: mocks.appAiProfileFindUnique,
+    },
+  },
+}))
+vi.mock('@/lib/capability-tracing', () => ({
+  recordCapabilityTraceSafe: mocks.recordCapabilityTraceSafe,
+}))
+vi.mock('@/lib/control-plane-jobs', () => ({
+  createControlPlaneJob: mocks.createControlPlaneJob,
+  startControlPlaneAttempt: mocks.startControlPlaneAttempt,
+  finishControlPlaneAttempt: mocks.finishControlPlaneAttempt,
 }))
 vi.mock('@/lib/firecrawl', () => ({ crawlAppWebsite: mocks.crawlAppWebsite }))
 vi.mock('@/lib/genx-client', () => ({
@@ -109,6 +131,26 @@ beforeEach(() => {
     suggestiveMode: true,
   })
   mocks.loadAppSafetyConfigFromDB.mockResolvedValue(undefined)
+  mocks.appAiProfileFindUnique.mockImplementation(async ({ where }: { where: { appSlug: string } }) => ({
+    appSlug: where.appSlug,
+    safeMode: where.appSlug === 'safe-app',
+    adultMode: where.appSlug !== 'safe-app',
+    adultCategories: '["fictional_adult"]',
+    adultTextEnabled: true,
+    adultImageEnabled: true,
+    adultVoiceEnabled: true,
+    adultAvatarEnabled: true,
+    adultShortVideoEnabled: true,
+    adultLongVideoEnabled: true,
+    adultApprovedProviders: '["genx","huggingface","together"]',
+    adultApprovedModels: '[]',
+    adultSafetyRules: '[]',
+    adultAuditLogging: true,
+  }))
+  mocks.recordCapabilityTraceSafe.mockResolvedValue(null)
+  mocks.createControlPlaneJob.mockResolvedValue({ id: 'control-job-1', status: 'queued' })
+  mocks.startControlPlaneAttempt.mockResolvedValue({ id: 'control-attempt-1' })
+  mocks.finishControlPlaneAttempt.mockResolvedValue({ id: 'control-job-1', status: 'processing' })
   mocks.scanContent.mockReturnValue({
     flagged: false,
     categories: [],
@@ -216,20 +258,21 @@ describe('capability router contract', () => {
       safeMode: false,
     })
     expect(appBlocked).toMatchObject({ readiness: 'BLOCKED', error_category: 'guardrail_block' })
-    expect(mocks.loadAppSafetyConfigFromDB).toHaveBeenCalledWith('safe-app')
+    expect(mocks.appAiProfileFindUnique).toHaveBeenCalledWith({ where: { appSlug: 'safe-app' } })
   })
 
   it('reports unsupported adult video honestly', async () => {
     const result = await executeCapability({
-      input: 'adult video request',
+      input: 'Create a fictional consensual adult age 25 video request',
       capability: 'adult_video',
+      appId: 'adult-app',
       adultMode: true,
       safeMode: false,
     })
     expect(result).toMatchObject({
       success: false,
-      readiness: 'UNAVAILABLE',
-      error_category: 'model_not_supported',
+      readiness: 'NEEDS_CONFIGURATION',
+      error_category: 'missing_key',
     })
   })
 
@@ -299,6 +342,7 @@ describe('capability router contract', () => {
     })
     expect(result.jobId).toBeTruthy()
     expect(result.pollUrl).toContain('/api/brain/media-jobs/')
+    expect(result.diagnostics).toMatchObject({ controlPlaneJobId: 'control-job-1' })
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
 })

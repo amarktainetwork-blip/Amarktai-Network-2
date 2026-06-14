@@ -152,8 +152,10 @@ describe('live media route contracts', () => {
 
   it('advertises Groq only because the canonical TTS endpoint implements it', () => {
     expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).toContain('groq')
-    expect(read('app/api/brain/tts/route.ts')).toContain('api.groq.com/openai/v1/audio/speech')
-    expect(read('app/api/brain/tts/route.ts')).toContain("getVaultApiKey('groq')")
+    const route = read('app/api/brain/tts/route.ts')
+    expect(route).toContain('https://api.groq.com/openai/v1')
+    expect(route).toContain('/audio/speech')
+    expect(route).toContain("getVaultApiKey('groq')")
   })
 
   it('uses canonical video capability and exposes local polling in Studio', () => {

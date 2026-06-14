@@ -2,10 +2,16 @@ import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getVaultApiKey } from '@/lib/brain'
 import { callGenXMedia, GENX_TTS_MODELS } from '@/lib/genx-client'
-import { createArtifact } from '@/lib/artifact-store'
+import { createArtifact, detectArtifactContent } from '@/lib/artifact-store'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
+import { getProviderInfo } from '@/lib/provider-registry'
+import { recordCapabilityTrace } from '@/lib/capability-tracing'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+} from '@/lib/adult-app-capabilities'
 
 type TtsCapability = 'tts' | 'adult_voice'
 type TtsProvider = 'auto' | 'groq' | 'genx' | 'huggingface'
@@ -54,7 +60,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(result({ success: false, capability, traceId, jobStatus: 'blocked', error: 'text is required.' }), { status: 400 })
     }
 
+    let adultApprovedProviders: string[] | null = null
     if (capability === 'adult_voice') {
+      const profile = await getAdultAppCapabilityProfile(appSlug)
+      const policy = validateAdultCapabilityRequest(profile, 'adult_voice', text)
+      if (!policy.allowed) {
+        return NextResponse.json(result({
+          success: false,
+          capability,
+          traceId,
+          jobStatus: 'blocked',
+          error: policy.blocker,
+        }), { status: 403 })
+      }
+      adultApprovedProviders = profile.approvedProviders
       await loadAppSafetyConfigFromDB(appSlug)
       const safety = getAppSafetyConfig(appSlug)
       if (safety.safeMode || !safety.adultMode) {
@@ -94,8 +113,12 @@ export async function POST(request: NextRequest) {
     const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
     const attempts: Array<Record<string, unknown>> = []
 
-    for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
+    for (const entry of route.providers.filter((candidate) =>
+      (requestedProvider === 'auto' || candidate.provider === requestedProvider)
+      && (!adultApprovedProviders || adultApprovedProviders.includes(candidate.provider)),
+    )) {
       const model = requestedModel ?? entry.model
+      const startedAt = Date.now()
       let audio: Buffer | null = null
       let mimeType = 'audio/mpeg'
       let error = ''
@@ -105,13 +128,13 @@ export async function POST(request: NextRequest) {
         if (!apiKey) {
           error = 'Groq API key is missing.'
         } else {
-          const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+          const response = await fetch(`${getProviderInfo('groq')?.baseUrl ?? 'https://api.groq.com/openai/v1'}/audio/speech`, {
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
               model,
               input: text,
-              voice: typeof body.voice === 'string' ? body.voice : 'troy',
+              voice: typeof body.voice === 'string' ? body.voice : 'autumn',
               response_format: 'wav',
             }),
             signal: AbortSignal.timeout(60_000),
@@ -172,7 +195,9 @@ export async function POST(request: NextRequest) {
         if (!apiKey) {
           error = 'Hugging Face API key is missing.'
         } else {
-          const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+          const endpoint = process.env.HF_ENDPOINT_TEXT_TO_SPEECH?.trim()
+            || `https://router.huggingface.co/hf-inference/models/${model}`
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ inputs: text }),
@@ -188,9 +213,32 @@ export async function POST(request: NextRequest) {
       }
 
       if (!audio?.length) {
-        attempts.push({ provider: entry.provider, model, status: error.includes('missing') ? 'needs_key' : 'test_failed', error })
+        attempts.push({
+          provider: entry.provider,
+          model,
+          adapter: `${entry.provider}_capability_adapter`,
+          outputType: 'audio',
+          status: error.includes('missing') ? 'needs_key' : 'test_failed',
+          latencyMs: Date.now() - startedAt,
+          error,
+        })
         continue
       }
+      const detected = detectArtifactContent(audio, mimeType)
+      if (!detected.mimeType.startsWith('audio/')) {
+        attempts.push({
+          provider: entry.provider,
+          model,
+          adapter: `${entry.provider}_capability_adapter`,
+          outputType: 'audio',
+          status: 'invalid_output',
+          latencyMs: Date.now() - startedAt,
+          error: `Provider returned ${detected.mimeType}, not playable audio.`,
+        })
+        continue
+      }
+      audio = detected.content
+      mimeType = detected.mimeType
 
       try {
         const artifact = await createArtifact({
@@ -222,6 +270,16 @@ export async function POST(request: NextRequest) {
             },
           })
         }
+        await recordCapabilityTrace({
+          traceId,
+          appSlug,
+          adultModeState: capability === 'adult_voice' ? 'enabled' : 'off',
+          capability,
+          eventType: 'tts.completed',
+          selectedRoute: { provider: entry.provider, model },
+          artifactId: artifact.id,
+          payload: { mimeType, bytes: audio.length, attempts },
+        })
         return NextResponse.json(result({
           success: true,
           capability,
@@ -255,7 +313,13 @@ export async function POST(request: NextRequest) {
       jobStatus: 'needs_setup',
       error: `No tested ${capability} provider returned real audio.`,
       attempts,
-    }), { status: 503 })
+    }), {
+      status: 503,
+      headers: {
+        'X-Setup-Route': '/admin/dashboard/settings',
+        'X-Test-Route': '/api/admin/settings/test-provider',
+      },
+    })
   } catch (error) {
     return NextResponse.json(result({
       success: false,

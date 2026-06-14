@@ -67,6 +67,14 @@ export default function SettingsPage() {
   })
   const [routingMessage, setRoutingMessage] = useState('')
   const [safety, setSafety] = useState({ safeMode: true, suggestiveMode: false, adultMode: false })
+  const [adultCapabilities, setAdultCapabilities] = useState<Record<string, boolean>>({
+    adult_text: false,
+    adult_image: false,
+    adult_voice: false,
+    adult_avatar: false,
+    adult_short_video: false,
+    adult_long_video: false,
+  })
   const [safetyMessage, setSafetyMessage] = useState('')
   const [runtimeTools, setRuntimeTools] = useState<RuntimeTool[]>([])
   const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
@@ -109,6 +117,9 @@ export default function SettingsPage() {
         suggestiveMode: Boolean(safetyData.suggestiveMode),
         adultMode: Boolean(safetyData.adultMode),
       })
+      if (safetyResponse.ok && safetyData.adultCapabilities?.capabilities) {
+        setAdultCapabilities(safetyData.adultCapabilities.capabilities)
+      }
       if (runtimeResponse.ok) setRuntimeTools(settingsRuntimeTools(runtimeData.tools ?? []))
       if (capabilityResponse.ok) setCapabilities(capabilityData.capabilities ?? capabilityData.matrix ?? [])
     } catch {
@@ -142,7 +153,11 @@ export default function SettingsPage() {
     const response = await fetch('/api/admin/app-safety', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ appSlug: 'amarktai-network', ...safety }),
+      body: JSON.stringify({
+        appSlug: 'amarktai-network',
+        ...safety,
+        adultCapabilities,
+      }),
     })
     const data = await response.json().catch(() => ({}))
     setSafetyMessage(response.ok ? 'Content safety policy saved.' : data.error || 'Policy could not be saved.')
@@ -328,7 +343,23 @@ export default function SettingsPage() {
             <SafetyToggle label="Suggestive mode" detail="Requires safe mode off" checked={safety.suggestiveMode} disabled={safety.safeMode} onChange={(suggestiveMode) => setSafety((current) => ({ ...current, suggestiveMode }))} />
             <SafetyToggle label="Adult mode" detail="Lawful 18+ content only" checked={safety.adultMode} disabled={safety.safeMode} onChange={(adultMode) => setSafety((current) => ({ ...current, adultMode }))} />
           </div>
-          <div className="mt-4 flex items-center gap-3"><button onClick={() => void saveSafety()} className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-xs font-black text-slate-950"><Save className="h-4 w-4" />Save safety policy</button>{safetyMessage && <p className="text-xs text-teal-200">{safetyMessage}</p>}</div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(adultCapabilities).map(([capability, enabled]) => (
+              <SafetyToggle
+                key={capability}
+                label={capability.replaceAll('_', ' ')}
+                detail={safety.adultMode ? 'Per-app capability' : 'Enable adult mode first'}
+                checked={enabled}
+                disabled={!safety.adultMode}
+                onChange={(value) => setAdultCapabilities((current) => ({ ...current, [capability]: value }))}
+              />
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button onClick={() => void saveSafety()} className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2.5 text-xs font-black text-slate-950"><Save className="h-4 w-4" />Save safety policy</button>
+            <a href="/api/admin/system/adult-capability-matrix?appSlug=amarktai-network" target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-black text-slate-300"><TestTube2 className="h-4 w-4" />Test adult routes</a>
+            {safetyMessage && <p className="text-xs text-teal-200">{safetyMessage}</p>}
+          </div>
         </div>
       </section>
 

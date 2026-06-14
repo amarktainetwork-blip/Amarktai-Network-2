@@ -69,6 +69,10 @@ export async function POST(request: NextRequest) {
         'budgetSensitivity', 'latencySensitivity', 'allowedModels',
         'fallbackChain', 'enabledCapabilities', 'enabledAgents',
         'safeMode', 'adultMode', 'suggestiveMode',
+        'adultCategories', 'adultTextEnabled', 'adultImageEnabled',
+        'adultVoiceEnabled', 'adultAvatarEnabled', 'adultShortVideoEnabled',
+        'adultLongVideoEnabled', 'adultApprovedProviders', 'adultApprovedModels',
+        'adultSafetyRules', 'adultAuditLogging',
       ]
       for (const field of allowedFields) {
         if (body[field] !== undefined) data[field] = body[field]

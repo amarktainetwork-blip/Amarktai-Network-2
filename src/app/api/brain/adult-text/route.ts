@@ -10,6 +10,11 @@ import { getVaultApiKey } from '@/lib/brain'
 import { createArtifact } from '@/lib/artifact-store'
 import { getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+} from '@/lib/adult-app-capabilities'
+import { recordCapabilityTrace } from '@/lib/capability-tracing'
 
 type AdultTextProvider = 'auto' | 'huggingface' | 'together'
 type Attempt = {
@@ -187,11 +192,22 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const prompt = String(body.prompt ?? body.message ?? '').trim()
-    const appSlug = typeof body.appSlug === 'string' ? body.appSlug : '__admin_test__'
-    if (!prompt) {
-      return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', error: 'prompt or message is required.' }), { status: 400 })
+    const appSlug = typeof body.appSlug === 'string' ? body.appSlug : ''
+    if (!prompt || !appSlug) {
+      return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
     }
 
+    const adultProfile = await getAdultAppCapabilityProfile(appSlug)
+    const adultPolicy = validateAdultCapabilityRequest(adultProfile, 'adult_text', prompt)
+    if (!adultPolicy.allowed) {
+      return NextResponse.json(response({
+        success: false,
+        traceId,
+        jobStatus: 'blocked',
+        status: 'policy_refused',
+        error: adultPolicy.blocker,
+      }), { status: 403 })
+    }
     await loadAppSafetyConfigFromDB(appSlug)
     const safety = getAppSafetyConfig(appSlug)
     if (safety.safeMode || !safety.adultMode) {
@@ -228,10 +244,22 @@ export async function POST(request: NextRequest) {
     const attempts: Attempt[] = []
     const togetherKey = await getVaultApiKey('together')
     const hfKey = await getVaultApiKey('huggingface')
-    const chain = route.providers.filter((entry) => provider === 'auto' || entry.provider === provider)
+    const chain = route.providers.filter((entry) =>
+      adultProfile.approvedProviders.includes(entry.provider)
+      && (provider === 'auto' || entry.provider === provider),
+    )
 
     for (const entry of chain) {
       const model = requestedModel ?? (entry.provider === 'huggingface' ? getDefaultAdultTextModel().id : DEFAULT_TOGETHER_MODEL)
+      if (!adultProfile.approvedModels.includes(model)) {
+        attempts.push({
+          provider: entry.provider as Exclude<AdultTextProvider, 'auto'>,
+          model,
+          status: 'needs_endpoint',
+          error: 'Model is not explicitly approved for this app adult profile.',
+        })
+        continue
+      }
       const result = entry.provider === 'together'
         ? await executeTogether(togetherKey, model, prompt)
         : await executeHuggingFace(hfKey, endpoint, model, prompt)
@@ -264,6 +292,16 @@ export async function POST(request: NextRequest) {
           content: Buffer.from(result.output, 'utf8'),
           mimeType: 'text/plain',
           metadata: { capability: CAPABILITY },
+        })
+        await recordCapabilityTrace({
+          traceId,
+          appSlug,
+          adultModeState: 'enabled',
+          capability: CAPABILITY,
+          eventType: 'adult_text.completed',
+          selectedRoute: { provider: entry.provider, model },
+          artifactId: artifact.id,
+          payload: { attempts },
         })
         return NextResponse.json(response({
           success: true,

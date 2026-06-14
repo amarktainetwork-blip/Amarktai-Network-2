@@ -5,6 +5,8 @@ import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
 import { createArtifact } from '@/lib/artifact-store'
 import { recordExecutionResponse } from '@/lib/execution'
+import { finishControlPlaneAttempt } from '@/lib/control-plane-jobs'
+import { recordCapabilityTrace } from '@/lib/capability-tracing'
 
 const MAX_PROCESSING_MS = 15 * 60 * 1000
 
@@ -54,6 +56,21 @@ function executionIdFor(resultMeta: string | null) {
   }
 }
 
+function controlPlaneFor(resultMeta: string | null) {
+  try {
+    const parsed = JSON.parse(resultMeta ?? '{}') as {
+      controlPlaneJobId?: string
+      controlPlaneAttemptId?: string
+    }
+    return {
+      jobId: typeof parsed.controlPlaneJobId === 'string' ? parsed.controlPlaneJobId : undefined,
+      attemptId: typeof parsed.controlPlaneAttemptId === 'string' ? parsed.controlPlaneAttemptId : undefined,
+    }
+  } catch {
+    return {}
+  }
+}
+
 async function ensureVideoArtifact(job: {
   id: string
   appSlug: string | null
@@ -98,6 +115,52 @@ async function ensureVideoArtifact(job: {
   }
 }
 
+async function reconcileControlPlaneJob(
+  job: {
+    id: string
+    status: string
+    appSlug: string | null
+    provider: string
+    modelId: string
+    providerJobId: string | null
+    resultUrl: string | null
+    resultMeta: string | null
+    errorMessage: string | null
+  },
+  artifact?: { artifactId: string | null },
+) {
+  const controlPlane = controlPlaneFor(job.resultMeta)
+  if (!controlPlane.attemptId) return
+
+  await finishControlPlaneAttempt({
+    attemptId: controlPlane.attemptId,
+    status: job.status === 'succeeded'
+      ? 'completed'
+      : job.status === 'failed'
+        ? 'failed'
+        : 'processing',
+    providerJobId: job.providerJobId,
+    pollUrl: `/api/brain/video-generate/${job.id}`,
+    charged: true,
+    artifactId: artifact?.artifactId,
+    errorCategory: job.status === 'failed' ? 'provider_job_failed' : null,
+    errorMessage: job.errorMessage,
+    responseMetadata: { resultUrl: job.resultUrl },
+  })
+  await recordCapabilityTrace({
+    jobId: controlPlane.jobId,
+    appSlug: job.appSlug ?? 'amarktai-network',
+    adultModeState: capabilityFor(job.resultMeta) === 'adult_video' ? 'enabled' : 'off',
+    capability: capabilityFor(job.resultMeta),
+    eventType: `video.poll.${job.status}`,
+    selectedRoute: { provider: job.provider, model: job.modelId },
+    providerJobId: job.providerJobId ?? undefined,
+    artifactId: artifact?.artifactId ?? undefined,
+    errorCategory: job.status === 'failed' ? 'provider_job_failed' : undefined,
+    payload: { videoGenerationJobId: job.id, resultUrl: job.resultUrl },
+  })
+}
+
 function responsePayload(
   job: {
     id: string
@@ -127,6 +190,7 @@ function responsePayload(
     blocker: error ?? null,
     jobId: job.id,
     pollUrl: `/api/brain/video-generate/${job.id}`,
+    controlPlaneJobId: controlPlaneFor(job.resultMeta).jobId ?? null,
     status: job.status,
     resultUrl: job.resultUrl,
     prompt: job.prompt,
@@ -157,6 +221,7 @@ export async function GET(
 
   if (job.status === 'succeeded' || job.status === 'failed') {
     const artifact = job.status === 'succeeded' ? await ensureVideoArtifact(job) : undefined
+    await reconcileControlPlaneJob(job, artifact)
     const payload = responsePayload(job, artifact)
     reconcileVideoExecution(job.resultMeta, payload)
     return NextResponse.json(payload)
@@ -170,6 +235,7 @@ export async function GET(
         errorMessage: `Video provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       },
     })
+    await reconcileControlPlaneJob(updated)
     const payload = responsePayload(updated)
     reconcileVideoExecution(updated.resultMeta, payload)
     return NextResponse.json(payload)
@@ -212,6 +278,7 @@ export async function GET(
         where: { id: jobId },
         data: { status: 'failed', errorMessage: message },
       })
+      await reconcileControlPlaneJob(updated)
       return NextResponse.json(responsePayload(updated))
     }
     return NextResponse.json({
@@ -244,10 +311,16 @@ export async function GET(
         resultUrl: updated.resultUrl,
         errorMessage: updated.errorMessage,
       },
-    ).catch(() => null)
+    ).catch((error) => {
+      console.error('[video-generate] webhook dispatch failed', {
+        jobId: updated.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
   }
 
   const artifact = updated.status === 'succeeded' ? await ensureVideoArtifact(updated) : undefined
+  await reconcileControlPlaneJob(updated, artifact)
   const payload = responsePayload(updated, artifact)
   reconcileVideoExecution(updated.resultMeta, payload)
   return NextResponse.json(payload)

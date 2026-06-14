@@ -94,6 +94,17 @@ import {
   scanContent,
 } from '@/lib/content-filter'
 import { crawlAppWebsite } from '@/lib/firecrawl'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+  type AdultCapabilityId,
+} from '@/lib/adult-app-capabilities'
+import {
+  createControlPlaneJob,
+  finishControlPlaneAttempt,
+  startControlPlaneAttempt,
+} from '@/lib/control-plane-jobs'
+import { recordCapabilityTraceSafe } from '@/lib/capability-tracing'
 
 /**
  * Check whether a model supports the given modality.
@@ -1801,6 +1812,20 @@ export async function executeCapabilityOrchestration(
       'model_not_supported',
     )
   }
+  const appSlug = request.appId ?? request.workspaceId ?? '__system__'
+  await recordCapabilityTraceSafe({
+    traceId: request.traceId,
+    appSlug,
+    adultModeState: request.adultMode ? 'requested' : 'off',
+    capability,
+    eventType: 'capability.request.accepted',
+    providerRequestMeta: {
+      requestedProvider: request.providerOverride ?? request.provider ?? null,
+      requestedModel: request.modelOverride ?? request.model ?? null,
+      qualityTier: request.qualityTier ?? request.metadata?.qualityTier ?? 'auto',
+      fileCount: request.files?.length ?? 0,
+    },
+  })
 
   const requestedProvider = request.providerOverride ?? request.provider
   const requestedModel = request.modelOverride ?? request.model
@@ -1842,14 +1867,6 @@ export async function executeCapabilityOrchestration(
       capability,
       'NEEDS_INPUT',
       'Speech-to-text requires an audio input reference.',
-      'model_not_supported',
-    )
-  }
-  if (capability === 'adult_video') {
-    return capabilityFailure(
-      capability,
-      'UNAVAILABLE',
-      'No approved provider contract currently permits adult-video execution.',
       'model_not_supported',
     )
   }
@@ -2024,6 +2041,26 @@ export async function executeCapabilityOrchestration(
       retryable: adapterResult.retryable,
       error: adapterResult.error ?? undefined,
     })
+    await recordCapabilityTraceSafe({
+      traceId: request.traceId,
+      appSlug,
+      adultModeState: request.adultMode ? 'enabled' : 'off',
+      capability,
+      eventType: `provider.attempt.${adapterResult.status}`,
+      selectedRoute: {
+        provider: adapterResult.provider,
+        model: adapterResult.model,
+        adapter: candidate.route.adapter,
+        fallbackIndex: index,
+      },
+      providerRequestMeta: {
+        outputType: candidate.route.outputType,
+        latencyMs,
+        retryable: adapterResult.retryable,
+      },
+      providerJobId: adapterResult.providerJobId ?? undefined,
+      errorCategory: adapterResult.errorCategory ?? undefined,
+    })
 
     if (adapterResult.status === 'completed') {
       await recordProviderSuccess({
@@ -2069,6 +2106,46 @@ export async function executeCapabilityOrchestration(
             },
           })
         : null
+      const durableJob = await createControlPlaneJob({
+        idempotencyKey: typeof request.metadata?.idempotencyKey === 'string'
+          ? request.metadata.idempotencyKey
+          : `${appSlug}:${capability}:${adapterResult.providerJobId}`,
+        appSlug,
+        requestedCapability: request.capability ?? capability,
+        canonicalCapability: taxonomyId,
+        jobType: 'external_provider_poll',
+        selectedRoute: {
+          provider: adapterResult.provider,
+          model: adapterResult.model,
+          adapter: candidate.route.adapter,
+        },
+        metadata: {
+          localMediaJobId: localJob?.id ?? null,
+          providerAttempts: attempts,
+        },
+        queueData: {
+          provider: adapterResult.provider,
+          providerJobId: adapterResult.providerJobId,
+          localMediaJobId: localJob?.id ?? null,
+          capability,
+        },
+      })
+      const durableAttempt = await startControlPlaneAttempt({
+        jobId: durableJob.id,
+        provider: adapterResult.provider,
+        model: adapterResult.model,
+        adapter: candidate.route.adapter,
+        outputType: candidate.route.outputType,
+        requestMetadata: { localMediaJobId: localJob?.id ?? null },
+      })
+      await finishControlPlaneAttempt({
+        attemptId: durableAttempt.id,
+        status: 'processing',
+        providerJobId: adapterResult.providerJobId,
+        pollUrl: localJob ? `/api/brain/media-jobs/${localJob.id}` : null,
+        latencyMs,
+        charged: true,
+      })
       return {
         success: true,
         capability,
@@ -2084,6 +2161,11 @@ export async function executeCapabilityOrchestration(
         fallbackUsed: index > 0,
         fallbackReason: index > 0 ? 'An earlier provider/model attempt failed.' : undefined,
         providerAttempts: attempts,
+        diagnostics: {
+          controlPlaneJobId: durableJob.id,
+          controlPlaneAttemptId: durableAttempt.id,
+          queueStatus: durableJob.status,
+        },
       }
     }
 
@@ -2102,6 +2184,18 @@ export async function executeCapabilityOrchestration(
       attempt.errorCategory ?? '',
     ),
   )
+  await recordCapabilityTraceSafe({
+    traceId: request.traceId,
+    appSlug,
+    adultModeState: request.adultMode ? 'enabled' : 'off',
+    capability,
+    eventType: 'capability.failed',
+    selectedRoute: lastAttempt
+      ? { provider: lastAttempt.provider, model: lastAttempt.model }
+      : {},
+    errorCategory: lastAttempt?.errorCategory ?? 'unknown',
+    payload: { attempts: attempts.length, reason: routePlan.reason },
+  })
   return capabilityFailure(
     capability,
     onlyConfigurationFailures ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
@@ -2268,6 +2362,25 @@ async function governedCapabilityBlockReason(
     return 'Suggestive capability requires safe mode off.'
   }
   if (request.appId) {
+    if (isAdult) {
+      const profile = await getAdultAppCapabilityProfile(request.appId)
+      const policyCapability = ({
+        adult_text: 'adult_text',
+        adult_image: 'adult_image',
+        adult_voice: 'adult_voice',
+        adult_video: 'adult_short_video',
+      } as Partial<Record<CapabilityRouterCapability, AdultCapabilityId>>)[capability]
+      if (policyCapability) {
+        const result = validateAdultCapabilityRequest(profile, policyCapability, request.input)
+        if (!result.allowed) return result.blocker
+      }
+      if (request.providerOverride && !profile.approvedProviders.includes(request.providerOverride)) {
+        return `Provider "${request.providerOverride}" is not approved for adult execution by this app.`
+      }
+      if (!profile.approvedProviders.length) {
+        return 'No adult provider is approved for this app. Configure and test one in the app adult capability profile.'
+      }
+    }
     await loadAppSafetyConfigFromDB(request.appId)
     const safety = getAppSafetyConfig(request.appId)
     if (safety.safeMode) return 'The app safety policy has safe mode enabled.'
@@ -2354,11 +2467,26 @@ async function completeCapabilityResult(input: {
     fallbackReason: input.fallbackUsed ? 'An earlier provider/model attempt failed.' : undefined,
     providerAttempts: input.attempts,
   }
-  if (!input.request.saveArtifact && !input.definitionCreatesArtifact) return response
+  const appSlug = input.request.appId ?? input.request.workspaceId ?? '__system__'
+  if (!input.request.saveArtifact && !input.definitionCreatesArtifact) {
+    await recordCapabilityTraceSafe({
+      traceId: input.request.traceId,
+      appSlug,
+      adultModeState: input.request.adultMode ? 'enabled' : 'off',
+      capability: input.capability,
+      eventType: 'capability.completed',
+      selectedRoute: {
+        provider: input.adapterResult.provider,
+        model: input.adapterResult.model,
+      },
+      payload: { artifactRequired: false, fallbackUsed: input.fallbackUsed },
+    })
+    return response
+  }
 
   try {
     const artifact = await createArtifact({
-      appSlug: input.request.appId ?? input.request.workspaceId ?? '__system__',
+      appSlug,
       appId: input.request.appId,
       workspaceId: input.request.workspaceId,
       executionId: typeof input.request.metadata?.executionId === 'string'
@@ -2380,6 +2508,19 @@ async function completeCapabilityResult(input: {
         providerAttempts: input.attempts,
       },
     })
+    await recordCapabilityTraceSafe({
+      traceId: input.request.traceId,
+      appSlug,
+      adultModeState: input.request.adultMode ? 'enabled' : 'off',
+      capability: input.capability,
+      eventType: 'capability.completed',
+      selectedRoute: {
+        provider: input.adapterResult.provider,
+        model: input.adapterResult.model,
+      },
+      artifactId: artifact.id,
+      payload: { artifactMime: artifact.mimeType, fallbackUsed: input.fallbackUsed },
+    })
     return {
       ...response,
       artifactId: artifact.id,
@@ -2387,6 +2528,19 @@ async function completeCapabilityResult(input: {
       output: input.adapterResult.mediaUrl ?? artifact.storageUrl ?? output,
     }
   } catch (error) {
+    await recordCapabilityTraceSafe({
+      traceId: input.request.traceId,
+      appSlug,
+      adultModeState: input.request.adultMode ? 'enabled' : 'off',
+      capability: input.capability,
+      eventType: 'capability.artifact_failed',
+      selectedRoute: {
+        provider: input.adapterResult.provider,
+        model: input.adapterResult.model,
+      },
+      errorCategory: 'artifact_error',
+      payload: { error: sanitizeProviderError(error) },
+    })
     return {
       ...response,
       warning: `Provider execution succeeded but artifact persistence failed: ${sanitizeProviderError(error)}`,

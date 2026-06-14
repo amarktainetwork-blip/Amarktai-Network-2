@@ -7,6 +7,7 @@ import {
   UNIVERSAL_MODEL_ROUTES,
   type UniversalCapabilityGroup,
 } from '@/lib/universal-model-catalog'
+import { getVideoModelContract } from '@/lib/video-route-specs'
 
 export const AI_CAPABILITY_CATEGORIES = [
   'text',
@@ -130,7 +131,7 @@ function capability(input: CapabilityInput): AiCapabilityDefinition {
         && model.enabled
         && model.capabilities.some((modelCapability) => modelGroups.includes(modelCapability)),
       )
-      .filter((model) => modelMatchesCapability(input.id, model.modelId))
+      .filter((model) => modelMatchesCapability(input.id, provider, model.modelId))
       .map((model) => model.modelId)
     return {
       provider,
@@ -169,11 +170,16 @@ function capability(input: CapabilityInput): AiCapabilityDefinition {
   }
 }
 
-function modelMatchesCapability(capabilityId: string, modelId: string): boolean {
-  const normalized = modelId.toLowerCase()
-  if (capabilityId === 'text_to_video') return !/(i2v|image.to.video)/.test(normalized)
+function modelMatchesCapability(
+  capabilityId: string,
+  provider: ApprovedDirectProviderId,
+  modelId: string,
+): boolean {
+  if (capabilityId === 'text_to_video') {
+    return getVideoModelContract(provider, modelId)?.mode === 'text_to_video'
+  }
   if (capabilityId === 'image_to_video' || capabilityId === 'image_text_to_video') {
-    return /(i2v|image.to.video|veo)/.test(normalized)
+    return getVideoModelContract(provider, modelId)?.mode === 'image_to_video'
   }
   return true
 }

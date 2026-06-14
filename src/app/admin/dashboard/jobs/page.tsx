@@ -43,6 +43,11 @@ type Job = {
   artifactUrl?: string | null
   promptSummary?: string
   providerAttempts?: Array<{ provider?: string; model?: string; status?: string; error?: string }>
+  providerJobIds?: string[]
+  pollUrls?: string[]
+  charged?: boolean
+  progress?: number
+  cancelRequested?: boolean
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -111,6 +116,11 @@ export default function JobsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const cancel = async (id: string) => {
+    await fetch(`/api/admin/system/jobs/${id}/cancel`, { method: 'POST' })
+    await load()
+  }
 
   const runningCount = jobs.filter((j) => ['running', 'processing', 'queued', 'planned', 'generating_scenes', 'stitching', 'saving_artifact'].includes(j.status?.toLowerCase())).length
   const completedCount = jobs.filter((j) => j.status?.toLowerCase() === 'completed').length
@@ -239,6 +249,17 @@ export default function JobsPage() {
                         Attempts: {job.providerAttempts.map((attempt) => `${attempt.provider ?? 'provider'} ${attempt.status ?? ''}`.trim()).join(' -> ')}
                       </p>
                     )}
+                    {job.providerJobIds && job.providerJobIds.length > 0 && (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Provider jobs: {job.providerJobIds.join(', ')}
+                      </p>
+                    )}
+                    {job.charged && (
+                      <p className="mt-1 text-[11px] font-bold text-amber-300">Provider charge recorded</p>
+                    )}
+                    {typeof job.progress === 'number' && job.status !== 'completed' && (
+                      <p className="mt-1 text-[11px] text-slate-500">Progress: {job.progress}%</p>
+                    )}
                     <p className="mt-1 font-mono text-[11px] text-slate-500">{job.id}</p>
                     <p className="text-[11px] text-slate-600">{formatTime(job.createdAt)}</p>
 
@@ -259,6 +280,14 @@ export default function JobsPage() {
                       <Layers3 className="h-3.5 w-3.5" />
                       View artifact
                     </a>
+                  )}
+                  {['queued', 'processing'].includes(job.status?.toLowerCase()) && !job.cancelRequested && (
+                    <button
+                      onClick={() => cancel(job.id)}
+                      className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/20"
+                    >
+                      Cancel
+                    </button>
                   )}
                 </div>
               )
