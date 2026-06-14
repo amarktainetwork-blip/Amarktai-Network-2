@@ -341,10 +341,13 @@ export async function getProviderReadiness(
   ])
   const configured = Boolean(credential)
   const tested = Boolean(notes.lastTestedAt ?? row?.lastCheckedAt)
-  const passed = notes.lastTestPassed === true || row?.healthStatus === 'healthy'
-  const explicitlyFailed = notes.lastTestStatus === 'failed'
-    || row?.healthStatus === 'error'
-    || row?.healthStatus === 'degraded'
+  const notesHaveTestResult = notes.lastTestStatus === 'passed' || notes.lastTestStatus === 'failed'
+  const passed = notesHaveTestResult
+    ? notes.lastTestStatus === 'passed' && notes.lastTestPassed !== false
+    : row?.healthStatus === 'healthy'
+  const explicitlyFailed = notesHaveTestResult
+    ? notes.lastTestStatus === 'failed'
+    : row?.healthStatus === 'error' || row?.healthStatus === 'degraded'
   const enabled = row?.enabled !== false
   const availableModels = provider.supportedModels.length
   let state: ProviderReadinessState

@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getProviderKey } from '@/lib/provider-config'
-import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -42,14 +41,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await res.json() as { name?: string; type?: string }
-
-    if (!inlineKey) {
-      await prisma.integrationConfig.upsert({
-        where: { key: 'huggingface' },
-        create: { key: 'huggingface', displayName: 'Hugging Face', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
-        update: { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
-      }).catch(() => null)
-    }
 
     return NextResponse.json({ success: true, username: data.name, accountType: data.type, latencyMs })
   } catch (err) {

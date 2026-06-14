@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getProviderKey } from '@/lib/provider-config'
-import { prisma } from '@/lib/prisma'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -43,14 +42,6 @@ export async function POST(req: NextRequest) {
 
     const data = await res.json() as unknown[]
     const modelCount = Array.isArray(data) ? data.length : 0
-
-    if (!inlineKey) {
-      await prisma.integrationConfig.upsert({
-        where: { key: 'together' },
-        create: { key: 'together', displayName: 'Together AI', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
-        update: { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
-      }).catch(() => null)
-    }
 
     return NextResponse.json({ success: true, modelCount, latencyMs })
   } catch (err) {

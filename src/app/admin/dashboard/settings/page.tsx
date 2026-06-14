@@ -23,6 +23,7 @@ type SettingsTruth = {
   connectedCount: number
   vaultEncryptionConfigured: boolean
   vaultWarning: string
+  storage: StorageSetup
 }
 
 type StorageSetup = {
@@ -73,17 +74,15 @@ export default function SettingsPage() {
     setRefreshing(true)
     setLoadError('')
     try {
-      const [settingsResponse, readinessResponse, routingResponse, safetyResponse, runtimeResponse, capabilityResponse] = await Promise.all([
+      const [settingsResponse, routingResponse, safetyResponse, runtimeResponse, capabilityResponse] = await Promise.all([
         fetch('/api/admin/settings/status', { cache: 'no-store' }),
-        fetch('/api/admin/system/ai-deployment-readiness', { cache: 'no-store' }),
         fetch('/api/admin/settings/routing-policy', { cache: 'no-store' }),
         fetch('/api/admin/app-safety?appSlug=amarktai-network', { cache: 'no-store' }),
         fetch('/api/admin/settings/runtime-tools', { cache: 'no-store' }),
         fetch('/api/admin/system/ai-capabilities-truth', { cache: 'no-store' }),
       ])
-      const [settingsData, readinessData, routingData, safetyData, runtimeData, capabilityData] = await Promise.all([
+      const [settingsData, routingData, safetyData, runtimeData, capabilityData] = await Promise.all([
         settingsResponse.json().catch(() => null),
-        readinessResponse.json().catch(() => null),
         routingResponse.json().catch(() => null),
         safetyResponse.json().catch(() => null),
         runtimeResponse.json().catch(() => null),
@@ -98,12 +97,9 @@ export default function SettingsPage() {
         connectedCount: settingsData.truth.connectedCount ?? 0,
         vaultEncryptionConfigured: settingsData.truth.vaultEncryptionConfigured === true,
         vaultWarning: settingsData.truth.vaultWarning ?? '',
+        storage: settingsData.truth.storage,
       })
-      setStorage(
-        readinessResponse.ok
-          ? readinessData?.artifacts?.storage ?? null
-          : null,
-      )
+      setStorage(settingsData.truth.storage ?? null)
       if (routingResponse.ok && routingData?.routingPolicy) {
         setRoutingPolicy(routingData.routingPolicy)
       }
@@ -192,8 +188,8 @@ export default function SettingsPage() {
           )}
           {storage ? (
             <StatusPill
-              label={storage.writable ? 'Storage ready' : 'Storage needs setup'}
-              status={storage.writable ? 'ready' : 'missing'}
+              label={storage.ready ? 'Storage ready' : 'Storage needs setup'}
+              status={storage.ready ? 'ready' : 'missing'}
             />
           ) : (
             <StatusPill label="Storage status unavailable" status="unknown" />
@@ -281,26 +277,26 @@ export default function SettingsPage() {
         {loading ? (
           <LoadingCard label="Checking storage..." />
         ) : storage ? (
-          <div className={`rounded-2xl border p-5 ${storage.writable ? 'border-emerald-800/40 bg-emerald-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
+          <div className={`rounded-2xl border p-5 ${storage.ready ? 'border-emerald-800/40 bg-emerald-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${storage.writable ? 'border-emerald-700/40 bg-emerald-900/30' : 'border-amber-700/30 bg-amber-900/20'}`}>
-                  {storage.writable
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl border ${storage.ready ? 'border-emerald-700/40 bg-emerald-900/30' : 'border-amber-700/30 bg-amber-900/20'}`}>
+                  {storage.ready
                     ? <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                     : <AlertTriangle className="h-4 w-4 text-amber-400" />}
                 </div>
                 <div>
                   <p className="font-black text-slate-100">Artifact Storage</p>
                   <p className="text-xs text-slate-500">
-                    {storage.writable ? 'Writable and ready' : 'Storage is not writable'}
+                    {storage.ready ? 'Storage ready' : 'Storage is not ready'}
                   </p>
                 </div>
               </div>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${storage.writable ? 'bg-emerald-900/60 text-emerald-300' : 'bg-amber-900/60 text-amber-300'}`}>
-                {storage.writable ? 'Ready' : 'Needs setup'}
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${storage.ready ? 'bg-emerald-900/60 text-emerald-300' : 'bg-amber-900/60 text-amber-300'}`}>
+                {storage.ready ? 'Ready' : 'Needs setup'}
               </span>
             </div>
-            {!storage.writable && (
+            {!storage.ready && (
               <p className="mt-4 rounded-xl border border-amber-800/30 bg-amber-900/15 p-3 text-xs font-bold text-amber-200">
                 Configure a readable and writable artifact storage location during deployment.
               </p>

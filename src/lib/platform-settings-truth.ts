@@ -1,7 +1,7 @@
 import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
 import { getProviderReadiness } from '@/lib/provider-registry'
-import { verifyStorage } from '@/lib/storage-driver'
+import { verifyStorage, type StorageHealth } from '@/lib/storage-driver'
 
 export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
 
@@ -24,11 +24,11 @@ export interface SettingsTruthEntry {
   unlocks: string
 }
 
-async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
+async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): Promise<SettingsTruthEntry> {
   const node = PROVIDER_MESH.find((item) => item.id === id)!
   const notes = await getMeshTestNotes(id)
   const localRuntime = id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage'
-  const storageHealth = id === 'storage' ? await verifyStorage().catch(() => null) : null
+  const storageHealth = id === 'storage' ? verifiedStorage : null
   const storageWritable = storageHealth?.ready === true
   const providerReadiness = node.kind === 'provider'
     ? await getProviderReadiness(node.id as never)
@@ -81,15 +81,17 @@ async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
 }
 
 export async function getPlatformSettingsTruth() {
-  const entries = await Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id)))
+  const verifiedStorage = await verifyStorage()
+  const entries = await Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id, verifiedStorage)))
   const providers = entries.filter((entry) => entry.kind === 'provider')
   const tools = entries.filter((entry) => entry.kind === 'tool')
-  const storage = entries.find((entry) => entry.kind === 'storage')!
+  const storageEntry = entries.find((entry) => entry.kind === 'storage')!
   return {
     entries,
     providers,
     tools,
-    storage,
+    storage: verifiedStorage,
+    storageEntry,
     connectedCount: entries.filter((entry) => entry.connected).length,
     connectedProviderIds: providers.filter((entry) => entry.connected).map((entry) => entry.key),
     vaultEncryptionConfigured: /^[a-f0-9]{64}$/i.test(
