@@ -14,7 +14,53 @@ import {
 } from '@/lib/adult-app-capabilities'
 
 type TtsCapability = 'tts' | 'adult_voice'
-type TtsProvider = 'auto' | 'groq' | 'genx' | 'huggingface'
+type TtsProvider = 'auto' | 'mimo' | 'together' | 'groq' | 'genx' | 'huggingface'
+
+async function getIntegrationConfigApiKey(providerKey: string): Promise<string> {
+  try {
+    const { PrismaClient } = await import('@prisma/client')
+    const prisma = new PrismaClient()
+    const rows = await prisma.$queryRawUnsafe<Array<{ key: string; display_name: string; api_key: string }>>('SELECT `key`, display_name, api_key FROM integration_configs')
+    await prisma.$disconnect()
+    const wanted = providerKey.toLowerCase().replace(/[^a-z0-9]/g, '')
+    const row = rows.find((entry) => {
+      const key = String(entry.key ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      const name = String(entry.display_name ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
+      if (wanted === 'mimo') return key === 'mimo' || name.includes('mimo') || name.includes('xiaomi')
+      if (wanted === 'together') return key.includes('together') || name.includes('together')
+      if (wanted === 'groq') return key === 'groq' || name.includes('groq')
+      if (wanted === 'genx') return key === 'genx' || name.includes('genx')
+      if (wanted === 'huggingface') return key.includes('huggingface') || name.includes('huggingface')
+      return key.includes(wanted) || name.includes(wanted)
+    })
+    return row?.api_key?.trim() ?? ''
+  } catch {
+    return ''
+  }
+}
+
+async function getProviderApiKey(provider: string): Promise<string> {
+  const vault = await getVaultApiKey(provider).catch(() => '')
+  if (vault) return vault
+  return getIntegrationConfigApiKey(provider)
+}
+
+function normalizeVoice(provider: string, value: unknown): string {
+  const requested = typeof value === 'string' && value.trim() ? value.trim() : ''
+  if (provider === 'mimo') return requested || 'Chloe'
+  if (provider === 'together') return requested || 'tara'
+  if (provider === 'groq') return requested || 'hannah'
+  return requested || 'alloy'
+}
+
+function audioMime(format: string, fallback = 'audio/mpeg'): string {
+  if (format === 'wav') return 'audio/wav'
+  if (format === 'mp3') return 'audio/mpeg'
+  if (format === 'raw') return 'audio/L16'
+  if (format === 'mulaw') return 'audio/basic'
+  return fallback
+}
+
 
 function result(input: {
   success: boolean
@@ -98,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     const requestedProviderValue = typeof body.provider === 'string' ? body.provider : 'auto'
-    if (!['auto', 'groq', 'genx', 'huggingface'].includes(requestedProviderValue)) {
+    if (!['auto', 'mimo', 'together', 'groq', 'genx', 'huggingface'].includes(requestedProviderValue)) {
       return NextResponse.json(result({
         success: false,
         capability,
@@ -112,8 +158,19 @@ export async function POST(request: NextRequest) {
     const route = getMediaCapabilityRoute(capability)!
     const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
     const attempts: Array<Record<string, unknown>> = []
+    const canonicalVoiceProviders = [
+      { provider: 'mimo' as const, model: 'mimo-v2.5-tts' },
+      { provider: 'together' as const, model: 'canopylabs/orpheus-3b-0.1-ft' },
+      { provider: 'groq' as const, model: 'canopylabs/orpheus-v1-english' },
+      { provider: 'genx' as const, model: 'aura-2' },
+      { provider: 'huggingface' as const, model: 'espnet/kan-bayashi_ljspeech_vits' },
+    ]
+    const providerCandidates = [
+      ...canonicalVoiceProviders,
+      ...route.providers.filter((entry) => !canonicalVoiceProviders.some((candidate) => candidate.provider === entry.provider)),
+    ]
 
-    for (const entry of route.providers.filter((candidate) =>
+    for (const entry of providerCandidates.filter((candidate) =>
       (requestedProvider === 'auto' || candidate.provider === requestedProvider)
       && (!adultApprovedProviders || adultApprovedProviders.includes(candidate.provider)),
     )) {
@@ -123,8 +180,80 @@ export async function POST(request: NextRequest) {
       let mimeType = 'audio/mpeg'
       let error = ''
 
+
+      if (entry.provider === 'mimo') {
+        const apiKey = await getProviderApiKey('mimo')
+        if (!apiKey) {
+          error = 'MiMo API key is missing.'
+        } else {
+          const endpoint = `${process.env.MIMO_BASE_URL?.trim() || 'https://token-plan-sgp.xiaomimimo.com/v1'}/chat/completions`
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'api-key': apiKey,
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify({
+              model: model && model.startsWith('mimo-') ? model : 'mimo-v2.5-tts',
+              messages: [
+                { role: 'user', content: typeof body.voiceStyle === 'string' ? body.voiceStyle : 'Clear, warm English narrator voice. Natural pace and friendly tone.' },
+                { role: 'assistant', content: text },
+              ],
+              audio: {
+                format: body.format === 'mp3' ? 'mp3' : 'wav',
+                voice: normalizeVoice('mimo', body.voice),
+              },
+            }),
+            signal: AbortSignal.timeout(60_000),
+          }).catch(() => null)
+          if (response?.ok) {
+            const json = await response.json().catch(() => null) as { choices?: Array<{ message?: { audio?: { data?: string } } }> } | null
+            const b64 = json?.choices?.[0]?.message?.audio?.data
+            if (typeof b64 === 'string' && b64.length > 0) {
+              audio = Buffer.from(b64, 'base64')
+              mimeType = audioMime(body.format === 'mp3' ? 'mp3' : 'wav', 'audio/wav')
+            } else {
+              error = 'MiMo returned no audio data.'
+            }
+          } else {
+            error = response ? `MiMo returned HTTP ${response.status}.` : 'MiMo TTS request failed.'
+          }
+        }
+      }
+
+      if (entry.provider === 'together') {
+        const apiKey = await getProviderApiKey('together')
+        if (!apiKey) {
+          error = 'Together API key is missing.'
+        } else {
+          const response = await fetch('https://api.together.xyz/v1/audio/speech', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              Accept: 'audio/mpeg, audio/wav, application/json',
+            },
+            body: JSON.stringify({
+              model: model && model.includes('/') ? model : 'canopylabs/orpheus-3b-0.1-ft',
+              input: text,
+              voice: normalizeVoice('together', body.voice),
+              response_format: body.format === 'wav' ? 'wav' : 'mp3',
+            }),
+            signal: AbortSignal.timeout(60_000),
+          }).catch(() => null)
+          if (response?.ok) {
+            audio = Buffer.from(await response.arrayBuffer())
+            mimeType = response.headers.get('content-type') ?? audioMime(body.format === 'wav' ? 'wav' : 'mp3')
+          } else {
+            error = response ? `Together returned HTTP ${response.status}.` : 'Together TTS request failed.'
+          }
+        }
+      }
+
       if (entry.provider === 'groq') {
-        const apiKey = await getVaultApiKey('groq')
+        const apiKey = await getProviderApiKey('groq')
         if (!apiKey) {
           error = 'Groq API key is missing.'
         } else {
@@ -134,8 +263,8 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify({
               model,
               input: text,
-              voice: typeof body.voice === 'string' ? body.voice : 'autumn',
-              response_format: 'wav',
+              voice: normalizeVoice('groq', body.voice),
+              response_format: body.format === 'mp3' ? 'mp3' : 'wav',
             }),
             signal: AbortSignal.timeout(60_000),
           }).catch(() => null)
@@ -191,7 +320,7 @@ export async function POST(request: NextRequest) {
       }
 
       if (entry.provider === 'huggingface') {
-        const apiKey = await getVaultApiKey('huggingface')
+        const apiKey = await getProviderApiKey('huggingface')
         if (!apiKey) {
           error = 'Hugging Face API key is missing.'
         } else {
