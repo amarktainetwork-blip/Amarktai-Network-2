@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getV1BrainRouteMatrix } from '@/lib/brain/v1-route-matrix'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const matrix = await getV1BrainRouteMatrix()
+  const [matrix, curated] = await Promise.all([
+    getV1BrainRouteMatrix(),
+    prisma.approvedModelRegistry.findMany({
+      orderBy: [{ provider: 'asc' }, { modelId: 'asc' }],
+    }),
+  ])
   const provider = request.nextUrl.searchParams.get('provider')
   const category = request.nextUrl.searchParams.get('category')
   const enabledOnly = request.nextUrl.searchParams.get('enabled') === 'true'
@@ -34,6 +40,9 @@ export async function GET(request: NextRequest) {
     registrySize: matrix.models.length,
     summary: matrix.summary,
     source: matrix.source,
+    curatedProviderModels: curated,
+    curatedProviderModelCount: curated.length,
+    inventoryRule: 'Discovered models are not executable until approved, adapter-backed, and live-tested.',
   })
 }
 

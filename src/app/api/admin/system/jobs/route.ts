@@ -4,14 +4,46 @@ import { getQueueStatus } from '@/lib/job-queue'
 import { listRecords } from '@/lib/local-json-store'
 import { listExecutions } from '@/lib/execution'
 import { listVideoProjects } from '@/lib/long-form-video'
+import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 
 export async function GET() {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const executions = listExecutions({ limit: 50 })
   const videoProjects = listVideoProjects().slice(0, 50)
+  const controlPlaneJobs = await listControlPlaneJobs(100)
   const jobs = [
-    ...videoProjects.map((project) => ({
+    ...controlPlaneJobs.map((job) => {
+      const activeAttempt = job.attempts.find((attempt) => attempt.id === job.activeAttemptId) ?? null
+      const finalAttempt = job.attempts.find((attempt) => attempt.id === job.finalAttemptId) ?? null
+      return {
+        id: job.id,
+        type: job.jobType,
+        requestedCapability: job.requestedCapability,
+        capability: job.canonicalCapability,
+        status: job.status,
+        progress: job.progress,
+        selectedRoute: parseJson(job.selectedRoute),
+        provider: finalAttempt?.provider ?? activeAttempt?.provider ?? null,
+        model: finalAttempt?.model ?? activeAttempt?.model ?? null,
+        activeAttempt,
+        finalAttempt,
+        providerAttempts: job.attempts,
+        providerJobIds: parseJson(job.providerJobIds),
+        pollUrls: parseJson(job.pollUrls),
+        artifactId: job.artifactId,
+        artifactUrl: job.artifactId ? `/api/admin/artifacts/${job.artifactId}/download` : null,
+        charged: job.charged,
+        estimatedCostCents: job.estimatedCostCents,
+        cancelRequested: job.cancelRequested,
+        createdAt: job.createdAt,
+        completedAt: job.completedAt,
+        error: job.errorMessage,
+        appSlug: job.appSlug,
+        metadata: parseJson(job.metadata),
+      }
+    }),
+    ...videoProjects.filter((project) => !project.controlPlaneJobId).map((project) => ({
       id: project.id,
       type: 'long_form_video',
       status: project.status,
@@ -58,5 +90,14 @@ export async function GET() {
     executions,
     videoProjects,
     jobs,
+    controlPlaneJobs,
   })
+}
+
+function parseJson(value: string) {
+  try {
+    return JSON.parse(value) as unknown
+  } catch {
+    return null
+  }
 }

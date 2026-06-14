@@ -358,7 +358,7 @@ export default function StudioPage() {
         <h1 className="mt-2 text-3xl font-black text-white">One workspace for every creative capability.</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">Brief the work, add project and brand context, then follow real provider jobs and persisted artifacts in one preview-first workspace.</p>
         <div className="mt-5 flex flex-wrap gap-2">
-          {capabilities.filter(([value]) => !value.startsWith('adult_') && value !== 'suggestive_image' && value !== 'lyrics_generation' && value !== 'stt').map(([value, label]) => (
+          {capabilities.map(([value, label]) => (
             <button key={value} onClick={() => setCapability(value)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${capability === value ? 'border-fuchsia-300/50 bg-fuchsia-300/15 text-fuchsia-100' : 'border-slate-700 text-slate-500'}`}>{label}</button>
           ))}
         </div>

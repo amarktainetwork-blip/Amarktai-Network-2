@@ -5,6 +5,10 @@ import { getVaultApiKey } from '@/lib/brain'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultImageModels } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+} from '@/lib/adult-app-capabilities'
 
 const CAPABILITY = 'adult_image'
 const ALLOWED_SIZES = ['512x512', '768x768', '1024x1024'] as const
@@ -53,6 +57,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
     }
 
+    const adultProfile = await getAdultAppCapabilityProfile(appSlug)
+    const adultPolicy = validateAdultCapabilityRequest(adultProfile, 'adult_image', prompt)
+    if (!adultPolicy.allowed) {
+      return NextResponse.json(payload({
+        success: false,
+        traceId,
+        jobStatus: 'blocked',
+        error: adultPolicy.blocker,
+      }), { status: 403 })
+    }
     await loadAppSafetyConfigFromDB(appSlug)
     const safety = getAppSafetyConfig(appSlug)
     if (safety.safeMode || !safety.adultMode) {
@@ -92,8 +106,15 @@ export async function POST(request: NextRequest) {
     const route = getMediaCapabilityRoute(CAPABILITY)!
     const attempts: Array<Record<string, unknown>> = []
 
-    for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
+    for (const entry of route.providers.filter((candidate) =>
+      adultProfile.approvedProviders.includes(candidate.provider)
+      && (requestedProvider === 'auto' || candidate.provider === requestedProvider),
+    )) {
       const model = requestedModel ?? entry.model
+      if (!adultProfile.approvedModels.includes(model)) {
+        attempts.push({ provider: entry.provider, model, status: 'needs_approval' })
+        continue
+      }
       if (entry.provider === 'together') {
         const apiKey = await getVaultApiKey('together')
         if (!apiKey) {
@@ -126,8 +147,14 @@ export async function POST(request: NextRequest) {
           continue
         }
         const hfModel = requestedModel ?? getAdultImageModels()[0]?.id ?? entry.model
+        if (!adultProfile.approvedModels.includes(hfModel)) {
+          attempts.push({ provider: entry.provider, model: hfModel, status: 'needs_approval' })
+          continue
+        }
         try {
-          const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+          const endpoint = process.env.HF_ENDPOINT_ADULT_IMAGE?.trim()
+            || `https://router.huggingface.co/hf-inference/models/${hfModel}`
+          const res = await fetch(endpoint, {
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({

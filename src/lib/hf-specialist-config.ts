@@ -134,7 +134,7 @@ export function resolveHfSpecialistConfig(
   const model = envModel || defaultModel || routeModel
   const endpointRequired = (HF_ENDPOINT_REQUIRED_CAPABILITIES as readonly string[]).includes(capability)
   const endpoint = envEndpoint ?? (!endpointRequired && model
-    ? `https://api-inference.huggingface.co/models/${model}`
+    ? `https://router.huggingface.co/hf-inference/models/${model}`
     : null)
 
   return {

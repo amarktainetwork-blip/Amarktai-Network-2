@@ -10,6 +10,10 @@ import type {
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
 import { getProviderInfo } from '@/lib/provider-registry'
+import {
+  getVideoModelContract,
+  providerSafeVideoParameters,
+} from '@/lib/video-route-specs'
 
 export type CapabilityReferenceKind =
   | 'image'
@@ -353,6 +357,14 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
   const model = input.model ?? input.route.modelIds[0] ?? (
     type === 'video' ? 'veo-3.1' : type === 'image' ? 'gpt-image-1' : 'lyria-2'
   )
+  const videoContract = type === 'video' ? getVideoModelContract(provider, model) : null
+  if (type === 'video' && !videoContract) {
+    return result(provider, model, 'failed', {
+      error: `No provider-safe video contract is registered for ${provider}/${model}.`,
+      errorCategory: 'model_not_supported',
+      retryable: true,
+    })
+  }
   const generated = await callGenXMedia({
     model,
     prompt: structuredPrompt(input),
@@ -360,7 +372,7 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     params: {
       references: input.references,
       capability: input.capability.id,
-      inputs: input.inputs,
+      inputs: type === 'video' ? providerSafeVideoParameters(videoContract!, input.inputs ?? {}) : input.inputs,
     },
     metadata: { capability: input.capability.id },
   })
@@ -403,6 +415,20 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
       ? isImageToVideo ? 'wan2.1-i2v-turbo' : 'wan2.1-t2v-turbo'
       : 'qwen-image-2.0'
   )
+  const videoContract = isVideo ? getVideoModelContract(provider, model) : null
+  if (isVideo && !videoContract) {
+    return result(provider, model, 'failed', {
+      error: `No provider-safe video contract is registered for ${provider}/${model}.`,
+      errorCategory: 'model_not_supported',
+      retryable: true,
+    })
+  }
+  if (videoContract?.requiresSourceImage && !imageReference?.url) {
+    return result(provider, model, 'blocked', {
+      error: `${model} requires a source image.`,
+      errorCategory: 'model_not_supported',
+    })
+  }
   if (isVideo && !isImageToVideo && /i2v|image.to.video/i.test(model)) {
     return result(provider, model, 'failed', {
       error: 'Text-to-video cannot execute an image-to-video model without image input.',
@@ -422,7 +448,7 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
           ...(imageReference?.url ? { img_url: imageReference.url } : {}),
           ...(videoReference?.url ? { video_url: videoReference.url } : {}),
         },
-        parameters: input.inputs ?? {},
+        parameters: providerSafeVideoParameters(videoContract!, input.inputs ?? {}),
       }
     : isWanxImage
       ? {

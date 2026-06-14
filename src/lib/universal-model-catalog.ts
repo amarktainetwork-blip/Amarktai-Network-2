@@ -127,9 +127,10 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('genx', 'gpt-4o-transcribe', 'Speech Transcription via GenX', 'GenX routed speech', ['STT'], ['stt', 'audio'], { costTier: 'low', recommendedFor: ['media_studio'] }),
   route('genx', 'text-embedding-3-large', 'Embeddings via GenX', 'GenX routed embeddings', ['embeddings/moderation'], ['embeddings'], { costTier: 'low' }),
 
-  route('huggingface', 'task:text', 'Hugging Face Text Task', 'Hugging Face Tasks', ['chat', 'coding'], ['text', 'code'], { costTier: 'low', taskBased: true, recommendedFor: ['assistant'] }),
-  route('huggingface', 'task:image', 'Hugging Face Image Task', 'Hugging Face Tasks', ['image'], ['image'], { costTier: 'low', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
-  route('huggingface', 'task:video', 'Hugging Face Video Task', 'Hugging Face Tasks', ['video'], ['video'], { costTier: 'medium', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('huggingface', 'mistralai/Mistral-7B-Instruct-v0.3', 'Mistral 7B Instruct on Hugging Face', 'Mistral', ['chat', 'coding'], ['text', 'code'], { costTier: 'low', taskBased: true, recommendedFor: ['assistant'] }),
+  route('huggingface', 'stabilityai/stable-diffusion-xl-base-1.0', 'Stable Diffusion XL on Hugging Face', 'Stable Diffusion XL', ['image'], ['image'], { costTier: 'low', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('huggingface', 'Wan-AI/Wan2.1-T2V-14B-Diffusers', 'Wan 2.1 Text to Video on Hugging Face', 'Wan', ['video'], ['video'], { costTier: 'medium', taskBased: true, supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('huggingface', 'facebook/musicgen-small', 'MusicGen Small on Hugging Face', 'MusicGen', ['music/audio'], ['music', 'audio'], { costTier: 'low', taskBased: true, recommendedFor: ['media_studio'] }),
   route('huggingface', 'openai/whisper-large-v3', 'Whisper Large v3 on Hugging Face', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', taskBased: true }),
   route('huggingface', 'facebook/mms-tts-eng', 'MMS TTS English', 'MMS', ['voice/TTS'], ['tts', 'audio'], { costTier: 'low', taskBased: true }),
   route('huggingface', 'sentence-transformers/all-MiniLM-L6-v2', 'MiniLM Embeddings', 'Sentence Transformers', ['embeddings/moderation'], ['embeddings'], { costTier: 'free', taskBased: true }),

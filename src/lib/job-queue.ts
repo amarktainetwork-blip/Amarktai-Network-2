@@ -11,10 +11,11 @@
  */
 
 import type { Queue, Worker, Job } from 'bullmq'
+import { getRedisClient } from '@/lib/redis'
 
 // ── Connection config ────────────────────────────────────────────────────────
 
-function getConnection() {
+export function getQueueConnection() {
   const url = process.env.REDIS_URL
   if (!url) return null
   // Parse the Redis URL for BullMQ connection options
@@ -43,7 +44,7 @@ const JOB_QUEUE_NAME = 'amarktai-jobs'
  */
 export function getQueue(name: string = JOB_QUEUE_NAME): Queue | null {
   if (_queues.has(name)) return _queues.get(name)!
-  const connection = getConnection()
+  const connection = getQueueConnection()
   if (!connection) return null
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Queue } = require('bullmq') as typeof import('bullmq')
@@ -56,6 +57,11 @@ export function getQueue(name: string = JOB_QUEUE_NAME): Queue | null {
 
 export type JobType =
   | 'video_generation'
+  | 'long_form_video'
+  | 'avatar_video'
+  | 'adult_media'
+  | 'image_batch'
+  | 'external_provider_poll'
   | 'batch_inference'
   | 'memory_summarization'
   | 'health_sync'
@@ -78,7 +84,13 @@ export interface JobPayload {
  */
 export async function enqueueJob(
   payload: JobPayload,
-  opts?: { delay?: number; priority?: number },
+  opts?: {
+    delay?: number
+    priority?: number
+    idempotencyKey?: string
+    attempts?: number
+    backoffMs?: number
+  },
 ): Promise<string | null> {
   const queue = getQueue(JOB_QUEUE_NAME)
   if (!queue) return null
@@ -86,11 +98,15 @@ export async function enqueueJob(
     const job = await queue.add(payload.type, payload, {
       delay: opts?.delay,
       priority: opts?.priority,
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
+      jobId: opts?.idempotencyKey?.replace(/[^a-zA-Z0-9_-]+/g, '-').slice(0, 120),
+      attempts: opts?.attempts ?? 4,
+      backoff: { type: 'exponential', delay: opts?.backoffMs ?? 5000 },
+      removeOnComplete: 500,
+      removeOnFail: 1_000,
     })
     return job.id ?? null
-  } catch {
+  } catch (error) {
+    console.error('[JobQueue] Enqueue failed:', error)
     return null
   }
 }
@@ -102,18 +118,72 @@ export async function enqueueJob(
 export function createWorker(
   processor: (job: Job<JobPayload>) => Promise<void>,
 ): Worker | null {
-  const connection = getConnection()
+  const connection = getQueueConnection()
   if (!connection) return null
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { Worker } = require('bullmq') as typeof import('bullmq')
   const worker = new Worker<JobPayload>(JOB_QUEUE_NAME, processor, {
     connection,
-    concurrency: 5,
+    concurrency: Number(process.env.AMARKTAI_QUEUE_CONCURRENCY || 5),
+    limiter: {
+      max: Number(process.env.AMARKTAI_QUEUE_RATE_MAX || 20),
+      duration: Number(process.env.AMARKTAI_QUEUE_RATE_WINDOW_MS || 1_000),
+    },
   })
   worker.on('failed', (job, err) => {
     console.error(`[JobQueue] Job ${job?.id} failed:`, err.message)
   })
   return worker
+}
+
+export async function cancelQueuedJob(jobId: string): Promise<boolean> {
+  const queue = getQueue(JOB_QUEUE_NAME)
+  if (!queue) return false
+  const job = await queue.getJob(jobId).catch((error) => {
+    console.error('[JobQueue] Failed to load job for cancellation:', {
+      jobId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  })
+  if (!job) return false
+  await job.remove()
+  return true
+}
+
+export async function withConcurrencyLease<T>(
+  input: {
+    provider?: string
+    appSlug?: string
+    capability: string
+    limit?: number
+    ttlSeconds?: number
+  },
+  run: () => Promise<T>,
+): Promise<T> {
+  const redis = getRedisClient()
+  if (!redis) return run()
+  const key = [
+    'amarktai',
+    'concurrency',
+    input.provider || 'platform',
+    input.appSlug || 'platform',
+    input.capability,
+  ].join(':').replace(/[^a-zA-Z0-9:_-]/g, '-')
+  const limit = input.limit ?? Number(process.env.AMARKTAI_PROVIDER_CONCURRENCY || 2)
+  const ttl = input.ttlSeconds ?? 1_800
+  const current = await redis.incr(key)
+  if (current === 1) await redis.expire(key, ttl)
+  if (current > limit) {
+    await redis.decr(key)
+    throw new Error(`Concurrency limit reached for ${input.provider ?? 'provider'}/${input.capability}.`)
+  }
+  try {
+    return await run()
+  } finally {
+    const remaining = await redis.decr(key).catch(() => 0)
+    if (remaining <= 0) await redis.del(key).catch(() => undefined)
+  }
 }
 
 /**

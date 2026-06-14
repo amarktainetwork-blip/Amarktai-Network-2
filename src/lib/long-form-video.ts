@@ -16,6 +16,8 @@ import { getStorageDriver } from '@/lib/storage-driver'
 import { resolveStoragePath } from '@/lib/storage-root'
 import { brandKitPrompt, getBrandKit } from '@/lib/creative-workspaces'
 import { testLocalTool } from '@/lib/local-tools'
+import { createControlPlaneJob } from '@/lib/control-plane-jobs'
+import { prisma } from '@/lib/prisma'
 
 const execFileAsync = promisify(execFile)
 const MAX_SCENES = 30
@@ -48,6 +50,7 @@ export interface VideoScene {
 export interface VideoProject {
   id: string
   appSlug: string
+  capability: 'video_generation' | 'adult_video'
   title: string
   prompt: string
   totalDuration: number
@@ -64,6 +67,7 @@ export interface VideoProject {
   scenes: VideoScene[]
   finalArtifactId: string | null
   finalVideoUrl: string | null
+  controlPlaneJobId: string | null
   error: string | null
   blocker: string | null
   createdAt: string
@@ -96,6 +100,8 @@ export async function createLongFormVideoProject(input: {
   qualityTier?: VideoProject['qualityTier']
   requestedProvider?: string
   requestedModel?: string
+  capability?: VideoProject['capability']
+  idempotencyKey?: string
 }) {
   const totalDuration = clamp(Math.round(input.totalDuration ?? 90), 15, 240)
   const sceneCount = clamp(
@@ -129,6 +135,7 @@ export async function createLongFormVideoProject(input: {
   const project = appendRecord<VideoProject>(LOCAL_STORE_FILES.videoProjects, {
     id: crypto.randomUUID(),
     appSlug: input.appSlug?.trim() || 'amarktai-network',
+    capability: input.capability ?? 'video_generation',
     title: input.title?.trim() || input.prompt.trim().slice(0, 80),
     prompt: input.prompt.trim(),
     totalDuration,
@@ -145,13 +152,37 @@ export async function createLongFormVideoProject(input: {
     scenes,
     finalArtifactId: null,
     finalVideoUrl: null,
+    controlPlaneJobId: null,
     error: null,
     blocker: null,
     createdAt: now,
     updatedAt: now,
     completedAt: null,
   })
-  return advanceVideoProject(project.id)
+  const durableJob = await createControlPlaneJob({
+    idempotencyKey: input.idempotencyKey,
+    appSlug: project.appSlug,
+    requestedCapability: project.capability,
+    canonicalCapability: 'text_to_video',
+    jobType: project.capability === 'adult_video' ? 'adult_media' : 'long_form_video',
+    selectedRoute: {
+      pipeline: 'long_form_video',
+      sceneCount: project.scenes.length,
+      clipDurationSeconds: project.scenes[0]?.duration ?? SCENE_SECONDS,
+    },
+    metadata: {
+      videoProjectId: project.id,
+      totalDuration: project.totalDuration,
+      aspectRatio: project.aspectRatio,
+      adult: project.capability === 'adult_video',
+    },
+    queueData: { videoProjectId: project.id },
+  })
+  return saveProject(project, {
+    controlPlaneJobId: durableJob.id,
+    status: durableJob.status === 'blocked' || durableJob.status === 'failed' ? 'blocked' : 'planned',
+    blocker: durableJob.errorMessage,
+  })
 }
 
 export async function advanceVideoProject(id: string): Promise<VideoProject | null> {
@@ -165,8 +196,10 @@ export async function advanceVideoProject(id: string): Promise<VideoProject | nu
   for (const scene of queued) {
     const result = await executeCapabilityOrchestration({
       input: scene.prompt,
-      capability: 'video_generation',
+      capability: project.capability,
       appId: project.appSlug,
+      adultMode: project.capability === 'adult_video',
+      safeMode: project.capability === 'adult_video' ? false : undefined,
       providerOverride: project.requestedProvider ?? undefined,
       modelOverride: project.requestedModel ?? undefined,
       qualityTier: project.qualityTier,
@@ -181,6 +214,7 @@ export async function advanceVideoProject(id: string): Promise<VideoProject | nu
         style: project.style,
         tone: project.tone,
         brandKitId: project.brandKitId,
+        controlPlaneJobId: project.controlPlaneJobId,
       },
     })
     scene.provider = result.provider
@@ -366,10 +400,45 @@ function videoScale(aspectRatio: string) {
 }
 
 function saveProject(project: VideoProject, updates: Partial<VideoProject>) {
-  return updateRecord<VideoProject>(LOCAL_STORE_FILES.videoProjects, project.id, {
+  const saved = updateRecord<VideoProject>(LOCAL_STORE_FILES.videoProjects, project.id, {
     ...updates,
     updatedAt: new Date().toISOString(),
   }) ?? project
+  if (saved.controlPlaneJobId) {
+    const terminal = ['completed', 'failed', 'blocked'].includes(saved.status)
+    void prisma.controlPlaneJob.update({
+      where: { id: saved.controlPlaneJobId },
+      data: {
+        status: saved.status === 'generating_scenes' || saved.status === 'stitching' || saved.status === 'saving_artifact'
+          ? 'processing'
+          : saved.status,
+        progress: saved.progress,
+        artifactId: saved.finalArtifactId,
+        metadata: JSON.stringify({
+          videoProjectId: saved.id,
+          sceneCount: saved.scenes.length,
+          completedScenes: saved.scenes.filter((scene) => scene.status === 'completed').length,
+          scenes: saved.scenes.map((scene) => ({
+            id: scene.id,
+            order: scene.order,
+            status: scene.status,
+            provider: scene.provider,
+            model: scene.model,
+            jobId: scene.jobId,
+            providerJobId: scene.providerJobId,
+            artifactId: scene.artifactId,
+            error: scene.error,
+          })),
+        }),
+        errorMessage: saved.error ?? saved.blocker,
+        completedAt: terminal ? new Date() : null,
+        startedAt: saved.status !== 'planned' ? new Date() : undefined,
+      },
+    }).catch((error) => {
+      console.error('[long-form-video] Failed to sync control-plane job:', error)
+    })
+  }
+  return saved
 }
 
 function clamp(value: number, min: number, max: number) {

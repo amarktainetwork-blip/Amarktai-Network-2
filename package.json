@@ -6,8 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "worker": "tsx scripts/worker.mjs",
     "lint": "next lint",
     "test": "vitest run",
+    "proof:v1-control-plane": "node scripts/v1-operational-proof.mjs",
     "test:watch": "vitest",
     "db:push": "prisma db push",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
@@ -35,6 +37,7 @@
     "react-dom": "^18",
     "sentiment": "^5.0.2",
     "tailwind-merge": "^3.5.0",
+    "tsx": "^4.20.6",
     "zod": "^4.3.6"
   },
   "devDependencies": {

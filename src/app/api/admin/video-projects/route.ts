@@ -6,6 +6,10 @@ import {
   getVideoProject,
   listVideoProjects,
 } from '@/lib/long-form-video'
+import {
+  getAdultAppCapabilityProfile,
+  validateAdultCapabilityRequest,
+} from '@/lib/adult-app-capabilities'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,6 +42,12 @@ export async function POST(request: NextRequest) {
   const prompt = stringValue(body?.prompt)
   if (!prompt) return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   try {
+    const capability = body?.capability === 'adult_video' ? 'adult_video' : 'video_generation'
+    if (capability === 'adult_video') {
+      const profile = await getAdultAppCapabilityProfile(stringValue(body?.appSlug) ?? 'amarktai-network')
+      const policy = validateAdultCapabilityRequest(profile, 'adult_long_video', prompt)
+      if (!policy.allowed) return NextResponse.json({ error: policy.blocker }, { status: 403 })
+    }
     const project = await createLongFormVideoProject({
       appSlug: stringValue(body?.appSlug),
       title: stringValue(body?.title),
@@ -52,6 +62,8 @@ export async function POST(request: NextRequest) {
       qualityTier: qualityValue(body?.qualityTier),
       requestedProvider: stringValue(body?.provider),
       requestedModel: stringValue(body?.model),
+      capability,
+      idempotencyKey: stringValue(body?.idempotencyKey),
     })
     return NextResponse.json({ project }, { status: 202 })
   } catch (error) {
