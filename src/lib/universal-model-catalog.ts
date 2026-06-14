@@ -142,7 +142,7 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('qwen', 'qwen-image-max', 'Qwen Image Max', 'Qwen Image', ['image'], ['image'], { costTier: 'high', recommendedFor: ['media_studio'] }),
   route('qwen', 'qwen-image-2.0', 'Qwen Image 2.0', 'Qwen Image', ['image'], ['image'], { costTier: 'low', recommendedFor: ['media_studio'] }),
   route('qwen', 'qwen-image-2.0-pro', 'Qwen Image 2.0 Pro', 'Qwen Image', ['image'], ['image'], { costTier: 'premium', recommendedFor: ['media_studio'] }),
-  route('qwen', 'wanx2.1-t2i-turbo', 'Wan Image Turbo', 'Wan', ['image'], ['image', 'async_jobs'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
+  route('qwen', 'wan2.1-t2v-turbo', 'Wan Text to Video Turbo', 'Wan', ['video'], ['video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
   route('qwen', 'wan2.1-i2v-turbo', 'Wan Image to Video', 'Wan', ['video'], ['video', 'image_to_video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
 
   route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
@@ -150,6 +150,7 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
 
   route('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B on Groq', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'low', latencyTier: 'ultra_low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('groq', 'whisper-large-v3-turbo', 'Whisper Large v3 Turbo on Groq', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),
+  route('groq', 'canopylabs/orpheus-v1-english', 'Orpheus English TTS on Groq', 'Orpheus', ['voice/TTS'], ['tts', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),
 
   route('together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo', 'Llama 3.3 70B on Together', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('together', 'black-forest-labs/FLUX.1-schnell', 'FLUX.1 Schnell on Together', 'FLUX', ['image'], ['image'], { costTier: 'medium', supportsAdult: true, recommendedFor: ['media_studio'] }),
@@ -160,8 +161,8 @@ export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog>
   const liveGenx = await listGenXModels().catch(() => [])
   const liveRoutes = liveGenx.map(fromGenXLive)
   const models = dedupeModels([
-    ...(liveRoutes.length ? liveRoutes : UNIVERSAL_MODEL_ROUTES.filter((model) => model.provider === 'genx')),
-    ...UNIVERSAL_MODEL_ROUTES.filter((model) => model.provider !== 'genx'),
+    ...liveRoutes,
+    ...UNIVERSAL_MODEL_ROUTES,
   ])
   return {
     providers: AI_PROVIDER_MESH,

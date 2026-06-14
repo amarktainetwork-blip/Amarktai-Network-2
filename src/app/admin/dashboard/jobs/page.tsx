@@ -42,6 +42,7 @@ type Job = {
   appSlug?: string
   artifactUrl?: string | null
   promptSummary?: string
+  providerAttempts?: Array<{ provider?: string; model?: string; status?: string; error?: string }>
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -233,6 +234,11 @@ export default function JobsPage() {
                       )}
                     </div>
                     {job.promptSummary && <p className="mt-1 truncate text-xs text-slate-400">{job.promptSummary}</p>}
+                    {job.providerAttempts && job.providerAttempts.length > 0 && (
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Attempts: {job.providerAttempts.map((attempt) => `${attempt.provider ?? 'provider'} ${attempt.status ?? ''}`.trim()).join(' -> ')}
+                      </p>
+                    )}
                     <p className="mt-1 font-mono text-[11px] text-slate-500">{job.id}</p>
                     <p className="text-[11px] text-slate-600">{formatTime(job.createdAt)}</p>
 

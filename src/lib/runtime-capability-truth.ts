@@ -3,9 +3,9 @@ import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
-import type { ProviderCapability } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 import { normalizeAdultPolicy } from '@/lib/universal-model-catalog'
+import { getV1BrainRouteMatrix } from '@/lib/brain/v1-route-matrix'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -193,33 +193,34 @@ export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]):
   }
 }
 
-const CAPABILITY_ROWS: Array<{ name: string; capabilities: ProviderCapability[] }> = [
-  { name: 'Text / Chat', capabilities: ['text'] },
-  { name: 'Coding Agent', capabilities: ['code'] },
-  { name: 'Image Generation', capabilities: ['image'] },
-  { name: 'Video Generation', capabilities: ['video'] },
-  { name: 'Voice TTS', capabilities: ['tts'] },
-  { name: 'STT / Transcription', capabilities: ['stt'] },
-  { name: 'Music Generation', capabilities: ['music'] },
-  { name: 'Embeddings', capabilities: ['embeddings'] },
-  { name: 'Web Crawler / Research', capabilities: ['crawl'] },
-  { name: 'Repo / GitHub', capabilities: ['repo'] },
-]
-
 export async function getCapabilityStatus(
   _genxConfigured: boolean,
-  providers: ProviderRuntimeEntry[],
+  _providers: ProviderRuntimeEntry[],
 ): Promise<CapabilityRuntimeEntry[]> {
-  return CAPABILITY_ROWS.map((row) => {
-    const connected = providers.filter((provider) =>
-      provider.connected && row.capabilities.some((capability) => provider.capabilities?.includes(capability)),
-    )
+  const matrix = await getV1BrainRouteMatrix()
+  return matrix.capabilities.map((capability) => {
+    const status: RuntimeReadinessState =
+      capability.readiness === 'ready' || capability.readiness === 'ready_with_fallback'
+        ? 'READY'
+        : capability.readiness === 'provider_config_missing'
+          ? 'NEEDS_CONFIGURATION'
+          : capability.readiness === 'blocked'
+            ? 'BLOCKED'
+            : capability.readiness === 'adapter_missing' || capability.readiness === 'post_launch'
+              ? 'UNAVAILABLE'
+              : 'DEGRADED'
     return {
-      name: row.name,
-      status: connected.length ? 'READY' as const : 'NEEDS_CONFIGURATION' as const,
-      blocker: connected.length ? null : `No tested approved connection provides ${row.capabilities.join(' or ')}.`,
-      models: connected.map((provider) => provider.displayName),
-      nextAction: connected.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
+      name: capability.label,
+      status,
+      blocker: capability.blocker,
+      models: [capability.selectedRoute, ...capability.fallbackRoutes]
+        .filter((route): route is NonNullable<typeof route> => Boolean(route))
+        .map((route) => `${route.provider}/${route.model ?? 'provider-default'}`),
+      nextAction: status === 'READY'
+        ? null
+        : capability.readiness === 'needs_input'
+          ? `Provide the required ${capability.requiredSourceInput} input.`
+          : capability.blocker,
     }
   })
 }

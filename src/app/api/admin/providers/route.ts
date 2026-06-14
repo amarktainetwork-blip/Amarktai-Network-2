@@ -7,6 +7,10 @@ import { validateConfig, classifyDbError, configErrorResponse } from '@/lib/conf
 import { encryptVaultKey } from '@/lib/crypto-vault'
 import { getCanonicalProvider } from '@/lib/provider-catalog'
 import { isApprovedDirectProvider } from '@/lib/provider-mesh'
+import {
+  PROVIDER_REGISTRY,
+  getProviderReadiness,
+} from '@/lib/provider-registry'
 
 const createSchema = z.object({
   providerKey: z.string().min(1).max(50),
@@ -52,14 +56,37 @@ export async function GET() {
         // apiKey intentionally excluded
       },
     })
-    // Augment each provider with catalog metadata (launchRequired, etc.)
-    const augmented = providers.filter((p) => isApprovedDirectProvider(p.providerKey)).map((p) => {
-      const catalog = getCanonicalProvider(p.providerKey)
+    const rows = new Map(
+      providers
+        .filter((provider) => isApprovedDirectProvider(provider.providerKey))
+        .map((provider) => [provider.providerKey, provider]),
+    )
+    const augmented = await Promise.all(PROVIDER_REGISTRY.map(async (provider) => {
+      const row = rows.get(provider.id)
+      const catalog = getCanonicalProvider(provider.id)
+      const readiness = await getProviderReadiness(provider.id)
       return {
-        ...p,
+        id: row?.id ?? `canonical:${provider.id}`,
+        providerKey: provider.id,
+        displayName: provider.displayName,
+        enabled: row?.enabled ?? readiness.configured,
+        maskedPreview: row?.maskedPreview ?? '',
+        baseUrl: row?.baseUrl || readiness.baseUrl,
+        defaultModel: row?.defaultModel || provider.defaultModelsByCapability.text || '',
+        fallbackModel: row?.fallbackModel ?? '',
+        healthStatus: readiness.state,
+        healthMessage: readiness.message,
+        lastCheckedAt: readiness.checkedAt,
+        notes: row?.notes ?? '',
+        sortOrder: row?.sortOrder ?? 99,
+        createdAt: row?.createdAt ?? null,
+        updatedAt: row?.updatedAt ?? null,
+        dbRowExists: Boolean(row),
+        configured: readiness.configured,
+        supportedModels: provider.supportedModels,
         launchRequired: catalog?.launchRequired ?? false,
       }
-    })
+    }))
     return NextResponse.json(augmented)
   } catch (error) {
     const { category, message } = classifyDbError(error)

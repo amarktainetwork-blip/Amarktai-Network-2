@@ -46,9 +46,13 @@ describe('V1 final source-of-truth contracts', () => {
     expect(AI_CAPABILITY_TAXONOMY).toHaveLength(62)
     for (const capability of AI_CAPABILITY_TAXONOMY) {
       const route = selectCapabilityRoute(capability)
-      expect(route).not.toBeNull()
-      expect(capability.providerRoutes).toContain(route)
-      expect(APPROVED_DIRECT_PROVIDER_IDS).toContain(route?.provider)
+      if (capability.adapterImplemented) {
+        expect(route).not.toBeNull()
+        expect(capability.providerRoutes).toContain(route)
+        expect(APPROVED_DIRECT_PROVIDER_IDS).toContain(route?.provider)
+      } else {
+        expect(route).toBeNull()
+      }
     }
 
     const engine = source('src/lib/connected-app-capability-engine.ts')

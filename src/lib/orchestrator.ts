@@ -1840,7 +1840,7 @@ export async function executeCapabilityOrchestration(
   if (capability === 'stt' && !request.files?.length) {
     return capabilityFailure(
       capability,
-      'BLOCKED',
+      'NEEDS_INPUT',
       'Speech-to-text requires an audio input reference.',
       'model_not_supported',
     )
@@ -1883,6 +1883,22 @@ export async function executeCapabilityOrchestration(
     )
   }
 
+  if (
+    definition.requiredSourceInput
+    && !hasRequiredSource(request, definition.requiredSourceInput)
+  ) {
+    return capabilityFailure(
+      capability,
+      'NEEDS_INPUT',
+      `${definition.label} requires a ${definition.requiredSourceInput} input.`,
+      'model_not_supported',
+    )
+  }
+
+  if (capability === 'music_generation' || capability === 'avatar_video') {
+    return createPlanningFallback(request, capability, definition.id)
+  }
+
   const routePlan = await selectCapabilityRoutePlan({
     capability: definition,
     qualityTier: request.qualityTier ?? String(request.metadata?.qualityTier ?? 'auto'),
@@ -1917,6 +1933,8 @@ export async function executeCapabilityOrchestration(
       attempts.push({
         provider: candidate.route.provider,
         model: candidate.model,
+        adapter: candidate.route.adapter,
+        outputType: candidate.route.outputType,
         status: 'failed',
         errorCategory: 'unsupported_endpoint',
         retryable: true,
@@ -1934,6 +1952,8 @@ export async function executeCapabilityOrchestration(
       attempts.push({
         provider: candidate.route.provider,
         model: candidate.model,
+        adapter: candidate.route.adapter,
+        outputType: candidate.route.outputType,
         status: 'failed',
         errorCategory: 'model_not_supported',
         retryable: true,
@@ -1996,6 +2016,8 @@ export async function executeCapabilityOrchestration(
     attempts.push({
       provider: adapterResult.provider,
       model: adapterResult.model,
+      adapter: candidate.route.adapter,
+      outputType: candidate.route.outputType,
       status: adapterResult.status,
       latencyMs,
       errorCategory: adapterResult.errorCategory ?? undefined,
@@ -2072,9 +2094,6 @@ export async function executeCapabilityOrchestration(
       latencyMs,
       errorCategory: adapterResult.errorCategory ?? 'unknown',
     })
-    if (adapterResult.status === 'blocked' || adapterResult.retryable === false) {
-      break
-    }
   }
 
   const lastAttempt = attempts.at(-1)
@@ -2094,6 +2113,105 @@ export async function executeCapabilityOrchestration(
     lastAttempt?.model ?? requestedModel ?? null,
     attempts,
   )
+}
+
+function hasRequiredSource(
+  request: CapabilityRequest,
+  source: 'image' | 'audio' | 'video' | 'document' | 'avatar',
+): boolean {
+  if (request.files?.some((file) => typeof file === 'string' && file.trim())) return true
+  const metadata = request.metadata ?? {}
+  return [
+    metadata.source,
+    metadata.mediaSource,
+    metadata.sourceArtifactId,
+    metadata[`${source}Url`],
+    metadata[`${source}ArtifactId`],
+  ].some((value) => typeof value === 'string' && value.trim())
+}
+
+async function createPlanningFallback(
+  request: CapabilityRequest,
+  capability: 'music_generation' | 'avatar_video',
+  taxonomyId: string,
+): Promise<CapabilityResponse> {
+  const isMusic = capability === 'music_generation'
+  const blueprint = isMusic
+    ? {
+        kind: 'music_blueprint',
+        title: 'Music production blueprint',
+        brief: request.input,
+        style: request.metadata?.genres ?? request.metadata?.genre ?? null,
+        mood: request.metadata?.moods ?? null,
+        structure: ['intro', 'verse', 'chorus', 'verse', 'chorus', 'bridge', 'final chorus', 'outro'],
+        productionNotes: request.metadata?.productionNotes ?? 'Use this blueprint with an approved audio generator when a verified adapter is available.',
+        audioGeneration: 'post_launch',
+      }
+    : {
+        kind: 'avatar_storyboard',
+        title: 'Avatar video storyboard',
+        brief: request.input,
+        source: request.files?.[0] ?? request.metadata?.source ?? null,
+        scenes: [
+          { order: 1, direction: 'Establish the avatar and setting.' },
+          { order: 2, direction: 'Deliver the core message with clear framing.' },
+          { order: 3, direction: 'Close with the requested call to action.' },
+        ],
+        videoGeneration: 'adapter_missing',
+      }
+  const output = JSON.stringify(blueprint, null, 2)
+  try {
+    const artifact = await createArtifact({
+      appSlug: request.appId ?? request.workspaceId ?? '__system__',
+      appId: request.appId,
+      workspaceId: request.workspaceId,
+      executionId: typeof request.metadata?.executionId === 'string'
+        ? request.metadata.executionId
+        : undefined,
+      type: 'report',
+      subType: isMusic ? 'music_blueprint' : 'avatar_storyboard',
+      title: blueprint.title,
+      capability: taxonomyId,
+      mimeType: 'application/json',
+      content: Buffer.from(output),
+      metadata: {
+        ...(request.metadata ?? {}),
+        requestedCapability: capability,
+        routeReadiness: isMusic ? 'post_launch' : 'adapter_missing',
+      },
+    })
+    return {
+      success: true,
+      capability,
+      readiness: 'READY',
+      provider: null,
+      model: null,
+      outputType: 'text',
+      output,
+      status: 'completed',
+      artifactId: artifact.id,
+      artifactUrl: artifact.downloadUrl,
+      fallbackUsed: true,
+      fallbackReason: isMusic
+        ? 'Real music audio generation is post-launch; a production blueprint was created.'
+        : 'No approved avatar-video adapter is wired; a storyboard was created.',
+      warning: isMusic
+        ? 'This is a music blueprint, not generated audio.'
+        : 'This is an avatar storyboard, not a generated video.',
+      providerAttempts: [],
+      diagnostics: {
+        routeReadiness: isMusic ? 'post_launch' : 'adapter_missing',
+        fallbackArtifact: isMusic ? 'music_blueprint' : 'avatar_storyboard',
+      },
+    }
+  } catch (error) {
+    return capabilityFailure(
+      capability,
+      'UNAVAILABLE',
+      `Fallback artifact persistence failed: ${sanitizeProviderError(error)}`,
+      'artifact_error',
+    )
+  }
 }
 
 function resolveProductCapability(
@@ -2357,7 +2475,9 @@ function capabilityFailure(
     error: sanitizeProviderError(error),
     error_category: errorCategory,
     providerAttempts: attempts,
-    nextActions: readiness === 'NEEDS_CONFIGURATION'
+    nextActions: readiness === 'NEEDS_INPUT'
+      ? ['Attach the required source input and retry.']
+      : readiness === 'NEEDS_CONFIGURATION'
       ? ['Configure and live-test at least one approved provider for this capability.']
       : readiness === 'UNAVAILABLE'
         ? ['Review provider attempts in admin diagnostics and retry after correcting the provider contract.']

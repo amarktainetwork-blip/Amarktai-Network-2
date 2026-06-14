@@ -32,6 +32,7 @@ export type CapabilityRouterCapability =
 
 export type CapabilityExecutionState =
   | 'READY'
+  | 'NEEDS_INPUT'
   | 'NEEDS_CONFIGURATION'
   | 'BLOCKED'
   | 'UNAVAILABLE'
@@ -58,6 +59,8 @@ export interface CapabilityRequest {
 export interface ProviderAttempt {
   provider: string
   model: string
+  adapter?: string
+  outputType?: string
   status: string
   latencyMs?: number
   errorCategory?: string

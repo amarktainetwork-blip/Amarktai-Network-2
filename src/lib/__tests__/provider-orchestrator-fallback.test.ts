@@ -19,6 +19,8 @@ vi.mock('@/lib/capability-routing-policy', async (importOriginal) => {
     adapter: 'qwen_capability_adapter',
     source: 'universal_model_catalog',
     route: '/api/connected-apps/capabilities/execute',
+    outputType: 'image',
+    adapterImplemented: true,
   } as const
   const togetherRoute = {
     provider: 'together',
@@ -27,6 +29,8 @@ vi.mock('@/lib/capability-routing-policy', async (importOriginal) => {
     adapter: 'together_capability_adapter',
     source: 'universal_model_catalog',
     route: '/api/connected-apps/capabilities/execute',
+    outputType: 'image',
+    adapterImplemented: true,
   } as const
   return {
     ...actual,
@@ -142,6 +146,8 @@ describe('canonical provider fallback', () => {
     expect(result.providerAttempts).toHaveLength(2)
     expect(result.providerAttempts?.[0]).toMatchObject({
       provider: 'qwen',
+      adapter: 'qwen_capability_adapter',
+      outputType: 'image',
       errorCategory: 'model_not_supported',
     })
     expect(mocks.recordFailure).toHaveBeenCalledWith(expect.objectContaining({

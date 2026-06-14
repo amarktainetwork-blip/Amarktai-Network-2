@@ -186,6 +186,95 @@ function isPreviewable(type: ArtifactType): boolean {
   ].includes(type)
 }
 
+export function detectArtifactContent(
+  input: Buffer,
+  declaredMimeType = 'application/octet-stream',
+): { content: Buffer; mimeType: string; extension: string } {
+  const unwrapped = unwrapJsonMedia(input)
+  const content = unwrapped ?? input
+  const detected = detectBinaryMime(content)
+  const mimeType = detected ?? (
+    unwrapped ? 'application/octet-stream' : declaredMimeType
+  )
+  return {
+    content,
+    mimeType,
+    extension: extensionForMime(mimeType),
+  }
+}
+
+function detectBinaryMime(content: Buffer): string | null {
+  if (content.length >= 8 && content.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return 'image/png'
+  if (content.length >= 3 && content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff) return 'image/jpeg'
+  if (content.length >= 12 && content.subarray(0, 4).toString('ascii') === 'RIFF') {
+    const format = content.subarray(8, 12).toString('ascii')
+    if (format === 'WEBP') return 'image/webp'
+    if (format === 'WAVE') return 'audio/wav'
+  }
+  if (content.length >= 12 && content.subarray(4, 8).toString('ascii') === 'ftyp') {
+    const brand = content.subarray(8, 12).toString('ascii').toLowerCase()
+    return brand.startsWith('m4a') ? 'audio/mp4' : 'video/mp4'
+  }
+  if (content.length >= 3 && content.subarray(0, 3).toString('ascii') === 'ID3') return 'audio/mpeg'
+  if (content.length >= 2 && content[0] === 0xff && (content[1] & 0xe0) === 0xe0) return 'audio/mpeg'
+  if (content.length >= 4 && content.subarray(0, 4).toString('ascii') === 'OggS') return 'audio/ogg'
+  return null
+}
+
+function unwrapJsonMedia(content: Buffer): Buffer | null {
+  const prefix = content.subarray(0, Math.min(content.length, 32)).toString('utf8').trimStart()
+  if (!prefix.startsWith('{') && !prefix.startsWith('[')) return null
+  try {
+    const parsed = JSON.parse(content.toString('utf8'))
+    const encoded = findMediaBase64(parsed)
+    return encoded ? Buffer.from(encoded, 'base64') : null
+  } catch {
+    return null
+  }
+}
+
+function findMediaBase64(value: unknown, depth = 0): string | null {
+  if (depth > 5 || value == null) return null
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findMediaBase64(item, depth + 1)
+      if (found) return found
+    }
+    return null
+  }
+  if (typeof value !== 'object') return null
+  const record = value as Record<string, unknown>
+  for (const key of ['b64_json', 'base64', 'imageBase64', 'audioBase64', 'videoBase64', 'bytesBase64Encoded']) {
+    const raw = record[key]
+    if (typeof raw !== 'string') continue
+    const encoded = raw.replace(/^data:[^;]+;base64,/, '').replace(/\s/g, '')
+    if (/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) && encoded.length >= 16) return encoded
+  }
+  for (const nested of Object.values(record)) {
+    const found = findMediaBase64(nested, depth + 1)
+    if (found) return found
+  }
+  return null
+}
+
+function extensionForMime(mimeType: string): string {
+  const normalized = mimeType.split(';')[0].trim().toLowerCase()
+  const extensions: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+    'video/mp4': 'mp4',
+    'audio/mpeg': 'mp3',
+    'audio/wav': 'wav',
+    'audio/mp4': 'm4a',
+    'audio/ogg': 'ogg',
+    'application/json': 'json',
+    'text/plain': 'txt',
+    'application/pdf': 'pdf',
+  }
+  return extensions[normalized] ?? 'bin'
+}
+
 function isPublicHttpsUrl(raw: string): boolean {
   try {
     const url = new URL(raw)
@@ -259,11 +348,14 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
 
   // Upload content if provided
   if (content) {
-    const buf = typeof content === 'string'
+    const source = typeof content === 'string'
       ? Buffer.from(content, 'base64')
       : content
+    const detected = detectArtifactContent(source, mimeType)
+    const buf = detected.content
+    mimeType = detected.mimeType
     fileSizeBytes = buf.length
-    const ext = mimeType.split('/')[1] ?? 'bin'
+    const ext = detected.extension
     const key = `artifacts/${input.appSlug}/${input.type}/${Date.now()}.${ext}`
     const result = await driver.put(key, buf, mimeType)
     const exists = await driver.exists(result.path)
