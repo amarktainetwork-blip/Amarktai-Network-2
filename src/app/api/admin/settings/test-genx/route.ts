@@ -21,6 +21,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { decryptVaultKey } from '@/lib/crypto-vault'
+import { normalizeProviderCatalog } from '@/lib/providers/provider-discovery'
 
 /**
  * Normalise a GenX base URL:
@@ -160,6 +161,7 @@ export async function POST(req: NextRequest) {
   let catalogOk = false
   let catalogError: string | undefined
   let modelCount = 0
+  let catalogPayload: unknown = null
   let resolvedCatalogUrl = catalogUrls[0]
 
   for (const url of catalogUrls) {
@@ -173,6 +175,7 @@ export async function POST(req: NextRequest) {
         const data = await res.json() as { models?: unknown[] } | unknown[]
         const models = Array.isArray(data) ? data : ((data as { models?: unknown[] }).models ?? [])
         modelCount = models.length
+        catalogPayload = data
         catalogOk = true
         resolvedCatalogUrl = url
         catalogError = undefined
@@ -188,14 +191,19 @@ export async function POST(req: NextRequest) {
   // ── Test 2: Chat completions ──────────────────────────────────────────────
   let chatOk = false
   let chatError: string | undefined
+  const discoveredModels = normalizeProviderCatalog('genx', catalogPayload)
+  if (modelCount === 0) modelCount = discoveredModels.length
+  const chatModel = discoveredModels.find((model) => model.capabilities.includes('chat'))
+    ?? discoveredModels.find((model) => model.capabilities.length === 0)
 
   try {
+    if (!chatModel) throw new Error('Catalog returned no chat-capable model.')
     // lgtm[js/request-forgery] — URL is validated above (protocol + private-IP checks); admin-only endpoint
     const res = await fetch(chatUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        model: 'genx/default-chat',
+        model: chatModel.id,
         messages: [{ role: 'user', content: 'ping' }],
         max_tokens: 1,
       }),
@@ -255,7 +263,7 @@ export async function POST(req: NextRequest) {
   invalidateEndpointProfile()
 
   const latencyMs = Date.now() - start
-  const executionOk = chatOk || generateOk
+  const executionOk = chatOk
   const success = catalogOk && executionOk
 
   return NextResponse.json({

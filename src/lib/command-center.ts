@@ -104,8 +104,6 @@ export async function runCommandCenter(
     prompt,
     files,
     action,
-    selectedProvider: input.selectedProvider,
-    selectedModel: input.selectedModel,
     costMode: input.costMode,
     adultPolicy: safety.adultMode
       ? 'full_adult_app_mode'
@@ -118,6 +116,8 @@ export async function runCommandCenter(
       quickAction: input.quickAction ?? null,
       artifactIds: artifactContext.map((item) => item.id),
       reusedArtifacts: artifactContext,
+      ignoredProviderPreference: input.selectedProvider ?? null,
+      ignoredModelPreference: input.selectedModel ?? null,
     },
   })
 
@@ -171,8 +171,6 @@ export async function runCommandCenter(
       capability: execution.detectedCapability,
       files,
       appId: appSlug,
-      providerOverride: input.selectedProvider,
-      modelOverride: input.selectedModel,
       adultMode: safety.adultMode,
       safeMode: safety.safeMode,
       suggestiveMode: safety.suggestiveMode,

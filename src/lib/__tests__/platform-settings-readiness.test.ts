@@ -168,9 +168,16 @@ describe('platform Settings readiness truth', () => {
   it('persists a passed MiMo Token Plan test and honors MIMO_BASE_URL', async () => {
     process.env.MIMO_API_KEY = 'tp-production-key'
     process.env.MIMO_BASE_URL = 'https://token-plan-sgp.xiaomimimo.com/v1/'
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
-      choices: [{ message: { content: 'OK' } }],
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input)
+      return url.endsWith('/models')
+        ? new Response(JSON.stringify({
+            data: [{ id: 'runtime-chat-model', capabilities: ['chat'], active: true }],
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+        : new Response(JSON.stringify({
+            choices: [{ message: { content: 'OK' } }],
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
     vi.stubGlobal('fetch', fetchMock)
 
     const response = await testProvider(providerRequest('mimo'))
@@ -187,7 +194,7 @@ describe('platform Settings readiness truth', () => {
     expect(notes).toMatchObject({
       lastTestStatus: 'passed',
       lastTestPassed: true,
-      detail: 'OpenAI-compatible chat passed.',
+      detail: 'OpenAI-compatible chat passed with a dynamically discovered model_metadata model.',
     })
     expect(database.providerRows.get('mimo')).toMatchObject({
       healthStatus: 'healthy',
@@ -205,7 +212,13 @@ describe('platform Settings readiness truth', () => {
   it('persists failed provider tests and exposes a useful Settings error', async () => {
     process.env.MIMO_API_KEY = 'tp-invalid-key'
     process.env.MIMO_BASE_URL = 'https://token-plan-sgp.xiaomimimo.com/v1'
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('unauthorized', { status: 401 })))
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request) =>
+      String(input).endsWith('/models')
+        ? new Response(JSON.stringify({
+            data: [{ id: 'runtime-chat-model', capabilities: ['chat'], active: true }],
+          }), { status: 200 })
+        : new Response('unauthorized', { status: 401 }),
+    ))
 
     const response = await testProvider(providerRequest('mimo'))
     expect(await response.json()).toMatchObject({

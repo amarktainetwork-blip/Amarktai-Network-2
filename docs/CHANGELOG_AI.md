@@ -70,3 +70,30 @@ unproven capability appear complete.
   without parity and are not canonical product execution.
 - **Next PR:** #118 Research Completion, followed by #119 Dashboard Completion,
   #120 Website Completion, and #121 Marketing App Integration.
+
+## PR 118
+
+- **Purpose:** Complete provider runtime discovery and recover dashboard
+  execution without redesigning the final Brain architecture.
+- **Root Cause At Start:** Dynamic discovery required exact model-level task
+  tags. OpenAI-compatible catalogs commonly returned valid model IDs without
+  task metadata, leaving configured healthy providers with zero candidates.
+  Studio also preplanned through an obsolete static selector and passed
+  provider/model overrides that canonical execution correctly rejected.
+- **Providers Tested By Contract:** Hugging Face, Together, Groq, GenX, Qwen,
+  and MiMo. Production credentials were unavailable, so no live provider
+  success is claimed.
+- **Capabilities Under Test:** Chat, streaming, image, video, TTS, STT,
+  embeddings, rerank, moderation, avatar, and adult policy routes.
+- **Completed:** Added exact metadata plus provider-contract evidence routing,
+  task-filtered Hugging Face Hub discovery, Together video/STT/embeddings/rerank
+  paths, discovery-selected Qwen/MiMo/GenX tests, canonical Studio and Command
+  Center plans, canonical assistant chat/stream delegates, dynamic provider
+  diagnostics, and truthful `Wired` capability labels.
+- **Proof:** `npm install` completed; TypeScript passed; 40 test files and
+  496/496 tests passed; production build passed with 183 pages; diff check
+  passed.
+- **Remaining:** Run authenticated production provider tests and creative smoke
+  proof on the VPS. True token streaming, research, long-form composition,
+  avatar/music live proof, and MiMo voice clone/design/omni remain partial.
+- **Next PR:** #119 Research Completion after production smoke verification.

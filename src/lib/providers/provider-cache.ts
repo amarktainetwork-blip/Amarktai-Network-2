@@ -25,6 +25,12 @@ export class ProviderDiscoveryCache<T> {
     this.entries.delete(key)
   }
 
+  deletePrefix(prefix: string) {
+    for (const key of this.entries.keys()) {
+      if (key === prefix || key.startsWith(`${prefix}:`)) this.entries.delete(key)
+    }
+  }
+
   clear() {
     this.entries.clear()
   }

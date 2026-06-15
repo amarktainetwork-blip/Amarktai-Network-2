@@ -262,7 +262,7 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
   const endpoint = specialist.endpointSource === 'environment'
     ? specialist.endpoint
     : !specialist.endpointRequired
-      ? `https://api-inference.huggingface.co/models/${model}`
+      ? `${resolveProviderEndpoint(getProviderTruth(provider)!, 'inference_router')}/hf-inference/models/${model}`
       : null
   if (!endpoint) {
     return result(provider, model, 'needs_configuration', {
@@ -719,6 +719,120 @@ async function executeTogetherTts(input: CapabilityAdapterInput): Promise<Capabi
   }
 }
 
+async function executeTogetherStt(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'together' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Together STT model.')
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const audio = firstReference(input, ['audio'])
+  if (!audio) return result(provider, model, 'blocked', { error: 'Speech recognition requires audio input.' })
+  try {
+    const form = new FormData()
+    form.append('model', model)
+    if (audio.data !== undefined) {
+      form.append(
+        'file',
+        new Blob([Uint8Array.from(referenceBytes(audio.data))], { type: audio.mimeType ?? 'audio/mpeg' }),
+        'audio-input',
+      )
+    } else {
+      const url = publicHttpsUrl(audio.url)
+      if (!url) return result(provider, model, 'blocked', { error: 'Audio reference must be a public HTTPS URL.' })
+      form.append('file', url)
+    }
+    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/audio/transcriptions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}` },
+      body: form,
+      signal: AbortSignal.timeout(90_000),
+    })
+    const json = await response.json().catch(() => null)
+    if (!response.ok) {
+      return failedResult(provider, model, `Together STT HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    }
+    return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together STT failed.')
+  }
+}
+
+async function executeTogetherData(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'together' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Together data model.')
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const rerank = ['rerank', 'text_ranking'].includes(input.capability.id)
+  const endpoint = `${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/${rerank ? 'rerank' : 'embeddings'}`
+  const body = rerank
+    ? {
+        model,
+        query: input.prompt,
+        documents: input.inputs?.documents ?? input.inputs?.sentences ?? [],
+      }
+    : {
+        model,
+        input: input.inputs?.input ?? input.text ?? input.prompt,
+      }
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(45_000),
+    })
+    const json = await response.json().catch(() => null)
+    if (!response.ok) {
+      return failedResult(provider, model, `Together ${rerank ? 'rerank' : 'embeddings'} HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    }
+    return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together data execution failed.')
+  }
+}
+
+async function executeTogetherVideo(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'together' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Together video model.')
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const image = firstReference(input, ['image'])
+  const body: Record<string, unknown> = {
+    model,
+    prompt: input.prompt,
+    ...(input.inputs ?? {}),
+  }
+  if (image?.url) {
+    const url = publicHttpsUrl(image.url)
+    if (!url) return result(provider, model, 'blocked', { error: 'Image reference must be a public HTTPS URL.' })
+    body.media = { reference_images: [url] }
+  }
+  try {
+    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/videos`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(90_000),
+    })
+    const json = await response.json().catch(() => null) as Record<string, unknown> | null
+    if (!response.ok) {
+      return failedResult(provider, model, `Together video HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    }
+    const jobId = nestedString(json, ['id'])
+    const status = nestedString(json, ['status'])?.toLowerCase()
+    const mediaUrl = nestedString(json, ['outputs', 'video_url'])
+    if (status === 'completed' && mediaUrl) {
+      return result(provider, model, 'completed', { output: json, mediaUrl, contentType: 'video/mp4' })
+    }
+    if (!jobId) return failedResult(provider, model, 'Together video response did not include a job ID.')
+    return result(provider, model, 'processing', { output: json, providerJobId: jobId })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together video generation failed.')
+  }
+}
+
 async function executeMimoTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'mimo' as const
   const key = await getVaultApiKey(provider)
@@ -775,6 +889,15 @@ async function adapterExecute(provider: ApprovedDirectProviderId, input: Capabil
   else if (provider === 'together' && input.capability.id === 'text_to_speech') {
     execution = executeTogetherTts(input)
   }
+  else if (provider === 'together' && input.capability.id === 'automatic_speech_recognition') {
+    execution = executeTogetherStt(input)
+  }
+  else if (provider === 'together' && ['embeddings', 'rerank', 'text_ranking'].includes(input.capability.id)) {
+    execution = executeTogetherData(input)
+  }
+  else if (provider === 'together' && input.capability.group === 'video') {
+    execution = executeTogetherVideo(input)
+  }
   else if (provider === 'mimo' && input.capability.id === 'text_to_speech') {
     execution = executeMimoTts(input)
   }
@@ -812,6 +935,43 @@ async function pollProvider(
       ?? nestedString(json, ['output', 'results', '0', 'url'])
     if (!mediaUrl) return result(provider, model, 'failed', { providerJobId, output: json, error: 'Provider completed without a media URL.' })
     return result(provider, model, 'completed', { providerJobId, mediaUrl, output: json })
+  }
+  if (provider === 'together') {
+    const key = await getVaultApiKey(provider)
+    if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+    try {
+      const response = await fetch(
+        `${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/videos/${encodeURIComponent(providerJobId)}`,
+        {
+          headers: { Authorization: `Bearer ${key}` },
+          signal: AbortSignal.timeout(45_000),
+        },
+      )
+      const json = await response.json().catch(() => null) as Record<string, unknown> | null
+      if (!response.ok) {
+        return failedResult(provider, model, `Together video status HTTP ${response.status}.`, response.status)
+      }
+      const status = nestedString(json, ['status'])?.toLowerCase()
+      if (status === 'failed') {
+        return result(provider, model, 'failed', {
+          providerJobId,
+          output: json,
+          error: nestedString(json, ['error', 'message']) ?? 'Together video job failed.',
+        })
+      }
+      const mediaUrl = nestedString(json, ['outputs', 'video_url'])
+      if (status !== 'completed' || !mediaUrl) {
+        return result(provider, model, 'processing', { providerJobId, output: json })
+      }
+      return result(provider, model, 'completed', {
+        providerJobId,
+        output: json,
+        mediaUrl,
+        contentType: 'video/mp4',
+      })
+    } catch (error) {
+      return failedResult(provider, model, error instanceof Error ? error.message : 'Together video polling failed.')
+    }
   }
   return result(provider, model, 'failed', {
     providerJobId,

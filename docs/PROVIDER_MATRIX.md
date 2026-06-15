@@ -19,11 +19,11 @@ presence, or theoretical support alone is insufficient.
 | image | partial | partial | unknown | partial | partial | unknown |
 | image edit | unknown | unknown | unknown | unknown | unknown | unknown |
 | video | partial | partial | unknown | partial | partial | unknown |
-| image_to_video | unknown | unknown | unknown | partial | partial | unknown |
+| image_to_video | unknown | partial | unknown | partial | partial | unknown |
 | avatar | unknown | unknown | unknown | partial | unknown | unknown |
 | music | partial | unknown | unknown | partial | unknown | unknown |
 | tts | unknown | working | working | unknown | unknown | working |
-| stt | partial | unknown | partial | unknown | unknown | unknown |
+| stt | partial | partial | partial | unknown | unknown | unknown |
 | voice clone | unknown | unknown | unknown | unknown | unknown | unknown |
 | ocr | unknown | unknown | partial | unknown | partial | unknown |
 | vision | partial | partial | partial | partial | partial | partial |
@@ -61,14 +61,18 @@ presence, or theoretical support alone is insufficient.
 
 Discovery support does not upgrade a capability row to `working`. The working,
 partial, blocked, and unknown statuses above remain evidence-based execution
-truth. A discovered model is only routeable when its metadata identifies the
-requested capability.
+truth. A discovered model is preferred when its metadata identifies the
+requested capability. PR #118 adds a lower-scored provider-contract fallback
+only for dynamically discovered models whose catalogs omit task metadata.
+Models identified as another modality are not relabeled.
 
 PR #117 makes this discovery evidence the production routing dependency.
 Provider-native adapters receive the discovered model and contain no fallback
-model selection. If the catalog supplies no eligible model, execution returns
-`NO_ROUTE_FOUND`. The matrix statuses remain conservative because architecture
-cutover alone is not live provider proof.
+model selection. If the catalog supplies no discovered model and no
+provider-contract evidence, execution returns `NO_ROUTE_FOUND`. PR #118 also
+adds task-filtered Hugging Face Hub discovery and Together-native video, STT,
+embeddings, and rerank adapter paths. The matrix remains conservative because
+repository wiring is not live provider proof.
 
 Phase 1 files:
 

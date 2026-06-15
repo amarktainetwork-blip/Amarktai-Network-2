@@ -60,7 +60,7 @@ export async function planDynamicCapabilityRoute(input: {
     selected: candidates[0] ?? null,
     candidates,
     reason: candidates.length
-      ? `${profile.id} selected the highest-scoring discovered model.`
-      : 'No configured provider returned model-level capability evidence for this request.',
+      ? `${profile.id} selected the highest-scoring discovered model using model metadata or a provider capability contract.`
+      : 'No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.',
   }
 }

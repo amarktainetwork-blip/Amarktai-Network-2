@@ -39,7 +39,7 @@ const GROUP_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  working: { label: 'Working', color: 'bg-emerald-900/60 text-emerald-300' },
+  working: { label: 'Wired', color: 'bg-emerald-900/60 text-emerald-300' },
   partially_wired: { label: 'Partial', color: 'bg-amber-900/60 text-amber-300' },
   provider_available_not_wired: { label: 'Provider available', color: 'bg-slate-800 text-slate-400' },
   unavailable: { label: 'Unavailable', color: 'bg-red-900/60 text-red-300' },
@@ -69,7 +69,7 @@ export default function CapabilitiesPage() {
           AI Capability Browser
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          {totalWorking} of {totalCapabilities} capabilities are working. Browse by family below.
+          {totalWorking} of {totalCapabilities} capabilities have runtime adapters. Live availability depends on provider discovery.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export default function CapabilitiesPage() {
       <div className="flex flex-wrap gap-3">
         <div className="flex items-center gap-2 rounded-full border border-emerald-800/40 bg-emerald-900/20 px-3 py-1.5 text-xs font-bold text-emerald-300">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          {totalWorking} working
+          {totalWorking} wired
         </div>
         <div className="flex items-center gap-2 rounded-full border border-amber-800/30 bg-amber-900/15 px-3 py-1.5 text-xs font-bold text-amber-300">
           {totalCapabilities - totalWorking} need provider setup or wiring
@@ -100,7 +100,7 @@ export default function CapabilitiesPage() {
                 </div>
                 <div>
                   <h2 className="text-sm font-black text-slate-200">{groupInfo.label}</h2>
-                  <p className="text-xs text-slate-500">{workingInGroup} of {caps.length} working</p>
+                  <p className="text-xs text-slate-500">{workingInGroup} of {caps.length} wired</p>
                 </div>
               </div>
 

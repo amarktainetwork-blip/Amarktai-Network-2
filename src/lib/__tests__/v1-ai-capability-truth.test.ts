@@ -158,7 +158,7 @@ describe('V1 universal AI capability truth', () => {
     expect(route).toContain('getSession')
     expect(route).toContain('Unauthorized')
     expect(route).toContain('getCapabilityTaxonomyByGroup')
-    expect(route).toContain('connectedAppExecutionAddedInThisChange: true')
+    expect(route).toContain('runtimeAvailabilityRequiresLiveDiscovery: true')
     expect(route).not.toMatch(/selectedModel|modelOverride|model picker/i)
   })
 })

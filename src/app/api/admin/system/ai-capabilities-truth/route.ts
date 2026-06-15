@@ -29,9 +29,14 @@ export async function GET() {
       capabilityFirst: true,
       noFakeSuccess: true,
       providerAndModelTruthSources: [
-        'src/lib/brain/v1-capability-matrix.ts',
+        'src/lib/providers/provider-truth.ts',
+        'src/lib/providers/provider-discovery.ts',
+        'src/lib/providers/model-discovery.ts',
+        'src/lib/providers/registry.ts',
       ],
-      connectedAppExecutionAddedInThisChange: true,
+      taxonomySource: 'src/lib/brain/v1-capability-matrix.ts',
+      runtimeAvailabilityRequiresLiveDiscovery: true,
+      connectedAppExecutionAddedInThisChange: false,
     },
   })
 }

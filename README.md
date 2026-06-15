@@ -3,24 +3,23 @@
 ## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #117
-- **Purpose:** Make the Brain and canonical capability router the only runtime
-  execution path through provider truth, live discovery, scoring, execution,
-  and artifacts.
-- **Completed:** Production execution now enters the capability router, uses
-  provider truth, live model discovery, scoring, provider-native adapters,
-  jobs, and canonical artifacts. Specialist media routes and agent execution
-  delegate to this path. The runtime-dead legacy orchestrator was removed.
-- **Remaining:** Production credentials and provider catalogs must return
-  capability evidence. Research completion, dashboard completion, website
-  completion, and Marketing App integration remain separate PRs.
-- **Known Issues:** Research and long-form video are intentionally partial.
-  Some admin diagnostics and non-product legacy modules still inspect provider
-  protocols, but they are not product execution routes.
-- **Go Live Readiness:** Signed apps can connect for capabilities with a
-  discovered healthy route. Missing evidence returns `NO_ROUTE_FOUND`; no
-  provider or model is guessed.
-- **Next PR:** #118 Research Completion.
+- **PR Number:** #118
+- **Purpose:** Recover dashboard execution and complete provider runtime
+  discovery without changing the final Brain architecture.
+- **Completed:** Added the dynamic model-metadata/provider-contract evidence
+  ladder, task-filtered Hugging Face discovery, current Together native
+  adapters, canonical dashboard planning, and dynamic provider diagnostics.
+- **Working:** The canonical Brain, provider truth, jobs, artifacts, policy,
+  signed connected-app entry, six-provider boundary, dashboard build, and full
+  repository test suite.
+- **Partial:** Live provider execution proof, token-level streaming, research,
+  long-form composition, avatar, music, and advanced MiMo voice/omni families.
+- **Broken At Start:** OpenAI-compatible catalogs that returned model IDs
+  without task tags produced empty route candidates. Studio also preselected
+  from an obsolete static route layer and passed rejected overrides.
+- **Proof:** TypeScript passed; 40 suites and 496 tests passed; production build
+  passed with 183 pages.
+- **Next PR:** #119 Research Completion after the production VPS smoke run.
 
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 

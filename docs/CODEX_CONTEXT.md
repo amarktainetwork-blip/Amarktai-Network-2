@@ -5,21 +5,23 @@ READ THIS FILE FIRST.
 ## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #117
-- **Purpose:** Complete the final V1 Brain architecture and prohibit execution
-  outside the canonical capability, discovery, scoring, and artifact path.
-- **Completed:** The Brain capability router is the production execution
-  owner. It resolves canonical capabilities, discovers provider models, scores
-  candidates, executes provider-native adapters, records jobs, and persists
-  artifacts. Specialist routes and agents delegate to it.
-- **Remaining:** Research completion and deployment proof for each provider
-  capability family. PRs #119-#121 own dashboard, website, and Marketing App.
-- **Known Issues:** Research and long-form video remain partial. Compatibility
-  role names and selected admin diagnostics remain, but cannot choose a
-  provider/model for product execution.
-- **Go Live Readiness:** Signed apps can execute only when live discovery
-  returns evidence. Otherwise the stable result is `NO_ROUTE_FOUND`.
-- **Next PR:** #118 Research Completion.
+- **PR Number:** #118
+- **Purpose:** Complete provider runtime evidence and recover critical dashboard
+  execution while preserving the PR #114-#117 architecture.
+- **Completed:** Dynamic provider/model evidence fallback, provider
+  diagnostics, Studio/Playground/assistant routing repair, Hugging Face
+  task-filtered discovery, and Together native adapter completion.
+- **Working:** One Brain, one capability router, six providers, canonical jobs,
+  artifacts, adult policy, and signed connected-app execution.
+- **Partial:** Production live execution, token streaming, research, long-form
+  assembly, avatar, music, and advanced MiMo voice/omni require truthful proof.
+- **Broken At Start:** Exact model-task matching rejected discovered models
+  whose provider catalogs omitted task metadata. Studio used a static
+  pre-router whose selected overrides were rejected by canonical execution.
+- **Proof:** `npx tsc --noEmit`, 496/496 tests, and the 183-page production
+  build pass. No production credentials were available for live latency or
+  artifact proof.
+- **Next PR:** #119 Research Completion after production smoke verification.
 
 Single source of truth:
 

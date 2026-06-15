@@ -18,8 +18,10 @@ import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
 import {
   clearProviderDiscoveryCache,
   discoverProvider,
+  normalizeProviderCatalog,
   resolveProviderEndpoint,
 } from '@/lib/providers/provider-discovery'
+import { modelsForCapability } from '@/lib/providers/model-discovery'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { scoreProviderModel } from '@/lib/providers/provider-scoring'
 import {
@@ -164,6 +166,50 @@ describe('Phase 1 provider truth layer', () => {
     expect(empty.models).toEqual([])
   })
 
+  it('uses provider-contract evidence when a live catalog omits model task metadata', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: 'runtime-catalog-model', object: 'model', active: true }],
+    }), { status: 200 }))
+    const snapshot = await discoverProvider('groq', { fetcher })
+    expect(snapshot.models[0]).toMatchObject({
+      id: 'runtime-catalog-model',
+      capabilities: [],
+      capabilityEvidence: 'unknown',
+    })
+    expect(modelsForCapability(snapshot, 'chat')[0]).toMatchObject({
+      id: 'runtime-catalog-model',
+      capabilities: ['chat'],
+      capabilityEvidence: 'provider_contract',
+    })
+    expect(modelsForCapability(snapshot, 'image')).toEqual([])
+  })
+
+  it('derives capability metadata from dynamic catalog descriptors without fixed model IDs', () => {
+    const models = normalizeProviderCatalog('together', {
+      data: [
+        { id: 'vendor/runtime-transcription', type: 'speech-to-text' },
+        { id: 'vendor/runtime-picture', type: 'image-generation' },
+        { id: 'vendor/runtime-ranker', type: 'reranking' },
+      ],
+    })
+    expect(models.map((model) => [model.id, model.capabilities])).toEqual([
+      ['vendor/runtime-transcription', ['stt']],
+      ['vendor/runtime-picture', ['image']],
+      ['vendor/runtime-ranker', ['rerank']],
+    ])
+  })
+
+  it('filters Hugging Face discovery by the requested task family', async () => {
+    mocks.getProviderKeyWithSource.mockResolvedValue({ key: null, source: 'missing' })
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify([]), { status: 200 }))
+    await discoverProvider('huggingface', {
+      fetcher,
+      capability: 'stt',
+      force: true,
+    })
+    expect(String(fetcher.mock.calls[0][0])).toContain('pipeline_tag=automatic-speech-recognition')
+  })
+
   it('provides all global profiles without provider ordering or model defaults', () => {
     expect(Object.keys(ROUTING_PROFILES)).toEqual([...ROUTING_PROFILE_IDS])
     for (const profile of Object.values(ROUTING_PROFILES)) {
@@ -233,6 +279,14 @@ describe('Phase 1 provider truth layer', () => {
       profile: getRoutingProfile('balanced'),
     })).toBeNull()
 
+    expect(scoreProviderModel({
+      provider,
+      model: { ...model, raw: { free_quota_eligible: true } },
+      capability,
+      health: { ...health, state: 'degraded', healthy: false },
+      profile: getRoutingProfile('balanced'),
+    })).toBeNull()
+
     process.env.QWEN_PAID_ENABLED = 'true'
     expect(scoreProviderModel({
       provider,
@@ -286,7 +340,7 @@ describe('Phase 1 provider truth layer', () => {
     ))
     const empty = await planDynamicCapabilityRoute({ capability: 'chat' })
     expect(empty.selected).toBeNull()
-    expect(empty.reason).toContain('No configured provider returned model-level capability evidence')
+    expect(empty.reason).toContain('model metadata or provider-contract evidence')
     vi.restoreAllMocks()
   })
 })
