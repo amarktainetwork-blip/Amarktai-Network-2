@@ -1,15 +1,14 @@
 import {
   AI_CAPABILITY_TAXONOMY,
   type AiCapabilityDefinition,
-  type AiCapabilityProviderRoute,
 } from '@/lib/ai-capability-taxonomy'
 import {
-  classifyProviderError,
   getProviderCapabilityAdapter,
   type CapabilityAdapterInput,
   type CapabilityAdapterResult,
   type CapabilityReference,
 } from '@/lib/ai-capability-adapters'
+import { executeCapability } from '@/lib/capability-router'
 import { createArtifact, type ArtifactType } from '@/lib/artifact-store'
 import { getConnectedApp, type ConnectedApp } from '@/lib/connected-apps'
 import { recordAcceptedEvent } from '@/lib/connected-app-events'
@@ -20,14 +19,9 @@ import { verifyWebhookSignature } from '@/lib/webhook-verifier'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 import {
   resolveRoutingQuality,
-  selectCapabilityRoutePlan,
   type StoredRoutingQualityTier,
   type RoutingQualityTier,
 } from '@/lib/capability-routing-policy'
-import {
-  recordProviderFailure,
-  recordProviderSuccess,
-} from '@/lib/provider-performance'
 
 export type ConnectedAppCapabilityJobStatus =
   | 'processing'
@@ -159,6 +153,9 @@ export function validateCapabilityRequest(
   capability: AiCapabilityDefinition,
   request: ConnectedAppCapabilityRequest,
 ): string | null {
+  if (request.provider || request.model || request.endpointUrl) {
+    return 'Connected apps request capabilities; provider, model, and endpoint selection are owned by AmarktAI.'
+  }
   const references = request.references ?? []
   if (!request.prompt?.trim() && !request.text?.trim() && !request.inputs && references.length === 0) {
     return 'A prompt, text, structured inputs, or reference is required'
@@ -232,15 +229,6 @@ function isPublicHttpsUrl(raw: string): boolean {
   }
 }
 
-export function selectCapabilityRoute(
-  capability: AiCapabilityDefinition,
-  requestedProvider?: ApprovedDirectProviderId,
-): AiCapabilityProviderRoute | null {
-  return capability.providerRoutes.find(
-    (route) => route.executable && (!requestedProvider || route.provider === requestedProvider),
-  ) ?? null
-}
-
 export async function executeConnectedAppCapability(input: {
   app: ConnectedApp
   capability: AiCapabilityDefinition
@@ -251,151 +239,66 @@ export async function executeConnectedAppCapability(input: {
     appSlug: input.app.slug,
     surface: 'connected_apps',
   })
-  if (input.capability.fallbackArtifactType) {
-    return createDeclaredFallbackArtifact(input, qualityTier)
-  }
-  const routePlan = await selectCapabilityRoutePlan({
-    capability: input.capability,
-    requestedProvider: input.request.provider,
-    requestedModel: input.request.model,
-    qualityTier,
-  })
-  const selected = routePlan.selected
-  const route = selected?.route
-  if (!route || !selected) {
-    return createTerminalJob(input, {
-      status: input.capability.adapterImplemented ? 'needs_configuration' : 'blocked',
-      provider: input.request.provider ?? input.capability.defaultProviders[0] ?? 'huggingface',
-      model: input.request.model ?? '',
-      adapter: '',
-      qualityTier,
-      error: input.capability.blocker ?? routePlan.reason,
-    })
-  }
-  const adapter = getProviderCapabilityAdapter(route.provider)
-  if (!adapter || adapter.id !== route.adapter) {
-    return createTerminalJob(input, {
-      status: 'needs_configuration',
-      provider: route.provider,
-      model: input.request.model ?? route.modelIds[0] ?? '',
-      adapter: route.adapter,
-      qualityTier,
-      error: `Adapter ${route.adapter} is not registered.`,
-    })
-  }
-
   const context = await loadExecutionContext(input.app.slug, input.request)
-  const model = selected.model
+  const result = await executeCapability({
+    capability: input.capability.id,
+    input: input.request.prompt?.trim() || input.request.text?.trim() || JSON.stringify(input.request.inputs ?? {}),
+    appId: input.app.slug,
+    files: (input.request.references ?? [])
+      .map((reference) => reference.url ?? reference.artifactId)
+      .filter((value): value is string => Boolean(value)),
+    saveArtifact: input.capability.createsArtifact,
+    metadata: {
+      ...input.request.inputs,
+      references: input.request.references ?? [],
+      context,
+      routingProfile: qualityTier,
+      callbackUrl: input.request.callbackUrl ?? null,
+      referenceMetadata: input.request.referenceMetadata ?? null,
+      connectedAppId: input.app.id,
+    },
+  })
   const now = new Date().toISOString()
-  let job = appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
+  const status: ConnectedAppCapabilityJobStatus = result.success
+    ? result.status === 'processing' ? 'processing' : 'completed'
+    : result.readiness === 'NEEDS_CONFIGURATION'
+      ? 'needs_configuration'
+      : result.readiness === 'BLOCKED' || result.readiness === 'NEEDS_INPUT'
+        ? 'blocked'
+        : 'failed'
+  const provider = isApprovedConnectedProvider(result.provider) ? result.provider : 'amarktai'
+  const job = appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
     LOCAL_STORE_FILES.connectedAppCapabilityJobs,
     {
       appId: input.app.id,
       appSlug: input.app.slug,
       capability: input.capability.id,
       requiredScope: input.capability.requiredScope,
-      provider: route.provider,
-      model,
-      adapter: adapter.id,
+      provider,
+      model: result.model ?? '',
+      adapter: result.providerAttempts?.at(-1)?.adapter ?? '',
       qualityTier,
-      status: 'processing',
-      providerJobId: null,
-      artifactId: null,
-      artifactUrl: null,
-      result: null,
-      error: null,
-      providerAttempts: [],
+      status,
+      providerJobId: result.providerJobId ?? null,
+      artifactId: result.artifactId ?? null,
+      artifactUrl: result.artifactUrl ?? null,
+      result: result.output,
+      error: result.error ?? null,
+      providerAttempts: (result.providerAttempts ?? []).map((attempt) => ({
+        provider: attempt.provider as ApprovedDirectProviderId,
+        model: attempt.model,
+        adapter: attempt.adapter ?? '',
+        outputType: attempt.outputType ?? '',
+        status: attempt.status,
+        latencyMs: attempt.latencyMs ?? 0,
+        errorCategory: attempt.errorCategory ?? null,
+        error: attempt.error ?? null,
+      })),
       request: sanitizeRequest(input.request),
       createdAt: now,
       updatedAt: now,
     },
   ) as ConnectedAppCapabilityJob
-
-  const candidates = [selected, ...routePlan.fallback]
-  let finalResult: CapabilityAdapterResult | null = null
-  for (const candidate of candidates) {
-    const candidateAdapter = getProviderCapabilityAdapter(candidate.route.provider)
-    if (!candidateAdapter || candidateAdapter.id !== candidate.route.adapter) continue
-    const adapterInput: CapabilityAdapterInput = {
-      capability: input.capability,
-      route: candidate.route,
-      prompt: input.request.prompt?.trim() ?? '',
-      text: input.request.text,
-      inputs: input.request.inputs,
-      references: input.request.references ?? [],
-      context,
-      model: candidate.model,
-      endpointUrl: input.request.endpointUrl,
-    }
-    let result: CapabilityAdapterResult
-    const startedAt = Date.now()
-    try {
-      result = await candidateAdapter.execute(adapterInput)
-    } catch (error) {
-      const classified = classifyProviderError({
-        error,
-        provider: candidate.route.provider,
-      })
-      result = {
-        status: 'failed',
-        provider: candidate.route.provider,
-        model: candidate.model,
-        output: null,
-        mediaUrl: null,
-        bytes: null,
-        contentType: null,
-        providerJobId: null,
-        latencyMs: Date.now() - startedAt,
-        rawStatus: null,
-        error: classified.message,
-        errorCategory: classified.category,
-        retryable: classified.retryable,
-        diagnostics: null,
-      }
-    }
-    job.providerAttempts.push({
-      provider: result.provider,
-      model: result.model,
-      adapter: candidateAdapter.id,
-      outputType: candidate.route.outputType,
-      status: result.status,
-      latencyMs: result.latencyMs,
-      errorCategory: result.errorCategory,
-      error: result.error,
-    })
-    job = updateCapabilityJob(job.id, {
-      providerAttempts: job.providerAttempts,
-      provider: result.provider,
-      model: result.model,
-      adapter: candidateAdapter.id,
-    }) ?? job
-    if (result.status === 'completed' || result.status === 'processing') {
-      await recordProviderSuccess({
-        providerId: result.provider,
-        model: result.model,
-        capability: input.capability.id,
-        latencyMs: result.latencyMs,
-      })
-      finalResult = result
-      break
-    }
-    await recordProviderFailure({
-      providerId: result.provider,
-      model: result.model,
-      capability: input.capability.id,
-      latencyMs: result.latencyMs,
-      errorCategory: result.errorCategory ?? 'unknown',
-    })
-    finalResult = result
-  }
-  if (finalResult) {
-    job = await applyAdapterResult(job, input.capability, finalResult)
-  } else {
-    job = updateCapabilityJob(job.id, {
-      status: 'failed',
-      error: 'No registered provider adapter could execute this capability.',
-    }) ?? job
-  }
   recordAcceptedEvent({
     appId: input.app.id,
     eventType: 'capability.execution',
@@ -412,6 +315,12 @@ export async function executeConnectedAppCapability(input: {
     },
   })
   return job
+}
+
+function isApprovedConnectedProvider(
+  provider: string | null,
+): provider is ApprovedDirectProviderId {
+  return ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'].includes(provider ?? '')
 }
 
 export async function pollConnectedAppCapabilityJob(
@@ -572,130 +481,6 @@ function sanitizeRequest(request: ConnectedAppCapabilityRequest): ConnectedAppCa
     ...request,
     endpointUrl: request.endpointUrl ? '[configured-endpoint]' : undefined,
   }
-}
-
-function createTerminalJob(
-  input: {
-    app: ConnectedApp
-    capability: AiCapabilityDefinition
-    request: ConnectedAppCapabilityRequest
-  },
-  terminal: {
-    status: ConnectedAppCapabilityJobStatus
-    provider: ApprovedDirectProviderId
-    model: string
-    adapter: string
-    qualityTier: StoredRoutingQualityTier
-    error: string
-  },
-): ConnectedAppCapabilityJob {
-  const now = new Date().toISOString()
-  return appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
-    LOCAL_STORE_FILES.connectedAppCapabilityJobs,
-    {
-      appId: input.app.id,
-      appSlug: input.app.slug,
-      capability: input.capability.id,
-      requiredScope: input.capability.requiredScope,
-      provider: terminal.provider,
-      model: terminal.model,
-      adapter: terminal.adapter,
-      qualityTier: terminal.qualityTier,
-      status: terminal.status,
-      providerJobId: null,
-      artifactId: null,
-      artifactUrl: null,
-      result: null,
-      error: terminal.error,
-      providerAttempts: [],
-      request: sanitizeRequest(input.request),
-      createdAt: now,
-      updatedAt: now,
-    },
-  ) as ConnectedAppCapabilityJob
-}
-
-async function createDeclaredFallbackArtifact(
-  input: {
-    app: ConnectedApp
-    capability: AiCapabilityDefinition
-    request: ConnectedAppCapabilityRequest
-  },
-  qualityTier: StoredRoutingQualityTier,
-): Promise<ConnectedAppCapabilityJob> {
-  const fallbackType = input.capability.fallbackArtifactType
-  if (!fallbackType) {
-    throw new Error('A declared fallback artifact type is required.')
-  }
-  const now = new Date().toISOString()
-  let job = appendRecord<Omit<ConnectedAppCapabilityJob, 'id'>>(
-    LOCAL_STORE_FILES.connectedAppCapabilityJobs,
-    {
-      appId: input.app.id,
-      appSlug: input.app.slug,
-      capability: input.capability.id,
-      requiredScope: input.capability.requiredScope,
-      provider: 'amarktai',
-      model: `${fallbackType}-v1`,
-      adapter: 'declared_fallback_artifact',
-      qualityTier,
-      status: 'processing',
-      providerJobId: null,
-      artifactId: null,
-      artifactUrl: null,
-      result: null,
-      error: null,
-      providerAttempts: [],
-      request: sanitizeRequest(input.request),
-      createdAt: now,
-      updatedAt: now,
-    },
-  ) as ConnectedAppCapabilityJob
-  const report = {
-    kind: fallbackType,
-    capability: input.capability.id,
-    prompt: input.request.prompt ?? input.request.text ?? '',
-    generatedMedia: false,
-    readiness: input.capability.readiness,
-    blocker: input.capability.blocker,
-    sections: fallbackType === 'music_blueprint'
-      ? ['concept', 'lyrics_direction', 'arrangement', 'tempo_and_key', 'production_notes']
-      : ['scene_plan', 'voice_direction', 'timing', 'visual_notes', 'production_requirements'],
-  }
-  try {
-    const artifact = await createArtifact({
-      appSlug: input.app.slug,
-      appId: input.app.id,
-      jobId: job.id,
-      type: 'report',
-      subType: fallbackType,
-      title: `${input.capability.label} ${fallbackType === 'music_blueprint' ? 'Blueprint' : 'Storyboard'}`,
-      description: `Planning artifact only. ${input.capability.blocker ?? 'Generated media is not available in V1.'}`,
-      provider: 'amarktai',
-      model: `${fallbackType}-v1`,
-      capability: input.capability.id,
-      mimeType: 'application/json',
-      content: Buffer.from(JSON.stringify(report, null, 2), 'utf8'),
-      metadata: {
-        connectedAppId: input.app.id,
-        generatedMedia: false,
-        declaredFallback: true,
-      },
-    })
-    job = updateCapabilityJob(job.id, {
-      status: 'completed',
-      artifactId: artifact.id,
-      artifactUrl: artifact.downloadUrl,
-      result: report,
-      error: null,
-    }) ?? job
-  } catch (error) {
-    job = updateCapabilityJob(job.id, {
-      status: 'failed',
-      error: error instanceof Error ? error.message : 'Fallback artifact persistence failed.',
-    }) ?? job
-  }
-  return job
 }
 
 function updateCapabilityJob(

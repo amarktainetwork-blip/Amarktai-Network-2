@@ -64,6 +64,12 @@ partial, blocked, and unknown statuses above remain evidence-based execution
 truth. A discovered model is only routeable when its metadata identifies the
 requested capability.
 
+PR #117 makes this discovery evidence the production routing dependency.
+Provider-native adapters receive the discovered model and contain no fallback
+model selection. If the catalog supplies no eligible model, execution returns
+`NO_ROUTE_FOUND`. The matrix statuses remain conservative because architecture
+cutover alone is not live provider proof.
+
 Phase 1 files:
 
 - `src/lib/providers/provider-types.ts`

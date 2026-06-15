@@ -36,7 +36,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       toolCalling: true,
       artifactSupport: true,
     },
-    billing: { plan: 'account', freeQuotaEligible: 'unknown' },
+    billing: { plan: 'account', freeQuotaEligible: 'unknown', pricingSource: 'provider_catalog', staticPrices: false },
   },
   {
     id: 'together',
@@ -64,7 +64,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       toolCalling: true,
       artifactSupport: true,
     },
-    billing: { plan: 'account', freeQuotaEligible: 'unknown' },
+    billing: { plan: 'account', freeQuotaEligible: 'unknown', pricingSource: 'provider_catalog', staticPrices: false },
   },
   {
     id: 'groq',
@@ -92,7 +92,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       toolCalling: true,
       artifactSupport: true,
     },
-    billing: { plan: 'account', freeQuotaEligible: 'unknown' },
+    billing: { plan: 'account', freeQuotaEligible: 'unknown', pricingSource: 'provider_catalog', staticPrices: false },
   },
   {
     id: 'genx',
@@ -119,7 +119,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       toolCalling: true,
       artifactSupport: true,
     },
-    billing: { plan: 'credits', freeQuotaEligible: false },
+    billing: { plan: 'credits', freeQuotaEligible: false, pricingSource: 'provider_catalog', staticPrices: false },
   },
   {
     id: 'qwen',
@@ -158,6 +158,8 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       plan: 'standard_free_quota',
       freeQuotaEligible: true,
       paidEnabledEnv: 'QWEN_PAID_ENABLED',
+      pricingSource: 'provider_catalog',
+      staticPrices: false,
     },
   },
   {
@@ -186,6 +188,6 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       toolCalling: true,
       artifactSupport: true,
     },
-    billing: { plan: 'token_plan', freeQuotaEligible: false },
+    billing: { plan: 'token_plan', freeQuotaEligible: false, pricingSource: 'provider_catalog', staticPrices: false },
   },
 ] as const

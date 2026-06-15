@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { executeCapability } from '@/lib/capability-router'
 import { ensureExecution, recordExecutionResponse, startExecution } from '@/lib/execution'
+import { researchRuntime } from '@/lib/research-runtime'
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null) as {
     query?: string
     depth?: 'shallow' | 'deep'
-    providerOverride?: string
-    modelOverride?: string
     appSlug?: string
     executionId?: string
   } | null
@@ -22,19 +20,14 @@ export async function POST(request: NextRequest) {
     requestedCapability: 'research',
     prompt: body.query.trim(),
     action: 'generate',
-    selectedProvider: body.providerOverride,
-    selectedModel: body.modelOverride,
     metadata: { depth },
   }, body.executionId)
   startExecution(execution.executionId)
-  const result = await executeCapability({
-    input: `${depth === 'deep' ? 'Perform deep research' : 'Research'} and return a structured answer with source notes: ${body.query.trim()}`,
-    capability: 'research',
-    providerOverride: body.providerOverride,
-    modelOverride: body.modelOverride,
-    appId: body.appSlug || 'research',
-    saveArtifact: true,
-    metadata: { executionId: execution.executionId, depth },
+  const result = await researchRuntime.execute({
+    query: body.query.trim(),
+    appSlug: body.appSlug || 'research',
+    depth,
+    executionId: execution.executionId,
   })
 
   const payload = {

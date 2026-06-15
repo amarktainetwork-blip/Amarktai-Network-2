@@ -1,23 +1,26 @@
 # Amarktai Network
 
-# CURRENT IMPLEMENTATION STATUS
+## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #116
-- **Completed:** Definitive Brain, provider, model, agent, media, research, and
-  dashboard runtime audit, with evidence-based classifications.
-- **In Progress:** Documentation review and merge of PR #116 only.
-- **Blocked:** Full dynamic discovery cutover, durable agent/team state, image
-  editing, avatar video, OCR, and complete media provider proof.
-- **Next Steps:** Cut one capability family at a time from compatibility
-  registries to `src/lib/providers/`, prove parity, then remove superseded
-  truth tables.
-- **Known Technical Debt:** Production execution still uses static model
-  catalogs, hardcoded defaults, compatibility provider registries, and some
-  process-local stores.
-- **Runtime Truth Summary:** The Brain gateway and artifact system are live.
-  The Phase 1 provider discovery layer is canonical but not yet used by
-  production execution. See `docs/RUNTIME_TRUTH_20260615.md`.
+- **PR Number:** #117
+- **Purpose:** Make the Brain and canonical capability router the only runtime
+  execution path through provider truth, live discovery, scoring, execution,
+  and artifacts.
+- **Completed:** Production execution now enters the capability router, uses
+  provider truth, live model discovery, scoring, provider-native adapters,
+  jobs, and canonical artifacts. Specialist media routes and agent execution
+  delegate to this path. The runtime-dead legacy orchestrator was removed.
+- **Remaining:** Production credentials and provider catalogs must return
+  capability evidence. Research completion, dashboard completion, website
+  completion, and Marketing App integration remain separate PRs.
+- **Known Issues:** Research and long-form video are intentionally partial.
+  Some admin diagnostics and non-product legacy modules still inspect provider
+  protocols, but they are not product execution routes.
+- **Go Live Readiness:** Signed apps can connect for capabilities with a
+  discovered healthy route. Missing evidence returns `NO_ROUTE_FOUND`; no
+  provider or model is guessed.
+- **Next PR:** #118 Research Completion.
 
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 

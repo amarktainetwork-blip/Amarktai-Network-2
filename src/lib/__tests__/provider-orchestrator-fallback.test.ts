@@ -5,51 +5,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   qwenExecute: vi.fn(),
   togetherExecute: vi.fn(),
+  planCanonicalExecution: vi.fn(),
   createArtifact: vi.fn(),
   recordSuccess: vi.fn(),
   recordFailure: vi.fn(),
 }))
 
-vi.mock('@/lib/capability-routing-policy', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/capability-routing-policy')>()
-  const qwenRoute = {
-    provider: 'qwen',
-    modelIds: ['qwen-image-2.0'],
-    executable: true,
-    adapter: 'qwen_capability_adapter',
-    source: 'universal_model_catalog',
-    route: '/api/connected-apps/capabilities/execute',
-    outputType: 'image',
-    adapterImplemented: true,
-  } as const
-  const togetherRoute = {
-    provider: 'together',
-    modelIds: ['black-forest-labs/FLUX.1-schnell'],
-    executable: true,
-    adapter: 'together_capability_adapter',
-    source: 'universal_model_catalog',
-    route: '/api/connected-apps/capabilities/execute',
-    outputType: 'image',
-    adapterImplemented: true,
-  } as const
-  return {
-    ...actual,
-    selectCapabilityRoutePlan: vi.fn().mockResolvedValue({
-      capability: 'text_to_image',
-      qualityTier: 'auto',
-      selected: { route: qwenRoute, model: 'qwen-image-2.0', configured: true, rank: 0 },
-      candidates: [],
-      fallback: [{
-        route: togetherRoute,
-        model: 'black-forest-labs/FLUX.1-schnell',
-        configured: true,
-        rank: 1,
-      }],
-      setupRequired: false,
-      reason: 'ready',
-    }),
-  }
-})
+vi.mock('@/lib/providers/execution', () => ({
+  planCanonicalExecution: mocks.planCanonicalExecution,
+}))
 vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/ai-capability-adapters')>()
   return {
@@ -62,10 +26,6 @@ vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
     }),
   }
 })
-vi.mock('@/lib/provider-registry', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/lib/provider-registry')>(),
-  validateProviderModelAsync: vi.fn().mockResolvedValue({ valid: true, reason: null }),
-}))
 vi.mock('@/lib/provider-performance', () => ({
   recordProviderSuccess: mocks.recordSuccess,
   recordProviderFailure: mocks.recordFailure,
@@ -87,6 +47,48 @@ import { executeCapabilityOrchestration } from '@/lib/orchestrator'
 describe('canonical provider fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    const candidate = (provider: 'qwen' | 'together', model: string, score: number) => ({
+      provider,
+      model: {
+        provider,
+        id: model,
+        capabilities: ['image'],
+        capabilityEvidence: 'model_metadata',
+        status: 'available',
+        speed: null,
+        quality: null,
+        cost: null,
+        context: null,
+        adult: 'unknown',
+        streaming: 'unknown',
+        research: 'unknown',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score,
+      scoreBreakdown: {},
+      health: {
+        provider,
+        state: 'healthy',
+        configured: true,
+        tested: true,
+        healthy: true,
+        checkedAt: null,
+        detail: 'Healthy',
+      },
+      adapter: `${provider}_capability_adapter`,
+    })
+    const qwen = candidate('qwen', 'qwen-image-2.0', 100)
+    const together = candidate('together', 'black-forest-labs/FLUX.1-schnell', 90)
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'image',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected: qwen,
+      candidates: [qwen, together],
+    })
     mocks.recordSuccess.mockResolvedValue(undefined)
     mocks.recordFailure.mockResolvedValue(undefined)
     mocks.createArtifact.mockResolvedValue({

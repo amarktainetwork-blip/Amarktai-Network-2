@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { authenticateApp, callProvider } from '@/lib/brain'
+import { authenticateApp } from '@/lib/brain'
+import { executeCapability } from '@/lib/capability-router'
 import { scanContent } from '@/lib/content-filter'
 import { isApprovedDirectProvider } from '@/lib/provider-mesh'
-import { getDefaultModelForProvider } from '@/lib/model-registry'
 
 const streamRequestSchema = z.object({
   appId: z.string().min(1).max(200),
@@ -17,8 +17,6 @@ const streamRequestSchema = z.object({
   systemPrompt: z.string().max(4000).optional(),
   costMode: z.enum(['free_first', 'balanced', 'quality_first']).optional(),
 })
-
-const STREAM_PRIORITY = ['genx', 'groq', 'together', 'qwen', 'mimo', 'huggingface'] as const
 
 export async function POST(request: NextRequest) {
   let body: z.infer<typeof streamRequestSchema>
@@ -56,26 +54,34 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const providers = body.provider ? [body.provider] : STREAM_PRIORITY
-  let selected: { provider: string; model: string; output: string } | null = null
-  const errors: string[] = []
-
-  for (const provider of providers) {
-    const model = body.model || getDefaultModelForProvider(provider)
-    const result = await callProvider(provider, model, body.message, body.systemPrompt)
-    if (result.ok && result.output) {
-      selected = { provider, model, output: result.output }
-      break
-    }
-    errors.push(`${provider}: ${result.error ?? 'empty output'}`)
-  }
-
-  if (!selected) {
+  const result = await executeCapability({
+    input: body.message,
+    capability: streamCapability(body.taskType),
+    appId: auth.app.slug,
+    providerOverride: body.provider,
+    modelOverride: body.model,
+    metadata: {
+      streaming: true,
+      systemPrompt: body.systemPrompt ?? null,
+      routingProfile: body.costMode === 'free_first'
+        ? 'cheap'
+        : body.costMode === 'quality_first'
+          ? 'premium'
+          : 'balanced',
+    },
+  })
+  if (!result.success || !result.output || !result.provider || !result.model) {
     return NextResponse.json(
-      { error: 'No approved streaming provider is currently ready.', traceId, providers_tried: errors },
+      {
+        error: result.error ?? 'NO_ROUTE_FOUND',
+        code: result.code ?? 'NO_ROUTE_FOUND',
+        traceId,
+        providerAttempts: result.providerAttempts ?? [],
+      },
       { status: 503 },
     )
   }
+  const selected = { provider: result.provider, model: result.model, output: result.output }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
@@ -107,4 +113,12 @@ export async function POST(request: NextRequest) {
       'X-Cost-Mode': body.costMode ?? 'balanced',
     },
   })
+}
+
+function streamCapability(taskType: string) {
+  const normalized = taskType.toLowerCase()
+  if (normalized.includes('reason')) return 'reasoning'
+  if (normalized.includes('research')) return 'research'
+  if (normalized.includes('code')) return 'code'
+  return 'chat'
 }

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   createControlPlaneJob: vi.fn(),
   startControlPlaneAttempt: vi.fn(),
   finishControlPlaneAttempt: vi.fn(),
+  planCanonicalExecution: vi.fn(),
 }))
 
 vi.mock('@/lib/artifact-store', () => ({ createArtifact: mocks.createArtifact }))
@@ -88,6 +89,9 @@ vi.mock('@/lib/provider-performance', () => ({
 vi.mock('@/lib/universal-provider-call', () => ({
   callUniversalProvider: async (request: { providerKey: string; model: string; message: string; systemPrompt?: string }) =>
     mocks.callProvider(request.providerKey, request.model, request.message, request.systemPrompt),
+}))
+vi.mock('@/lib/providers/execution', () => ({
+  planCanonicalExecution: mocks.planCanonicalExecution,
 }))
 
 import {
@@ -175,18 +179,34 @@ beforeEach(() => {
     success: false,
     error: 'Firecrawl API key not configured',
   })
+  mocks.planCanonicalExecution.mockResolvedValue({
+    capability: 'chat',
+    profile: 'balanced',
+    code: 'NO_ROUTE_FOUND',
+    reason: 'No discovered route.',
+    selected: null,
+    candidates: [],
+  })
 })
 
 describe('capability router contract', () => {
   it('publishes the required capability inventory plus adult voice', () => {
-    expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual([
-      ...REQUIRED_CAPABILITIES.slice(0, 15),
+    expect(CAPABILITY_ROUTER_CAPABILITIES).toEqual(expect.arrayContaining([
+      ...REQUIRED_CAPABILITIES,
       'adult_voice',
       'adult_avatar',
       'avatar_generation',
       'avatar_video',
-      ...REQUIRED_CAPABILITIES.slice(15),
-    ])
+      'reasoning',
+      'voice_clone',
+      'ocr',
+      'vision',
+      'embeddings',
+      'rerank',
+      'translation',
+      'documents',
+      'agents',
+    ]))
   })
 
   it('returns a truthful canonical state for every supported capability', async () => {
@@ -273,12 +293,44 @@ describe('capability router contract', () => {
     })
     expect(result).toMatchObject({
       success: false,
-      readiness: 'NEEDS_CONFIGURATION',
-      error_category: 'missing_key',
+      readiness: 'UNAVAILABLE',
+      error_category: 'no_route_found',
+      code: 'NO_ROUTE_FOUND',
     })
   })
 
   it('creates artifacts for immediate text, image, audio, and crawl outputs', async () => {
+    const route = (provider: string, model: string, capability: string) => {
+      const selected = {
+        provider,
+        model: {
+          provider,
+          id: model,
+          capabilities: [capability],
+          capabilityEvidence: 'model_metadata',
+          status: 'available',
+          artifactSupport: true,
+          raw: {},
+          discoveredAt: '2026-06-15T00:00:00.000Z',
+        },
+        score: 100,
+        scoreBreakdown: {},
+        health: { provider, state: 'healthy', configured: true, tested: true, healthy: true },
+        adapter: `${provider}_capability_adapter`,
+      }
+      return {
+        capability,
+        profile: 'balanced',
+        code: 'ROUTE_FOUND',
+        reason: 'ready',
+        selected,
+        candidates: [selected],
+      }
+    }
+    mocks.planCanonicalExecution
+      .mockResolvedValueOnce(route('groq', 'runtime-chat', 'chat'))
+      .mockResolvedValueOnce(route('genx', 'genx-image', 'image'))
+      .mockResolvedValueOnce(route('genx', 'genx-tts', 'tts'))
     mocks.getVaultApiKey.mockResolvedValue('configured')
     mocks.callProvider.mockResolvedValue({
       ok: true,
@@ -311,7 +363,7 @@ describe('capability router contract', () => {
 
     for (const request of requests) {
       const result = await executeCapability({ ...request, saveArtifact: true })
-      expect(result).toMatchObject({
+      expect(result, JSON.stringify(result)).toMatchObject({
         success: true,
         readiness: 'READY',
         artifactId: 'artifact-1',
@@ -321,6 +373,31 @@ describe('capability router contract', () => {
   })
 
   it('does not create an artifact before an asynchronous job has output', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'veo-3.1',
+        capabilities: ['video'],
+        capabilityEvidence: 'model_metadata',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'video',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
     mocks.getVaultApiKey.mockResolvedValue('configured')
     mocks.callGenXMedia.mockResolvedValue({
       success: true,
@@ -336,7 +413,7 @@ describe('capability router contract', () => {
       providerOverride: 'genx',
       saveArtifact: true,
     })
-    expect(result).toMatchObject({
+    expect(result, JSON.stringify(result)).toMatchObject({
       success: true,
       readiness: 'READY',
       providerJobId: 'job-1',

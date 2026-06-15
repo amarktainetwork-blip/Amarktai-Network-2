@@ -34,10 +34,12 @@ describe('Phase 0 product route coverage', () => {
     ]
     for (const route of routes) {
       const routeSource = source(route)
-      expect(routeSource).toContain('loadAppSafetyConfigFromDB')
-      expect(routeSource).toContain('getAppSafetyConfig')
-      expect(routeSource).toContain('scanContent')
+      expect(routeSource).toMatch(/delegateJsonCapability|executeCapability/)
     }
+    const orchestrator = source('src/lib/orchestrator.ts')
+    expect(orchestrator).toContain('loadAppSafetyConfigFromDB')
+    expect(orchestrator).toContain('getAppSafetyConfig')
+    expect(orchestrator).toContain('scanContent')
     expect(source('src/app/api/brain/tts/route.ts')).toContain('adult_voice')
   })
 
@@ -47,8 +49,9 @@ describe('Phase 0 product route coverage', () => {
       'src/app/api/brain/adult-image/route.ts',
       'src/app/api/brain/tts/route.ts',
     ]) {
-      expect(source(route)).toContain('createArtifact')
+      expect(source(route)).toMatch(/delegateJsonCapability|executeCapability/)
     }
+    expect(source('src/lib/orchestrator.ts')).toContain('createArtifact')
     expect(source('src/app/api/brain/adult-video/route.ts')).toContain(
       "capability: 'adult_video'",
     )
@@ -58,12 +61,14 @@ describe('Phase 0 product route coverage', () => {
     for (const route of [
       'src/app/api/brain/image/route.ts',
       'src/app/api/brain/suggestive-image/route.ts',
-      'src/app/api/brain/research/route.ts',
     ]) {
       expect(source(route)).toContain('saveArtifact: true')
     }
+    expect(source('src/app/api/brain/research/route.ts')).toContain('researchRuntime.execute')
+    expect(source('src/lib/research-runtime.ts')).toContain('saveArtifact: true')
     const imageEdit = source('src/app/api/brain/image-edit/route.ts')
-    expect(imageEdit).toContain("readiness: 'UNAVAILABLE'")
-    expect(imageEdit).toContain('artifactId: null')
+    expect(imageEdit).toContain('delegateJsonCapability')
+    expect(imageEdit).toContain("capability: 'image_edit'")
+    expect(source('src/lib/orchestrator.ts')).toContain('NO_ROUTE_FOUND')
   })
 })

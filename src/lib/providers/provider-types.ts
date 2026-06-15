@@ -86,6 +86,8 @@ export interface ProviderTruthDefinition {
     plan: string
     freeQuotaEligible: boolean | 'unknown'
     paidEnabledEnv?: string
+    pricingSource: 'provider_catalog'
+    staticPrices: false
   }
 }
 
@@ -192,5 +194,23 @@ export interface DynamicRoutePlan {
   profile: RoutingProfileId
   selected: ProviderRouteCandidate | null
   candidates: ProviderRouteCandidate[]
+  reason: string
+}
+
+export interface CanonicalExecutionRoute {
+  provider: ProviderId
+  model: DiscoveredModel
+  score: number
+  scoreBreakdown: Record<string, number>
+  health: ProviderHealthSnapshot
+  adapter: `${ProviderId}_capability_adapter`
+}
+
+export interface CanonicalExecutionPlan {
+  capability: CapabilityId
+  profile: RoutingProfileId
+  selected: CanonicalExecutionRoute | null
+  candidates: CanonicalExecutionRoute[]
+  code: 'ROUTE_FOUND' | 'NO_ROUTE_FOUND'
   reason: string
 }

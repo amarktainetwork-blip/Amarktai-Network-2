@@ -174,10 +174,13 @@ describe('Phase 2 producer and policy coverage', () => {
   })
 
   it('persists research, STT, and video plans', () => {
-    expect(source('src/lib/orchestrator.ts')).toContain("return 'research_result'")
-    expect(source('src/app/api/brain/stt/route.ts')).toContain("type: 'transcript'")
-    expect(source('src/app/api/brain/video/route.ts')).toContain("subType: 'video_plan'")
-    expect(source('src/app/api/brain/suggestive-video/route.ts')).toContain("subType: 'suggestive_video'")
+    const orchestrator = source('src/lib/orchestrator.ts')
+    expect(orchestrator).toContain("return 'research_result'")
+    expect(orchestrator).toContain("return 'transcript'")
+    expect(orchestrator).toContain('createArtifact')
+    expect(source('src/app/api/brain/stt/route.ts')).toContain('executeCapability')
+    expect(source('src/app/api/brain/video/route.ts')).toContain('delegateJsonCapability')
+    expect(source('src/app/api/brain/suggestive-video/route.ts')).toContain('delegateJsonCapability')
   })
 
   it('keeps removed voice authentication absent', () => {

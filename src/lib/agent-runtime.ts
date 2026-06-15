@@ -1,21 +1,18 @@
-/**
+﻿/**
  * @module agent-runtime
  * @description Internal Agent Runtime for the AmarktAI Network.
  *
- * Implements AmarktAI's own internal agents — planner, router, validator,
+ * Implements AmarktAI's own internal agents â€” planner, router, validator,
  * memory, retrieval, creative, campaign, trading analyst, app ops, and
- * learning — that collectively power multi-step orchestration, handoff
+ * learning â€” that collectively power multi-step orchestration, handoff
  * chains, and quality validation across every app in the network.
  *
  * Server-side only.
  */
 
-import { callProvider } from '@/lib/brain'
-import type { ProviderCallResult } from '@/lib/brain'
 import { getAppProfile } from '@/lib/app-profiles'
-import { getDefaultModelForProvider } from '@/lib/model-registry'
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Every agent role the runtime can instantiate. */
 export type AgentType =
@@ -35,10 +32,21 @@ export type AgentType =
   | 'developer'
   | 'support_community'
   | 'healing'
-  /** Consumer-facing chatbot deployed to an app — handles conversation, FAQs, and escalation. */
+  /** Consumer-facing chatbot deployed to an app â€” handles conversation, FAQs, and escalation. */
   | 'chatbot'
-  /** Consumer-facing marketing agent — drives personalised outreach and campaign execution. */
+  /** Consumer-facing marketing agent â€” drives personalised outreach and campaign execution. */
   | 'marketing_agent'
+
+export const CANONICAL_AGENT_TYPES = [
+  'research',
+  'creative',
+  'operations',
+  'ceo',
+  'marketing',
+  'custom',
+] as const
+
+export type CanonicalAgentType = typeof CANONICAL_AGENT_TYPES[number]
 
 /** Lifecycle status of an individual agent task. */
 export type AgentStatus = 'idle' | 'running' | 'completed' | 'failed' | 'waiting'
@@ -54,10 +62,6 @@ export interface AgentDefinition {
   /** Agent types this agent is allowed to hand off work to. */
   canHandoff: AgentType[]
   memoryEnabled: boolean
-  /** Provider key used when no app-level override exists. */
-  defaultProvider?: string
-  /** Model id used when no app-level override exists. */
-  defaultModel?: string
 }
 
 /** A single unit of work dispatched to an agent. */
@@ -80,7 +84,7 @@ export interface AgentTask {
   handoffTo?: AgentType
 }
 
-// ─── Agent Definitions ──────────────────────────────────────────────────────
+// â”€â”€â”€ Agent Definitions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<AgentType, AgentDefinition>([
   [
@@ -94,8 +98,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:planner'],
       canHandoff: ['router', 'creative', 'trading_analyst'],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -109,8 +111,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:router'],
       canHandoff: ['validator'],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -124,8 +124,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:validator'],
       canHandoff: [],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -139,8 +137,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:memory'],
       canHandoff: [],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -154,8 +150,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:retrieval'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -169,8 +163,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:creative'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gemini-2.0-flash',
     },
   ],
   [
@@ -179,13 +171,11 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       type: 'campaign',
       name: 'Campaign',
       description:
-        'Marketing campaign orchestration — audience targeting, scheduling, and cross-channel coordination.',
+        'Marketing campaign orchestration â€” audience targeting, scheduling, and cross-channel coordination.',
       capabilities: ['campaign_orchestration', 'audience_targeting', 'scheduling', 'cross_channel'],
       requiredPermissions: ['agent:campaign'],
       canHandoff: ['creative'],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -199,8 +189,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:trading_analyst'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -214,8 +202,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:app_ops'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -229,8 +215,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:learning'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -244,8 +228,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:security'],
       canHandoff: ['validator'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -259,8 +241,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:voice'],
       canHandoff: ['creative', 'campaign'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -274,8 +254,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:travel_planner'],
       canHandoff: ['creative', 'voice'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gemini-1.5-pro',
     },
   ],
   [
@@ -289,8 +267,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:developer'],
       canHandoff: ['validator', 'planner'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
   [
@@ -304,8 +280,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:support_community'],
       canHandoff: ['security', 'validator'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -319,8 +293,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:healing'],
       canHandoff: ['app_ops', 'validator'],
       memoryEnabled: false,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -335,8 +307,6 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:chatbot'],
       canHandoff: ['support_community', 'campaign'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o-mini',
     },
   ],
   [
@@ -351,13 +321,11 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:marketing_agent'],
       canHandoff: ['campaign', 'creative'],
       memoryEnabled: true,
-      defaultProvider: 'genx',
-      defaultModel: 'gpt-4o',
     },
   ],
 ])
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Generate a short, collision-resistant task id (no uuid dependency). */
 function generateTaskId(): string {
@@ -398,48 +366,18 @@ function buildSystemPrompt(definition: AgentDefinition, task: AgentTask): string
 /**
  * Resolve which provider and model to use for a given agent + app combination.
  *
- * Priority: app profile preferred models → agent defaults → global fallback.
+ * Priority: app profile preferred models â†’ agent defaults â†’ global fallback.
  */
-function resolveProviderAndModel(
-  definition: AgentDefinition,
-  appSlug: string,
-): { provider: string; model: string } {
-  const profile = getAppProfile(appSlug)
-
-  // Use the agent's default provider if the app allows it; otherwise fall back
-  // to the first allowed provider on the app profile.
-  let provider = definition.defaultProvider ?? 'genx'
-  if (!profile.allowed_providers.includes(provider) && profile.allowed_providers.length > 0) {
-    provider = profile.allowed_providers[0]
-  }
-
-  // Prefer the agent's configured default model; fall back to registry lookup.
-  let model = definition.defaultModel ?? getDefaultModelForProvider(provider)
-
-  // Only override with an app-preferred model when it belongs to the resolved
-  // provider (avoids mismatched provider/model combos like cohere + gpt-4o).
-  if (profile.preferred_models.length > 0 && profile.allowed_models.length > 0) {
-    const compatiblePreferred = profile.preferred_models.find((m) =>
-      profile.allowed_models.includes(m),
-    )
-    if (compatiblePreferred) {
-      model = compatiblePreferred
-    }
-  }
-
-  return { provider, model }
-}
-
-// ─── In-memory task ledger (lightweight; production would use a durable store)
+// â”€â”€â”€ In-memory task ledger (lightweight; production would use a durable store)
 
 const activeTasks: Map<string, AgentTask> = new Map()
 
-// ─── Public API ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /**
  * Returns every registered agent definition.
  *
- * @returns A read-only map of AgentType → AgentDefinition.
+ * @returns A read-only map of AgentType â†’ AgentDefinition.
  */
 export function getAgentDefinitions(): ReadonlyMap<AgentType, AgentDefinition> {
   return AGENT_DEFINITIONS
@@ -533,12 +471,31 @@ export async function executeAgent(task: AgentTask): Promise<AgentTask> {
   const systemPrompt = buildSystemPrompt(definition, task)
   const fullMessage = `${systemPrompt}\n\n---\n\nUser request:\n${task.input.message}`
 
-  const { provider, model } = resolveProviderAndModel(definition, task.appSlug)
-
-  let result: ProviderCallResult
-
   try {
-    result = await callProvider(provider, model, fullMessage)
+    // Dynamic import avoids an initialization cycle because the canonical
+    // orchestrator imports this module for legacy complex-task parity.
+    const { executeCapability } = await import('@/lib/capability-router')
+    const result = await executeCapability({
+      capability: 'agents',
+      input: fullMessage,
+      appId: task.appSlug,
+      saveArtifact: true,
+      metadata: {
+        agentType: task.agentType,
+        canonicalAgentType: canonicalAgentType(task.agentType),
+        parentTaskId: task.input.parentTaskId ?? null,
+        context: task.input.context ?? {},
+      },
+    })
+    if (result.success) {
+      task.status = 'completed'
+      task.output = typeof result.output === 'string'
+        ? result.output
+        : JSON.stringify(result.output)
+    } else {
+      task.status = 'failed'
+      task.error = result.error ?? result.code ?? 'Canonical Brain execution failed.'
+    }
   } catch (err: unknown) {
     task.status = 'failed'
     task.error = err instanceof Error ? err.message : String(err)
@@ -548,19 +505,20 @@ export async function executeAgent(task: AgentTask): Promise<AgentTask> {
     return task
   }
 
-  if (result.ok) {
-    task.status = 'completed'
-    task.output = result.output
-  } else {
-    task.status = 'failed'
-    task.error = result.error ?? 'Provider returned a non-ok response with no error message.'
-  }
-
   task.completedAt = new Date()
-  task.latencyMs = result.latencyMs
+  task.latencyMs = task.completedAt.getTime() - task.startedAt.getTime()
   activeTasks.set(task.id, task)
 
   return task
+}
+
+export function canonicalAgentType(type: AgentType): CanonicalAgentType {
+  if (['retrieval', 'learning', 'trading_analyst', 'travel_planner'].includes(type)) return 'research'
+  if (['creative', 'voice', 'healing'].includes(type)) return 'creative'
+  if (['planner', 'router', 'validator', 'security'].includes(type)) return 'ceo'
+  if (['campaign', 'marketing_agent'].includes(type)) return 'marketing'
+  if (['app_ops', 'support_community'].includes(type)) return 'operations'
+  return 'custom'
 }
 
 /**
