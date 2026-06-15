@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "apps_call_brain_only": true,
+    "dynamic_model_discovery": true,
+    "adult_is_capability_not_provider": true,
+    "allowed_statuses": ["working", "partial", "planned", "blocked", "unknown"]
+  },
+  "providers": {
+    "huggingface": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    },
+    "together": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    },
+    "groq": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    },
+    "genx": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    },
+    "qwen": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    },
+    "mimo": {
+      "capabilities": {},
+      "routing": {},
+      "discovery": {},
+      "models": [],
+      "streaming": "unknown",
+      "async": "unknown",
+      "webhooks": "unknown",
+      "artifacts": "unknown",
+      "adult": "policy_gated_by_brain",
+      "health": "unknown"
+    }
+  }
+}
