@@ -1,5 +1,25 @@
 # AmarktAI Network V1 Operating Truth
 
+# CURRENT IMPLEMENTATION STATUS
+
+- **Date:** 2026-06-15
+- **PR Number:** #116
+- **Completed:** Phase 0 operating truth, Phase 1 provider truth foundation, and
+  the PR #116 definitive V1 runtime audit.
+- **In Progress:** Documentation review only.
+- **Blocked:** Runtime cutover to dynamic discovery, durable multi-instance
+  agent/team/media jobs, and unimplemented source-media/OCR/avatar contracts.
+- **Next Steps:** Migrate one capability family into the canonical provider
+  planner with parity tests before deleting any compatibility layer.
+- **Known Technical Debt:** Current production execution still depends on
+  `orchestrator.ts`, legacy model/provider registries, static provider-native
+  defaults, and some process-local state.
+- **Runtime Truth Summary:** `src/lib/providers/` owns canonical provider
+  discovery and scoring but has no production execution caller yet. The live
+  Brain gateway delegates through `capability-router.ts` to `orchestrator.ts`.
+  The artifact system is canonical and working. Detailed evidence is in
+  `RUNTIME_TRUTH_20260615.md`.
+
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
 or older documents disagree with it, stop and resolve the conflict before
 shipping.

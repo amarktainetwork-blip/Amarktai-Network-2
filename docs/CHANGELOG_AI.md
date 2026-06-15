@@ -14,3 +14,30 @@ policy, or operating truth must update this file.
 Each entry states date, PR, branch, files changed, summary, providers,
 capabilities, blockers, and next steps. Never rewrite history to make an
 unproven capability appear complete.
+
+## PR 116
+
+- **Purpose:** Produce the definitive V1 runtime truth audit without changing
+  runtime behavior, schemas, integrations, policy, pricing, or UI.
+- **Files changed:** `README.md`, `docs/CODEX_CONTEXT.md`,
+  `docs/OPERATING_TRUTH.md`, this changelog, and six focused runtime audit
+  reports.
+- **Runtime findings:** The Brain gateway, capability-router entry,
+  orchestrator, connected-app authentication, artifact store, jobs, approvals,
+  and adult policy are live. The Phase 1 provider discovery/scoring layer is
+  canonical but has no production execution caller. Current execution still
+  uses compatibility provider/model/capability layers and hardcoded defaults.
+  Agents, research, and most media paths are partial; image edit, avatar video,
+  OCR, and voice cloning are not implemented as completed workflows.
+- **Deleted items:** None. PR #116 deletes no code.
+- **Canonical items:** GitHub and operating-law documents; `src/lib/providers/`
+  for provider discovery/scoring; Brain gateway and capability-router entry;
+  current orchestrator ownership; artifact store; connected-app auth; app
+  policy.
+- **Known issues:** Static model catalogs and defaults remain live; prohibited
+  provider remnants exist in legacy files and seed data; capability truth has
+  multiple compatibility projections; team and some task/job state is
+  process-local; media and research proof is incomplete.
+- **Next PR target:** Cut one capability family from compatibility routing to
+  Phase 1 discovery with parity tests, then remove only the superseded truth
+  for that family.
