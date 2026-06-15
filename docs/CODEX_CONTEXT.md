@@ -2,6 +2,24 @@ READ THIS FILE FIRST.
 
 # AmarktAI Network V1
 
+# CURRENT IMPLEMENTATION STATUS
+
+- **Date:** 2026-06-15
+- **PR Number:** #116
+- **Completed:** Runtime ownership and readiness audit for Brain, providers,
+  models, agents, media, research, and every admin page.
+- **In Progress:** PR #116 documentation review and merge.
+- **Blocked:** Production execution does not yet consume Phase 1 dynamic model
+  discovery. Several media and research contracts remain partial or absent.
+- **Next Steps:** Use `RUNTIME_TRUTH_20260615.md` to perform a narrow,
+  capability-by-capability parity cutover.
+- **Known Technical Debt:** Duplicate compatibility registries, hardcoded
+  models, prohibited-provider remnants, and process-local task/team stores.
+- **Runtime Truth Summary:** `src/lib/providers/` is canonical architecture but
+  currently unused by production execution. `capability-router.ts` delegates
+  to the live legacy-dependent orchestrator. Artifacts are canonical and real.
+  PR #116 changes documentation only.
+
 Single source of truth:
 
 ```text

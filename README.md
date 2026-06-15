@@ -1,5 +1,24 @@
 # Amarktai Network
 
+# CURRENT IMPLEMENTATION STATUS
+
+- **Date:** 2026-06-15
+- **PR Number:** #116
+- **Completed:** Definitive Brain, provider, model, agent, media, research, and
+  dashboard runtime audit, with evidence-based classifications.
+- **In Progress:** Documentation review and merge of PR #116 only.
+- **Blocked:** Full dynamic discovery cutover, durable agent/team state, image
+  editing, avatar video, OCR, and complete media provider proof.
+- **Next Steps:** Cut one capability family at a time from compatibility
+  registries to `src/lib/providers/`, prove parity, then remove superseded
+  truth tables.
+- **Known Technical Debt:** Production execution still uses static model
+  catalogs, hardcoded defaults, compatibility provider registries, and some
+  process-local stores.
+- **Runtime Truth Summary:** The Brain gateway and artifact system are live.
+  The Phase 1 provider discovery layer is canonical but not yet used by
+  production execution. See `docs/RUNTIME_TRUTH_20260615.md`.
+
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 
 ---
