@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest'
 import { AI_CAPABILITY_TAXONOMY } from '@/lib/ai-capability-taxonomy'
 import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
 import { CAPABILITY_MAP } from '@/lib/capability-engine'
-import { selectCapabilityRoute } from '@/lib/connected-app-capability-engine'
 import { LIVE_SMOKE_PROVIDER_IDS } from '@/lib/live-smoke-tests'
 import { MODEL_REGISTRY } from '@/lib/model-registry'
 import {
@@ -45,19 +44,18 @@ describe('V1 final source-of-truth contracts', () => {
   it('uses the canonical capability taxonomy for connected-app execution', () => {
     expect(AI_CAPABILITY_TAXONOMY).toHaveLength(62)
     for (const capability of AI_CAPABILITY_TAXONOMY) {
-      const route = selectCapabilityRoute(capability)
       if (capability.adapterImplemented) {
-        expect(route).not.toBeNull()
-        expect(capability.providerRoutes).toContain(route)
-        expect(APPROVED_DIRECT_PROVIDER_IDS).toContain(route?.provider)
-      } else {
-        expect(route).toBeNull()
+        expect(capability.providerRoutes.some((route) =>
+          route.executable && APPROVED_DIRECT_PROVIDER_IDS.includes(route.provider),
+        )).toBe(true)
       }
     }
 
     const engine = source('src/lib/connected-app-capability-engine.ts')
     expect(engine).toContain("from '@/lib/ai-capability-taxonomy'")
     expect(engine).toContain('AI_CAPABILITY_TAXONOMY.find')
+    expect(engine).toContain('executeCapability')
+    expect(engine).not.toContain('selectCapabilityRoutePlan')
     expect(engine).not.toMatch(/CAPABILITY_(REGISTRY|MATRIX)\s*=/)
   })
 
@@ -83,8 +81,8 @@ describe('V1 final source-of-truth contracts', () => {
 
   it('does not manufacture completed jobs or artifacts', () => {
     const engine = source('src/lib/connected-app-capability-engine.ts')
-    expect(engine).toContain("status: 'processing'")
-    expect(engine).toContain('artifactId: null')
+    expect(engine).toContain("result.status === 'processing'")
+    expect(engine).toContain('artifactId: result.artifactId ?? null')
     expect(engine).toContain("if (result.status !== 'completed')")
     expect(engine).toContain('await createArtifact')
     expect(engine).toContain("status: 'failed'")

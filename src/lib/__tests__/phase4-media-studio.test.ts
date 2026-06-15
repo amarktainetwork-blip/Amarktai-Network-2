@@ -167,22 +167,26 @@ describe('Phase 4 Media Studio product coverage', () => {
     const producer = read('app/api/brain/stt/route.ts')
     expect(wrapper).toContain("requestedCapability: 'stt'")
     expect(wrapper).toContain('recordExecutionResponse')
-    expect(producer).toContain("type: 'transcript'")
+    expect(producer).toContain('executeCapability')
     expect(producer).toContain('executionId')
+    expect(read('lib/orchestrator.ts')).toContain("return 'transcript'")
   })
 
   it('threads execution IDs into every completed media producer', () => {
     for (const file of [
       'app/api/brain/image/route.ts',
-      'app/api/brain/image-edit/route.ts',
       'app/api/brain/suggestive-image/route.ts',
+      'app/api/admin/music-studio/route.ts',
+    ]) expect(read(file), file).toContain('executionId')
+    for (const file of [
+      'app/api/brain/image-edit/route.ts',
       'app/api/brain/video/route.ts',
       'app/api/brain/video-generate/route.ts',
       'app/api/brain/tts/route.ts',
-      'app/api/brain/stt/route.ts',
       'app/api/brain/adult-image/route.ts',
-      'app/api/admin/music-studio/route.ts',
-    ]) expect(read(file), file).toContain('executionId')
+    ]) expect(read(file), file).toContain('delegateJsonCapability')
+    expect(read('lib/brain-route-delegate.ts')).toContain('executionId')
+    expect(read('app/api/brain/stt/route.ts')).toContain('executionId')
   })
 
   it('reconciles completed provider jobs into executions', () => {
@@ -198,7 +202,8 @@ describe('Phase 4 Media Studio product coverage', () => {
     expect(page).toContain('policy.safeMode')
     expect(page).toContain('policy.adultMode')
     expect(page).toContain('policy.suggestiveMode')
-    expect(read('app/api/brain/adult-image/route.ts')).toContain('scanContent')
+    expect(read('app/api/brain/adult-image/route.ts')).toContain('delegateJsonCapability')
+    expect(read('lib/orchestrator.ts')).toContain('scanContent')
   })
 
   it('uses only approved direct providers and keeps removed voice authentication absent', () => {

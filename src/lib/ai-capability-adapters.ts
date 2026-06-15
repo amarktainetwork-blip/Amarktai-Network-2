@@ -9,11 +9,12 @@ import type {
 } from '@/lib/ai-capability-taxonomy'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
-import { getProviderInfo } from '@/lib/provider-registry'
 import {
   getVideoModelContract,
   providerSafeVideoParameters,
 } from '@/lib/video-route-specs'
+import { resolveProviderEndpoint } from '@/lib/providers/provider-discovery'
+import { getProviderTruth } from '@/lib/providers/registry'
 
 export type CapabilityReferenceKind =
   | 'image'
@@ -220,19 +221,10 @@ function structuredPrompt(input: CapabilityAdapterInput): string {
   ].filter(Boolean).join('\n\n')
 }
 
-function textModel(provider: ApprovedDirectProviderId, requested?: string): string {
-  if (requested) return requested
-  if (provider === 'genx') return 'gpt-5.4-mini'
-  if (provider === 'qwen') return 'qwen-plus'
-  if (provider === 'mimo') return 'mimo-v2.5'
-  if (provider === 'groq') return 'llama-3.3-70b-versatile'
-  if (provider === 'together') return 'meta-llama/Llama-3-70b-chat-hf'
-  return 'task:text'
-}
-
 async function executeText(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   if (input.route.provider === 'huggingface') return executeHuggingFace(input)
-  const model = textModel(input.route.provider, input.model)
+  const model = input.model
+  if (!model) return failedResult(input.route.provider, '', 'Discovery did not select a text model.')
   const response = await callUniversalProvider({
     providerKey: input.route.provider,
     model,
@@ -264,11 +256,12 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
   const provider = 'huggingface' as const
   const key = await getVaultApiKey(provider)
   const specialist = resolveHfSpecialistConfig(input.capability.id, input.route)
-  const model = input.model ?? specialist.model ?? 'custom:huggingface-endpoint'
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Hugging Face model.')
   if (!key) return failedResult(provider, model, 'Hugging Face key not configured.')
   const endpoint = specialist.endpointSource === 'environment'
     ? specialist.endpoint
-    : !specialist.endpointRequired && !model.startsWith('custom:')
+    : !specialist.endpointRequired
       ? `https://api-inference.huggingface.co/models/${model}`
       : null
   if (!endpoint) {
@@ -280,7 +273,10 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
   const binaryReference = firstReference(input, ['image', 'audio', 'video', 'document'])
   let body: BodyInit
   let contentType = 'application/json'
-  if (binaryReference?.url && !['document_question_answering', 'visual_question_answering'].includes(input.capability.id)) {
+  if (binaryReference?.data !== undefined && !['document_question_answering', 'visual_question_answering'].includes(input.capability.id)) {
+    body = Uint8Array.from(referenceBytes(binaryReference.data))
+    contentType = binaryReference.mimeType ?? 'application/octet-stream'
+  } else if (binaryReference?.url && !['document_question_answering', 'visual_question_answering'].includes(input.capability.id)) {
     const referenceUrl = publicHttpsUrl(binaryReference.url)
     if (!referenceUrl) return result(provider, model, 'blocked', { error: 'Reference URLs must be public HTTPS URLs.' })
     const source = await fetch(referenceUrl, { signal: AbortSignal.timeout(30_000) }).catch(() => null)
@@ -354,9 +350,8 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     : input.capability.group === 'computer_vision' || input.capability.outputTypes.includes('image')
       ? 'image'
       : 'audio'
-  const model = input.model ?? input.route.modelIds[0] ?? (
-    type === 'video' ? 'veo-3.1' : type === 'image' ? 'gpt-image-1' : 'lyria-2'
-  )
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a GenX media model.')
   const videoContract = type === 'video' ? getVideoModelContract(provider, model) : null
   if (type === 'video' && !videoContract) {
     return result(provider, model, 'failed', {
@@ -404,17 +399,14 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
     input.capability.id === 'image_to_video'
     || input.capability.id === 'image_text_to_video'
   )
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Qwen media model.')
   if (isImageToVideo && !imageReference?.url) {
-    return result(provider, input.model ?? 'wan2.1-i2v-turbo', 'blocked', {
+    return result(provider, model, 'blocked', {
       error: 'Image-to-video requires a source image.',
       errorCategory: 'model_not_supported',
     })
   }
-  const model = input.model ?? (
-    isVideo
-      ? isImageToVideo ? 'wan2.1-i2v-turbo' : 'wan2.1-t2v-turbo'
-      : 'qwen-image-2.0'
-  )
   const videoContract = isVideo ? getVideoModelContract(provider, model) : null
   if (isVideo && !videoContract) {
     return result(provider, model, 'failed', {
@@ -505,12 +497,7 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
 }
 
 function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image'): string {
-  const configured = process.env.DASHSCOPE_AIGC_BASE_URL?.trim().replace(/\/+$/, '')
-  const region = process.env.DASHSCOPE_REGION?.trim().toLowerCase()
-  const root = configured
-    || (region === 'cn' || region === 'beijing'
-      ? 'https://dashscope.aliyuncs.com/api/v1'
-      : 'https://dashscope-intl.aliyuncs.com/api/v1')
+  const root = resolveProviderEndpoint(getProviderTruth('qwen')!, 'aigc')
   if (kind === 'video') return `${root}/services/aigc/video-generation/video-synthesis`
   if (kind === 'wanx_image') return `${root}/services/aigc/text2image/image-synthesis`
   return `${root}/services/aigc/multimodal-generation/generation`
@@ -519,7 +506,8 @@ function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image'): string {
 async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'qwen' as const
   const key = await getVaultApiKey(provider)
-  const model = input.model ?? 'qwen-vl-max'
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Qwen multimodal model.')
   if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const referenceContent: Record<string, unknown>[] = []
   for (const reference of input.references) {
@@ -534,7 +522,7 @@ async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<Cap
     { type: 'text', text: structuredPrompt(input) },
   ]
   try {
-    const response = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions', {
+    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'compatible_mode')}/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages: [{ role: 'user', content }] }),
@@ -558,9 +546,10 @@ async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<Cap
 async function executeTogetherImage(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'together' as const
   const key = await getVaultApiKey(provider)
-  const model = input.model ?? input.route.modelIds[0] ?? 'black-forest-labs/FLUX.1-schnell-Free'
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Together image model.')
   if (!key) return failedResult(provider, model, 'Together AI key not configured.')
-  const endpoint = `${getProviderInfo(provider)?.baseUrl ?? 'https://api.together.xyz/v1'}/images/generations`
+  const endpoint = `${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/images/generations`
   const reference = firstReference(input, ['image'])
   try {
     const response = await fetch(endpoint, {
@@ -613,19 +602,26 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
   const provider = 'groq' as const
   const key = await getVaultApiKey(provider)
   const isStt = input.capability.id === 'automatic_speech_recognition'
-  const model = input.model ?? (isStt ? 'whisper-large-v3-turbo' : 'canopylabs/orpheus-v1-english')
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a Groq audio model.')
   if (!key) return failedResult(provider, model, 'Groq key not configured.')
   try {
     if (isStt) {
       const audio = firstReference(input, ['audio'])
-      const url = publicHttpsUrl(audio?.url)
-      if (!url) return result(provider, model, 'blocked', { error: 'Speech recognition requires a public HTTPS audio reference.' })
-      const source = await fetch(url, { signal: AbortSignal.timeout(30_000) })
-      if (!source.ok) return result(provider, model, 'failed', { error: `Audio fetch failed (${source.status}).` })
+      let audioBytes: Buffer
+      if (audio?.data !== undefined) {
+        audioBytes = referenceBytes(audio.data)
+      } else {
+        const url = publicHttpsUrl(audio?.url)
+        if (!url) return result(provider, model, 'blocked', { error: 'Speech recognition requires audio bytes or a public HTTPS audio reference.' })
+        const source = await fetch(url, { signal: AbortSignal.timeout(30_000) })
+        if (!source.ok) return result(provider, model, 'failed', { error: `Audio fetch failed (${source.status}).` })
+        audioBytes = Buffer.from(await source.arrayBuffer())
+      }
       const form = new FormData()
       form.append('model', model)
-      form.append('file', new Blob([await source.arrayBuffer()], { type: audio?.mimeType ?? 'audio/mpeg' }), 'audio-input')
-      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      form.append('file', new Blob([Uint8Array.from(audioBytes)], { type: audio?.mimeType ?? 'audio/mpeg' }), 'audio-input')
+      const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/audio/transcriptions`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${key}` },
         body: form,
@@ -637,7 +633,7 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
         contentType: 'application/json',
       })
     }
-    const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
+    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/audio/speech`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -658,10 +654,116 @@ async function executeGroqAudio(input: CapabilityAdapterInput): Promise<Capabili
   }
 }
 
+function referenceBytes(value: unknown): Buffer {
+  if (Buffer.isBuffer(value)) return value
+  if (value instanceof Uint8Array) return Buffer.from(value)
+  if (value instanceof ArrayBuffer) return Buffer.from(value)
+  if (typeof value === 'string') return Buffer.from(value, 'base64')
+  throw new Error('Unsupported inline reference data.')
+}
+
+async function executeQwenEmbeddings(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'qwen' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select an embeddings model.')
+  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
+  const truth = getProviderTruth(provider)!
+  try {
+    const response = await fetch(`${resolveProviderEndpoint(truth, 'compatible_mode')}/embeddings`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        input: input.inputs?.input ?? input.text ?? input.prompt,
+        encoding_format: 'float',
+      }),
+      signal: AbortSignal.timeout(45_000),
+    })
+    const json = await response.json().catch(() => null)
+    if (!response.ok) {
+      return failedResult(provider, model, `Qwen embeddings HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    }
+    return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen embeddings failed.')
+  }
+}
+
+async function executeTogetherTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'together' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a TTS model.')
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const truth = getProviderTruth(provider)!
+  try {
+    const response = await fetch(`${resolveProviderEndpoint(truth, 'openai_compatible')}/audio/speech`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        input: input.text ?? input.prompt,
+        voice: input.inputs?.voice,
+        response_format: input.inputs?.format ?? 'mp3',
+      }),
+      signal: AbortSignal.timeout(60_000),
+    })
+    if (!response.ok) return failedResult(provider, model, `Together TTS HTTP ${response.status}.`, response.status)
+    return result(provider, model, 'completed', {
+      bytes: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get('content-type') ?? 'audio/mpeg',
+    })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together TTS failed.')
+  }
+}
+
+async function executeMimoTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'mimo' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select a TTS model.')
+  if (!key) return failedResult(provider, model, 'MiMo key not configured.')
+  const truth = getProviderTruth(provider)!
+  try {
+    const response = await fetch(`${resolveProviderEndpoint(truth, 'token_plan')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'api-key': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: input.text ?? input.prompt }],
+        audio: {
+          format: input.inputs?.format ?? 'wav',
+          voice: input.inputs?.voice,
+        },
+      }),
+      signal: AbortSignal.timeout(60_000),
+    })
+    const json = await response.json().catch(() => null) as {
+      choices?: Array<{ message?: { audio?: { data?: string } } }>
+    } | null
+    if (!response.ok) return failedResult(provider, model, `MiMo TTS HTTP ${response.status}.`, response.status)
+    const audio = json?.choices?.[0]?.message?.audio?.data
+    if (!audio) return failedResult(provider, model, 'MiMo completed without audio data.')
+    return result(provider, model, 'completed', {
+      bytes: Buffer.from(audio, 'base64'),
+      contentType: input.inputs?.format === 'mp3' ? 'audio/mpeg' : 'audio/wav',
+    })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'MiMo TTS failed.')
+  }
+}
+
 async function adapterExecute(provider: ApprovedDirectProviderId, input: CapabilityAdapterInput) {
   const startedAt = Date.now()
   let execution: Promise<CapabilityAdapterResult>
   if (provider === 'huggingface') execution = executeHuggingFace(input)
+  else if (provider === 'qwen' && input.capability.id === 'embeddings') execution = executeQwenEmbeddings(input)
   else if (provider === 'qwen') execution = executeQwen(input)
   else if (provider === 'genx' && (
     input.capability.longRunning
@@ -669,6 +771,12 @@ async function adapterExecute(provider: ApprovedDirectProviderId, input: Capabil
   )) execution = executeGenXMedia(input)
   else if (provider === 'groq' && ['text_to_speech', 'automatic_speech_recognition'].includes(input.capability.id)) {
     execution = executeGroqAudio(input)
+  }
+  else if (provider === 'together' && input.capability.id === 'text_to_speech') {
+    execution = executeTogetherTts(input)
+  }
+  else if (provider === 'mimo' && input.capability.id === 'text_to_speech') {
+    execution = executeMimoTts(input)
   }
   else if (provider === 'together' && input.capability.outputTypes.includes('image')) {
     execution = executeTogetherImage(input)
@@ -683,7 +791,8 @@ async function pollProvider(
   providerJobId: string,
   input: CapabilityAdapterInput,
 ): Promise<CapabilityAdapterResult> {
-  const model = input.model ?? input.route.modelIds[0] ?? 'unknown'
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not retain a model for provider polling.')
   if (provider === 'genx') {
     const polled = await getGenXJobStatus(providerJobId)
     if (!polled) return result(provider, model, 'processing', { providerJobId })

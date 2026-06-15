@@ -81,7 +81,8 @@ describe('V1 AI capability routing truth', () => {
     const engine = source('src/lib/connected-app-capability-engine.ts')
     expect(AI_CAPABILITY_TAXONOMY.some((capability) => capability.longRunning)).toBe(true)
     expect(engine).toContain('LOCAL_STORE_FILES.connectedAppCapabilityJobs')
-    expect(engine).toContain("status: 'processing'")
+    expect(engine).toContain("result.status === 'processing'")
+    expect(engine).toContain('executeCapability')
     expect(source('src/app/api/connected-apps/capabilities/jobs/[jobId]/route.ts'))
       .toContain('pollConnectedAppCapabilityJob')
   })
@@ -93,6 +94,13 @@ describe('V1 AI capability routing truth', () => {
     expect(source('src/lib/artifact-store.ts')).toContain('Completed artifacts require persisted content')
     expect(engine).toContain("status: 'failed'")
     expect(engine).not.toMatch(/fake|placeholder artifact|mock result/i)
+  })
+
+  it('does not let connected apps select providers, models, or endpoints', () => {
+    const engine = source('src/lib/connected-app-capability-engine.ts')
+    expect(engine).toContain('request.provider || request.model || request.endpointUrl')
+    expect(engine).toContain('selection are owned by AmarktAI')
+    expect(engine).not.toContain('selectCapabilityRoutePlan')
   })
 
   it('supports the required references, app context, and safety constraints', () => {

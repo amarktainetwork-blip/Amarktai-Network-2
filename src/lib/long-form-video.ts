@@ -23,6 +23,17 @@ const execFileAsync = promisify(execFile)
 const MAX_SCENES = 30
 const SCENE_SECONDS = 8
 
+export const LONG_FORM_VIDEO_ARCHITECTURE = [
+  'storyboard',
+  'scene_list',
+  'scene_jobs',
+  'provider_generation',
+  'voice',
+  'music',
+  'assembly',
+  'artifact',
+] as const
+
 export type VideoProjectStatus =
   | 'planned'
   | 'generating_scenes'
@@ -200,8 +211,6 @@ export async function advanceVideoProject(id: string): Promise<VideoProject | nu
       appId: project.appSlug,
       adultMode: project.capability === 'adult_video',
       safeMode: project.capability === 'adult_video' ? false : undefined,
-      providerOverride: project.requestedProvider ?? undefined,
-      modelOverride: project.requestedModel ?? undefined,
       qualityTier: project.qualityTier,
       saveArtifact: true,
       metadata: {
@@ -215,6 +224,9 @@ export async function advanceVideoProject(id: string): Promise<VideoProject | nu
         tone: project.tone,
         brandKitId: project.brandKitId,
         controlPlaneJobId: project.controlPlaneJobId,
+        pipeline: LONG_FORM_VIDEO_ARCHITECTURE,
+        ignoredRequestedProvider: project.requestedProvider,
+        ignoredRequestedModel: project.requestedModel,
       },
     })
     scene.provider = result.provider

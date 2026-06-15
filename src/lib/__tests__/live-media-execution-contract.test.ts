@@ -147,15 +147,17 @@ describe('local media job lifecycle', () => {
 describe('live media route contracts', () => {
   it('recognizes avatar video without advertising a fake provider', () => {
     expect(normalizeGovernedCapability('avatar_video')).toBe('avatar_video')
-    expect(read('app/api/brain/avatar-video/route.ts')).toContain('avatar video provider unavailable')
+    expect(read('app/api/brain/avatar-video/route.ts')).toContain('delegateJsonCapability')
+    expect(read('app/api/brain/avatar-video/route.ts')).toContain("capability: 'avatar_video'")
   })
 
-  it('advertises Groq only because the canonical TTS endpoint implements it', () => {
+  it('advertises Groq only because the canonical adapter implements TTS', () => {
     expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).toContain('groq')
     const route = read('app/api/brain/tts/route.ts')
-    expect(route).toContain('https://api.groq.com/openai/v1')
-    expect(route).toContain('/audio/speech')
-    expect(route).toContain("getProviderApiKey('groq')")
+    const adapters = read('lib/ai-capability-adapters.ts')
+    expect(route).toContain('delegateJsonCapability')
+    expect(adapters).toContain('/audio/speech')
+    expect(adapters).toContain("provider === 'groq'")
   })
 
   it('uses canonical video capability and exposes local polling in Studio', () => {

@@ -1,13 +1,12 @@
 /**
  * Orchestrator Tests
  *
- * Validates task classification, decision engine, confidence scoring,
- * and specialist profile mapping.
+ * Validates compatibility classification, confidence scoring, and specialist
+ * profiles. Provider/model selection belongs to canonical discovery tests.
  */
 import { describe, it, expect } from 'vitest'
 import {
   classifyTask,
-  decideExecution,
   computeConfidenceScore,
   getSpecialistProfile,
   SPECIALIST_PROFILES,
@@ -59,63 +58,8 @@ describe('Orchestrator', () => {
     })
   })
 
-  describe('decideExecution', () => {
-    const mockProvider = {
-      providerKey: 'openai',
-      model: 'gpt-4o-mini',
-      healthStatus: 'healthy',
-      isHealthy: true,
-    }
-    const mockProvider2 = {
-      providerKey: 'groq',
-      model: 'llama-3.3-70b-versatile',
-      healthStatus: 'healthy',
-      isHealthy: true,
-    }
-
-    it('returns valid result even with empty provider list (routing engine has registry)', async () => {
-      const classification = classifyTask('generic', 'chat', 'test')
-      const result = await decideExecution(classification, [])
-      // The routing engine uses the model registry as its source of truth,
-      // so even with an empty DB provider list, it may find eligible models.
-      // If the registry has models, primaryProvider will be set from them.
-      if (result.primaryProvider) {
-        expect(result.primaryProvider.providerKey).toBeTruthy()
-      } else {
-        // Only null when registry has no enabled models either
-        expect(result.warnings.length).toBeGreaterThan(0)
-      }
-    })
-
-    it('selects primary provider from available', async () => {
-      const classification = classifyTask('generic', 'chat', 'test')
-      const result = await decideExecution(classification, [mockProvider])
-      expect(result.primaryProvider).toBeDefined()
-      expect(result.primaryProvider?.providerKey).toBeDefined()
-    })
-
-    it('selects secondary provider for review mode', async () => {
-      const classification = classifyTask('finance', 'analysis', 'Market analysis needed')
-      const result = await decideExecution(classification, [mockProvider, mockProvider2])
-      if (result.executionMode === 'review' || result.executionMode === 'consensus') {
-        expect(result.secondaryProvider).toBeDefined()
-      }
-    })
-
-    it('downgrades to specialist when only 1 provider for review', async () => {
-      const classification = classifyTask('finance', 'analysis', 'Market analysis')
-      const result = await decideExecution(classification, [mockProvider])
-      if (classification.executionMode === 'review') {
-        expect(result.executionMode).toBe('specialist')
-        expect(result.warnings.some(w => w.includes('downgraded'))).toBe(true)
-      }
-    })
-  })
-
   describe('computeConfidenceScore', () => {
     const healthyProvider = {
-      providerKey: 'openai',
-      model: 'gpt-4o',
       healthStatus: 'healthy',
       isHealthy: true,
     }

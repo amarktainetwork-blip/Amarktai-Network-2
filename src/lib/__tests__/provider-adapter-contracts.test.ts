@@ -79,7 +79,7 @@ describe('provider adapter contracts', () => {
     )
 
     expect(result.status).toBe('completed')
-    expect(fetchMock.mock.calls[0][0]).toBe('https://api.together.xyz/v1/images/generations')
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.together.ai/v1/images/generations')
     expect(fetchMock.mock.calls[0][0]).not.toContain('chat/completions')
   })
 

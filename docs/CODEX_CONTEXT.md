@@ -2,23 +2,24 @@ READ THIS FILE FIRST.
 
 # AmarktAI Network V1
 
-# CURRENT IMPLEMENTATION STATUS
+## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #116
-- **Completed:** Runtime ownership and readiness audit for Brain, providers,
-  models, agents, media, research, and every admin page.
-- **In Progress:** PR #116 documentation review and merge.
-- **Blocked:** Production execution does not yet consume Phase 1 dynamic model
-  discovery. Several media and research contracts remain partial or absent.
-- **Next Steps:** Use `RUNTIME_TRUTH_20260615.md` to perform a narrow,
-  capability-by-capability parity cutover.
-- **Known Technical Debt:** Duplicate compatibility registries, hardcoded
-  models, prohibited-provider remnants, and process-local task/team stores.
-- **Runtime Truth Summary:** `src/lib/providers/` is canonical architecture but
-  currently unused by production execution. `capability-router.ts` delegates
-  to the live legacy-dependent orchestrator. Artifacts are canonical and real.
-  PR #116 changes documentation only.
+- **PR Number:** #117
+- **Purpose:** Complete the final V1 Brain architecture and prohibit execution
+  outside the canonical capability, discovery, scoring, and artifact path.
+- **Completed:** The Brain capability router is the production execution
+  owner. It resolves canonical capabilities, discovers provider models, scores
+  candidates, executes provider-native adapters, records jobs, and persists
+  artifacts. Specialist routes and agents delegate to it.
+- **Remaining:** Research completion and deployment proof for each provider
+  capability family. PRs #119-#121 own dashboard, website, and Marketing App.
+- **Known Issues:** Research and long-form video remain partial. Compatibility
+  role names and selected admin diagnostics remain, but cannot choose a
+  provider/model for product execution.
+- **Go Live Readiness:** Signed apps can execute only when live discovery
+  returns evidence. Otherwise the stable result is `NO_ROUTE_FOUND`.
+- **Next PR:** #118 Research Completion.
 
 Single source of truth:
 
@@ -50,6 +51,17 @@ APP
   -> ARTIFACT
   -> APP
 ```
+
+Production ownership:
+
+- `src/lib/providers/*`: provider truth, discovery, cache, health, profiles,
+  scoring, and route planning.
+- `src/lib/capability-router.ts`: stable product execution entry.
+- `src/lib/orchestrator.ts`: policy, adapter execution, jobs, and artifacts.
+- `src/lib/ai-capability-adapters.ts`: provider-native protocol calls only;
+  adapters never select a fallback model.
+- `/api/brain/request`, `/api/brain/execute`, `/api/brain/stream`: public Brain
+  entry surfaces. Specialist routes are compatibility delegates.
 
 ## Working Rules
 

@@ -55,3 +55,49 @@ export function getCapability(id: string): CapabilityDefinition | null {
 export function isCanonicalCapability(id: string): id is CapabilityId {
   return CANONICAL_CAPABILITY_IDS.includes(id as CapabilityId)
 }
+
+const PRODUCT_CAPABILITY_ALIASES: Readonly<Record<string, CapabilityId>> = {
+  chat: 'chat',
+  reasoning: 'reasoning',
+  code: 'coding',
+  coding: 'coding',
+  repo_edit: 'coding',
+  app_build: 'coding',
+  deploy_plan: 'reasoning',
+  research: 'research',
+  scrape_website: 'research',
+  image: 'image',
+  image_generation: 'image',
+  suggestive_image: 'image',
+  image_edit: 'image_edit',
+  video: 'video',
+  video_generation: 'video',
+  suggestive_video: 'video',
+  image_to_video: 'image_to_video',
+  avatar_generation: 'avatar',
+  adult_avatar: 'avatar',
+  avatar_video: 'avatar',
+  music_generation: 'music',
+  lyrics_generation: 'chat',
+  tts: 'tts',
+  voice_response: 'tts',
+  adult_voice: 'tts',
+  stt: 'stt',
+  voice_clone: 'voice_clone',
+  voice_design: 'voice_clone',
+  ocr: 'ocr',
+  vision: 'vision',
+  embeddings: 'embeddings',
+  rerank: 'rerank',
+  translation: 'translation',
+  documents: 'documents',
+  file_analysis: 'documents',
+  agents: 'agents',
+  adult_text: 'adult_text',
+  adult_image: 'adult_image',
+  adult_video: 'adult_video',
+}
+
+export function resolveCanonicalCapability(id: string): CapabilityId | null {
+  return PRODUCT_CAPABILITY_ALIASES[id] ?? (isCanonicalCapability(id) ? id : null)
+}

@@ -1,24 +1,22 @@
 # AmarktAI Network V1 Operating Truth
 
-# CURRENT IMPLEMENTATION STATUS
+## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #116
-- **Completed:** Phase 0 operating truth, Phase 1 provider truth foundation, and
-  the PR #116 definitive V1 runtime audit.
-- **In Progress:** Documentation review only.
-- **Blocked:** Runtime cutover to dynamic discovery, durable multi-instance
-  agent/team/media jobs, and unimplemented source-media/OCR/avatar contracts.
-- **Next Steps:** Migrate one capability family into the canonical provider
-  planner with parity tests before deleting any compatibility layer.
-- **Known Technical Debt:** Current production execution still depends on
-  `orchestrator.ts`, legacy model/provider registries, static provider-native
-  defaults, and some process-local state.
-- **Runtime Truth Summary:** `src/lib/providers/` owns canonical provider
-  discovery and scoring but has no production execution caller yet. The live
-  Brain gateway delegates through `capability-router.ts` to `orchestrator.ts`.
-  The artifact system is canonical and working. Detailed evidence is in
-  `RUNTIME_TRUTH_20260615.md`.
+- **PR Number:** #117
+- **Purpose:** Establish the final production execution architecture: one
+  Brain, one capability router, one provider truth layer, and one artifact
+  system.
+- **Completed:** Provider truth, live discovery, scoring, capability routing,
+  provider-native execution, jobs, artifacts, adult policy, specialist-route
+  delegation, agent delegation, and removal of the dead legacy orchestrator.
+- **Remaining:** Live provider evidence for every desired capability, research
+  completion, and later product/UI integration PRs.
+- **Known Issues:** Research and long-form video are partial. Compatibility
+  admin diagnostics remain outside product execution.
+- **Go Live Readiness:** Apps may use proven scoped capabilities. Discovery
+  failure is `NO_ROUTE_FOUND`, never a guessed provider or model.
+- **Next PR:** #118 Research Completion.
 
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
 or older documents disagree with it, stop and resolve the conflict before
@@ -79,9 +77,9 @@ Capability
   -> Execute
 ```
 
-Provider-specific adapters may contain protocol identifiers. Capability callers
-must use the canonical registry and router rather than selecting raw providers
-or models. Models are dynamic and discovery-driven.
+Provider-specific adapters may contain endpoint protocol identifiers, but no
+fallback model IDs. Capability callers cannot select raw providers or models.
+Models are dynamic and discovery-driven.
 
 ## Routing Profiles
 
@@ -129,8 +127,9 @@ returns no route; it never creates a default model or fake fallback.
 
 Provider scoring considers quality, speed, cost, availability, adult
 permission, research support, streaming, health, and artifact support.
-Provider and model preferences constrain scoring but do not authorize an
-unknown provider or undiscovered model.
+Internal routing profiles may constrain scoring. App-facing specialist routes
+ignore raw provider/model preferences; an unknown or undiscovered model is
+never authorized.
 
 Qwen discovery distinguishes compatible-mode and AIGC endpoint families. Its
 standard endpoint retains free-quota truth, and models marked outside free
@@ -139,6 +138,12 @@ endpoint. Hugging Face discovery includes public model/task metadata,
 inference-provider mappings, and separately configured private or dedicated
 endpoints.
 
-Existing execution APIs and business workflows are not switched in Phase 1.
-Their compatibility registries remain in place until a dedicated runtime
-cutover can prove parity without changing product behavior.
+PR #117 promoted this layer to production execution truth. The compatibility
+`orchestrate()` export now delegates to canonical capability execution. Its old
+provider/model routing body was deleted. Provider-native adapters receive the
+model selected by discovery and return a failure if no model was selected.
+
+Specialist Brain routes do not implement separate routing, policy, provider, or
+artifact systems. They delegate to the capability router. Provider connection
+tests may call provider health/catalog endpoints directly because they are
+diagnostics, not product generation.

@@ -2,6 +2,7 @@ import type { RoutingQualityTier } from '@/lib/capability-routing-policy'
 
 export const CAPABILITY_ROUTER_CAPABILITIES = [
   'chat',
+  'reasoning',
   'code',
   'file_analysis',
   'image_generation',
@@ -20,6 +21,17 @@ export const CAPABILITY_ROUTER_CAPABILITIES = [
   'adult_avatar',
   'avatar_generation',
   'avatar_video',
+  'voice_clone',
+  'voice_design',
+  'ocr',
+  'vision',
+  'documents',
+  'embeddings',
+  'rerank',
+  'translation',
+  'agents',
+  'memory',
+  'artifacts',
   'suggestive_image',
   'suggestive_video',
   'repo_edit',
@@ -106,8 +118,10 @@ export interface CapabilityResponse {
     | 'unsupported_endpoint'
     | 'artifact_error'
     | 'guardrail_block'
+    | 'no_route_found'
     | 'unknown'
   nextActions?: string[]
   providerAttempts?: ProviderAttempt[]
   diagnostics?: Record<string, unknown>
+  code?: 'NO_ROUTE_FOUND' | 'ROUTE_FOUND'
 }

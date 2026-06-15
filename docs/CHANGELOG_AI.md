@@ -41,3 +41,32 @@ unproven capability appear complete.
 - **Next PR target:** Cut one capability family from compatibility routing to
   Phase 1 discovery with parity tests, then remove only the superseded truth
   for that family.
+
+## PR 117
+
+- **Purpose:** Make the Brain the only V1 runtime execution path and promote the
+  provider truth, live discovery, and scoring layer to production truth.
+- **Files Changed:** Status and operating documents first; canonical Brain,
+  capability routing, provider execution, media architecture, agent truth, and
+  focused parity tests as required by the cutover.
+- **Execution Changes:** The capability router now resolves provider truth,
+  live discovery, scoring, and adapter candidates. The compatibility
+  orchestrator, specialist media routes, Music Studio, connected-app
+  capability engine, stream route, and agent runtime enter this path. Connected
+  apps submit scoped capabilities only; provider, model, and endpoint overrides
+  are rejected. Adapters require the discovered model and cannot invent a
+  default. Missing evidence returns `NO_ROUTE_FOUND`.
+- **Deleted Legacy Components:** Removed the runtime-dead legacy orchestration
+  body and unused `src/lib/capability-gaps.ts`. Specialist route-local routing,
+  policy, and artifact implementations were replaced by thin delegates.
+- **Capability Coverage:** Chat, reasoning, research, image, image edit, video,
+  image to video, music, TTS, STT, avatar, OCR, documents, embeddings, rerank,
+  adult, memory, and artifacts are in the cutover audit. Unsupported discovery
+  results return `NO_ROUTE_FOUND`.
+- **Remaining Work:** Research remains `PARTIAL`; long-form video has the final
+  storyboard-to-artifact architecture but incomplete voice/music composition
+  runtime. Deployment must prove live catalog evidence and each desired
+  capability. Active Labs/LiteLLM compatibility imports were not deleted
+  without parity and are not canonical product execution.
+- **Next PR:** #118 Research Completion, followed by #119 Dashboard Completion,
+  #120 Website Completion, and #121 Marketing App Integration.
