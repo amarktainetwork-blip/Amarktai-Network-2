@@ -90,3 +90,35 @@ canonical GitHub branch, this document, `CHANGELOG_AI.md`,
 
 Do not create parallel provider configs, model catalogs, capability lists,
 routers, or product truth documents.
+
+## Phase 1 Provider Truth Rules
+
+The canonical Phase 1 provider truth layer is under `src/lib/providers/`.
+It owns:
+
+- the six approved provider IDs
+- the 23 product capability IDs
+- provider-native endpoint and discovery metadata
+- cached model, task, inference-provider, and endpoint discovery
+- routing profiles and scoring weights
+- dynamic route planning from discovered model evidence
+
+No model IDs are stored in this layer. A model becomes eligible only after
+provider discovery returns model-level capability evidence. Missing discovery
+returns no route; it never creates a default model or fake fallback.
+
+Provider scoring considers quality, speed, cost, availability, adult
+permission, research support, streaming, health, and artifact support.
+Provider and model preferences constrain scoring but do not authorize an
+unknown provider or undiscovered model.
+
+Qwen discovery distinguishes compatible-mode and AIGC endpoint families. Its
+standard endpoint retains free-quota truth, and models marked outside free
+quota are excluded unless `QWEN_PAID_ENABLED=true`. MiMo uses its token-plan
+endpoint. Hugging Face discovery includes public model/task metadata,
+inference-provider mappings, and separately configured private or dedicated
+endpoints.
+
+Existing execution APIs and business workflows are not switched in Phase 1.
+Their compatibility registries remain in place until a dedicated runtime
+cutover can prove parity without changing product behavior.
