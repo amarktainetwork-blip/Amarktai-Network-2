@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "canonical_capabilities": [
+    "chat",
+    "reasoning",
+    "coding",
+    "research",
+    "image",
+    "image_edit",
+    "video",
+    "image_to_video",
+    "avatar",
+    "music",
+    "tts",
+    "stt",
+    "voice_clone",
+    "ocr",
+    "vision",
+    "embeddings",
+    "rerank",
+    "translation",
+    "documents",
+    "agents",
+    "adult_text",
+    "adult_image",
+    "adult_video"
+  ],
+  "policy": {
+    "selection_flow": [
+      "capability",
+      "provider_discovery",
+      "model_discovery",
+      "score",
+      "execute"
+    ],
+    "apps_call_providers_directly": false,
+    "adult_is_provider": false
+  }
+}

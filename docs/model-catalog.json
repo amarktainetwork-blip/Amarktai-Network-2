@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "models_are_dynamic": true,
+    "hardcoded_models_allowed": false,
+    "catalog_source": "provider_discovery"
+  },
+  "fields": [
+    "provider",
+    "capability",
+    "model",
+    "speed",
+    "quality",
+    "cost",
+    "adult",
+    "context",
+    "status",
+    "discovered_at"
+  ],
+  "models": []
+}

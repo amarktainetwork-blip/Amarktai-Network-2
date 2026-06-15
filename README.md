@@ -411,6 +411,36 @@ Provider health is refreshed:
 
 ---
 
+## AI Operating Rules
+
+All future AI work must:
+
+1. Update [`docs/CHANGELOG_AI.md`](docs/CHANGELOG_AI.md).
+2. Update [`docs/PROVIDER_MATRIX.md`](docs/PROVIDER_MATRIX.md) when provider
+   capabilities change.
+3. Update [`docs/OPERATING_TRUTH.md`](docs/OPERATING_TRUTH.md) when architecture
+   changes.
+4. Never hardcode providers, models, or capabilities as universal routing
+   policy.
+5. Treat GitHub as the only source of truth.
+
+Apps never call AI providers directly. The required execution path is:
+
+```text
+APP
+  -> BRAIN
+  -> CAPABILITY
+  -> ROUTER
+  -> PROVIDER
+  -> ARTIFACT
+  -> APP
+```
+
+Read [`docs/CODEX_CONTEXT.md`](docs/CODEX_CONTEXT.md) first when starting a new
+AI implementation session.
+
+---
+
 ## License
 
 Proprietary — Amarktai Network © 2025. All rights reserved.
