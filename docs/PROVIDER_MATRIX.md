@@ -47,3 +47,32 @@ presence, or theoretical support alone is insufficient.
 - Adult rows remain `unknown` at provider level because adult is a Brain policy
   gate, not a provider feature.
 - Provider capability changes must update this file and `CHANGELOG_AI.md`.
+
+## Phase 1 Discovery Coverage
+
+| Provider | Dynamic model discovery | Task/capability evidence | Extra discovery |
+| --- | --- | --- | --- |
+| HF | Hub model metadata | pipeline task metadata | inference providers plus configured private/dedicated endpoints |
+| Together | provider model catalog | model metadata when supplied | configured dedicated endpoints |
+| Groq | provider model catalog | model metadata when supplied | tool-calling capability contract |
+| GenX | async `/api/v1/models` family | model metadata when supplied | streaming, async job, and webhook truth |
+| Qwen | compatible-mode model catalog | model metadata when supplied | compatible/AIGC split, free-quota and paid guard |
+| MiMo | token-plan model catalog | model metadata when supplied | token-plan endpoint truth |
+
+Discovery support does not upgrade a capability row to `working`. The working,
+partial, blocked, and unknown statuses above remain evidence-based execution
+truth. A discovered model is only routeable when its metadata identifies the
+requested capability.
+
+Phase 1 files:
+
+- `src/lib/providers/provider-types.ts`
+- `src/lib/providers/provider-truth.ts`
+- `src/lib/providers/registry.ts`
+- `src/lib/providers/capability-registry.ts`
+- `src/lib/providers/provider-discovery.ts`
+- `src/lib/providers/model-discovery.ts`
+- `src/lib/providers/provider-cache.ts`
+- `src/lib/providers/provider-scoring.ts`
+- `src/lib/providers/routing-profiles.ts`
+- `src/lib/providers/health.ts`

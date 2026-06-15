@@ -155,7 +155,7 @@ describe('live media route contracts', () => {
     const route = read('app/api/brain/tts/route.ts')
     expect(route).toContain('https://api.groq.com/openai/v1')
     expect(route).toContain('/audio/speech')
-    expect(route).toContain("getVaultApiKey('groq')")
+    expect(route).toContain("getProviderApiKey('groq')")
   })
 
   it('uses canonical video capability and exposes local polling in Studio', () => {
