@@ -1,7 +1,9 @@
 import { getCapability, resolveCanonicalCapability } from './capability-registry'
 import { discoverProvider } from './provider-discovery'
 import { getCanonicalProviderHealth } from './health'
+import { modelsForCapability } from './model-discovery'
 import { planDynamicCapabilityRoute } from './registry'
+import { PROVIDER_TRUTH } from './provider-truth'
 import type {
   CanonicalExecutionPlan,
   ProviderId,
@@ -46,11 +48,24 @@ export async function getCanonicalProviderRuntimeTruth(provider: ProviderId) {
     discoverProvider(provider),
     getCanonicalProviderHealth(provider),
   ])
+  const providerTruth = PROVIDER_TRUTH.find((entry) => entry.id === provider)!
+  const routes = providerTruth.capabilities.map((capability) => {
+    const models = modelsForCapability(discovery, capability)
+    return {
+      capability,
+      models: models.map((model) => model.id),
+      evidence: [...new Set(models.map((model) => model.capabilityEvidence))],
+      executable: health.configured && models.length > 0,
+    }
+  })
   return {
     provider,
     health,
+    discoveryStatus: discovery.status,
     models: discovery.models,
-    capabilities: [...new Set(discovery.models.flatMap((model) => model.capabilities))],
+    declaredCapabilities: [...providerTruth.capabilities],
+    capabilities: routes.filter((route) => route.executable).map((route) => route.capability),
+    routes,
     streaming: discovery.models.some((model) => model.streaming === true),
     asyncJobs: discovery.models.some((model) => model.raw.async === true || model.raw.async_jobs === true),
     artifacts: discovery.models.some((model) => model.artifactSupport),

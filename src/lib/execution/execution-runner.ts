@@ -169,6 +169,7 @@ export function recordExecutionResponse(
   const success = response.success === true || response.executed === true
   const status = String(response.jobStatus ?? response.status ?? '')
   const isPending = Boolean(jobId && ['pending', 'processing', 'queued'].includes(status))
+  recordCanonicalRoute(executionId, response)
 
   if (jobId) {
     linkExecutionJob(executionId, {
@@ -206,6 +207,43 @@ export function recordExecutionResponse(
     executionId,
     String(response.error ?? response.blocker ?? 'Execution failed.'),
   )
+}
+
+function recordCanonicalRoute(
+  executionId: string,
+  response: Record<string, unknown>,
+) {
+  const execution = getExecution(executionId)
+  if (!execution) return
+  const provider = typeof response.provider === 'string' ? response.provider : null
+  const model = typeof response.model === 'string' ? response.model : null
+  const attempts = Array.isArray(response.providerAttempts)
+    ? response.providerAttempts.filter(
+        (attempt): attempt is Record<string, unknown> =>
+          Boolean(attempt) && typeof attempt === 'object',
+      )
+    : []
+  const fallbackProviders = attempts
+    .map((attempt) => attempt.provider)
+    .filter((value): value is string => typeof value === 'string' && value !== provider)
+  const fallbackModels = attempts
+    .map((attempt) => attempt.model)
+    .filter((value): value is string => typeof value === 'string' && value !== model)
+  if (!provider && !model && attempts.length === 0) return
+  updateExecution(executionId, {
+    providerPlan: {
+      provider,
+      fallbackProviders: [...new Set(fallbackProviders)],
+      reason: response.success === true
+        ? 'Canonical discovery and scoring selected the executed provider route.'
+        : 'Canonical discovery returned provider attempts; execution did not complete.',
+    },
+    modelPlan: {
+      ...execution.modelPlan,
+      model,
+      fallbackModels: [...new Set(fallbackModels)],
+    },
+  })
 }
 
 export function resolveExecutionApproval(

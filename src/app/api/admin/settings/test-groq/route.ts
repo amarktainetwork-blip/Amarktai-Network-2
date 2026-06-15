@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getProviderKey } from '@/lib/provider-config'
+import { resolveProviderEndpoint } from '@/lib/providers/provider-discovery'
+import { getProviderTruth } from '@/lib/providers/registry'
 
 export async function POST(req: NextRequest) {
   const session = await getSession()
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const start = Date.now()
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/models', {
+    const res = await fetch(`${resolveProviderEndpoint(getProviderTruth('groq')!, 'openai_compatible')}/models`, {
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(8_000),
     })

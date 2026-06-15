@@ -17,7 +17,7 @@ export function scoreProviderModel(input: {
   const { provider, model, capability, health, profile } = input
   if (model.status === 'unavailable') return null
   if (!model.capabilities.includes(capability.id)) return null
-  if (!health.configured) return null
+  if (!health.configured || health.state === 'degraded') return null
   if (capability.requiresAdultPermission && profile.preferences.adult !== true) return null
   if (profile.preferences.streaming === true && model.streaming !== true && !provider.features.streaming) {
     return null
@@ -38,9 +38,10 @@ export function scoreProviderModel(input: {
   ) return null
 
   const availability = model.status === 'available' ? 1 : 0.5
+  const evidence = model.capabilityEvidence === 'model_metadata' ? 1 : 0.55
   const healthScore = health.state === 'healthy'
     ? 1
-    : health.state === 'unknown' ? 0.5 : health.state === 'degraded' ? 0.2 : 0
+    : health.state === 'unknown' ? 0.5 : 0
   const scoreBreakdown = {
     quality: normalized(model.quality) * profile.weights.quality,
     speed: normalized(model.speed) * profile.weights.speed,
@@ -51,6 +52,7 @@ export function scoreProviderModel(input: {
     streaming: (model.streaming === true || provider.features.streaming ? 1 : 0.5) * profile.weights.streaming,
     health: healthScore * profile.weights.health,
     artifactSupport: (model.artifactSupport ? 1 : 0) * profile.weights.artifactSupport,
+    evidence: evidence * 0.2,
   }
   return {
     provider: provider.id,

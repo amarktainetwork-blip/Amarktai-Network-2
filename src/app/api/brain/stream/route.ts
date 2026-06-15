@@ -4,7 +4,6 @@ import { z } from 'zod'
 import { authenticateApp } from '@/lib/brain'
 import { executeCapability } from '@/lib/capability-router'
 import { scanContent } from '@/lib/content-filter'
-import { isApprovedDirectProvider } from '@/lib/provider-mesh'
 
 const streamRequestSchema = z.object({
   appId: z.string().min(1).max(200),
@@ -47,9 +46,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: auth.error ?? 'Unauthorized', traceId }, { status: auth.statusCode })
   }
 
-  if (body.provider && !isApprovedDirectProvider(body.provider)) {
+  if (body.provider || body.model) {
     return NextResponse.json(
-      { error: `Provider "${body.provider}" is not approved for direct execution.`, traceId },
+      {
+        error: 'Apps request capabilities; provider and model selection are owned by AmarktAI.',
+        traceId,
+      },
       { status: 400 },
     )
   }
@@ -58,8 +60,6 @@ export async function POST(request: NextRequest) {
     input: body.message,
     capability: streamCapability(body.taskType),
     appId: auth.app.slug,
-    providerOverride: body.provider,
-    modelOverride: body.model,
     metadata: {
       streaming: true,
       systemPrompt: body.systemPrompt ?? null,

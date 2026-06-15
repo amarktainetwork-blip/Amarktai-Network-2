@@ -12,6 +12,31 @@ import type {
 
 const discoveryCache = new ProviderDiscoveryCache<ProviderDiscoverySnapshot>()
 
+const HF_PIPELINE_TASK: Partial<Record<CapabilityId, string>> = {
+  chat: 'text-generation',
+  reasoning: 'text-generation',
+  coding: 'text-generation',
+  research: 'text-generation',
+  image: 'text-to-image',
+  image_edit: 'image-to-image',
+  video: 'text-to-video',
+  image_to_video: 'image-to-video',
+  avatar: 'text-to-image',
+  music: 'text-to-audio',
+  tts: 'text-to-speech',
+  stt: 'automatic-speech-recognition',
+  ocr: 'image-to-text',
+  vision: 'image-text-to-text',
+  embeddings: 'feature-extraction',
+  rerank: 'text-ranking',
+  translation: 'translation',
+  documents: 'document-question-answering',
+  agents: 'text-generation',
+  adult_text: 'text-generation',
+  adult_image: 'text-to-image',
+  adult_video: 'text-to-video',
+}
+
 const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
   chat: ['chat'],
   reasoning: ['reasoning'],
@@ -51,6 +76,22 @@ const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
   'text-ranking': ['rerank'],
   translation: ['translation'],
   'tool-calling': ['agents'],
+  'chat-completion': ['chat'],
+  'chat-completions': ['chat'],
+  instruct: ['chat'],
+  llm: ['chat', 'reasoning', 'coding'],
+  code: ['coding'],
+  coder: ['coding'],
+  multimodal: ['vision'],
+  'image-generation': ['image'],
+  'image-editing': ['image_edit'],
+  'video-generation': ['video'],
+  'speech-to-text': ['stt'],
+  transcription: ['stt'],
+  asr: ['stt'],
+  'speech-generation': ['tts'],
+  embedding: ['embeddings'],
+  reranking: ['rerank'],
 }
 
 type FetchLike = typeof fetch
@@ -60,6 +101,7 @@ export interface ProviderDiscoveryOptions {
   fetcher?: FetchLike
   credential?: string | null
   keySource?: string
+  capability?: CapabilityId
 }
 
 export async function discoverProvider(
@@ -68,7 +110,8 @@ export async function discoverProvider(
 ): Promise<ProviderDiscoverySnapshot> {
   const provider = PROVIDER_TRUTH.find((entry) => entry.id === providerId)
   if (!provider) throw new Error(`Unknown provider: ${providerId}`)
-  const cached = options.force ? null : discoveryCache.get(providerId)
+  const cacheKey = options.capability ? `${providerId}:${options.capability}` : providerId
+  const cached = options.force ? null : discoveryCache.get(cacheKey)
   if (cached) return cached
 
   const credentialResult = options.credential !== undefined
@@ -78,10 +121,10 @@ export async function discoverProvider(
   const now = new Date()
   const expiresAt = new Date(now.getTime() + provider.discovery.cacheTtlMs)
   if (!credentialResult.key && !publicDiscovery) {
-    return discoveryCache.set(providerId, {
+    return discoveryCache.set(cacheKey, {
       provider: providerId,
       status: 'not_configured',
-      endpoint: resolveDiscoveryUrl(provider),
+      endpoint: resolveDiscoveryUrl(provider, options.capability),
       keySource: credentialResult.source,
       models: [],
       tasks: [],
@@ -94,9 +137,9 @@ export async function discoverProvider(
     }, provider.discovery.cacheTtlMs)
   }
 
-  const endpoint = resolveDiscoveryUrl(provider)
+  const endpoint = resolveDiscoveryUrl(provider, options.capability)
   if (!endpoint) {
-    return discoveryCache.set(providerId, {
+    return discoveryCache.set(cacheKey, {
       provider: providerId,
       status: 'failed',
       endpoint: null,
@@ -136,7 +179,7 @@ export async function discoverProvider(
     const inferenceProviders = [...new Set(records.flatMap((record) =>
       providerNames(record.inferenceProviderMapping ?? record.providers),
     ))]
-    return discoveryCache.set(providerId, {
+    return discoveryCache.set(cacheKey, {
       provider: providerId,
       status: 'ready',
       endpoint,
@@ -151,7 +194,7 @@ export async function discoverProvider(
       error: null,
     }, provider.discovery.cacheTtlMs)
   } catch (error) {
-    return discoveryCache.set(providerId, {
+    return discoveryCache.set(cacheKey, {
       provider: providerId,
       status: 'failed',
       endpoint,
@@ -169,8 +212,20 @@ export async function discoverProvider(
 }
 
 export function clearProviderDiscoveryCache(providerId?: ProviderId) {
-  if (providerId) discoveryCache.delete(providerId)
+  if (providerId) discoveryCache.deletePrefix(providerId)
   else discoveryCache.clear()
+}
+
+export function normalizeProviderCatalog(
+  providerId: ProviderId,
+  payload: unknown,
+  discoveredAt = new Date().toISOString(),
+): DiscoveredModel[] {
+  const provider = PROVIDER_TRUTH.find((entry) => entry.id === providerId)
+  if (!provider) return []
+  return modelRecords(payload)
+    .map((record) => normalizeModel(provider, record, discoveredAt))
+    .filter((model): model is DiscoveredModel => Boolean(model))
 }
 
 export function resolveProviderEndpoint(
@@ -194,13 +249,18 @@ export function resolveProviderEndpoint(
   return normalized
 }
 
-function resolveDiscoveryUrl(provider: ProviderTruthDefinition): string | null {
+function resolveDiscoveryUrl(
+  provider: ProviderTruthDefinition,
+  capability?: CapabilityId,
+): string | null {
   if (!provider.discovery.models) return null
   if (/^https?:\/\//.test(provider.discovery.models)) {
     const url = new URL(provider.discovery.models)
     if (provider.id === 'huggingface') {
       url.searchParams.set('limit', '100')
       url.searchParams.set('full', 'true')
+      const pipelineTag = capability ? HF_PIPELINE_TASK[capability] : null
+      if (pipelineTag) url.searchParams.set('pipeline_tag', pipelineTag)
     }
     return url.toString()
   }
@@ -238,9 +298,16 @@ function normalizeModel(
     record.type,
     record.tags,
   )
-  const capabilities = [...new Set(tasks.flatMap((task) =>
-    TASK_CAPABILITY_MAP[task.toLowerCase()] ?? [],
-  ))]
+  const descriptor = [
+    id,
+    ...tasks,
+    firstString(record.display_name, record.displayName, record.description) ?? '',
+  ].join(' ').toLowerCase()
+  const capabilities = [...new Set([
+    ...tasks.flatMap((task) => TASK_CAPABILITY_MAP[task.toLowerCase()] ?? []),
+    ...descriptorCapabilities(descriptor),
+  ])]
+  const pricing = isRecord(record.pricing) ? Object.values(record.pricing) : []
   return {
     provider: provider.id,
     id,
@@ -249,15 +316,41 @@ function normalizeModel(
     status: availability(record),
     speed: metric(record.speed, record.latency_score),
     quality: metric(record.quality, record.quality_score),
-    cost: metric(record.cost, record.cost_score),
+    cost: metric(record.cost, record.cost_score, ...pricing),
     context: metric(record.context, record.context_length),
     adult: booleanOrUnknown(record.adult),
-    streaming: booleanOrUnknown(record.streaming),
+    streaming: booleanOrUnknown(
+      record.streaming ?? record.supports_streaming ?? record.stream,
+    ),
     research: booleanOrUnknown(record.research),
     artifactSupport: provider.features.artifactSupport,
     raw: record,
     discoveredAt,
   }
+}
+
+function descriptorCapabilities(descriptor: string): CapabilityId[] {
+  const capabilities = new Set<CapabilityId>()
+  const add = (capability: CapabilityId, pattern: RegExp) => {
+    if (pattern.test(descriptor)) capabilities.add(capability)
+  }
+  add('stt', /\b(stt|asr|whisper|transcri(?:be|ption)|speech[-_\s]?to[-_\s]?text)\b/i)
+  add('tts', /\b(tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]?(?:generation|synthesis))\b/i)
+  add('embeddings', /\b(embed(?:ding|dings)?|feature[-_\s]?extraction)\b/i)
+  add('rerank', /\b(re[-_\s]?rank(?:er|ing)?|text[-_\s]?ranking)\b/i)
+  add('image_edit', /\b(image[-_\s]?(?:edit|editing|inpaint)|inpainting)\b/i)
+  add('image_to_video', /\b(image[-_\s]?to[-_\s]?video|i2v)\b/i)
+  add('video', /\b(video|text[-_\s]?to[-_\s]?video|t2v)\b/i)
+  add('image', /\b(image|text[-_\s]?to[-_\s]?image|diffusion)\b/i)
+  add('vision', /\b(vision|visual|multimodal|image[-_\s]?text|(?:^|[-_/])vl(?:[-_/]|$))\b/i)
+  add('ocr', /\bocr\b/i)
+  add('music', /\b(music|text[-_\s]?to[-_\s]?audio)\b/i)
+  add('translation', /\btranslat(?:e|ion)\b/i)
+  add('coding', /\b(code|coder|coding)\b/i)
+  add('reasoning', /\b(reason(?:ing)?|think(?:ing)?)\b/i)
+  add('agents', /\b(agent|tool[-_\s]?calling|compound)\b/i)
+  add('chat', /\b(chat|instruct|language|llm|text[-_\s]?generation|completion)\b/i)
+  return [...capabilities]
 }
 
 function readEndpointEnv(envName: string | null): string[] {
@@ -297,8 +390,14 @@ function firstString(...values: unknown[]): string | null {
 }
 
 function metric(...values: unknown[]): number | null {
-  const value = values.find((entry) => typeof entry === 'number' && Number.isFinite(entry))
-  return typeof value === 'number' ? value : null
+  for (const entry of values) {
+    if (typeof entry === 'number' && Number.isFinite(entry)) return entry
+    if (typeof entry === 'string' && entry.trim()) {
+      const numeric = Number(entry)
+      if (Number.isFinite(numeric)) return numeric
+    }
+  }
+  return null
 }
 
 function availability(record: Record<string, unknown>): DiscoveredModel['status'] {

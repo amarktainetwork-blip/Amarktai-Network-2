@@ -3,6 +3,9 @@ import { getSession } from '@/lib/session'
 import { getProviderMeshNode, sanitizeProviderError, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential, recordMeshTestResult } from '@/lib/provider-mesh-status'
 import { testLocalTool } from '@/lib/local-tools'
+import { discoverProvider, resolveProviderEndpoint } from '@/lib/providers/provider-discovery'
+import { modelsForCapability } from '@/lib/providers/model-discovery'
+import { getProviderTruth } from '@/lib/providers/registry'
 
 type TestPayload = { success?: boolean; error?: string; detail?: string; note?: string; connected?: boolean; [key: string]: unknown }
 
@@ -29,14 +32,32 @@ async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
   if (!credential) return { success: false, error: 'Key not present' }
 
   if (id === 'mimo') {
-    const baseUrl = (process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1').trim().replace(/\/+$/, '')
+    const discovery = await discoverProvider('mimo', {
+      force: true,
+      credential,
+      keySource: 'stored',
+    })
+    const chatModel = modelsForCapability(discovery, 'chat')[0]
+    if (!chatModel) {
+      return {
+        success: false,
+        error: discovery.error || 'MiMo catalog returned no chat-capable model.',
+      }
+    }
+    const baseUrl = resolveProviderEndpoint(getProviderTruth('mimo')!, 'token_plan')
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.MIMO_TEST_MODEL || 'mimo-v2.5', messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
+      body: JSON.stringify({ model: chatModel.id, messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
       signal: AbortSignal.timeout(20_000),
     })
-    return response.ok ? { success: true, detail: 'OpenAI-compatible chat passed.' } : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
+    return response.ok
+      ? {
+          success: true,
+          detail: `OpenAI-compatible chat passed with a dynamically discovered ${chatModel.capabilityEvidence} model.`,
+          model: chatModel.id,
+        }
+      : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
   }
 
   if (id === 'qdrant') {

@@ -4,7 +4,6 @@ import {
 } from '@/lib/capability-router'
 import { evaluateApprovalPolicy } from '@/lib/execution/approval-policy'
 import type { CreateExecutionInput, ExecutionPlan } from '@/lib/execution/contracts'
-import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
 
 const CAPABILITY_SET = new Set<string>(CAPABILITY_ROUTER_CAPABILITIES)
 
@@ -41,35 +40,27 @@ export function planExecution(input: CreateExecutionInput): ExecutionPlan {
     input.requestedCapability,
     input.prompt,
   )
-  const route = routeLiveModel({
-    capability: toLiveCapability(detectedCapability),
-    appSlug: input.appSlug,
-    selectedProvider: input.selectedProvider,
-    selectedModel: input.selectedModel,
-    costMode: input.costMode,
-    adultPolicy: input.adultPolicy,
-    requiresMedia: isMediaCapability(detectedCapability),
-  })
-  const estimatedCostUsd = input.estimatedCostUsd ?? route.estimatedCostUsd
+  const estimatedCostUsd = input.estimatedCostUsd ?? 0
   const approval = evaluateApprovalPolicy(input, detectedCapability, estimatedCostUsd)
-  const policyBlockedReason = isPolicyBlock(route.blockedReason)
-    ? route.blockedReason
-    : null
+  const policyBlockedReason = planningPolicyBlock(
+    detectedCapability,
+    input.adultPolicy,
+  )
 
   return {
     requestedCapability: input.requestedCapability ?? detectedCapability,
     detectedCapability,
     action: input.action ?? 'generate',
     providerPlan: {
-      provider: route.selectedProvider,
-      fallbackProviders: route.fallbackChain.map((candidate) => candidate.provider),
-      reason: route.reason,
+      provider: null,
+      fallbackProviders: [],
+      reason: 'Provider is resolved at execution time by canonical discovery and scoring.',
     },
     modelPlan: {
-      model: route.selectedModel,
-      fallbackModels: route.fallbackChain.map((candidate) => candidate.model),
-      task: route.selectedTask,
-      costMode: route.costMode,
+      model: null,
+      fallbackModels: [],
+      task: detectedCapability,
+      costMode: input.costMode ?? 'balanced',
     },
     approval: {
       required: approval.required,
@@ -78,71 +69,27 @@ export function planExecution(input: CreateExecutionInput): ExecutionPlan {
     },
     riskLevel: approval.riskLevel,
     estimatedCostUsd,
-    // Provider/model readiness is resolved by the canonical orchestrator, which
-    // owns fallback. The legacy planner may only stop policy, safety, budget,
-    // or approval-sensitive work before execution.
+    // Provider/model availability is owned by the canonical orchestrator.
     blockedReason: policyBlockedReason,
   }
 }
 
-function isPolicyBlock(reason: string | null): boolean {
-  if (!reason) return false
-  return /(adult|suggestive|safe mode|policy|approval|budget|spend|not approved)/i.test(reason)
-}
-
-function toLiveCapability(capability: CapabilityRouterCapability): AiCapability {
-  const map: Record<CapabilityRouterCapability, AiCapability> = {
-    chat: 'chat',
-    reasoning: 'reasoning',
-    code: 'coding',
-    file_analysis: 'research',
-    image_generation: 'image_generation',
-    image_edit: 'image_editing',
-    video_generation: 'video_generation',
-    image_to_video: 'image_to_video',
-    music_generation: 'music_generation',
-    lyrics_generation: 'lyrics_generation',
-    tts: 'tts',
-    stt: 'stt',
-    voice_response: 'tts',
-    adult_text: 'adult_text',
-    adult_image: 'adult_image',
-    adult_video: 'adult_video',
-    adult_voice: 'adult_voice',
-    avatar_generation: 'image_generation',
-    adult_avatar: 'adult_image',
-    avatar_video: 'avatar_video',
-    voice_clone: 'voice_cloning',
-    voice_design: 'voice_cloning',
-    ocr: 'browser_qa',
-    vision: 'image',
-    documents: 'research',
-    embeddings: 'embeddings',
-    rerank: 'rag',
-    translation: 'chat',
-    agents: 'operations',
-    memory: 'app_memory',
-    artifacts: 'artifacts',
-    suggestive_image: 'image_generation',
-    suggestive_video: 'video_generation',
-    repo_edit: 'coding',
-    app_build: 'coding',
-    deploy_plan: 'coding',
-    research: 'research',
-    scrape_website: 'crawling',
+function planningPolicyBlock(
+  capability: CapabilityRouterCapability,
+  adultPolicy: CreateExecutionInput['adultPolicy'],
+): string | null {
+  if (
+    ['adult_text', 'adult_image', 'adult_video', 'adult_voice', 'adult_avatar']
+      .includes(capability)
+    && adultPolicy !== 'full_adult_app_mode'
+  ) {
+    return 'Adult capability requires explicit app adult policy.'
   }
-  return map[capability]
-}
-
-function isMediaCapability(capability: CapabilityRouterCapability): boolean {
-  return (
-    capability.includes('image') ||
-    capability.includes('video') ||
-    capability === 'music_generation' ||
-    capability === 'tts' ||
-    capability === 'stt' ||
-    capability === 'voice_response' ||
-    capability === 'adult_voice' ||
-    capability === 'avatar_video'
-  )
+  if (
+    ['suggestive_image', 'suggestive_video'].includes(capability)
+    && adultPolicy === 'off'
+  ) {
+    return 'Suggestive capability requires an app policy that permits suggestive content.'
+  }
+  return null
 }

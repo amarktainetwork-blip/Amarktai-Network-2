@@ -3,20 +3,23 @@
 ## CURRENT IMPLEMENTATION STATUS
 
 - **Date:** 2026-06-15
-- **PR Number:** #117
-- **Purpose:** Establish the final production execution architecture: one
-  Brain, one capability router, one provider truth layer, and one artifact
-  system.
-- **Completed:** Provider truth, live discovery, scoring, capability routing,
-  provider-native execution, jobs, artifacts, adult policy, specialist-route
-  delegation, agent delegation, and removal of the dead legacy orchestrator.
-- **Remaining:** Live provider evidence for every desired capability, research
-  completion, and later product/UI integration PRs.
-- **Known Issues:** Research and long-form video are partial. Compatibility
-  admin diagnostics remain outside product execution.
-- **Go Live Readiness:** Apps may use proven scoped capabilities. Discovery
-  failure is `NO_ROUTE_FOUND`, never a guessed provider or model.
-- **Next PR:** #118 Research Completion.
+- **PR Number:** #118
+- **Purpose:** Repair provider runtime discovery and dashboard execution inside
+  the final PR #114-#117 architecture.
+- **Completed:** Model evidence normalization, provider-contract fallback,
+  task-filtered Hugging Face discovery, Together native runtime paths,
+  canonical dashboard planning, and provider diagnostics.
+- **Working:** Provider truth, capability routing, scoring, adapters, jobs,
+  artifacts, adult policy, and connected-app scope enforcement.
+- **Partial:** Production live provider proof, true token streaming, research,
+  long-form media composition, and advanced provider-specific voice families.
+- **Broken At Start:** The runtime required exact model-level capability tags,
+  so healthy provider catalogs containing only model IDs yielded
+  `NO_ROUTE_FOUND`. Studio also preplanned through obsolete static truth.
+- **Proof:** TypeScript, 496 tests, and a 183-page production build pass. Live
+  provider execution remains a deployment proof because this checkout has no
+  production credentials.
+- **Next PR:** #119 Research Completion after production smoke verification.
 
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
 or older documents disagree with it, stop and resolve the conflict before

@@ -21,7 +21,6 @@ import { executeCapabilityOrchestration } from '@/lib/orchestrator'
 import {
   productCapabilityToTaxonomyId,
   resolveRoutingQuality,
-  selectCapabilityRoutePlan,
   type RoutingQualityTier,
 } from '@/lib/capability-routing-policy'
 
@@ -89,16 +88,6 @@ export async function POST(request: NextRequest) {
     surface: 'studio',
   })
   const taxonomyId = productCapabilityToTaxonomyId(capability)
-  const routePlan = taxonomyId
-    ? await selectCapabilityRoutePlan({
-        capability: taxonomyId,
-        qualityTier,
-        requestedProvider: body.provider && body.provider !== 'auto' ? body.provider as never : undefined,
-        requestedModel: body.model && body.model !== 'auto' ? body.model : undefined,
-      })
-    : null
-  const selectedProvider = routePlan?.selected?.route.provider
-  const selectedModel = routePlan?.selected?.model
   let execution = existing ?? createExecution({
     appSlug,
     actor: { type: 'admin', label: 'Media Studio' },
@@ -106,8 +95,6 @@ export async function POST(request: NextRequest) {
     prompt,
     files: body.source ? [body.source] : [],
     action: 'generate',
-    selectedProvider,
-    selectedModel,
     costMode: qualityTier === 'auto' ? 'balanced' : qualityTier,
     adultPolicy: safety.adultMode
       ? 'full_adult_app_mode'
@@ -122,6 +109,8 @@ export async function POST(request: NextRequest) {
       parameters: studioParameters(body),
       qualityTier,
       canonicalCapability: taxonomyId,
+      ignoredProviderPreference: body.provider && body.provider !== 'auto' ? body.provider : null,
+      ignoredModelPreference: body.model && body.model !== 'auto' ? body.model : null,
     },
   })
   if (['blocked', 'awaiting_approval', 'cancelled'].includes(execution.status)) {
@@ -164,8 +153,6 @@ async function dispatchStudio(
   qualityTier: 'cheap' | 'balanced' | 'premium' | 'auto',
 ) {
   const capability = execution.detectedCapability
-  const selectedProvider = execution.providerPlan.provider ?? undefined
-  const selectedModel = execution.modelPlan.model ?? undefined
   if (capability === 'video_generation' && body.scenePlanOnly) {
     return videoPlanPost(jsonRequest(original, '/api/brain/video', {
       script: execution.input.prompt,
@@ -181,8 +168,6 @@ async function dispatchStudio(
     capability,
     files: body.source ? [body.source] : execution.input.files,
     appId: execution.appSlug,
-    providerOverride: selectedProvider,
-    modelOverride: selectedModel,
     qualityTier,
     adultMode: safety.adultMode,
     suggestiveMode: safety.suggestiveMode,

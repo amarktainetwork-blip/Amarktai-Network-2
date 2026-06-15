@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { APPROVED_DIRECT_PROVIDER_IDS, PROVIDER_MESH } from '@/lib/provider-mesh'
 import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
-import { UNIVERSAL_MODEL_ROUTES } from '@/lib/universal-model-catalog'
-import { AI_CAPABILITY_TAXONOMY } from '@/lib/brain/v1-capability-matrix'
+import { getCanonicalProviderRuntimeTruth } from '@/lib/providers/execution'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,33 +13,32 @@ export async function GET() {
   }
 
   const truth = await getPlatformSettingsTruth()
-  const providers = APPROVED_DIRECT_PROVIDER_IDS.map((providerId) => {
+  const providers = await Promise.all(APPROVED_DIRECT_PROVIDER_IDS.map(async (providerId) => {
     const node = PROVIDER_MESH.find((entry) => entry.id === providerId)!
     const status = truth.providers.find((entry) => entry.key === providerId)!
-    const models = UNIVERSAL_MODEL_ROUTES
-      .filter((model) => model.provider === providerId)
+    const runtime = await getCanonicalProviderRuntimeTruth(providerId)
+    const models = runtime.models
       .map((model) => ({
-        id: model.modelId,
-        name: model.displayName,
+        id: model.id,
+        name: typeof model.raw.display_name === 'string'
+          ? model.raw.display_name
+          : model.id,
         capabilities: model.capabilities,
-        enabled: model.enabled,
+        enabled: model.status !== 'unavailable',
+        evidence: model.capabilityEvidence,
       }))
-    const routes = AI_CAPABILITY_TAXONOMY
-      .filter((capability) =>
-        capability.providerRoutes.some((route) => route.provider === providerId),
-      )
-      .map((capability) => {
-        const route = capability.providerRoutes.find((item) => item.provider === providerId)!
-        return {
-          capability: capability.id,
-          label: capability.label,
-          executable: route.executable,
-          adapter: route.adapter,
-          endpoint: route.route,
-          models: route.modelIds,
-          blocker: capability.blocker,
-        }
-      })
+    const routes = runtime.routes.map((route) => ({
+      capability: route.capability,
+      label: route.capability.replaceAll('_', ' '),
+      executable: route.executable,
+      adapter: `${providerId}_capability_adapter`,
+      endpoint: '/api/brain/execute',
+      models: route.models,
+      evidence: route.evidence,
+      blocker: route.executable
+        ? null
+        : runtime.error ?? 'No discovered model or provider-contract evidence.',
+    }))
 
     return {
       id: providerId,
@@ -52,12 +50,14 @@ export async function GET() {
       lastTestedAt: status.lastTestedAt,
       error: status.error,
       blocker: status.blocker,
-      capabilities: node.capabilities,
+      capabilities: runtime.declaredCapabilities,
       models,
       routes,
+      discoveryStatus: runtime.discoveryStatus,
+      discoveryError: runtime.error,
       executableRouteCount: routes.filter((route) => route.executable).length,
     }
-  })
+  }))
 
   return NextResponse.json({
     generatedAt: new Date().toISOString(),
