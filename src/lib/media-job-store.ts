@@ -1,5 +1,10 @@
 import { getGenXJobStatus } from '@/lib/genx-client'
 import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
+import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
+import {
+  getProviderCapabilityAdapter,
+  providerHasCanonicalPollingContract,
+} from '@/lib/ai-capability-adapters'
 import {
   appendRecord,
   findRecord,
@@ -96,7 +101,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
     return failed
   }
 
-  if (!['genx', 'qwen'].includes(job.provider)) {
+  if (!providerHasCanonicalPollingContract(job.provider as 'genx' | 'qwen' | 'together')) {
     const failed = saveJob(job, {
       status: 'failed',
       error: `Provider "${job.provider}" does not have a local media polling contract.`,
@@ -108,7 +113,9 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
 
   const providerResult = job.provider === 'qwen'
     ? await qwenJobStatus(job.providerJobId, job.model)
-    : await getGenXJobStatus(job.providerJobId)
+    : job.provider === 'genx'
+      ? await getGenXJobStatus(job.providerJobId)
+      : await togetherJobStatus(job)
   if (!providerResult) return job
   if (providerResult.status === 'failed') {
     const failed = saveJob(job, {
@@ -190,6 +197,37 @@ async function qwenJobStatus(providerJobId: string, model: string) {
         : 'processing',
     resultUrl,
     error: status === 'failed' ? String(output?.message ?? 'Qwen task failed.') : null,
+  }
+}
+
+async function togetherJobStatus(job: LocalMediaJob) {
+  const adapter = getProviderCapabilityAdapter('together')
+  const capability = getCapabilityDefinition('text_to_video')
+  const route = capability?.providerRoutes.find((entry) => entry.provider === 'together')
+  if (!adapter?.poll || !capability || !route) {
+    return { status: 'failed', resultUrl: null, error: 'Together local media polling is not available.' }
+  }
+
+  const result = await adapter.poll(job.providerJobId, {
+    capability,
+    route,
+    prompt: job.prompt,
+    text: job.prompt,
+    inputs: job.metadata,
+    references: [],
+    context: {
+      appId: job.appSlug,
+    },
+    model: job.model,
+  })
+  return {
+    status: result.status === 'completed'
+      ? 'completed'
+      : result.status === 'failed'
+        ? 'failed'
+        : 'processing',
+    resultUrl: result.mediaUrl,
+    error: result.error,
   }
 }
 

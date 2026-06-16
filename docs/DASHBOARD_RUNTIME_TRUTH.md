@@ -35,6 +35,21 @@ inside that one UI:
 The frontend should eventually consume one normalized backend truth response.
 That is a later parity/cutover task, not a redesign.
 
+## Canonical V1 Navigation
+
+The shipped canonical V1 navigation contains:
+
+- Command Center
+- Studio
+- Capabilities
+- Connected Apps
+- Jobs
+- Artifacts
+- Settings
+
+`/admin/dashboard/providers` remains reachable as a legacy diagnostic route, but
+it is not part of the canonical V1 navigation.
+
 ## Placeholder Determination
 
 Input placeholder text is not a placeholder product. Pages are marked PARTIAL

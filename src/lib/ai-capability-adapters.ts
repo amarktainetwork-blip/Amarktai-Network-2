@@ -979,6 +979,10 @@ async function pollProvider(
   })
 }
 
+export function providerHasCanonicalPollingContract(provider: ApprovedDirectProviderId) {
+  return ['genx', 'qwen', 'together'].includes(provider)
+}
+
 export const PROVIDER_CAPABILITY_ADAPTERS: readonly ProviderCapabilityAdapter[] =
   (Object.keys(PROVIDER_CATEGORIES) as ApprovedDirectProviderId[]).map((provider) => ({
     id: `${provider}_capability_adapter`,

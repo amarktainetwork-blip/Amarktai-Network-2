@@ -13,7 +13,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { encryptVaultKey, decryptVaultKey } from '@/lib/crypto-vault'
+import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { z } from 'zod'
+
+const APPROVED_V1_AI_PROVIDER_IDS = [
+  'huggingface',
+  'together',
+  'groq',
+  'genx',
+  'qwen',
+  'mimo',
+] as const
 
 /* Known integrations with their default metadata */
 const KNOWN_INTEGRATIONS: Record<string, { displayName: string; urlPlaceholder?: string; keyEnvVar: string; urlEnvVar?: string; description: string }> = {
@@ -24,7 +34,16 @@ const KNOWN_INTEGRATIONS: Record<string, { displayName: string; urlPlaceholder?:
   posthog:    { displayName: 'PostHog',    keyEnvVar: 'POSTHOG_API_KEY',    urlEnvVar: 'POSTHOG_HOST',       urlPlaceholder: 'https://us.i.posthog.com',       description: 'Analytics and observability' },
   langgraph:  { displayName: 'LangGraph',  keyEnvVar: 'LANGGRAPH_API_KEY',  urlEnvVar: 'LANGGRAPH_API_URL',  urlPlaceholder: '',                               description: 'Durable workflow orchestration' },
   qdrant:     { displayName: 'Qdrant',     keyEnvVar: 'QDRANT_API_KEY',     urlEnvVar: 'QDRANT_URL',         urlPlaceholder: 'http://localhost:6333',           description: 'Vector database for semantic search and RAG' },
-  huggingface:{ displayName: 'HuggingFace',keyEnvVar: 'HUGGINGFACE_API_KEY',                                                                                   description: 'Emotion enrichment and open-source models' },
+  huggingface:{ displayName: 'Hugging Face', keyEnvVar: 'HUGGINGFACE_API_KEY', urlEnvVar: 'HUGGINGFACE_BASE_URL', urlPlaceholder: 'https://router.huggingface.co', description: 'Approved V1 provider key for Hugging Face runtime access' },
+  together:   { displayName: 'Together AI', keyEnvVar: 'TOGETHER_API_KEY',   urlEnvVar: 'TOGETHER_BASE_URL',    urlPlaceholder: 'https://api.together.ai/v1',     description: 'Approved V1 provider key for Together runtime access' },
+  groq:       { displayName: 'Groq',        keyEnvVar: 'GROQ_API_KEY',       urlEnvVar: 'GROQ_BASE_URL',        urlPlaceholder: 'https://api.groq.com/openai/v1', description: 'Approved V1 provider key for Groq runtime access' },
+  genx:       { displayName: 'GenX',        keyEnvVar: 'GENX_API_KEY',       urlEnvVar: 'GENX_BASE_URL',        urlPlaceholder: 'https://query.genx.sh/api/v1',   description: 'Approved V1 provider key for GenX runtime access' },
+  qwen:       { displayName: 'Qwen / DashScope', keyEnvVar: 'QWEN_API_KEY', urlEnvVar: 'DASHSCOPE_BASE_URL',   urlPlaceholder: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', description: 'Approved V1 provider key for Qwen runtime access' },
+  mimo:       { displayName: 'Xiaomi MiMo', keyEnvVar: 'MIMO_API_KEY',       urlEnvVar: 'MIMO_BASE_URL',        urlPlaceholder: 'https://token-plan-sgp.xiaomimimo.com/v1', description: 'Approved V1 provider key for MiMo runtime access' },
+}
+
+function isApprovedV1AiProvider(key: string): key is typeof APPROVED_V1_AI_PROVIDER_IDS[number] {
+  return (APPROVED_V1_AI_PROVIDER_IDS as readonly string[]).includes(key)
 }
 
 /** Mask an API key: first 4 chars + "..." + last 4 (or all "*" if short) */
@@ -62,14 +81,22 @@ export async function GET() {
   const rows = await prisma.integrationConfig.findMany({ orderBy: { key: 'asc' } })
   const rowByKey = new Map(rows.map(r => [r.key, r]))
 
-  const result = Object.entries(KNOWN_INTEGRATIONS).map(([key, meta]) => {
+  const result = await Promise.all(Object.entries(KNOWN_INTEGRATIONS).map(async ([key, meta]) => {
     const row = rowByKey.get(key)
     const env = getEnvFallback(key)
 
     // Determine effective key source: DB > env var
     let effectiveKey = ''
     let source: 'database' | 'env' | 'none' = 'none'
-    if (row?.apiKey) {
+    if (isApprovedV1AiProvider(key)) {
+      const resolved = await getProviderKeyWithSource(key)
+      effectiveKey = resolved.key ?? ''
+      source = resolved.source === 'vault' || resolved.source === 'ai_provider'
+        ? 'database'
+        : resolved.source === 'env'
+          ? 'env'
+          : 'none'
+    } else if (row?.apiKey) {
       try {
         const decrypted = decryptVaultKey(row.apiKey)
         effectiveKey = decrypted ?? ''
@@ -100,7 +127,7 @@ export async function GET() {
       urlEnvVar: meta.urlEnvVar ?? null,
       updatedAt: row?.updatedAt?.toISOString() ?? null,
     }
-  })
+  }))
 
   return NextResponse.json({ integrations: result })
 }

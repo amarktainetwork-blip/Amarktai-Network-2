@@ -38,10 +38,10 @@ describe('production capability and dashboard contract', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
       'Studio',
+      'Capabilities',
       'Apps',
       'Jobs',
       'Artifacts',
-      'Providers',
       'Settings',
     ])
     const studio = source('src/app/admin/dashboard/studio/page.tsx')

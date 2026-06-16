@@ -48,6 +48,7 @@ vi.mock('@/lib/firecrawl', () => ({ crawlAppWebsite: mocks.crawlAppWebsite }))
 vi.mock('@/lib/genx-client', () => ({
   callGenXMedia: mocks.callGenXMedia,
   GENX_AUDIO_MODELS: ['genx-audio'],
+  GENX_I2V_MODELS: ['genx-i2v'],
   GENX_IMAGE_MODELS: ['genx-image'],
   GENX_TTS_MODELS: ['genx-tts'],
   GENX_STT_MODELS: ['genx-stt'],

@@ -10,6 +10,8 @@ import { recordCapabilityTrace } from '@/lib/capability-tracing'
 
 const MAX_PROCESSING_MS = 15 * 60 * 1000
 
+// Legacy compatibility route. Apps should poll `/api/brain/media-jobs/:jobId`.
+
 async function pollQwenWanJob(providerJobId: string, apiKey: string) {
   const taskId = providerJobId.replace(/^qwen-wan:/, '')
   if (!taskId) throw new Error('Invalid Qwen Wan provider job ID.')

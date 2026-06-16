@@ -34,9 +34,10 @@ READ THIS FILE FIRST.
   `NO_ROUTE_FOUND` before the degraded-health fallback routing fix; rerun VPS
   proof after pulling the latest commit.
 - **Next Step:** On the VPS, pull the branch, rerun the focused media contract
-  test and build, restart `amarktai-platform.service`, start a GenX image job,
-  poll the returned Brain `pollUrl`, and confirm artifact completion before
-  marking GenX image complete.
+  test and build, restart `amarktai-platform.service`, keep
+  `amarktai-worker.service` aligned with the same deploy, start a GenX image
+  job, poll the returned Brain `pollUrl`, and confirm canonical artifact
+  completion before marking GenX image complete.
 
 Single source of truth:
 
@@ -47,6 +48,29 @@ OPERATING_TRUTH.md
 +
 CHANGELOG_AI.md
 ```
+
+Current operator truth:
+
+- Branch: `integration/cline-source-of-truth`
+- VPS path: `/var/www/amarktai/platform`
+- Services: `amarktai-platform.service` and `amarktai-worker.service`
+- DB: MariaDB/MySQL
+- Standalone deploy: `.next/static` and `public` must be copied into
+  `.next/standalone`
+- Dashboard reflects Brain runtime; the dashboard is not source of truth
+- Canonical V1 dashboard nav: Command Center, Studio, Capabilities, Connected
+  Apps, Jobs, Artifacts, and Settings
+- `/admin/dashboard/providers` may remain reachable as a legacy diagnostic page,
+  but it is not canonical V1 navigation
+- Canonical Brain local async media polling currently supports GenX, Qwen, and
+  Together
+- Hugging Face async job truth is narrowed until canonical Brain polling exists
+- `/api/brain/video-generate/:jobId` is legacy compatibility only; apps poll
+  `/api/brain/media-jobs/:jobId`
+- Admin provider-key truth covers only the six approved V1 providers:
+  Hugging Face, Together, Groq, GenX, Qwen, and MiMo
+- App-facing callers remain capability-only and cannot choose provider, model,
+  or endpoint
 
 Never:
 

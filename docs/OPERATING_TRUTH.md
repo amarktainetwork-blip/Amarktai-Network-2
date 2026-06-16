@@ -37,6 +37,16 @@ This document is the law for AmarktAI Network V1. When code, tickets, prompts,
 or older documents disagree with it, stop and resolve the conflict before
 shipping.
 
+## Operator Truth
+
+- Branch: `integration/cline-source-of-truth`
+- VPS path: `/var/www/amarktai/platform`
+- Services: `amarktai-platform.service` and `amarktai-worker.service`
+- DB: MariaDB/MySQL via Prisma `provider = "mysql"`
+- Standalone deploy: `.next/static` and `public` must be copied into
+  `.next/standalone`
+- Dashboard reflects Brain runtime; the dashboard is not source of truth
+
 ## Mission
 
 ```text
@@ -71,6 +81,9 @@ agents, research, brand context, and adult permissions.
 
 The only approved AI providers in V1 are Hugging Face, Together, Groq, GenX,
 Qwen, and MiMo.
+
+Admin provider-key truth must cover these six approved providers only. App
+callers remain capability-only and cannot choose provider, model, or endpoint.
 
 Adding or removing a provider is an architecture change. It requires updates to
 this document, `PROVIDER_MATRIX.md`, `provider-truth.json`, and
@@ -129,6 +142,8 @@ GitHub is the only repository source of truth. The operating set is the
 canonical GitHub branch, this document, `CHANGELOG_AI.md`,
 `PROVIDER_MATRIX.md`, and the canonical runtime registries.
 
+The canonical GitHub branch is `integration/cline-source-of-truth`.
+
 Do not create parallel provider configs, model catalogs, capability lists,
 routers, or product truth documents.
 
@@ -180,3 +195,13 @@ Provider job ids may be exposed separately for diagnostics, but apps poll only
 `/api/brain/media-jobs/:jobId`. The poll route is a Brain runtime surface and
 must not require an admin dashboard session. Completion is only true after the
 provider returns usable media and the artifact layer persists or references it.
+
+Canonical Brain local media polling currently supports GenX, Qwen, and Together.
+Hugging Face does not yet expose canonical Brain local async media polling, so
+its provider truth must not claim canonical async job support.
+
+`/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
+must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.
+
+GenX image remains incomplete until a Brain image job returns a Brain
+`pollUrl`, that `pollUrl` completes, and a canonical artifact persists.

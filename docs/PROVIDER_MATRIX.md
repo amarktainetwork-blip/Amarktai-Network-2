@@ -46,6 +46,8 @@ presence, or theoretical support alone is insufficient.
   V1 code, but live proof is insufficient to call it working.
 - Adult rows remain `unknown` at provider level because adult is a Brain policy
   gate, not a provider feature.
+- Admin provider-key and provider-test surfaces cover only the six approved V1
+  providers. This does not upgrade any capability row to `working`.
 - Provider capability changes must update this file and `CHANGELOG_AI.md`.
 
 ## Phase 1 Discovery Coverage
@@ -72,6 +74,9 @@ discovery fails. This can recover routing candidates for image, image edit,
 video, image-to-video, avatar, music, TTS, STT, adult image, and adult video,
 but it does not prove provider execution or artifact completion.
 
+GenX image remains incomplete until a Brain image job returns a Brain
+`pollUrl`, that `pollUrl` completes, and a canonical artifact persists.
+
 PR #117 makes this discovery evidence the production routing dependency.
 Provider-native adapters receive the discovered model and contain no fallback
 model selection. If the catalog supplies no discovered model and no
@@ -79,6 +84,10 @@ provider-contract evidence, execution returns `NO_ROUTE_FOUND`. PR #118 also
 adds task-filtered Hugging Face Hub discovery and Together-native video, STT,
 embeddings, and rerank adapter paths. The matrix remains conservative because
 repository wiring is not live provider proof.
+
+Canonical Brain local async media polling currently exists for GenX, Qwen, and
+Together. Hugging Face async generation remains incomplete in canonical Brain
+polling truth.
 
 Phase 1 files:
 

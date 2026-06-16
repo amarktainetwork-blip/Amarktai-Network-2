@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
     records,
     getGenXJobStatus: vi.fn(),
     persistCanonicalMediaResult: vi.fn(),
+    togetherPoll: vi.fn(),
   }
 })
 
@@ -39,6 +40,23 @@ vi.mock('@/lib/genx-client', async (importOriginal) => {
 vi.mock('@/lib/canonical-media-artifact', () => ({
   persistCanonicalMediaResult: mocks.persistCanonicalMediaResult,
 }))
+
+vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/ai-capability-adapters')>()
+  return {
+    ...actual,
+    providerHasCanonicalPollingContract: (provider: string) => ['genx', 'qwen', 'together'].includes(provider),
+    getProviderCapabilityAdapter: (provider: string) => provider === 'together'
+      ? {
+          provider: 'together',
+          id: 'together_capability_adapter',
+          categories: ['video'],
+          execute: vi.fn(),
+          poll: mocks.togetherPoll,
+        }
+      : actual.getProviderCapabilityAdapter(provider as never),
+  }
+})
 
 import {
   createLocalMediaJob,
@@ -123,6 +141,52 @@ describe('local media job lifecycle', () => {
       provider: 'genx',
       traceId: 'media-job-local-media-job-1',
     }))
+  })
+
+  it('polls Together async video jobs through the canonical Brain local job surface', async () => {
+    createLocalMediaJob({
+      capability: 'video_generation',
+      appSlug: 'amarktai-network',
+      type: 'video',
+      subType: 'video_generation',
+      title: 'Video',
+      prompt: 'Launch trailer',
+      provider: 'together',
+      model: 'together-video-1',
+      providerJobId: 'together-job-2',
+    })
+    mocks.togetherPoll.mockResolvedValue({
+      status: 'completed',
+      provider: 'together',
+      model: 'together-video-1',
+      output: { status: 'completed' },
+      mediaUrl: 'https://cdn.example/together-video.mp4',
+      bytes: null,
+      contentType: 'video/mp4',
+      providerJobId: 'together-job-2',
+      latencyMs: 12,
+      rawStatus: 200,
+      error: null,
+      errorCategory: null,
+      retryable: false,
+      diagnostics: null,
+    })
+    mocks.persistCanonicalMediaResult.mockResolvedValue({
+      artifactId: 'artifact-together-1',
+      storageUrl: '/api/admin/artifacts/artifact-together-1/content',
+      mediaUrl: '/api/admin/artifacts/artifact-together-1/content',
+    })
+
+    const completed = await pollLocalMediaJob('local-media-job-1')
+
+    expect(mocks.togetherPoll).toHaveBeenCalledWith('together-job-2', expect.objectContaining({
+      model: 'together-video-1',
+    }))
+    expect(completed).toMatchObject({
+      status: 'completed',
+      artifactId: 'artifact-together-1',
+      mediaUrl: '/api/admin/artifacts/artifact-together-1/content',
+    })
   })
 
   it('fails stale jobs instead of leaving them processing forever', async () => {
@@ -245,11 +309,13 @@ describe('live media route contracts', () => {
   it('exposes Brain image polling without leaking provider jobs as the only job ID', () => {
     const imageRoute = read('app/api/brain/image/route.ts')
     const mediaJobRoute = read('app/api/brain/media-jobs/[jobId]/route.ts')
+    const legacyVideoRoute = read('app/api/brain/video-generate/[jobId]/route.ts')
 
     expect(imageRoute).toContain('pollUrl: result.pollUrl')
     expect(imageRoute).toContain('providerJobId: result.providerJobId')
     expect(imageRoute).toContain("result.status === 'processing' ? 202")
     expect(mediaJobRoute).not.toContain('getSession')
     expect(mediaJobRoute).not.toContain('Unauthorized')
+    expect(legacyVideoRoute).toContain('Legacy compatibility route')
   })
 })

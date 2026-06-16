@@ -17,6 +17,9 @@ The platform runs at `amarktai.co.za`; `www.amarktai.co.za` is its public alias.
 The V1 dashboard contains Command Center, Studio, Capabilities, Connected Apps,
 Artifacts, Jobs, and Settings.
 
+`/admin/dashboard/providers` may remain reachable as a legacy diagnostic route,
+but it is not part of the canonical V1 navigation surface.
+
 V1 has no App Builder, Repo Workbench, MCP, or provider marketplace.
 
 ## VPS layout
@@ -29,8 +32,9 @@ V1 has no App Builder, Repo Workbench, MCP, or provider marketplace.
 /var/www/amarktai/backups
 ```
 
-The main platform uses one repository and one PM2 process. Persistent storage,
-logs, and backups stay outside the release directory.
+The main platform deploy target is `/var/www/amarktai/platform`. Runtime
+services are `amarktai-platform.service` and `amarktai-worker.service`.
+Persistent storage, logs, and backups stay outside the release directory.
 
 ## Wildcard domain architecture
 
@@ -72,6 +76,9 @@ does not cover the apex name.
 Connected apps never call raw providers or models. AmarktAI owns provider
 routing, policy, jobs, artifacts, and truthful readiness.
 
+The dashboard reflects Brain runtime truth. The dashboard is not the source of
+truth.
+
 ## Storage and routing
 
 V1 storage is local VPS storage at:
@@ -83,6 +90,9 @@ AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage
 All callers use the storage adapter. S3-compatible storage can be added later
 without rewriting Studio or artifact workflows. Do not hardwire new features to
 local paths.
+
+Production deploy uses Next standalone output. `.next/static` and `public` must
+be copied into `.next/standalone`.
 
 Routing policy supports `cheap`, `balanced`, `premium`, and `auto`. Providers
 remain internal adapters. GenX is important but is not hardcoded for every
@@ -110,6 +120,9 @@ DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"
 Replace the placeholder password, then run `npm ci`, `npx prisma generate`,
 `npx prisma validate`, `npx prisma db push`, and a `SELECT 1` through
 `prisma db execute`.
+
+GenX image remains incomplete until a Brain image job returns a Brain
+`pollUrl`, that `pollUrl` completes, and a canonical artifact persists.
 
 ## Guardrails for future work
 

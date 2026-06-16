@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
@@ -12,15 +14,29 @@ vi.mock('@/lib/brain', () => ({
   callProvider: vi.fn(),
 }))
 vi.mock('@/lib/service-vault', () => ({ getServiceKey: mocks.getServiceKey }))
-vi.mock('@/lib/genx-client', () => ({
-  callGenXMedia: mocks.callGenXMedia,
-  getGenXJobStatus: mocks.getGenXJobStatus,
-}))
+vi.mock('@/lib/genx-client', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/genx-client')>()
+  return {
+    ...actual,
+    callGenXMedia: mocks.callGenXMedia,
+    getGenXJobStatus: mocks.getGenXJobStatus,
+  }
+})
 vi.mock('@/lib/qwen-wanx-polling', () => ({ pollQwenWanxTask: vi.fn() }))
 
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
-import { getProviderCapabilityAdapter } from '@/lib/ai-capability-adapters'
+import {
+  getProviderCapabilityAdapter,
+  providerHasCanonicalPollingContract,
+} from '@/lib/ai-capability-adapters'
+import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
+
+const ROOT = process.cwd()
+
+function source(file: string) {
+  return fs.readFileSync(path.join(ROOT, file), 'utf8')
+}
 
 function adapterInput(
   capabilityId: string,
@@ -150,5 +166,59 @@ describe('provider adapter contracts', () => {
       status: 'completed',
       mediaUrl: 'https://cdn.example/video.mp4',
     })
+  })
+
+  it('polls Together video jobs through the canonical adapter contract', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      status: 'completed',
+      outputs: { video_url: 'https://cdn.example/together.mp4' },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const adapter = getProviderCapabilityAdapter('together')!
+    const input = adapterInput('text_to_video', 'together', 'together-video-1')
+
+    const completed = await adapter.poll!('together-job-1', input)
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      providerJobId: 'together-job-1',
+      mediaUrl: 'https://cdn.example/together.mp4',
+    })
+    expect(String(fetchMock.mock.calls[0][0])).toBe('https://api.together.ai/v1/videos/together-job-1')
+  })
+
+  it('keeps provider async flags aligned with canonical polling support', () => {
+    const asyncProviders = PROVIDER_TRUTH
+      .filter((provider) => provider.features.asyncJobs)
+      .map((provider) => provider.id)
+
+    expect(asyncProviders).toEqual(['together', 'genx', 'qwen'])
+    for (const provider of asyncProviders) {
+      expect(providerHasCanonicalPollingContract(provider)).toBe(true)
+    }
+    expect(providerHasCanonicalPollingContract('huggingface')).toBe(false)
+  })
+
+  it('keeps admin provider-key truth within the six approved V1 providers', () => {
+    const integrationKeysRoute = source('src/app/api/admin/integration-keys/route.ts')
+
+    for (const provider of ['huggingface', 'together', 'groq', 'genx', 'qwen', 'mimo']) {
+      expect(integrationKeysRoute).toMatch(new RegExp(`\\b${provider}:\\s*\\{`))
+    }
+    for (const provider of ['openai', 'openrouter', 'gemini', 'deepseek', 'nvidia']) {
+      expect(integrationKeysRoute).not.toMatch(new RegExp(`\\b${provider}:\\s*\\{`))
+    }
+  })
+
+  it('keeps provider truth aligned with the exact approved V1 provider set', () => {
+    expect(PROVIDER_TRUTH.map((provider) => provider.id)).toEqual([
+      'huggingface',
+      'together',
+      'groq',
+      'genx',
+      'qwen',
+      'mimo',
+    ])
   })
 })

@@ -87,10 +87,10 @@ describe('V1 AmarktAI product truth', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
       'Studio',
+      'Capabilities',
       'Apps',
       'Jobs',
       'Artifacts',
-      'Providers',
       'Settings',
     ])
     expect(new Set(DASHBOARD_NAV_ITEMS.map((item) => item.href)).size).toBe(7)

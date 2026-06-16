@@ -31,7 +31,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     ],
     features: {
       streaming: true,
-      asyncJobs: true,
+      asyncJobs: false,
       webhooks: false,
       toolCalling: true,
       artifactSupport: true,
