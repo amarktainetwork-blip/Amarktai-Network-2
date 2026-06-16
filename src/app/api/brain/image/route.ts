@@ -43,23 +43,28 @@ export async function POST(request: NextRequest) {
   })
 
   const payload = {
-      executed: result.success,
-      success: result.success,
-      imageUrl: result.output?.startsWith('http') ? result.output : undefined,
-      imageBase64: result.output?.startsWith('data:image/') ? result.output : undefined,
-      jobId: result.jobId,
-      status: result.status,
-      provider: result.provider,
-      model: result.model,
-      artifactId: result.artifactId,
-      error: result.error,
-      code: result.success ? undefined : 'no_eligible_image_model',
-      capability: 'image_generation',
-      executionId: execution.executionId,
-    }
+    executed: result.success,
+    success: result.success,
+    imageUrl: result.output?.startsWith('http') ? result.output : undefined,
+    imageBase64: result.output?.startsWith('data:image/') ? result.output : undefined,
+    jobId: result.jobId,
+    providerJobId: result.providerJobId,
+    pollUrl: result.pollUrl,
+    jobStatus: result.status,
+    status: result.status,
+    provider: result.provider,
+    model: result.model,
+    artifactId: result.artifactId,
+    artifactUrl: result.artifactUrl,
+    error: result.error,
+    blocker: result.error,
+    code: result.success ? undefined : 'no_eligible_image_model',
+    capability: 'image_generation',
+    executionId: execution.executionId,
+  }
   const executionResult = recordExecutionResponse(execution.executionId, payload)
   return NextResponse.json(
     { ...payload, execution: executionResult },
-    { status: result.success ? 200 : 503 },
+    { status: result.status === 'processing' ? 202 : result.success ? 200 : 503 },
   )
 }
