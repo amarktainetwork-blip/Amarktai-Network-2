@@ -1,3 +1,11 @@
+import {
+  GENX_AUDIO_MODELS,
+  GENX_I2V_MODELS,
+  GENX_IMAGE_MODELS,
+  GENX_STT_MODELS,
+  GENX_TTS_MODELS,
+  GENX_VIDEO_MODELS,
+} from '@/lib/genx-client'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
 import { ProviderDiscoveryCache } from './provider-cache'
@@ -94,6 +102,19 @@ const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
   reranking: ['rerank'],
 }
 
+const GENX_FALLBACK_MODEL_CAPABILITIES: Partial<Record<CapabilityId, readonly string[]>> = {
+  image: GENX_IMAGE_MODELS,
+  image_edit: GENX_IMAGE_MODELS,
+  adult_image: GENX_IMAGE_MODELS,
+  video: GENX_VIDEO_MODELS,
+  image_to_video: GENX_I2V_MODELS,
+  adult_video: GENX_VIDEO_MODELS,
+  avatar: GENX_VIDEO_MODELS,
+  music: GENX_AUDIO_MODELS,
+  tts: GENX_TTS_MODELS,
+  stt: GENX_STT_MODELS,
+}
+
 type FetchLike = typeof fetch
 
 export interface ProviderDiscoveryOptions {
@@ -119,6 +140,7 @@ export async function discoverProvider(
     : await getProviderKeyWithSource(providerId)
   const publicDiscovery = providerId === 'huggingface'
   const now = new Date()
+  const discoveredAt = now.toISOString()
   const expiresAt = new Date(now.getTime() + provider.discovery.cacheTtlMs)
   if (!credentialResult.key && !publicDiscovery) {
     return discoveryCache.set(cacheKey, {
@@ -131,7 +153,7 @@ export async function discoverProvider(
       inferenceProviders: [],
       privateEndpoints: readEndpointEnv(provider.discovery.privateEndpointsEnv),
       dedicatedEndpoints: readEndpointEnv(provider.discovery.dedicatedEndpointsEnv),
-      discoveredAt: now.toISOString(),
+      discoveredAt,
       expiresAt: expiresAt.toISOString(),
       error: 'Provider credential is not configured.',
     }, provider.discovery.cacheTtlMs)
@@ -149,7 +171,7 @@ export async function discoverProvider(
       inferenceProviders: [],
       privateEndpoints: readEndpointEnv(provider.discovery.privateEndpointsEnv),
       dedicatedEndpoints: readEndpointEnv(provider.discovery.dedicatedEndpointsEnv),
-      discoveredAt: now.toISOString(),
+      discoveredAt,
       expiresAt: expiresAt.toISOString(),
       error: 'Provider does not publish a model discovery endpoint.',
     }, provider.discovery.cacheTtlMs)
@@ -171,7 +193,7 @@ export async function discoverProvider(
     const payload = await response.json() as unknown
     const records = modelRecords(payload)
     const models = records
-      .map((record) => normalizeModel(provider, record, now.toISOString()))
+      .map((record) => normalizeModel(provider, record, discoveredAt))
       .filter((model): model is DiscoveredModel => Boolean(model))
     const tasks = [...new Set(models.flatMap((model) =>
       stringList(model.raw.pipeline_tag ?? model.raw.task ?? model.raw.tasks),
@@ -189,11 +211,32 @@ export async function discoverProvider(
       inferenceProviders,
       privateEndpoints: readEndpointEnv(provider.discovery.privateEndpointsEnv),
       dedicatedEndpoints: readEndpointEnv(provider.discovery.dedicatedEndpointsEnv),
-      discoveredAt: now.toISOString(),
+      discoveredAt,
       expiresAt: expiresAt.toISOString(),
       error: null,
     }, provider.discovery.cacheTtlMs)
   } catch (error) {
+    const fallbackModels = providerId === 'genx'
+      ? genxFallbackModels(options.capability, discoveredAt)
+      : []
+    if (fallbackModels.length > 0) {
+      const tasks = [...new Set(fallbackModels.flatMap((model) => model.capabilities))]
+      return discoveryCache.set(cacheKey, {
+        provider: providerId,
+        status: 'ready',
+        endpoint,
+        keySource: credentialResult.source,
+        models: fallbackModels,
+        tasks,
+        inferenceProviders: [],
+        privateEndpoints: readEndpointEnv(provider.discovery.privateEndpointsEnv),
+        dedicatedEndpoints: readEndpointEnv(provider.discovery.dedicatedEndpointsEnv),
+        discoveredAt,
+        expiresAt: expiresAt.toISOString(),
+        error: `GenX discovery failed; using static runtime fallback: ${sanitizeProviderError(error)}`,
+      }, provider.discovery.cacheTtlMs)
+    }
+
     return discoveryCache.set(cacheKey, {
       provider: providerId,
       status: 'failed',
@@ -204,7 +247,7 @@ export async function discoverProvider(
       inferenceProviders: [],
       privateEndpoints: readEndpointEnv(provider.discovery.privateEndpointsEnv),
       dedicatedEndpoints: readEndpointEnv(provider.discovery.dedicatedEndpointsEnv),
-      discoveredAt: now.toISOString(),
+      discoveredAt,
       expiresAt: expiresAt.toISOString(),
       error: sanitizeProviderError(error),
     }, provider.discovery.cacheTtlMs)
@@ -270,6 +313,48 @@ function resolveDiscoveryUrl(
       ? 'compatible_mode'
       : undefined
   return `${resolveProviderEndpoint(provider, family)}${provider.discovery.models}`
+}
+
+function genxFallbackModels(
+  capability?: CapabilityId,
+  discoveredAt = new Date().toISOString(),
+): DiscoveredModel[] {
+  const entries = capability
+    ? [[capability, GENX_FALLBACK_MODEL_CAPABILITIES[capability] ?? []] as const]
+    : Object.entries(GENX_FALLBACK_MODEL_CAPABILITIES) as Array<[CapabilityId, readonly string[]]>
+  const capabilitiesByModel = new Map<string, Set<CapabilityId>>()
+
+  for (const [entryCapability, modelIds] of entries) {
+    for (const id of modelIds) {
+      const existing = capabilitiesByModel.get(id) ?? new Set<CapabilityId>()
+      existing.add(entryCapability)
+      capabilitiesByModel.set(id, existing)
+    }
+  }
+
+  return [...capabilitiesByModel.entries()].map(([id, capabilitySet]) => {
+    const capabilities = [...capabilitySet]
+    return {
+      provider: 'genx',
+      id,
+      capabilities,
+      capabilityEvidence: 'provider_contract',
+      status: 'available',
+      speed: null,
+      quality: null,
+      cost: null,
+      context: null,
+      adult: 'unknown',
+      streaming: 'unknown',
+      research: 'unknown',
+      artifactSupport: true,
+      raw: {
+        source: 'genx_static_runtime_fallback',
+        capabilities,
+      },
+      discoveredAt,
+    }
+  })
 }
 
 function modelRecords(payload: unknown): Record<string, unknown>[] {
