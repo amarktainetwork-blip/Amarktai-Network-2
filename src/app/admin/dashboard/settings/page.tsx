@@ -7,12 +7,9 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
-  Key,
   Loader2,
   RefreshCw,
   Save,
-  Server,
-  Settings2,
   Shield,
   TestTube2,
 } from 'lucide-react'

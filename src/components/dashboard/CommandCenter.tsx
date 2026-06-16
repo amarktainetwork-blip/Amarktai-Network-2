@@ -12,7 +12,6 @@ import {
   RefreshCw,
   RotateCcw,
   Send,
-  Sparkles,
   XCircle,
 } from 'lucide-react'
 import {
