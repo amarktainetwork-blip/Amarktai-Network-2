@@ -4,24 +4,31 @@ READ THIS FILE FIRST.
 
 ## CURRENT IMPLEMENTATION STATUS
 
-- **Date:** 2026-06-15
-- **PR Number:** #118
+- **Date:** 2026-06-16
+- **PR Number:** #118 follow-up on `integration/cline-source-of-truth`
 - **Purpose:** Complete provider runtime evidence and recover critical dashboard
   execution while preserving the PR #114-#117 architecture.
 - **Completed:** Dynamic provider/model evidence fallback, provider
   diagnostics, Studio/Playground/assistant routing repair, Hugging Face
-  task-filtered discovery, and Together native adapter completion.
+  task-filtered discovery, Together native adapter completion, and Brain media
+  polling recovery for async image/provider jobs.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
-  artifacts, adult policy, and signed connected-app execution.
+  artifacts, adult policy, signed connected-app execution, and external Brain
+  media polling by local job id.
 - **Partial:** Production live execution, token streaming, research, long-form
   assembly, avatar, music, and advanced MiMo voice/omni require truthful proof.
 - **Broken At Start:** Exact model-task matching rejected discovered models
   whose provider catalogs omitted task metadata. Studio used a static
   pre-router whose selected overrides were rejected by canonical execution.
-- **Proof:** `npx tsc --noEmit`, 496/496 tests, and the 183-page production
-  build pass. No production credentials were available for live latency or
-  artifact proof.
-- **Next PR:** #119 Research Completion after production smoke verification.
+  External `/api/brain/media-jobs/:jobId` polling also returned Unauthorized.
+- **Proof:** Previous PR #118 proof remains `npx tsc --noEmit`, 496/496 tests,
+  and the 183-page production build. On 2026-06-16 this environment could not
+  install dependencies because registry access returned 403 for a locked
+  package, and terminal HTTP calls to the live site were blocked; VPS proof must
+  be run from the server.
+- **Next Step:** Deploy the branch on the VPS, start a GenX image job, poll the
+  returned Brain `pollUrl`, and confirm artifact completion before marking GenX
+  image complete.
 
 Single source of truth:
 
@@ -64,6 +71,9 @@ Production ownership:
   adapters never select a fallback model.
 - `/api/brain/request`, `/api/brain/execute`, `/api/brain/stream`: public Brain
   entry surfaces. Specialist routes are compatibility delegates.
+- `/api/brain/media-jobs/:jobId`: public Brain polling surface for opaque local
+  media job ids returned by capability execution. It must not require an admin
+  dashboard session.
 
 ## Working Rules
 
