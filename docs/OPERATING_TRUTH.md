@@ -8,22 +8,27 @@
   the final PR #114-#117 architecture.
 - **Completed:** Model evidence normalization, provider-contract fallback,
   task-filtered Hugging Face discovery, Together native runtime paths,
-  canonical dashboard planning, provider diagnostics, and Brain media polling
-  recovery for async provider jobs.
+  canonical dashboard planning, provider diagnostics, Brain media polling
+  recovery for async provider jobs, and GitHub-tracked GenX static runtime
+  catalog fallback when live GenX model discovery fails.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
-  artifacts, adult policy, connected-app scope enforcement, and public Brain
-  media-job polling by opaque local job id.
+  artifacts, adult policy, connected-app scope enforcement, public Brain
+  media-job polling by opaque local job id, and GenX discovery candidates from
+  the existing runtime catalog when `/api/v1/models` is unavailable.
 - **Partial:** Production live provider proof, true token streaming, research,
   long-form media composition, and advanced provider-specific voice families.
 - **Broken At Start:** The runtime required exact model-level capability tags,
   so healthy provider catalogs containing only model IDs yielded
   `NO_ROUTE_FOUND`. Studio also preplanned through obsolete static truth.
   External media-job polling returned Unauthorized before the 2026-06-16
-  follow-up.
+  follow-up. VPS-local GenX discovery fallback existed outside GitHub until it
+  was moved into the canonical branch.
 - **Proof:** TypeScript, 496 tests, and a 183-page production build passed in PR
-  #118. The 2026-06-16 follow-up was pushed to GitHub, but this environment
-  could not install dependencies or curl the live deployment; VPS smoke proof is
-  still required before declaring the GenX image job path complete.
+  #118. The VPS transcript proves the focused media contract test and build
+  passed before the GenX fallback was moved to GitHub. The new fallback commit
+  still requires VPS test/build proof before it can be called deployed. Public
+  smoke is blocked until the correct web process is restarted instead of the
+  missing `amarktai-web.service` unit.
 - **Next PR:** #119 Research Completion after production smoke verification.
 
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
@@ -89,6 +94,11 @@ Provider-specific adapters may contain endpoint protocol identifiers, but no
 fallback model IDs. Capability callers cannot select raw providers or models.
 Models are dynamic and discovery-driven.
 
+GenX discovery uses live `/api/v1/models` first. If that endpoint fails while a
+GenX credential is configured, discovery may expose models from the existing
+GenX runtime catalog as provider-contract evidence. This is a recovery path for
+routing candidates only; it does not prove execution or artifact completion.
+
 ## Routing Profiles
 
 Supported profiles are `cheap`, `balanced`, `premium`, `mixed`,
@@ -130,7 +140,9 @@ It owns:
 - dynamic route planning from discovered model evidence
 
 No model IDs are stored in this layer. A model becomes eligible only after
-provider discovery returns model-level capability evidence. Missing discovery
+provider discovery returns model-level capability evidence, or after an explicit
+provider-contract evidence path exists for a provider whose catalog omits task
+metadata or whose live catalog is temporarily unavailable. Missing discovery
 returns no route; it never creates a default model or fake fallback.
 
 Provider scoring considers quality, speed, cost, availability, adult
