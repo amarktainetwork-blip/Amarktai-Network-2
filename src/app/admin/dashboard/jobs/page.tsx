@@ -21,7 +21,6 @@ import {
   Layers3,
   Loader2,
   XCircle,
-  Zap,
 } from 'lucide-react'
 import {
   DashboardEmptyState,
