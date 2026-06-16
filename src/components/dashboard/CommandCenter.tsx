@@ -15,6 +15,12 @@ import {
   Sparkles,
   XCircle,
 } from 'lucide-react'
+import {
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+} from '@/components/dashboard/DashboardChrome'
 
 type AppOption = { id?: string; slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
@@ -225,14 +231,26 @@ export default function CommandCenter() {
     [policy.adultMode],
   )
   const activeResult = resultText(active?.result)
+  const activeJobCount = active?.jobs.length ?? (active?.job ? 1 : 0)
+  const activeArtifactCount = active?.artifacts.length ?? 0
 
   return (
-    <div className="space-y-5">
-      <header className="rounded-3xl border border-cyan-400/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,.14),transparent_42%)] p-5 lg:p-7">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Command Center</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">Say what you want done.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">A focused assistant workspace for questions, research, planning, and capability execution.</p>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-6">
+      <DashboardPageHeader
+        eyebrow="Command Center"
+        title="Say what you want done."
+        description="A focused operator workspace for questions, research, planning, and capability execution. Backend route selection remains internal while approvals, jobs, attempts, and artifacts stay visible."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardMetricCard label="App context" value={appSlug} tone="cyan" detail="Current app scope used for execution and policy checks." />
+        <DashboardMetricCard label="Capability" value={capability === 'auto' ? 'Auto-detect' : friendly(capability)} tone="slate" detail="Capability-first selection, not provider/model workflow." />
+        <DashboardMetricCard label="Jobs" value={activeJobCount} tone="amber" detail="Visible linked job or provider poll records for the active execution." />
+        <DashboardMetricCard label="Artifacts" value={activeArtifactCount} tone="emerald" detail="Completed artifacts currently linked to the active execution." />
+      </div>
+
+      <DashboardSectionPanel title="Execution controls" eyebrow="Prompt, scope, and reusable context">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Field label="App context">
             <select value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="command-control">
               {apps.length === 0 && <option value="amarktai-network">AmarktAI</option>}
@@ -247,7 +265,7 @@ export default function CommandCenter() {
           <Fact label="App policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
           <Fact label="Workspace" value="Conversation, result, and reusable artifacts" />
         </div>
-      </header>
+      </DashboardSectionPanel>
 
       <div className="space-y-5">
         <main className="flex flex-col gap-5">
@@ -288,9 +306,7 @@ export default function CommandCenter() {
           </section>
 
           {!active && (
-            <section className="grid min-h-72 place-items-center rounded-2xl border border-dashed border-slate-700/60 bg-slate-900/30 text-center">
-              <div><Sparkles className="mx-auto h-9 w-9 text-cyan-300/60" /><p className="mt-3 font-bold text-slate-300">Plan, progress, results, and artifacts appear here.</p></div>
-            </section>
+            <DashboardEmptyState title="No active execution yet" detail="Plan, progress, approvals, results, and reusable artifacts appear here after the next capability run." />
           )}
 
           {active && (
@@ -347,7 +363,7 @@ export default function CommandCenter() {
           )}
         </main>
 
-        <details className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">
+        <details className="rounded-[1.6rem] border border-slate-700/50 bg-slate-900/60 p-4 shadow-[0_22px_55px_rgba(0,0,0,0.16)]">
           <summary className="cursor-pointer text-sm font-black text-slate-200">Recent work and shortcuts</summary>
           <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_260px]">
           <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">

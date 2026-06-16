@@ -18,6 +18,12 @@ import {
 } from 'lucide-react'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 import { settingsRuntimeTools } from '@/lib/settings-runtime-tools'
+import {
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 type SettingsTruth = {
   providers: SettingsTruthEntry[]
@@ -192,26 +198,21 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Settings</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-white lg:text-3xl">
-            Connect capabilities once.
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Save a provider key securely, then run a live test before it is shown as ready.
-          </p>
+      <DashboardPageHeader
+        eyebrow="Settings"
+        title="Connect capabilities once."
+        description="Provider readiness, storage, routing policy, runtime tools, and capability truth all live here. The dashboard reflects backend/runtime truth rather than becoming the source of it."
+        actions={<button type="button" onClick={() => void load()} disabled={refreshing} className="flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-800/60 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />Refresh</button>}
+      />
+
+      {!loading && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <DashboardMetricCard label="Providers ready" value={`${connectedProviders}/${providers.length}`} tone={connectedProviders === providers.length ? 'emerald' : connectedProviders > 0 ? 'amber' : 'slate'} detail="Connected providers with successful live-test state." />
+          <DashboardMetricCard label="Storage" value={storage?.ready ? 'Ready' : 'Needs setup'} tone={storage?.ready ? 'emerald' : 'amber'} detail="Artifact storage truth from the backend status surface." />
+          <DashboardMetricCard label="Runtime tools" value={runtimeTools.filter((tool) => tool.connected).length} tone="cyan" detail="Local runtime tools currently reporting as connected." />
+          <DashboardMetricCard label="Capabilities" value={capabilities.length} tone="slate" detail="Capability truth entries currently returned for operator review." />
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={refreshing}
-          className="flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-4 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-800 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
-      </div>
+      )}
 
       {!loading && (
         <div className="flex flex-wrap gap-3">
@@ -257,12 +258,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
-          <Settings2 className="h-4 w-4" />
-          Capability Routing
-        </h2>
-        <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5">
+      <DashboardSectionPanel title="Capability routing" eyebrow="Routing policy defaults">
           <p className="text-sm text-slate-300">
             Choose the cost and quality policy. AmarktAI still selects providers and models by capability and readiness.
           </p>
@@ -289,15 +285,9 @@ export default function SettingsPage() {
             </button>
             {routingMessage && <p className="text-xs font-semibold text-teal-200">{routingMessage}</p>}
           </div>
-        </div>
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
-          <Key className="h-4 w-4" />
-          AI Provider Connections
-        </h2>
-
+      <DashboardSectionPanel title="AI provider connections" eyebrow="Secure credentials and live tests">
         {loading ? (
           <LoadingCard label="Checking provider configuration..." />
         ) : truth ? (
@@ -309,14 +299,9 @@ export default function SettingsPage() {
         ) : (
           <UnavailableCard label="Provider setup is unavailable until readiness can be checked." />
         )}
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
-          <Server className="h-4 w-4" />
-          Artifact Storage
-        </h2>
-
+      <DashboardSectionPanel title="Artifact storage" eyebrow="Persistence readiness">
         {loading ? (
           <LoadingCard label="Checking storage..." />
         ) : storage ? (
@@ -356,13 +341,9 @@ export default function SettingsPage() {
         ) : (
           <UnavailableCard label="Storage status is currently unavailable." />
         )}
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400">
-          <Shield className="h-4 w-4" />
-          Content Safety / Adult Mode
-        </h2>
+      <DashboardSectionPanel title="Content safety / adult mode" eyebrow="Policy and gating">
         <div id="content-safety" className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-5">
           <p className="text-sm leading-6 text-slate-400">Safe mode is the default. Suggestive and adult modes require explicit opt-in; prohibited content remains blocked in every mode.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
@@ -388,27 +369,21 @@ export default function SettingsPage() {
             {safetyMessage && <p className="text-xs text-teal-200">{safetyMessage}</p>}
           </div>
         </div>
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Server className="h-4 w-4" />Local Runtime Tools</h2>
+      <DashboardSectionPanel title="Local runtime tools" eyebrow="Operator dependencies">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {runtimeTools.map((tool) => <article key={tool.id} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4"><div className="flex items-center justify-between"><p className="font-black text-white">{tool.id}</p><span className={`h-2.5 w-2.5 rounded-full ${tool.connected ? 'bg-emerald-400' : 'bg-amber-400'}`} /></div><p className="mt-3 text-xs leading-5 text-slate-500">{tool.detail}</p></article>)}
+          {runtimeTools.map((tool) => <article key={tool.id} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-4"><div className="flex items-center justify-between"><p className="font-black text-white">{tool.id}</p><DashboardStatusBadge value={tool.connected ? 'active' : 'partial'} map={{ active: { label: 'connected', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, partial: { label: 'setup needed', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' } }} /></div><p className="mt-3 text-xs leading-5 text-slate-500">{tool.detail}</p></article>)}
         </div>
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-slate-400"><Settings2 className="h-4 w-4" />Capability Matrix</h2>
+      <DashboardSectionPanel title="Capability matrix" eyebrow="Mixed truth view">
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
           {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.readiness ?? entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
         </div>
-      </section>
+      </DashboardSectionPanel>
 
-      <section>
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] text-red-300">
-          <AlertTriangle className="h-4 w-4" />
-          Destructive Maintenance
-        </h2>
+      <DashboardSectionPanel title="Destructive maintenance" eyebrow="Operator-only reset surface">
         <div className="rounded-2xl border border-red-900/50 bg-red-950/20 p-5">
           <p className="font-black text-white">Hard reset jobs and artifacts</p>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
@@ -429,7 +404,7 @@ export default function SettingsPage() {
             {resetMessage && <p className="text-xs font-semibold text-slate-300">{resetMessage}</p>}
           </div>
         </div>
-      </section>
+      </DashboardSectionPanel>
     </div>
   )
 }
@@ -522,7 +497,7 @@ function ProviderConnectionCard({
   const failed = entry.status === 'Failed'
 
   return (
-    <article className={`rounded-2xl border p-5 ${ready ? 'border-emerald-800/40 bg-emerald-900/10' : failed ? 'border-red-800/40 bg-red-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
+    <article className={`rounded-[1.35rem] border p-5 shadow-[0_20px_50px_rgba(0,0,0,0.16)] ${ready ? 'border-emerald-800/40 bg-emerald-900/10' : failed ? 'border-red-800/40 bg-red-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-black text-slate-100">{entry.label}</p>
@@ -530,9 +505,7 @@ function ProviderConnectionCard({
             {docs?.hint ?? `Unlocks ${entry.unlocks}.`}
           </p>
         </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${ready ? 'bg-emerald-900/60 text-emerald-300' : failed ? 'bg-red-900/60 text-red-300' : 'bg-amber-900/60 text-amber-300'}`}>
-          {ready ? 'Ready' : failed ? 'Test failed' : entry.configured ? 'Needs test' : 'Needs setup'}
-        </span>
+        <DashboardStatusBadge value={ready ? 'ready' : failed ? 'failed' : entry.configured ? 'partial' : 'unavailable'} map={{ ready: { label: 'ready', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, partial: { label: 'needs test', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unavailable: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
       </div>
 
       {entry.requiresSecret && (

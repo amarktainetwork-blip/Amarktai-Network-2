@@ -14,6 +14,12 @@ import {
   Upload,
   XCircle,
 } from 'lucide-react'
+import {
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+} from '@/components/dashboard/DashboardChrome'
 
 type AppOption = { slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
@@ -334,12 +340,22 @@ export default function StudioPage() {
   const activeAttempts = active ? resultAttempts(active.result) : []
 
   return (
-    <div className="space-y-5">
-      <header className="rounded-3xl border border-fuchsia-400/20 bg-[radial-gradient(circle_at_top_left,rgba(217,70,239,.13),transparent_42%)] p-5 lg:p-7">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-fuchsia-300">Studio</p>
-        <h1 className="mt-2 text-3xl font-black text-white">Choose a task and create.</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">AmarktAI selects an approved provider route, tracks real jobs, and saves completed output to Artifacts.</p>
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+    <div className="space-y-6">
+      <DashboardPageHeader
+        eyebrow="Studio"
+        title="Choose a task and create."
+        description="A capability-first creative workspace. Route-matrix truth, safety state, execution progress, and artifacts stay visible while provider selection remains behind the Brain."
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardMetricCard label="Selected task" value={TASKS.find((entry) => entry.id === task)?.label ?? 'Task'} tone="cyan" detail="Creative task family selected for the current run." />
+        <DashboardMetricCard label="Mode" value={mode === 'adult' ? 'Adult' : 'Normal'} tone={mode === 'adult' ? 'amber' : 'slate'} detail="Content mode affects safety and route eligibility." />
+        <DashboardMetricCard label="Project" value={projectId || 'None'} tone="slate" detail="Optional workspace context attached to the studio run." />
+        <DashboardMetricCard label="Brand kit" value={brandKitId || 'None'} tone="slate" detail="Optional brand context applied without changing route selection rules." />
+      </div>
+
+      <DashboardSectionPanel title="Studio controls" eyebrow="Capability-first creative surface">
+        <div className="flex flex-wrap items-center gap-2">
           {TASKS.map((entry) => (
             <button key={entry.id} onClick={() => setTask(entry.id)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${task === entry.id ? 'border-fuchsia-300/50 bg-fuchsia-300/15 text-fuchsia-100' : 'border-slate-700 text-slate-500'}`}>{entry.label}</button>
           ))}
@@ -353,7 +369,7 @@ export default function StudioPage() {
           <Field label="Brand kit"><select value={brandKitId} onChange={(event) => setBrandKitId(event.target.value)} className="control"><option value="">No brand kit</option>{brandKits.map((kit) => <option key={kit.id} value={kit.id}>{kit.name}</option>)}</select></Field>
           <Fact label="Content policy" value={policy.adultMode ? 'Adult mode opted in' : policy.suggestiveMode ? 'Suggestive mode opted in' : 'Safe mode'} />
         </div>
-      </header>
+      </DashboardSectionPanel>
 
       <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className="space-y-4">
@@ -399,7 +415,7 @@ export default function StudioPage() {
               </div>)}
             </div>
           </Panel>}
-          {!active && !videoProject && <section className="grid min-h-[560px] place-items-center rounded-2xl border border-dashed border-slate-700 bg-slate-900/30 text-center text-slate-400">Your result preview, job progress, and persisted artifacts appear here.</section>}
+          {!active && !videoProject && <DashboardEmptyState title="No active studio output yet" detail="Prompt results, route truth, job progress, and persisted artifacts appear here once a studio task runs." />}
           {videoProject && <LongFormVideoPanel project={videoProject} />}
           {active && <>
             <section className="grid gap-3 md:grid-cols-2">

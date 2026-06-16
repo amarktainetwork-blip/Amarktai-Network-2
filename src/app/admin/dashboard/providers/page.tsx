@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { AlertCircle, CheckCircle2, Loader2, Play, ServerCog } from 'lucide-react'
+import {
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 type ProviderDiagnostic = {
   id: string
@@ -95,25 +102,20 @@ export default function ProvidersPage() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-teal-400">Operations</p>
-          <h1 className="mt-1 text-3xl font-semibold text-white">Providers</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Live readiness for the six approved provider adapters. This legacy diagnostic route exposes
-            provider diagnostics and live tests, not a provider picker for normal product work.
-          </p>
+      <DashboardPageHeader
+        eyebrow="Legacy diagnostics"
+        title="Provider diagnostics"
+        description="Live readiness for the six approved provider adapters. This remains a diagnostic/operator surface only and is not part of the normal capability-first product workflow."
+        actions={<button type="button" onClick={() => void testAllProviders()} disabled={testing !== null || providers.length === 0} className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-cyan-100 disabled:opacity-50">{testing === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}Test all providers</button>}
+      />
+
+      {!loading && (
+        <div className="grid gap-4 sm:grid-cols-3">
+          <DashboardMetricCard label="Providers" value={providers.length} tone="slate" detail="Diagnostic provider entries currently returned by the backend." />
+          <DashboardMetricCard label="Connected" value={providers.filter((provider) => provider.connected).length} tone="emerald" detail="Providers with a passing live test result." />
+          <DashboardMetricCard label="Needs setup or test" value={providers.filter((provider) => !provider.connected).length} tone="amber" detail="Providers that still need setup or a successful diagnostic run." />
         </div>
-        <button
-          type="button"
-          onClick={() => void testAllProviders()}
-          disabled={testing !== null || providers.length === 0}
-          className="inline-flex items-center gap-2 rounded-lg border border-teal-400/40 bg-teal-400/10 px-4 py-2.5 text-sm font-medium text-teal-100 disabled:opacity-50"
-        >
-          {testing === 'all' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Test all providers
-        </button>
-      </header>
+      )}
 
       {error && (
         <div className="flex gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
@@ -123,13 +125,12 @@ export default function ProvidersPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center gap-3 py-16 text-slate-400">
-          <Loader2 className="h-5 w-5 animate-spin" /> Loading provider truth...
-        </div>
+        <DashboardEmptyState title="Loading provider truth" detail="Reading provider diagnostics, live test state, routes, and model summaries." />
       ) : (
+        <DashboardSectionPanel title="Diagnostic provider cards" eyebrow="Operator-only view">
         <section className="grid gap-4 lg:grid-cols-2">
           {providers.map((provider) => (
-            <article key={provider.id} className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+            <article key={provider.id} className="rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-5 shadow-[0_24px_55px_rgba(0,0,0,0.2)] transition hover:border-cyan-400/16">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex gap-3">
                   <div className="rounded-xl bg-teal-500/10 p-2 text-teal-300">
@@ -143,9 +144,7 @@ export default function ProvidersPage() {
                       ) : (
                         <AlertCircle className="h-4 w-4 text-amber-400" />
                       )}
-                      <span className={provider.connected ? 'text-emerald-300' : 'text-amber-300'}>
-                        {provider.connected ? 'Live test passed' : provider.status}
-                      </span>
+                      <DashboardStatusBadge value={provider.connected ? 'ready' : provider.status} map={{ ready: { label: 'live test passed', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, degraded: { label: 'degraded', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unconfigured: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
                     </div>
                   </div>
                 </div>
@@ -153,7 +152,7 @@ export default function ProvidersPage() {
                   type="button"
                   onClick={() => void testProvider(provider.id)}
                   disabled={testing !== null}
-                  className="inline-flex items-center gap-2 rounded-lg bg-teal-500 px-3 py-2 text-sm font-medium text-slate-950 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-4 py-2.5 text-xs font-black uppercase tracking-[0.14em] text-slate-950 disabled:opacity-50"
                 >
                   {testing === provider.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                   Test live
@@ -208,6 +207,7 @@ export default function ProvidersPage() {
             </article>
           ))}
         </section>
+        </DashboardSectionPanel>
       )}
     </main>
   )

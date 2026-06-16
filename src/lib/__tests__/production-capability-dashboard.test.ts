@@ -54,8 +54,8 @@ describe('production capability and dashboard contract', () => {
   it('keeps Providers reachable only as legacy diagnostics, not canonical navigation', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Providers')
     const providersPage = source('src/app/admin/dashboard/providers/page.tsx')
-    expect(providersPage).toContain('legacy diagnostic route')
-    expect(providersPage).toContain('not a provider picker for normal product work')
+    expect(providersPage).toContain('Legacy diagnostics')
+    expect(providersPage).toContain('not part of the normal capability-first product workflow')
   })
 
   it('keeps the redesigned read-heavy pages on canonical backend surfaces', () => {
@@ -68,6 +68,21 @@ describe('production capability and dashboard contract', () => {
     expect(jobsPage).toContain("fetch('/api/admin/jobs')")
     expect(artifactsPage).toContain("fetch(`/api/admin/artifacts?${params}`")
     expect(connectedAppsPage).toContain('ConnectedAppsClient')
+  })
+
+  it('keeps interactive dashboard pages on their runtime-backed or diagnostic surfaces', () => {
+    const command = source('src/components/dashboard/CommandCenter.tsx')
+    const studio = source('src/app/admin/dashboard/studio/page.tsx')
+    const settings = source('src/app/admin/dashboard/settings/page.tsx')
+    const providers = source('src/app/admin/dashboard/providers/page.tsx')
+
+    expect(command).toContain('/api/admin/playground')
+    expect(studio).toContain('/api/admin/system/v1-brain-route-matrix')
+    expect(studio).toContain('/api/admin/studio/execute')
+    expect(settings).toContain('/api/admin/settings/status')
+    expect(settings).toContain('/api/admin/settings/runtime-tools')
+    expect(providers).toContain('/api/admin/system/provider-diagnostics')
+    expect(providers).toContain('Legacy diagnostics')
   })
 
   it('exposes approved-provider diagnostics and a guarded hard reset', () => {

@@ -75,4 +75,24 @@ describe('dashboard runtime truth contract', () => {
     expect(client).toContain("fetch('/api/admin/connected-apps'")
     expect(client).toContain('/api/admin/connected-apps/${id}')
   })
+
+  it('keeps Command Center, Studio, and Settings on their required backend surfaces', () => {
+    const command = source('src/components/dashboard/CommandCenter.tsx')
+    const studio = source('src/app/admin/dashboard/studio/page.tsx')
+    const settings = source('src/app/admin/dashboard/settings/page.tsx')
+
+    expect(command).toContain("fetch('/api/admin/playground?limit=30'")
+    expect(command).toContain("fetch('/api/admin/playground'" )
+    expect(command).toContain('/api/admin/app-safety?appSlug=${encodeURIComponent(appSlug)}')
+
+    expect(studio).toContain("fetch('/api/admin/system/v1-brain-route-matrix'")
+    expect(studio).toContain("fetch('/api/admin/studio/execute'" )
+    expect(studio).toContain('/api/admin/app-safety?appSlug=${encodeURIComponent(appSlug)}')
+    expect(studio).toContain("fetch('/api/admin/creative-workspaces'")
+
+    expect(settings).toContain("fetch('/api/admin/settings/status'")
+    expect(settings).toContain("fetch('/api/admin/settings/routing-policy'")
+    expect(settings).toContain("fetch('/api/admin/settings/runtime-tools'")
+    expect(settings).toContain("fetch('/api/admin/system/ai-capabilities-truth'")
+  })
 })
