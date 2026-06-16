@@ -106,6 +106,15 @@ describe('provider adapter contracts', () => {
     })
   })
 
+  it('preserves Groq auth/env truth conservatively', () => {
+    const groq = PROVIDER_TRUTH.find((provider) => provider.id === 'groq')!
+    process.env.GROQ_API_KEY = 'groq-env-token'
+
+    expect(getIntegrationKey('groq')).toBe('groq')
+    expect(getEnvKeyForProvider('groq')).toBe('groq-env-token')
+    expect(groq.envAliases).toEqual(['GROQ_API_KEY'])
+  })
+
   it('represents Qwen chat and reasoning while leaving unsupported families out of provider truth', () => {
     const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
 
@@ -411,6 +420,40 @@ describe('provider adapter contracts', () => {
       'voice_clone',
     ]))
     expect(huggingface.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: true,
+    })
+  })
+
+  it('keeps Groq provider truth conservative around supported and unsupported families', () => {
+    const groq = PROVIDER_TRUTH.find((provider) => provider.id === 'groq')!
+
+    expect(groq.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'vision',
+      'tts',
+      'stt',
+    ]))
+    expect(groq.capabilities).not.toEqual(expect.arrayContaining([
+      'image',
+      'video',
+      'image_to_video',
+      'music',
+      'embeddings',
+      'rerank',
+      'translation',
+      'documents',
+      'agents',
+      'adult_text',
+      'adult_image',
+      'adult_video',
+    ]))
+    expect(groq.features).toMatchObject({
       streaming: true,
       asyncJobs: false,
       webhooks: false,

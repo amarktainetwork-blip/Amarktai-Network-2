@@ -85,7 +85,10 @@ describe('Phase 1 provider truth layer', () => {
       'chat', 'image', 'video', 'tts', 'stt', 'embeddings', 'rerank',
     ]))
     expect(getProviderTruth('groq')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'reasoning', 'coding', 'vision', 'tts', 'stt', 'agents',
+      'chat', 'reasoning', 'coding', 'vision', 'tts', 'stt',
+    ]))
+    expect(getProviderTruth('groq')?.capabilities).not.toEqual(expect.arrayContaining([
+      'image', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('qwen')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'vision', 'image', 'video', 'image_to_video',
@@ -130,6 +133,13 @@ describe('Phase 1 provider truth layer', () => {
     expect(resolveProviderEndpoint(genx, 'streaming_text'))
       .toBe('https://query.genx.sh/v1')
     expect(huggingface.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: true,
+    })
+    expect(getProviderTruth('groq')?.features).toMatchObject({
       streaming: true,
       asyncJobs: false,
       webhooks: false,
@@ -249,6 +259,47 @@ describe('Phase 1 provider truth layer', () => {
       ['vendor/runtime-picture', ['image']],
       ['vendor/runtime-ranker', ['rerank']],
     ])
+  })
+
+  it('maps Groq auth aliases and discovery metadata conservatively', () => {
+    process.env.GROQ_API_KEY = 'groq-token-value'
+
+    expect(getIntegrationKey('groq')).toBe('groq')
+    expect(getEnvKeyForProvider('groq')).toBe('groq-token-value')
+
+    const models = normalizeProviderCatalog('groq', {
+      data: [
+        { id: 'groq/runtime-vision', type: 'image-text-to-text', available: true },
+        { id: 'groq/runtime-tts', type: 'speech-generation', available: true },
+        { id: 'groq/runtime-asr', type: 'speech-to-text', available: true },
+      ],
+    })
+
+    expect(models.map((model) => [model.id, model.capabilities])).toEqual([
+      ['groq/runtime-vision', ['vision', 'ocr', 'image']],
+      ['groq/runtime-tts', ['tts']],
+      ['groq/runtime-asr', ['stt']],
+    ])
+  })
+
+  it('does not fabricate Groq agent/tool-calling routes from empty catalogs', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: 'groq-runtime-model', object: 'model', active: true }],
+    }), { status: 200 }))
+
+    const snapshot = await discoverProvider('groq', { fetcher, force: true })
+
+    expect(snapshot.models[0]).toMatchObject({
+      id: 'groq-runtime-model',
+      capabilities: [],
+      capabilityEvidence: 'unknown',
+    })
+    expect(modelsForCapability(snapshot, 'chat')[0]).toMatchObject({
+      id: 'groq-runtime-model',
+      capabilities: ['chat'],
+      capabilityEvidence: 'provider_contract',
+    })
+    expect(modelsForCapability(snapshot, 'agents')).toEqual([])
   })
 
   it('filters Hugging Face discovery by the requested task family', async () => {

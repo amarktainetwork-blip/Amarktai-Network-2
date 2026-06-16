@@ -200,6 +200,13 @@ private/dedicated endpoint metadata, artifact-capable inference adapters, and
 `asyncJobs: false`. It does not claim canonical Hugging Face tool-calling or
 agent execution because no such adapter contract is proven in the current repo.
 
+Groq canonical auth alias truth is `GROQ_API_KEY`. The canonical provider layer
+represents Groq dynamic model discovery, streaming text/chat, reasoning/coding,
+Groq-native TTS/STT adapter paths, artifact-capable execution, and
+`asyncJobs: false`. It does not claim canonical Groq image/video generation,
+tool-calling, or agent execution because those contracts are not proven in the
+current repo.
+
 Free-token-only operation must keep `QWEN_PAID_ENABLED` unset or explicitly set
 to `false`. Paid Qwen routing is disabled by default and only turns on when
 `QWEN_PAID_ENABLED=true` exactly.
@@ -245,6 +252,10 @@ its provider truth must not claim canonical async job support.
 Hugging Face non-chat capability truth is partial unless live provider proof has
 been recorded. Local code and tests prove dynamic catalog support plus adapter
 paths for several HF specialist families, but not live production completion.
+
+Groq non-chat capability truth is also conservative. Local code and tests prove
+Groq TTS/STT adapter paths and conservative discovery metadata, but not live
+provider proof for those families.
 
 `/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
 must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.

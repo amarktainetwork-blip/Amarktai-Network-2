@@ -80,6 +80,11 @@ Current operator truth:
   metadata
 - Hugging Face canonical provider truth keeps `asyncJobs: false` and does not
   claim unproven tool-calling or agents support
+- Groq auth alias is `GROQ_API_KEY`
+- Groq dynamic discovery locally proves provider-catalog metadata for chat,
+  vision, and audio families
+- Groq canonical provider truth keeps `asyncJobs: false` and does not claim
+  unproven image/video generation, tool-calling, or agents support
 - `/api/brain/video-generate/:jobId` is legacy compatibility only; apps poll
   `/api/brain/media-jobs/:jobId`
 - Admin provider-key truth covers only the six approved V1 providers:
@@ -106,6 +111,8 @@ Current operator truth:
   adult GenX rows conservative
 - Hugging Face non-chat capability rows remain conservative `partial` or
   `unknown` until authenticated live proof upgrades them
+- Groq non-chat capability rows remain conservative `partial` or `unknown`
+  until authenticated live proof upgrades them
 
 Never:
 

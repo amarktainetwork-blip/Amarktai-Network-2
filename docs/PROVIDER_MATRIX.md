@@ -52,6 +52,14 @@ presence, or theoretical support alone is insufficient.
 - Hugging Face provider truth is conservative around tool-calling and agent
   claims. The canonical provider layer does not claim Hugging Face tool-calling
   or agents as working provider truth.
+- Groq auth currently depends on `GROQ_API_KEY` in canonical provider truth.
+- Groq dynamic catalog discovery is locally proven through its provider model
+  catalog plus conservative metadata mapping.
+- Groq has canonical chat plus Groq-native TTS/STT adapter paths, but no
+  canonical image/video generation or Brain async polling contract.
+- Groq tool-calling and agents are kept conservative here. The current repo does
+  not prove a canonical Groq tool-calling execution contract, so provider truth
+  does not claim `agents` or `toolCalling` as working.
 - PR #113 recorded persisted playable TTS artifacts through Together, Groq, and
   MiMo.
 - Together auth currently depends on `TOGETHER_API_KEY`.
@@ -89,7 +97,7 @@ presence, or theoretical support alone is insufficient.
 | --- | --- | --- | --- |
 | HF | Hub model metadata | pipeline task metadata and conservative descriptor mapping | inference providers plus configured private/dedicated endpoints |
 | Together | provider model catalog | model metadata when supplied | configured dedicated endpoints |
-| Groq | provider model catalog | model metadata when supplied | tool-calling capability contract |
+| Groq | provider model catalog | model metadata when supplied | chat/vision/audio discovery truth only |
 | GenX | async `/api/v1/models` family, then the existing runtime image/video/music/TTS fallback when the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming and async job truth |
 | Qwen | compatible-mode model catalog | model metadata when supplied | compatible/AIGC split, free-quota and paid guard |
 | MiMo | token-plan model catalog | model metadata when supplied | token-plan endpoint truth |
@@ -134,6 +142,12 @@ metadata, and canonical adapter paths for image, TTS, STT, rerank, documents,
 and other specialist inference families. This upgrades HF reasoning, coding,
 TTS, OCR, and avatar rows to conservative `partial` rather than `unknown`, but
 does not upgrade any non-chat HF row to `working` without live provider proof.
+
+Groq has local proof for dynamic catalog discovery, chat routing, streaming,
+and Groq-native TTS/STT adapter paths. Groq image/video/media-generation rows
+remain `unknown` because the current repo does not prove a canonical Groq-native
+or routed generation contract for those families. Groq tool-calling remains
+conservative and is not treated as proven provider truth here.
 
 Canonical Brain local async media polling currently exists for GenX, Qwen, and
 Together. Hugging Face async generation remains incomplete in canonical Brain
