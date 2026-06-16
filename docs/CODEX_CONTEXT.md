@@ -11,8 +11,9 @@ READ THIS FILE FIRST.
 - **Completed:** Dynamic provider/model evidence fallback, provider
   diagnostics, Studio/Playground/assistant routing repair, Hugging Face
   task-filtered discovery, Together native adapter completion, Brain media
-  polling recovery for async image/provider jobs, and a GitHub-tracked GenX
-  static runtime catalog fallback when live GenX model discovery fails.
+  polling recovery for async image/provider jobs, GitHub-tracked GenX static
+  runtime catalog fallback when live GenX model discovery fails, and GenX
+  fallback routing through degraded discovery-health.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
   artifacts, adult policy, signed connected-app execution, external Brain
   media polling by local job id, and GenX discovery candidates from the existing
@@ -24,18 +25,18 @@ READ THIS FILE FIRST.
   pre-router whose selected overrides were rejected by canonical execution.
   External `/api/brain/media-jobs/:jobId` polling also returned Unauthorized.
   VPS-local GenX discovery fallback existed outside GitHub until the 2026-06-16
-  follow-up.
+  follow-up. VPS proof then exposed that degraded discovery-health could still
+  suppress the explicit GenX fallback route.
 - **Proof:** Previous PR #118 proof remains `npx tsc --noEmit`, 496/496 tests,
-  and the 183-page production build. The VPS transcript proves the media
-  contract test and build passed before the GenX discovery fallback was moved to
-  GitHub. This environment could not install dependencies because registry
-  access returned 403 for a locked package, and terminal HTTP calls to the live
-  site were blocked; the new fallback commit still requires VPS test/build
-  proof.
-- **Next Step:** On the VPS, preserve dirty local provider/orchestrator changes,
-  pull the branch, identify the correct web process, restart it, start a GenX
-  image job, poll the returned Brain `pollUrl`, and confirm artifact completion
-  before marking GenX image complete.
+  and the 183-page production build. VPS proof on 2026-06-16 confirmed install,
+  Prisma generation, TypeScript, the focused media contract test, production
+  build, local site health, and API health. GenX image still failed with
+  `NO_ROUTE_FOUND` before the degraded-health fallback routing fix; rerun VPS
+  proof after pulling the latest commit.
+- **Next Step:** On the VPS, pull the branch, rerun the focused media contract
+  test and build, restart `amarktai-platform.service`, start a GenX image job,
+  poll the returned Brain `pollUrl`, and confirm artifact completion before
+  marking GenX image complete.
 
 Single source of truth:
 
