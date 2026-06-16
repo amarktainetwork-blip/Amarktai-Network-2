@@ -27,13 +27,12 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     capabilities: [
       'chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'video', 'music',
       'tts', 'stt', 'embeddings', 'rerank', 'documents', 'translation', 'avatar',
-      'adult_text', 'adult_image', 'adult_video', 'agents',
     ],
     features: {
       streaming: true,
       asyncJobs: false,
       webhooks: false,
-      toolCalling: true,
+      toolCalling: false,
       artifactSupport: true,
     },
     billing: { plan: 'account', freeQuotaEligible: 'unknown', pricingSource: 'provider_catalog', staticPrices: false },

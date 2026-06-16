@@ -13,19 +13,19 @@ presence, or theoretical support alone is insufficient.
 | Capability | HF | Together | Groq | GenX | Qwen | MiMo |
 | --- | --- | --- | --- | --- | --- | --- |
 | chat | working | working | working | working | working | working |
-| reasoning | unknown | partial | partial | partial | partial | partial |
-| coding | unknown | partial | partial | partial | partial | partial |
+| reasoning | partial | partial | partial | partial | partial | partial |
+| coding | partial | partial | partial | partial | partial | partial |
 | research | unknown | unknown | unknown | unknown | unknown | unknown |
 | image | partial | partial | unknown | partial | partial | unknown |
 | image edit | unknown | unknown | unknown | unknown | unknown | unknown |
 | video | partial | partial | unknown | partial | partial | unknown |
 | image_to_video | unknown | partial | unknown | unknown | partial | unknown |
-| avatar | unknown | unknown | unknown | unknown | unknown | unknown |
+| avatar | partial | unknown | unknown | unknown | unknown | unknown |
 | music | partial | unknown | unknown | partial | unknown | unknown |
-| tts | unknown | working | working | partial | unknown | working |
+| tts | partial | working | working | partial | unknown | working |
 | stt | partial | partial | partial | unknown | unknown | unknown |
 | voice clone | unknown | unknown | unknown | unknown | unknown | unknown |
-| ocr | unknown | unknown | partial | unknown | partial | unknown |
+| ocr | partial | unknown | partial | unknown | partial | unknown |
 | vision | partial | partial | partial | unknown | partial | partial |
 | embeddings | partial | partial | unknown | unknown | partial | unknown |
 | rerank | partial | partial | unknown | unknown | unknown | unknown |
@@ -40,6 +40,18 @@ presence, or theoretical support alone is insufficient.
 
 - PR #113 recorded successful smoke checks for all six providers. This matrix
   treats that as chat connectivity proof only.
+- Hugging Face auth accepts `HUGGINGFACE_API_KEY`,
+  `HUGGINGFACEHUB_API_TOKEN`, and `HF_TOKEN` in canonical provider truth.
+- The canonical Hugging Face specialist/admin execution path now honors that
+  same alias set for authentication.
+- Hugging Face dynamic catalog discovery is locally proven through the Hub model
+  API, including task metadata, inference-provider metadata, and configured
+  private/dedicated endpoint metadata.
+- Hugging Face async jobs remain `false` in canonical provider truth because no
+  canonical Brain local polling contract exists.
+- Hugging Face provider truth is conservative around tool-calling and agent
+  claims. The canonical provider layer does not claim Hugging Face tool-calling
+  or agents as working provider truth.
 - PR #113 recorded persisted playable TTS artifacts through Together, Groq, and
   MiMo.
 - Together auth currently depends on `TOGETHER_API_KEY`.
@@ -75,7 +87,7 @@ presence, or theoretical support alone is insufficient.
 
 | Provider | Dynamic model discovery | Task/capability evidence | Extra discovery |
 | --- | --- | --- | --- |
-| HF | Hub model metadata | pipeline task metadata | inference providers plus configured private/dedicated endpoints |
+| HF | Hub model metadata | pipeline task metadata and conservative descriptor mapping | inference providers plus configured private/dedicated endpoints |
 | Together | provider model catalog | model metadata when supplied | configured dedicated endpoints |
 | Groq | provider model catalog | model metadata when supplied | tool-calling capability contract |
 | GenX | async `/api/v1/models` family, then the existing runtime image/video/music/TTS fallback when the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming and async job truth |
@@ -115,6 +127,13 @@ provider-contract evidence, execution returns `NO_ROUTE_FOUND`. PR #118 also
 adds task-filtered Hugging Face Hub discovery and Together-native video, STT,
 embeddings, and rerank adapter paths. The matrix remains conservative because
 repository wiring is not live provider proof.
+
+Hugging Face has local proof for dynamic Hub discovery, task-to-capability
+mapping, inference-provider metadata, configured private/dedicated endpoint
+metadata, and canonical adapter paths for image, TTS, STT, rerank, documents,
+and other specialist inference families. This upgrades HF reasoning, coding,
+TTS, OCR, and avatar rows to conservative `partial` rather than `unknown`, but
+does not upgrade any non-chat HF row to `working` without live provider proof.
 
 Canonical Brain local async media polling currently exists for GenX, Qwen, and
 Together. Hugging Face async generation remains incomplete in canonical Brain

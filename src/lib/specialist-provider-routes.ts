@@ -58,7 +58,7 @@ export async function runHuggingFaceInference(params: {
   timeoutMs?: number
 }): Promise<SpecialistResult> {
   const startedAt = Date.now()
-  const key = await firstKey('huggingface', ['HUGGINGFACE_API_KEY'])
+  const key = await firstKey('huggingface', ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'])
   const model = params.modelId ?? 'custom:huggingface-model'
   if (!key) {
     return { ok: false, executed: false, provider: 'huggingface', model, capability: params.capability, latencyMs: Date.now() - startedAt, error: 'Hugging Face key not configured.' }

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const key = inlineKey || await getProviderKey('huggingface') || ''
 
   if (!key) {
-    return NextResponse.json({ success: false, error: 'No Hugging Face token configured', nextAction: 'Add HUGGINGFACE_API_KEY or HF_TOKEN in Settings' })
+    return NextResponse.json({ success: false, error: 'No Hugging Face token configured', nextAction: 'Add HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, or HF_TOKEN in Settings' })
   }
 
   const start = Date.now()

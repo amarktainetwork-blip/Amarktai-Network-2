@@ -36,8 +36,9 @@ import {
   getProviderCapabilityAdapter,
   providerHasCanonicalPollingContract,
 } from '@/lib/ai-capability-adapters'
-import { getIntegrationKey } from '@/lib/provider-config'
+import { getEnvKeyForProvider, getIntegrationKey } from '@/lib/provider-config'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
+import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
 
 const ROOT = process.cwd()
@@ -224,6 +225,34 @@ describe('provider adapter contracts', () => {
     expect(result.error).not.toContain('provider-secret')
   })
 
+  it('resolves Hugging Face auth aliases across canonical config and specialist execution', async () => {
+    process.env.HUGGINGFACE_API_KEY = ''
+    process.env.HUGGINGFACEHUB_API_TOKEN = ''
+    process.env.HF_TOKEN = 'hf-token-env'
+    mocks.getServiceKey.mockImplementation(async (_provider: string, envVar: string) =>
+      envVar === 'HF_TOKEN' ? 'hf-token-from-vault' : null,
+    )
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    expect(getIntegrationKey('hf')).toBe('huggingface')
+    expect(getEnvKeyForProvider('huggingface')).toBe('hf-token-env')
+
+    const result = await runHuggingFaceInference({
+      modelId: 'sentence-transformers/all-MiniLM-L6-v2',
+      inputs: 'hello',
+      capability: 'embeddings',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: 'Bearer hf-token-from-vault' }),
+    })
+  })
+
   it('normalizes the GenX asynchronous job and polling flow', async () => {
     mocks.callGenXMedia.mockResolvedValue({
       success: true,
@@ -343,6 +372,47 @@ describe('provider adapter contracts', () => {
     expect(genx.features).toMatchObject({
       streaming: true,
       asyncJobs: true,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: true,
+    })
+  })
+
+  it('keeps Hugging Face provider truth conservative around supported metadata and unproven families', () => {
+    const huggingface = PROVIDER_TRUTH.find((provider) => provider.id === 'huggingface')!
+
+    expect(huggingface.envAliases).toEqual([
+      'HUGGINGFACE_API_KEY',
+      'HUGGINGFACEHUB_API_TOKEN',
+      'HF_TOKEN',
+    ])
+    expect(huggingface.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'vision',
+      'ocr',
+      'image',
+      'video',
+      'music',
+      'tts',
+      'stt',
+      'embeddings',
+      'rerank',
+      'documents',
+      'translation',
+      'avatar',
+    ]))
+    expect(huggingface.capabilities).not.toEqual(expect.arrayContaining([
+      'adult_text',
+      'adult_image',
+      'adult_video',
+      'agents',
+      'voice_clone',
+    ]))
+    expect(huggingface.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
       webhooks: false,
       toolCalling: false,
       artifactSupport: true,

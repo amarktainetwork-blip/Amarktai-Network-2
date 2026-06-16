@@ -13,8 +13,9 @@ READ THIS FILE FIRST.
   task-filtered discovery, Together native adapter completion, Brain media
   polling recovery for async image/provider jobs, GitHub-tracked GenX static
   runtime catalog fallback when live GenX model discovery fails, GenX fallback
-  routing through degraded discovery-health, and canonical GenX discovery base
-  URL handling for `GENX_BASE_URL` and `GENX_API_URL`.
+  routing through degraded discovery-health, canonical GenX discovery base URL
+  handling for `GENX_BASE_URL` and `GENX_API_URL`, and canonical Hugging Face
+  auth-alias alignment across provider config and specialist execution.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
   artifacts, adult policy, signed connected-app execution, external Brain
   media polling by local job id, and GenX discovery candidates from the existing
@@ -72,6 +73,13 @@ Current operator truth:
   STT, vision, documents, agents, and adult GenX families are not currently
   claimed as working canonical provider truth
 - Hugging Face async job truth is narrowed until canonical Brain polling exists
+- Hugging Face auth aliases are `HUGGINGFACE_API_KEY`,
+  `HUGGINGFACEHUB_API_TOKEN`, and `HF_TOKEN`
+- Hugging Face dynamic discovery locally proves Hub task metadata,
+  inference-provider metadata, and configured private/dedicated endpoint
+  metadata
+- Hugging Face canonical provider truth keeps `asyncJobs: false` and does not
+  claim unproven tool-calling or agents support
 - `/api/brain/video-generate/:jobId` is legacy compatibility only; apps poll
   `/api/brain/media-jobs/:jobId`
 - Admin provider-key truth covers only the six approved V1 providers:
@@ -96,6 +104,8 @@ Current operator truth:
 - GenX still lacks live-provider proof in this repo; keep video, music, and TTS
   partial and keep image-to-video, avatar, STT, vision, documents, agents, and
   adult GenX rows conservative
+- Hugging Face non-chat capability rows remain conservative `partial` or
+  `unknown` until authenticated live proof upgrades them
 
 Never:
 

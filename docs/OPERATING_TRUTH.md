@@ -11,8 +11,9 @@
   canonical dashboard planning, provider diagnostics, Brain media polling
   recovery for async provider jobs, GitHub-tracked GenX static runtime catalog
   fallback when live GenX model discovery fails, GenX fallback routing through
-  degraded discovery-health, and canonical GenX discovery base-url handling for
-  `GENX_BASE_URL` and `GENX_API_URL`.
+  degraded discovery-health, canonical GenX discovery base-url handling for
+  `GENX_BASE_URL` and `GENX_API_URL`, and canonical Hugging Face auth-alias
+  alignment across provider config and specialist execution.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
   artifacts, adult policy, connected-app scope enforcement, public Brain
   media-job polling by opaque local job id, and GenX discovery candidates from
@@ -189,6 +190,16 @@ endpoint. Hugging Face discovery includes public model/task metadata,
 inference-provider mappings, and separately configured private or dedicated
 endpoints.
 
+Hugging Face canonical auth alias truth is `HUGGINGFACE_API_KEY`,
+`HUGGINGFACEHUB_API_TOKEN`, and `HF_TOKEN`. Admin/provider test surfaces and
+specialist execution must honor that same alias set.
+
+Hugging Face provider truth remains conservative. The canonical provider layer
+represents Hugging Face dynamic catalog, inference-provider metadata,
+private/dedicated endpoint metadata, artifact-capable inference adapters, and
+`asyncJobs: false`. It does not claim canonical Hugging Face tool-calling or
+agent execution because no such adapter contract is proven in the current repo.
+
 Free-token-only operation must keep `QWEN_PAID_ENABLED` unset or explicitly set
 to `false`. Paid Qwen routing is disabled by default and only turns on when
 `QWEN_PAID_ENABLED=true` exactly.
@@ -230,6 +241,10 @@ provider returns usable media and the artifact layer persists or references it.
 Canonical Brain local media polling currently supports GenX, Qwen, and Together.
 Hugging Face does not yet expose canonical Brain local async media polling, so
 its provider truth must not claim canonical async job support.
+
+Hugging Face non-chat capability truth is partial unless live provider proof has
+been recorded. Local code and tests prove dynamic catalog support plus adapter
+paths for several HF specialist families, but not live production completion.
 
 `/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
 must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.

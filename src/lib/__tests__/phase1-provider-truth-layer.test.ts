@@ -7,9 +7,13 @@ const mocks = vi.hoisted(() => ({
   getMeshTestNotes: vi.fn(),
 }))
 
-vi.mock('@/lib/provider-config', () => ({
-  getProviderKeyWithSource: mocks.getProviderKeyWithSource,
-}))
+vi.mock('@/lib/provider-config', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/provider-config')>()
+  return {
+    ...actual,
+    getProviderKeyWithSource: mocks.getProviderKeyWithSource,
+  }
+})
 vi.mock('@/lib/provider-mesh-status', () => ({
   getMeshTestNotes: mocks.getMeshTestNotes,
 }))
@@ -37,6 +41,7 @@ import {
   type DiscoveredModel,
   type ProviderHealthSnapshot,
 } from '@/lib/providers/provider-types'
+import { getEnvKeyForProvider, getIntegrationKey } from '@/lib/provider-config'
 
 const ROOT = path.resolve(__dirname, '../../..')
 
@@ -53,6 +58,9 @@ describe('Phase 1 provider truth layer', () => {
     })
     delete process.env.HF_PRIVATE_ENDPOINTS_JSON
     delete process.env.HF_DEDICATED_ENDPOINTS_JSON
+    delete process.env.HF_TOKEN
+    delete process.env.HUGGINGFACEHUB_API_TOKEN
+    delete process.env.HUGGINGFACE_API_KEY
     delete process.env.QWEN_PAID_ENABLED
   })
 
@@ -69,6 +77,8 @@ describe('Phase 1 provider truth layer', () => {
     expect(getProviderTruth('huggingface')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'video', 'music',
       'tts', 'stt', 'embeddings', 'rerank', 'documents', 'translation', 'avatar',
+    ]))
+    expect(getProviderTruth('huggingface')?.capabilities).not.toEqual(expect.arrayContaining([
       'adult_text', 'adult_image', 'adult_video', 'agents',
     ]))
     expect(getProviderTruth('together')?.capabilities).toEqual(expect.arrayContaining([
@@ -100,9 +110,12 @@ describe('Phase 1 provider truth layer', () => {
   })
 
   it('uses provider-native discovery endpoints and token/free-quota truth', () => {
+    const huggingface = getProviderTruth('huggingface')!
     const qwen = getProviderTruth('qwen')!
     const mimo = getProviderTruth('mimo')!
     const genx = getProviderTruth('genx')!
+    expect(resolveProviderEndpoint(huggingface, 'inference_router'))
+      .toBe('https://router.huggingface.co')
     expect(resolveProviderEndpoint(qwen, 'compatible_mode'))
       .toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1')
     expect(qwen.billing).toMatchObject({
@@ -116,6 +129,13 @@ describe('Phase 1 provider truth layer', () => {
       .toBe('https://query.genx.sh/api/v1')
     expect(resolveProviderEndpoint(genx, 'streaming_text'))
       .toBe('https://query.genx.sh/v1')
+    expect(huggingface.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: true,
+    })
     expect(genx.features).toMatchObject({
       streaming: true,
       asyncJobs: true,
@@ -149,6 +169,34 @@ describe('Phase 1 provider truth layer', () => {
       capabilities: ['image'],
       capabilityEvidence: 'model_metadata',
     })
+  })
+
+  it('maps Hugging Face auth aliases through canonical provider config', () => {
+    process.env.HF_TOKEN = 'hf-token-value'
+
+    expect(getIntegrationKey('hf')).toBe('huggingface')
+    expect(getIntegrationKey('huggingface')).toBe('huggingface')
+    expect(getEnvKeyForProvider('huggingface')).toBe('hf-token-value')
+
+    delete process.env.HF_TOKEN
+    process.env.HUGGINGFACEHUB_API_TOKEN = 'hub-token-value'
+    expect(getEnvKeyForProvider('huggingface')).toBe('hub-token-value')
+  })
+
+  it('derives Hugging Face capability mappings conservatively from model metadata', () => {
+    const models = normalizeProviderCatalog('huggingface', [
+      { id: 'org/runtime-asr', pipeline_tag: 'automatic-speech-recognition', available: true },
+      { id: 'org/runtime-rerank', pipeline_tag: 'text-ranking', available: true },
+      { id: 'org/runtime-docqa', pipeline_tag: 'document-question-answering', available: true },
+      { id: 'org/runtime-vlm', pipeline_tag: 'image-text-to-text', available: true },
+    ])
+
+    expect(models.map((model) => [model.id, model.capabilities])).toEqual([
+      ['org/runtime-asr', ['stt']],
+      ['org/runtime-rerank', ['rerank']],
+      ['org/runtime-docqa', ['documents', 'ocr']],
+      ['org/runtime-vlm', ['vision', 'ocr', 'image']],
+    ])
   })
 
   it('caches provider discovery and does not invent fallback models', async () => {
