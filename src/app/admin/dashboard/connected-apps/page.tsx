@@ -15,40 +15,42 @@
 import { listConnectedApps } from '@/lib/connected-apps'
 import { listConnectedAppEvents } from '@/lib/connected-app-events'
 import ConnectedAppsClient from './ConnectedAppsClient'
+import {
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 export const dynamic = 'force-dynamic'
 
 export default function ConnectedAppsPage() {
   const apps = listConnectedApps()
   const events = listConnectedAppEvents().slice(0, 50)
+  const activeApps = apps.filter((app) => app.status === 'active').length
+  const suspendedApps = apps.filter((app) => app.status === 'suspended').length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">
-          Connected Apps
-        </p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-white">
-          {apps.length === 0
-            ? 'No connected apps'
-            : `${apps.length} connected app${apps.length === 1 ? '' : 's'}`}
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-          {apps.length === 0
-            ? 'No apps have been registered yet. Use the form below to register an app.'
-            : 'Apps registered to deliver webhook events to this platform.'}
-        </p>
-      </section>
+      <DashboardPageHeader
+        eyebrow="Connected Apps"
+        title={apps.length === 0 ? 'No connected apps yet' : `${apps.length} connected app${apps.length === 1 ? '' : 's'}`}
+        description={apps.length === 0
+          ? 'No apps have been registered yet. Use the form below to register the first app and assign explicit capability scopes.'
+          : 'Apps registered to use scoped capability execution and webhook/event flows through the AmarktAI Brain.'}
+      />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <DashboardMetricCard label="Registered apps" value={apps.length} tone="cyan" detail="Apps known to the current connected-app registry." />
+        <DashboardMetricCard label="Active" value={activeApps} tone="emerald" detail="Apps currently able to send signed requests or webhook events." />
+        <DashboardMetricCard label="Suspended" value={suspendedApps} tone="amber" detail="Apps temporarily blocked without deleting their registration." />
+      </div>
 
       {/* Interactive client section: registration form + app list + controls */}
       <ConnectedAppsClient initialApps={apps} />
 
       {/* Event log — server-rendered, read-only */}
-      <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
-        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.18em] text-slate-300">
-          Webhook Event Log
-        </h2>
+      <DashboardSectionPanel title="Webhook event log" eyebrow="Read-only event truth">
         {events.length === 0 ? (
           <p className="text-sm text-slate-500">No webhook events recorded yet.</p>
         ) : (
@@ -56,7 +58,7 @@ export default function ConnectedAppsPage() {
             {events.map((event) => (
               <div
                 key={event.id}
-                className="flex items-center justify-between rounded-lg border border-slate-700/30 bg-slate-800/40 px-4 py-2"
+                className="flex items-center justify-between rounded-2xl border border-slate-700/30 bg-slate-800/40 px-4 py-3"
               >
                 <div className="min-w-0">
                   <p className="truncate text-xs font-mono text-slate-300">
@@ -71,20 +73,17 @@ export default function ConnectedAppsPage() {
                     )}
                   </p>
                 </div>
-                <span
-                  className={`ml-4 shrink-0 rounded-full px-2 py-0.5 text-xs font-bold uppercase ${
-                    event.verificationResult === 'accepted'
-                      ? 'bg-emerald-900/50 text-emerald-300'
-                      : 'bg-red-900/50 text-red-300'
-                  }`}
-                >
-                  {event.verificationResult}
-                </span>
+                <div className="ml-4 shrink-0">
+                  <DashboardStatusBadge value={event.verificationResult === 'accepted' ? 'active' : 'failed'} map={{
+                    active: { label: 'accepted', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
+                    failed: { label: 'rejected', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' },
+                  }} />
+                </div>
               </div>
             ))}
           </div>
         )}
-      </section>
+      </DashboardSectionPanel>
     </div>
   )
 }

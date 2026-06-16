@@ -23,6 +23,13 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react'
+import {
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -139,54 +146,25 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-8">
+      <DashboardPageHeader
+        eyebrow="Jobs"
+        title="Operational job tracker"
+        description="Canonical job, execution, and control-plane visibility for queued, running, completed, failed, and artifact-linked work."
+        actions={<p className="rounded-full border border-slate-700/60 bg-slate-900/50 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">{refreshing ? 'Updating…' : 'Auto refresh: 5s'}</p>}
+      />
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Jobs</p>
-          <h1 className="mt-1 text-2xl font-black tracking-tight text-white lg:text-3xl">
-            Job Tracker
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Track running and recent AI execution jobs.
-          </p>
-        </div>
-        <p className="text-xs font-bold text-slate-500">{refreshing ? 'Updating...' : 'Updates every 5 seconds'}</p>
-      </div>
-
-      {/* ── Summary cards ──────────────────────────────────────────────────── */}
       {!loading && (
         <div className="grid gap-4 sm:grid-cols-3">
-          <div className="flex flex-col gap-2 rounded-2xl border border-teal-800/40 bg-teal-900/10 p-4">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-teal-400" />
-              <p className="text-xs font-black uppercase tracking-wide text-teal-400">Running</p>
-            </div>
-            <p className="text-2xl font-black text-teal-300">{runningCount}</p>
-          </div>
-          <div className="flex flex-col gap-2 rounded-2xl border border-emerald-800/40 bg-emerald-900/10 p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-              <p className="text-xs font-black uppercase tracking-wide text-emerald-400">Completed</p>
-            </div>
-            <p className="text-2xl font-black text-emerald-300">{completedCount}</p>
-          </div>
-          <div className="flex flex-col gap-2 rounded-2xl border border-red-800/40 bg-red-900/10 p-4">
-            <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-red-400" />
-              <p className="text-xs font-black uppercase tracking-wide text-red-400">Failed</p>
-            </div>
-            <p className="text-2xl font-black text-red-300">{failedCount}</p>
-          </div>
+          <DashboardMetricCard label="Active" value={runningCount} tone="cyan" detail="Running, processing, queued, and other in-flight work." />
+          <DashboardMetricCard label="Completed" value={completedCount} tone="emerald" detail="Jobs that finished and may now link to artifacts or final outputs." />
+          <DashboardMetricCard label="Failed" value={failedCount} tone="rose" detail="Jobs that ended unsuccessfully with a safe operator-visible error reason." />
         </div>
       )}
 
-      {/* ── Job list ───────────────────────────────────────────────────────── */}
-      <section>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-            Recent Jobs {visibleJobs.length > 0 && `(${visibleJobs.length})`}
-          </h2>
+      <DashboardSectionPanel
+        title={`Recent jobs${visibleJobs.length > 0 ? ` (${visibleJobs.length})` : ''}`}
+        eyebrow="Canonical /api/admin/jobs surface"
+        actions={
           <div className="flex flex-wrap gap-2">
             {(['active', 'completed', 'failed', 'archived', 'all'] as const).map((value) => (
               <button key={value} onClick={() => setFilter(value)} className={`rounded-full border px-3 py-1 text-xs font-bold capitalize ${filter === value ? 'border-teal-400/50 bg-teal-400/10 text-teal-200' : 'border-slate-700 text-slate-500'}`}>
@@ -194,27 +172,23 @@ export default function JobsPage() {
               </button>
             ))}
           </div>
-        </div>
-
+        }
+      >
         {loading ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/50 p-6">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-600" />
-            <p className="text-sm text-slate-500">Loading jobs…</p>
-          </div>
+          <DashboardEmptyState title="Loading jobs" detail="Reading canonical jobs, executions, and control-plane entries." />
         ) : visibleJobs.length === 0 ? (
-          <div className="rounded-2xl border border-slate-800/60 bg-slate-900/40 p-8 text-center">
-            <Clock className="mx-auto h-8 w-8 text-slate-600" />
-            <p className="mt-3 font-bold text-slate-400">No jobs yet</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Jobs appear here when you run capabilities from Studio or Command Center.
-            </p>
-            <Link
-              href="/admin/dashboard/studio"
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-teal-500 px-4 py-2 text-sm font-black text-slate-950 transition hover:bg-teal-400"
-            >
-              Open Studio
-            </Link>
-          </div>
+          <DashboardEmptyState
+            title="No jobs yet"
+            detail="Jobs appear here when you run capabilities from Studio or Command Center. Pending work will stay pending, not completed."
+            actions={
+              <Link
+                href="/admin/dashboard/studio"
+                className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-950"
+              >
+                Open Studio
+              </Link>
+            }
+          />
         ) : (
           <div className="space-y-2">
             {visibleJobs.map((job) => {
@@ -226,14 +200,26 @@ export default function JobsPage() {
               return (
                 <div
                   key={job.id}
-                  className="flex flex-col gap-3 rounded-xl border border-slate-800/60 bg-slate-900/40 p-4 sm:flex-row sm:items-center"
+                  className="flex flex-col gap-4 rounded-[1.35rem] border border-slate-800/70 bg-slate-950/45 p-4 transition hover:border-cyan-400/16 hover:bg-cyan-400/[0.03] xl:flex-row xl:items-center"
                 >
                   {/* Status indicator */}
-                  <div className="flex items-center gap-3 sm:w-32 sm:shrink-0">
+                  <div className="flex items-center gap-3 xl:w-40 xl:shrink-0">
                     <span className={`h-2 w-2 shrink-0 rounded-full ${statusCfg.dot} ${isRunning ? 'animate-pulse' : ''}`} />
                     <div className="flex items-center gap-1.5">
                       <StatusIcon className={`h-3.5 w-3.5 ${statusCfg.color} ${isRunning ? 'animate-spin' : ''}`} />
-                      <span className={`text-xs font-bold ${statusCfg.color}`}>{statusCfg.label}</span>
+                      <DashboardStatusBadge value={statusCfg.label} map={{
+                        Completed: { label: 'Completed', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
+                        Running: { label: 'Running', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        Processing: { label: 'Processing', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        Planned: { label: 'Planned', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        Queued: { label: 'Queued', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        Pending: { label: 'Pending', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' },
+                        Failed: { label: 'Failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' },
+                        Cancelled: { label: 'Cancelled', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' },
+                        'Generating scenes': { label: 'Generating scenes', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        Stitching: { label: 'Stitching', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                        'Saving artifact': { label: 'Saving artifact', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
+                      }} />
                     </div>
                   </div>
 
@@ -256,9 +242,9 @@ export default function JobsPage() {
                         </span>
                       )}
                     </div>
-                    {job.promptSummary && <p className="mt-1 truncate text-xs text-slate-400">{job.promptSummary}</p>}
+                    {job.promptSummary && <p className="mt-2 truncate text-sm text-slate-400">{job.promptSummary}</p>}
                     {((job.providerAttempts?.length ?? 0) > 0 || (job.providerJobIds?.length ?? 0) > 0) && (
-                      <details className="mt-2 text-[11px] text-slate-500">
+                      <details className="mt-3 rounded-xl border border-slate-800/70 bg-slate-900/55 p-3 text-[11px] text-slate-500">
                         <summary className="cursor-pointer">Provider attempt details</summary>
                         {job.providerAttempts?.map((attempt, index) => (
                           <p key={index} className="mt-1">
@@ -275,7 +261,7 @@ export default function JobsPage() {
                     {typeof job.progress === 'number' && job.status !== 'completed' && (
                       <p className="mt-1 text-[11px] text-slate-500">Progress: {job.progress}%</p>
                     )}
-                    <p className="mt-1 font-mono text-[11px] text-slate-500">{job.id}</p>
+                    <p className="mt-2 font-mono text-[11px] text-slate-500">{job.id}</p>
                     <p className="text-[11px] text-slate-600">{formatTime(job.createdAt)}</p>
 
                     {safeError && (
@@ -290,7 +276,7 @@ export default function JobsPage() {
                   {job.artifactId && (
                     <a
                       href={job.artifactUrl || '/admin/dashboard/artifacts'}
-                      className="flex shrink-0 items-center gap-1.5 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-bold text-teal-300 transition hover:bg-teal-500/20"
+                      className="flex shrink-0 items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs font-bold text-cyan-300 transition hover:bg-cyan-500/18"
                     >
                       <Layers3 className="h-3.5 w-3.5" />
                       View artifact
@@ -299,7 +285,7 @@ export default function JobsPage() {
                   {['queued', 'processing'].includes(job.status?.toLowerCase()) && !job.cancelRequested && (
                     <button
                       onClick={() => cancel(job.id)}
-                      className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300 transition hover:bg-red-500/20"
+                      className="shrink-0 rounded-full border border-red-500/30 bg-red-500/10 px-4 py-2 text-xs font-bold text-red-300 transition hover:bg-red-500/20"
                     >
                       Cancel
                     </button>
@@ -309,19 +295,19 @@ export default function JobsPage() {
             })}
           </div>
         )}
-      </section>
+      </DashboardSectionPanel>
 
       {/* ── Quick links ────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-3">
         <Link
           href="/admin/dashboard/studio"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-teal-400"
+          className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-200"
         >
           Create in Studio
         </Link>
         <Link
           href="/admin/dashboard/artifacts"
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/60 px-5 py-2.5 text-sm font-bold text-slate-300 transition hover:bg-slate-800"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/55 px-5 py-3 text-sm font-bold text-slate-300 transition hover:bg-slate-800"
         >
           View artifacts
         </Link>

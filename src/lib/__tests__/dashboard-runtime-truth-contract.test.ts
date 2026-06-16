@@ -65,4 +65,14 @@ describe('dashboard runtime truth contract', () => {
     expect(jobsApi).toContain('jobs')
     expect(artifactsApi).toContain('listArtifacts')
   })
+
+  it('keeps connected apps on the existing registration and event-log flows', () => {
+    const page = source('src/app/admin/dashboard/connected-apps/page.tsx')
+    const client = source('src/app/admin/dashboard/connected-apps/ConnectedAppsClient.tsx')
+
+    expect(page).toContain('listConnectedApps()')
+    expect(page).toContain('listConnectedAppEvents()')
+    expect(client).toContain("fetch('/api/admin/connected-apps'")
+    expect(client).toContain('/api/admin/connected-apps/${id}')
+  })
 })

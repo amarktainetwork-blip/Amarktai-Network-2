@@ -14,7 +14,6 @@ import {
   AudioLines,
   Bot,
   Brain,
-  CheckCircle2,
   Cpu,
   FileText,
   Image,
@@ -22,8 +21,14 @@ import {
   Music,
   Puzzle,
   Video,
-  XCircle,
 } from 'lucide-react'
+import {
+  DashboardEmptyState,
+  DashboardMetricCard,
+  DashboardPageHeader,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 type CapabilityEntry = {
   id: string
@@ -61,14 +66,22 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function CapabilitiesPage() {
   const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/admin/system/ai-capabilities-truth', { cache: 'no-store' })
       .then((response) => response.json())
       .then((data) => {
+        if (data?.error) throw new Error(data.error)
         setCapabilities(Array.isArray(data.capabilities) ? data.capabilities : [])
+        setError('')
       })
-      .catch(() => setCapabilities([]))
+      .catch((loadError) => {
+        setCapabilities([])
+        setError(loadError instanceof Error ? loadError.message : 'Capability runtime truth is unavailable.')
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   // Group capabilities by their group
@@ -83,121 +96,97 @@ export default function CapabilitiesPage() {
 
   const totalWorking = capabilities.filter((c) => c.status === 'working').length
   const totalCapabilities = capabilities.length
+  const totalPartial = capabilities.filter((c) => c.status === 'partially_wired').length
+  const totalUnavailable = capabilities.filter((c) => c.status !== 'working' && c.status !== 'partially_wired').length
 
   return (
     <div className="space-y-8">
+      <DashboardPageHeader
+        eyebrow="Capabilities"
+        title="Runtime capability browser"
+        description="Brain runtime truth grouped by capability family. Working, partial, and unavailable states stay explicit so the dashboard never overclaims execution readiness."
+        actions={
+          <Link
+            href="/admin/dashboard/studio"
+            className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+          >
+            Open Studio
+          </Link>
+        }
+      />
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-teal-400">Capabilities</p>
-        <h1 className="mt-1 text-2xl font-black tracking-tight text-white lg:text-3xl">
-          AI Capability Browser
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          {totalWorking} of {totalCapabilities} capabilities have runtime adapters. Live availability depends on provider discovery.
-        </p>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <DashboardMetricCard label="Wired" value={totalWorking} tone="emerald" detail="Capabilities with runtime adapters and a working route contract." />
+        <DashboardMetricCard label="Partial" value={totalPartial} tone="amber" detail="Capabilities that are wired but still limited by inputs, setup, or incomplete adapter coverage." />
+        <DashboardMetricCard label="Unavailable" value={totalUnavailable} tone="slate" detail="Capabilities that remain blocked or not wired yet." />
       </div>
 
-      {/* ── Summary strip ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2 rounded-full border border-emerald-800/40 bg-emerald-900/20 px-3 py-1.5 text-xs font-bold text-emerald-300">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          {totalWorking} wired
-        </div>
-        <div className="flex items-center gap-2 rounded-full border border-amber-800/30 bg-amber-900/15 px-3 py-1.5 text-xs font-bold text-amber-300">
-          {totalCapabilities - totalWorking} need provider setup or wiring
-        </div>
-      </div>
-
-      {/* ── Capability groups ──────────────────────────────────────────────── */}
-      <div className="space-y-6">
+      {loading ? (
+        <DashboardEmptyState title="Loading capability truth" detail="Reading canonical Brain capability and route-matrix truth." />
+      ) : error ? (
+        <DashboardEmptyState title="Capability truth unavailable" detail={error} />
+      ) : totalCapabilities === 0 ? (
+        <DashboardEmptyState title="No capabilities returned" detail="The runtime truth endpoint did not return any capability entries." />
+      ) : (
+        <div className="space-y-6">
           {Object.entries(GROUP_CONFIG).map(([groupKey, groupInfo]) => {
             const caps = grouped[groupKey] ?? []
             if (caps.length === 0) return null
             const Icon = groupInfo.icon
             const workingInGroup = caps.filter((c) => c.status === 'working').length
 
-          return (
-            <section key={groupKey}>
-              <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/60">
-                  <Icon className={`h-4 w-4 ${groupInfo.color}`} />
+            return (
+              <DashboardSectionPanel
+                key={groupKey}
+                eyebrow={`${workingInGroup} of ${caps.length} wired`}
+                title={groupInfo.label}
+              >
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-700/60 bg-slate-800/70">
+                    <Icon className={`h-5 w-5 ${groupInfo.color}`} />
+                  </div>
+                  <p className="text-sm leading-6 text-slate-400">Capability family grouped from canonical Brain/runtime truth. Live provider availability may still vary by discovery and configuration.</p>
                 </div>
-                <div>
-                  <h2 className="text-sm font-black text-slate-200">{groupInfo.label}</h2>
-                  <p className="text-xs text-slate-500">{workingInGroup} of {caps.length} wired</p>
-                </div>
-              </div>
 
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {caps.map((cap) => {
-                  const statusInfo = STATUS_LABELS[cap.status] ?? STATUS_LABELS.unavailable
-                  const isWorking = cap.status === 'working'
-
-                  return (
-                    <div
-                      key={cap.id}
-                      className={[
-                        'rounded-xl border p-4 transition',
-                        isWorking
-                          ? 'border-slate-800/60 bg-slate-900/40 hover:border-teal-500/30 hover:bg-teal-500/5'
-                          : 'border-slate-800/40 bg-slate-900/20 opacity-70',
-                      ].join(' ')}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-bold text-slate-200">{cap.label}</p>
-                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${statusInfo.color}`}>
-                          {statusInfo.label}
-                        </span>
-                      </div>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500 line-clamp-2">{cap.description}</p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {/* Output types */}
-                        <div className="flex flex-wrap gap-1">
-                          {cap.outputTypes.slice(0, 3).map((type) => (
-                            <span key={type} className="rounded bg-slate-800/60 px-1.5 py-0.5 font-mono text-[10px] text-slate-400">
-                              {type}
-                            </span>
-                          ))}
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {caps.map((cap) => (
+                    <article key={cap.id} className="rounded-[1.35rem] border border-slate-800/70 bg-slate-950/45 p-4 transition hover:border-cyan-400/20 hover:bg-cyan-400/[0.04]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-slate-100">{cap.label}</p>
+                          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{cap.id}</p>
                         </div>
-
-                        {/* Artifact indicator */}
-                        {cap.createsArtifact && (
-                          <span className="ml-auto flex items-center gap-1 text-[10px] font-bold text-teal-400">
-                            <Layers3 className="h-3 w-3" />
-                            artifact
+                        <DashboardStatusBadge value={STATUS_LABELS[cap.status]?.label ?? cap.status} map={{
+                          Wired: { label: 'Wired', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
+                          Partial: { label: 'Partial', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' },
+                          'Provider available': { label: 'Provider available', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' },
+                          Unavailable: { label: 'Unavailable', className: 'border-rose-500/25 bg-rose-500/12 text-rose-200' },
+                        }} />
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-slate-400">{cap.description}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {cap.outputTypes.slice(0, 4).map((type) => (
+                          <span key={type} className="rounded-full border border-slate-700/60 bg-slate-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                            {type}
                           </span>
-                        )}
+                        ))}
+                        {cap.createsArtifact ? (
+                          <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-cyan-300">
+                            Artifact
+                          </span>
+                        ) : null}
                       </div>
-
-                      {/* Blocker */}
-                      {cap.blocker && (
-                        <div className="mt-2 flex items-start gap-1.5">
-                          <XCircle className="mt-0.5 h-3 w-3 shrink-0 text-slate-600" />
-                          <p className="text-[10px] leading-4 text-slate-600 line-clamp-2">{cap.blocker}</p>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-          )
-        })}
-      </div>
-
-      {/* ── Quick links ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/admin/dashboard/studio"
-          className="inline-flex items-center gap-2 rounded-xl bg-teal-500 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-teal-400"
-        >
-          Open Studio to create
-        </Link>
-      </div>
-
+                      <p className="mt-4 text-xs leading-5 text-slate-500">
+                        {cap.blocker || 'No declared blocker. Capability readiness still depends on runtime route truth and provider discovery.'}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </DashboardSectionPanel>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

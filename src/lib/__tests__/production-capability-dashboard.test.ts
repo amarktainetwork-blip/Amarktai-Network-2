@@ -58,6 +58,18 @@ describe('production capability and dashboard contract', () => {
     expect(providersPage).toContain('not a provider picker for normal product work')
   })
 
+  it('keeps the redesigned read-heavy pages on canonical backend surfaces', () => {
+    const capabilitiesPage = source('src/app/admin/dashboard/capabilities/page.tsx')
+    const jobsPage = source('src/app/admin/dashboard/jobs/page.tsx')
+    const artifactsPage = source('src/app/admin/dashboard/artifacts/page.tsx')
+    const connectedAppsPage = source('src/app/admin/dashboard/connected-apps/page.tsx')
+
+    expect(capabilitiesPage).toContain("fetch('/api/admin/system/ai-capabilities-truth'")
+    expect(jobsPage).toContain("fetch('/api/admin/jobs')")
+    expect(artifactsPage).toContain("fetch(`/api/admin/artifacts?${params}`")
+    expect(connectedAppsPage).toContain('ConnectedAppsClient')
+  })
+
   it('exposes approved-provider diagnostics and a guarded hard reset', () => {
     const diagnostics = source('src/app/api/admin/system/provider-diagnostics/route.ts')
     const reset = source('src/app/api/admin/system/hard-reset/route.ts')

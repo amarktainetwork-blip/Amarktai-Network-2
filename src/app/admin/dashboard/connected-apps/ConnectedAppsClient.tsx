@@ -13,6 +13,11 @@
 
 import { useState } from 'react'
 import type { ConnectedApp, ConnectedAppScope } from '@/lib/connected-apps'
+import {
+  DashboardEmptyState,
+  DashboardSectionPanel,
+  DashboardStatusBadge,
+} from '@/components/dashboard/DashboardChrome'
 
 const ALL_SCOPES: ConnectedAppScope[] = [
   'webhook:receive',
@@ -141,10 +146,7 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
   return (
     <div className="space-y-6">
       {/* Registration form */}
-      <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
-        <h2 className="mb-4 text-sm font-black uppercase tracking-[0.18em] text-slate-300">
-          Register New App
-        </h2>
+      <DashboardSectionPanel title="Register app" eyebrow="Scoped capability access">
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -208,16 +210,16 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
           <button
             type="submit"
             disabled={submitting}
-            className="rounded-xl bg-cyan-600 px-5 py-2 text-sm font-bold text-white hover:bg-cyan-500 disabled:opacity-50"
+            className="rounded-full bg-cyan-300 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:opacity-50"
           >
             {submitting ? 'Registering…' : 'Register App'}
           </button>
         </form>
-      </section>
+      </DashboardSectionPanel>
 
       {/* One-time secret banner */}
       {newSecret && (
-        <section className="rounded-3xl border border-amber-600/50 bg-amber-900/20 p-6">
+        <section className="rounded-[1.6rem] border border-amber-600/50 bg-amber-900/20 p-6 shadow-[0_20px_50px_rgba(0,0,0,0.18)]">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-400">
             ⚠ Save this signing secret now — it will not be shown again
           </p>
@@ -250,16 +252,9 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
 
       {/* App list */}
       {apps.length === 0 ? (
-        <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
-          <p className="text-sm text-slate-500">
-            No apps registered yet. Use the form above to register your first app.
-          </p>
-        </section>
+        <DashboardEmptyState title="No apps registered yet" detail="Use the form above to register the first app and assign explicit scopes before any runtime calls are accepted." />
       ) : (
-        <section className="rounded-3xl border border-slate-700/50 bg-slate-900/70 p-6">
-          <h2 className="mb-4 text-sm font-black uppercase tracking-[0.18em] text-slate-300">
-            Registered Apps
-          </h2>
+        <DashboardSectionPanel title="Registered apps" eyebrow="Live registration truth">
           {actionError && (
             <p className="mb-3 rounded-xl bg-red-900/40 px-4 py-2 text-sm text-red-300">
               {actionError}
@@ -269,7 +264,7 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
             {apps.map((app) => (
               <div
                 key={app.id}
-                className="flex flex-col gap-3 rounded-xl border border-slate-700/40 bg-slate-800/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-4 rounded-[1.35rem] border border-slate-700/40 bg-slate-800/60 px-4 py-4 shadow-[0_18px_45px_rgba(0,0,0,0.14)] sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-white">{app.name}</p>
@@ -287,22 +282,16 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${
-                      app.status === 'active'
-                        ? 'bg-emerald-900/60 text-emerald-300'
-                        : app.status === 'suspended'
-                          ? 'bg-red-900/60 text-red-300'
-                          : 'bg-slate-700/60 text-slate-300'
-                    }`}
-                  >
-                    {app.status}
-                  </span>
+                  <DashboardStatusBadge value={app.status} map={{
+                    active: { label: 'active', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
+                    suspended: { label: 'suspended', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' },
+                    archived: { label: 'archived', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' },
+                  }} />
                   {app.status === 'active' ? (
                     <button
                       type="button"
                       onClick={() => handleAction(app.id, 'suspend')}
-                      className="rounded-lg bg-slate-700 px-3 py-1 text-xs font-bold text-slate-300 hover:bg-slate-600"
+                      className="rounded-full border border-slate-600 bg-slate-700 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-slate-600"
                     >
                       Suspend
                     </button>
@@ -310,7 +299,7 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
                     <button
                       type="button"
                       onClick={() => handleAction(app.id, 'activate')}
-                      className="rounded-lg bg-emerald-800 px-3 py-1 text-xs font-bold text-emerald-200 hover:bg-emerald-700"
+                      className="rounded-full border border-emerald-700 bg-emerald-800 px-3 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-700"
                     >
                       Reactivate
                     </button>
@@ -323,18 +312,18 @@ export default function ConnectedAppsClient({ initialApps }: Props) {
                           `Deregister "${app.name}"? This cannot be undone.`,
                         )
                       ) {
-                        handleAction(app.id, 'delete')
-                      }
-                    }}
-                    className="rounded-lg bg-red-900/60 px-3 py-1 text-xs font-bold text-red-300 hover:bg-red-800/60"
-                  >
-                    Delete
-                  </button>
+                          handleAction(app.id, 'delete')
+                        }
+                      }}
+                      className="rounded-full border border-red-500/30 bg-red-900/60 px-3 py-2 text-xs font-bold text-red-300 transition hover:bg-red-800/60"
+                    >
+                      Delete
+                    </button>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </DashboardSectionPanel>
       )}
     </div>
   )
