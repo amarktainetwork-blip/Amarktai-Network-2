@@ -15,9 +15,12 @@ export function scoreProviderModel(input: {
   profile: RoutingProfile
 }): ProviderRouteCandidate | null {
   const { provider, model, capability, health, profile } = input
+  const allowDegradedFallback = provider.id === 'genx'
+    && model.capabilityEvidence === 'provider_contract'
+    && model.raw.source === 'genx_static_runtime_fallback'
   if (model.status === 'unavailable') return null
   if (!model.capabilities.includes(capability.id)) return null
-  if (!health.configured || health.state === 'degraded') return null
+  if (!health.configured || (health.state === 'degraded' && !allowDegradedFallback)) return null
   if (capability.requiresAdultPermission && profile.preferences.adult !== true) return null
   if (profile.preferences.streaming === true && model.streaming !== true && !provider.features.streaming) {
     return null
@@ -41,7 +44,9 @@ export function scoreProviderModel(input: {
   const evidence = model.capabilityEvidence === 'model_metadata' ? 1 : 0.55
   const healthScore = health.state === 'healthy'
     ? 1
-    : health.state === 'unknown' ? 0.5 : 0
+    : health.state === 'unknown'
+      ? 0.5
+      : allowDegradedFallback ? 0.25 : 0
   const scoreBreakdown = {
     quality: normalized(model.quality) * profile.weights.quality,
     speed: normalized(model.speed) * profile.weights.speed,
