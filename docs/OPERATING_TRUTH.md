@@ -9,8 +9,9 @@
 - **Completed:** Model evidence normalization, provider-contract fallback,
   task-filtered Hugging Face discovery, Together native runtime paths,
   canonical dashboard planning, provider diagnostics, Brain media polling
-  recovery for async provider jobs, and GitHub-tracked GenX static runtime
-  catalog fallback when live GenX model discovery fails.
+  recovery for async provider jobs, GitHub-tracked GenX static runtime catalog
+  fallback when live GenX model discovery fails, and GenX fallback routing
+  through degraded discovery-health.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
   artifacts, adult policy, connected-app scope enforcement, public Brain
   media-job polling by opaque local job id, and GenX discovery candidates from
@@ -22,13 +23,14 @@
   `NO_ROUTE_FOUND`. Studio also preplanned through obsolete static truth.
   External media-job polling returned Unauthorized before the 2026-06-16
   follow-up. VPS-local GenX discovery fallback existed outside GitHub until it
-  was moved into the canonical branch.
+  was moved into the canonical branch. VPS proof then exposed that degraded
+  discovery-health could suppress the explicit GenX fallback route.
 - **Proof:** TypeScript, 496 tests, and a 183-page production build passed in PR
-  #118. The VPS transcript proves the focused media contract test and build
-  passed before the GenX fallback was moved to GitHub. The new fallback commit
-  still requires VPS test/build proof before it can be called deployed. Public
-  smoke is blocked until the correct web process is restarted instead of the
-  missing `amarktai-web.service` unit.
+  #118. VPS proof on 2026-06-16 confirmed install, Prisma generation,
+  TypeScript, focused media contract tests, production build, local site health,
+  and API health. GenX image failed with `NO_ROUTE_FOUND` before the
+  degraded-health fallback routing fix; rerun VPS proof after pulling the
+  latest branch.
 - **Next PR:** #119 Research Completion after production smoke verification.
 
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
@@ -98,6 +100,9 @@ GenX discovery uses live `/api/v1/models` first. If that endpoint fails while a
 GenX credential is configured, discovery may expose models from the existing
 GenX runtime catalog as provider-contract evidence. This is a recovery path for
 routing candidates only; it does not prove execution or artifact completion.
+The explicit GenX static runtime fallback may remain routable when discovery
+health is degraded so the provider-native adapter can produce the real success
+or provider error.
 
 ## Routing Profiles
 
