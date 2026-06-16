@@ -94,7 +94,10 @@ describe('Phase 1 provider truth layer', () => {
       'chat', 'vision', 'image', 'video', 'image_to_video',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'coding', 'vision', 'tts', 'stt', 'voice_clone',
+      'chat', 'reasoning', 'coding', 'tts',
+    ]))
+    expect(getProviderTruth('mimo')?.capabilities).not.toEqual(expect.arrayContaining([
+      'vision', 'stt', 'voice_clone', 'image', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('genx')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'image', 'video', 'music', 'tts',
@@ -145,6 +148,13 @@ describe('Phase 1 provider truth layer', () => {
       webhooks: false,
       toolCalling: false,
       artifactSupport: true,
+    })
+    expect(mimo.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: false,
     })
     expect(genx.features).toMatchObject({
       streaming: true,
@@ -280,6 +290,52 @@ describe('Phase 1 provider truth layer', () => {
       ['groq/runtime-tts', ['tts']],
       ['groq/runtime-asr', ['stt']],
     ])
+  })
+
+  it('maps MiMo auth aliases and discovery metadata conservatively', () => {
+    process.env.XIAOMI_API_KEY = 'mimo-token-value'
+
+    expect(getIntegrationKey('mimo')).toBe('mimo')
+    expect(getEnvKeyForProvider('mimo')).toBe('mimo-token-value')
+
+    const models = normalizeProviderCatalog('mimo', {
+      data: [
+        { id: 'mimo/runtime-tts', type: 'speech-generation', available: true },
+        { id: 'mimo/runtime-code', type: 'code', available: true },
+      ],
+    })
+
+    expect(models.map((model) => [model.id, model.capabilities])).toEqual([
+      ['mimo/runtime-tts', ['tts']],
+      ['mimo/runtime-code', ['coding']],
+    ])
+  })
+
+  it('does not fabricate MiMo unsupported routes from empty catalogs', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      data: [{ id: 'mimo-runtime-model', object: 'model', active: true }],
+    }), { status: 200 }))
+
+    const snapshot = await discoverProvider('mimo', { fetcher, force: true })
+
+    expect(snapshot.models[0]).toMatchObject({
+      id: 'mimo-runtime-model',
+      capabilities: [],
+      capabilityEvidence: 'unknown',
+    })
+    expect(modelsForCapability(snapshot, 'chat')[0]).toMatchObject({
+      id: 'mimo-runtime-model',
+      capabilities: ['chat'],
+      capabilityEvidence: 'provider_contract',
+    })
+    expect(modelsForCapability(snapshot, 'tts')[0]).toMatchObject({
+      id: 'mimo-runtime-model',
+      capabilities: ['tts'],
+      capabilityEvidence: 'provider_contract',
+    })
+    expect(modelsForCapability(snapshot, 'stt')).toEqual([])
+    expect(modelsForCapability(snapshot, 'vision')).toEqual([])
+    expect(modelsForCapability(snapshot, 'voice_clone')).toEqual([])
   })
 
   it('does not fabricate Groq agent/tool-calling routes from empty catalogs', async () => {

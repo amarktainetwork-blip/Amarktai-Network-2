@@ -211,6 +211,37 @@ describe('provider adapter contracts', () => {
     expect(headers.Authorization).toBeUndefined()
   })
 
+  it('preserves MiMo auth aliases and provider truth conservatively', () => {
+    const mimo = PROVIDER_TRUTH.find((provider) => provider.id === 'mimo')!
+    process.env.XIAOMI_API_KEY = 'mimo-env-token'
+
+    expect(getIntegrationKey('mimo')).toBe('mimo')
+    expect(getEnvKeyForProvider('mimo')).toBe('mimo-env-token')
+    expect(mimo.envAliases).toEqual(['MIMO_API_KEY', 'XIAOMI_API_KEY'])
+    expect(mimo.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'tts',
+    ]))
+    expect(mimo.capabilities).not.toEqual(expect.arrayContaining([
+      'vision',
+      'stt',
+      'voice_clone',
+      'image',
+      'video',
+      'music',
+      'agents',
+    ]))
+    expect(mimo.features).toMatchObject({
+      streaming: true,
+      asyncJobs: false,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: false,
+    })
+  })
+
   it('treats Hugging Face loading and 503 responses as retryable', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ error: 'Model is currently loading' }),
@@ -460,6 +491,13 @@ describe('provider adapter contracts', () => {
       toolCalling: false,
       artifactSupport: true,
     })
+  })
+
+  it('keeps MiMo async flags aligned with the actual canonical runtime contract', () => {
+    const mimo = PROVIDER_TRUTH.find((provider) => provider.id === 'mimo')!
+
+    expect(mimo.features.asyncJobs).toBe(false)
+    expect(providerHasCanonicalPollingContract('mimo')).toBe(false)
   })
 
   it('keeps admin provider-key truth within the six approved V1 providers', () => {

@@ -22,7 +22,7 @@ presence, or theoretical support alone is insufficient.
 | image_to_video | unknown | partial | unknown | unknown | partial | unknown |
 | avatar | partial | unknown | unknown | unknown | unknown | unknown |
 | music | partial | unknown | unknown | partial | unknown | unknown |
-| tts | partial | working | working | partial | unknown | working |
+| tts | partial | working | working | partial | unknown | partial |
 | stt | partial | partial | partial | unknown | unknown | unknown |
 | voice clone | unknown | unknown | unknown | unknown | unknown | unknown |
 | ocr | partial | unknown | partial | unknown | partial | unknown |
@@ -60,6 +60,16 @@ presence, or theoretical support alone is insufficient.
 - Groq tool-calling and agents are kept conservative here. The current repo does
   not prove a canonical Groq tool-calling execution contract, so provider truth
   does not claim `agents` or `toolCalling` as working.
+- MiMo auth accepts `MIMO_API_KEY` and `XIAOMI_API_KEY` in canonical provider
+  truth.
+- MiMo dynamic catalog discovery is locally proven through its token-plan model
+  catalog plus conservative metadata mapping.
+- MiMo has canonical chat/reasoning/coding through the OpenAI-compatible text
+  path and a MiMo-native TTS adapter path, but no canonical STT, voice-clone,
+  image/video generation, or Brain async polling contract.
+- MiMo tool-calling, artifact support, and media-generation claims are kept
+  conservative here because the current repo does not prove canonical contracts
+  for those families.
 - PR #113 recorded persisted playable TTS artifacts through Together, Groq, and
   MiMo.
 - Together auth currently depends on `TOGETHER_API_KEY`.
@@ -100,7 +110,7 @@ presence, or theoretical support alone is insufficient.
 | Groq | provider model catalog | model metadata when supplied | chat/vision/audio discovery truth only |
 | GenX | async `/api/v1/models` family, then the existing runtime image/video/music/TTS fallback when the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming and async job truth |
 | Qwen | compatible-mode model catalog | model metadata when supplied | compatible/AIGC split, free-quota and paid guard |
-| MiMo | token-plan model catalog | model metadata when supplied | token-plan endpoint truth |
+| MiMo | token-plan model catalog | model metadata when supplied | token-plan text/TTS endpoint truth |
 
 Discovery support does not upgrade a capability row to `working`. The working,
 partial, blocked, and unknown statuses above remain evidence-based execution
@@ -148,6 +158,11 @@ and Groq-native TTS/STT adapter paths. Groq image/video/media-generation rows
 remain `unknown` because the current repo does not prove a canonical Groq-native
 or routed generation contract for those families. Groq tool-calling remains
 conservative and is not treated as proven provider truth here.
+
+MiMo has local proof for dynamic catalog discovery, OpenAI-compatible chat text
+routing, and a MiMo-native TTS adapter path. MiMo STT, vision, voice clone,
+image/video/media generation, and async polling remain unproven in canonical
+runtime truth and stay conservative here.
 
 Canonical Brain local async media polling currently exists for GenX, Qwen, and
 Together. Hugging Face async generation remains incomplete in canonical Brain

@@ -207,6 +207,13 @@ Groq-native TTS/STT adapter paths, artifact-capable execution, and
 tool-calling, or agent execution because those contracts are not proven in the
 current repo.
 
+MiMo canonical auth alias truth is `MIMO_API_KEY` and `XIAOMI_API_KEY`. The
+canonical provider layer represents MiMo dynamic token-plan discovery,
+OpenAI-compatible chat/reasoning/coding execution, a MiMo-native TTS adapter
+path, and `asyncJobs: false`. It does not claim canonical MiMo STT,
+voice-cloning, image/video generation, tool-calling, or artifact support
+because those contracts are not proven in the current repo.
+
 Free-token-only operation must keep `QWEN_PAID_ENABLED` unset or explicitly set
 to `false`. Paid Qwen routing is disabled by default and only turns on when
 `QWEN_PAID_ENABLED=true` exactly.
@@ -256,6 +263,10 @@ paths for several HF specialist families, but not live production completion.
 Groq non-chat capability truth is also conservative. Local code and tests prove
 Groq TTS/STT adapter paths and conservative discovery metadata, but not live
 provider proof for those families.
+
+MiMo non-chat capability truth is similarly conservative. Local code and tests
+prove MiMo TTS plus conservative discovery metadata, but not live provider proof
+for broader media or voice families.
 
 `/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
 must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.
