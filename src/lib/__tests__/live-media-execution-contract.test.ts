@@ -166,4 +166,15 @@ describe('live media route contracts', () => {
     expect(studio).toContain('mediaStudioResponse')
     expect(studio).toContain('normalizeVocalStyle')
   })
+
+  it('exposes Brain image polling without leaking provider jobs as the only job ID', () => {
+    const imageRoute = read('app/api/brain/image/route.ts')
+    const mediaJobRoute = read('app/api/brain/media-jobs/[jobId]/route.ts')
+
+    expect(imageRoute).toContain('pollUrl: result.pollUrl')
+    expect(imageRoute).toContain('providerJobId: result.providerJobId')
+    expect(imageRoute).toContain("result.status === 'processing' ? 202")
+    expect(mediaJobRoute).not.toContain('getSession')
+    expect(mediaJobRoute).not.toContain('Unauthorized')
+  })
 })
