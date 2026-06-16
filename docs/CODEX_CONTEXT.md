@@ -10,25 +10,32 @@ READ THIS FILE FIRST.
   execution while preserving the PR #114-#117 architecture.
 - **Completed:** Dynamic provider/model evidence fallback, provider
   diagnostics, Studio/Playground/assistant routing repair, Hugging Face
-  task-filtered discovery, Together native adapter completion, and Brain media
-  polling recovery for async image/provider jobs.
+  task-filtered discovery, Together native adapter completion, Brain media
+  polling recovery for async image/provider jobs, and a GitHub-tracked GenX
+  static runtime catalog fallback when live GenX model discovery fails.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
-  artifacts, adult policy, signed connected-app execution, and external Brain
-  media polling by local job id.
+  artifacts, adult policy, signed connected-app execution, external Brain
+  media polling by local job id, and GenX discovery candidates from the existing
+  runtime catalog when `/api/v1/models` is unavailable.
 - **Partial:** Production live execution, token streaming, research, long-form
   assembly, avatar, music, and advanced MiMo voice/omni require truthful proof.
 - **Broken At Start:** Exact model-task matching rejected discovered models
   whose provider catalogs omitted task metadata. Studio used a static
   pre-router whose selected overrides were rejected by canonical execution.
   External `/api/brain/media-jobs/:jobId` polling also returned Unauthorized.
+  VPS-local GenX discovery fallback existed outside GitHub until the 2026-06-16
+  follow-up.
 - **Proof:** Previous PR #118 proof remains `npx tsc --noEmit`, 496/496 tests,
-  and the 183-page production build. On 2026-06-16 this environment could not
-  install dependencies because registry access returned 403 for a locked
-  package, and terminal HTTP calls to the live site were blocked; VPS proof must
-  be run from the server.
-- **Next Step:** Deploy the branch on the VPS, start a GenX image job, poll the
-  returned Brain `pollUrl`, and confirm artifact completion before marking GenX
-  image complete.
+  and the 183-page production build. The VPS transcript proves the media
+  contract test and build passed before the GenX discovery fallback was moved to
+  GitHub. This environment could not install dependencies because registry
+  access returned 403 for a locked package, and terminal HTTP calls to the live
+  site were blocked; the new fallback commit still requires VPS test/build
+  proof.
+- **Next Step:** On the VPS, preserve dirty local provider/orchestrator changes,
+  pull the branch, identify the correct web process, restart it, start a GenX
+  image job, poll the returned Brain `pollUrl`, and confirm artifact completion
+  before marking GenX image complete.
 
 Single source of truth:
 
