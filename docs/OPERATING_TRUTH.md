@@ -12,14 +12,16 @@
   recovery for async provider jobs, GitHub-tracked GenX static runtime catalog
   fallback when live GenX model discovery fails, GenX fallback routing through
   degraded discovery-health, canonical GenX discovery base-url handling for
-  `GENX_BASE_URL` and `GENX_API_URL`, and canonical Hugging Face auth-alias
-  alignment across provider config and specialist execution.
+  `GENX_BASE_URL` and `GENX_API_URL`, canonical Hugging Face auth-alias
+  alignment across provider config and specialist execution, and focused
+  research-route contract alignment across Brain and admin research surfaces.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
   artifacts, adult policy, connected-app scope enforcement, public Brain
   media-job polling by opaque local job id, and GenX discovery candidates from
   the existing runtime catalog when `/api/v1/models` is unavailable. GenX image
   local Brain polling and artifact persistence are proven by focused contract
-  tests.
+  tests. The Brain research route and scrape-website capability now expose the
+  canonical execution/artifact truth their runtime already supports.
 - **Partial:** Production live provider proof, true token streaming, research,
   long-form media composition, and advanced provider-specific voice families.
 - **Broken At Start:** The runtime required exact model-level capability tags,
@@ -183,6 +185,13 @@ Internal routing profiles may constrain scoring. App-facing specialist routes
 ignore raw provider/model preferences; an unknown or undiscovered model is
 never authorized.
 
+Research and website scraping remain capability-first. Apps request `research`
+or `scrape_website`; they do not select providers, models, or endpoints.
+`/api/brain/research` executes through the canonical capability runtime and may
+return canonical artifact/job metadata when the underlying runtime produces it.
+`scrape_website` uses the local crawler path in the canonical orchestrator and
+persists a `research_result` artifact when artifact storage succeeds.
+
 Qwen discovery distinguishes compatible-mode and AIGC endpoint families. Its
 standard endpoint retains free-quota truth, and models marked outside free
 quota are excluded unless `QWEN_PAID_ENABLED=true`. MiMo uses its token-plan
@@ -267,6 +276,11 @@ provider proof for those families.
 MiMo non-chat capability truth is similarly conservative. Local code and tests
 prove MiMo TTS plus conservative discovery metadata, but not live provider proof
 for broader media or voice families.
+
+Admin research routes are mixed truth surfaces. `/api/admin/research/jobs` and
+`/api/admin/research/opportunity` reflect canonical research artifacts. The
+admin assist/status/url routes remain operator tools and diagnostics rather than
+the public app capability contract.
 
 `/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
 must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.

@@ -61,6 +61,16 @@ describe('Research Capability Backend Truth', () => {
     expect(search!.routeExists).toBe(true)
     expect(deep!.routeExists).toBe(true)
   })
+
+  it('keeps research provider suggestions capability-level and within approved providers', () => {
+    const map = CAPABILITY_MAP as Record<string, { suggestedProviders?: string[] }>
+    for (const capability of ['research_search', 'deep_research']) {
+      expect(map[capability].suggestedProviders?.length).toBeGreaterThan(0)
+      expect(map[capability].suggestedProviders?.every(
+        (provider) => APPROVED_DIRECT_PROVIDER_IDS.includes(provider as never),
+      )).toBe(true)
+    }
+  })
 })
 
 /* ================================================================

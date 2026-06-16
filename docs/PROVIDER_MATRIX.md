@@ -164,6 +164,13 @@ routing, and a MiMo-native TTS adapter path. MiMo STT, vision, voice clone,
 image/video/media generation, and async polling remain unproven in canonical
 runtime truth and stay conservative here.
 
+Research remains a Brain capability rather than a provider capability row. The
+current repo proves a canonical Brain research route, canonical scrape-website
+capability routing, and canonical research artifact persistence where storage
+succeeds. It does not prove live provider-specific research completion, so the
+provider matrix stays conservative and keeps research rows `unknown` at the
+provider level.
+
 Canonical Brain local async media polling currently exists for GenX, Qwen, and
 Together. Hugging Face async generation remains incomplete in canonical Brain
 polling truth.

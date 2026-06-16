@@ -14,8 +14,10 @@ READ THIS FILE FIRST.
   polling recovery for async image/provider jobs, GitHub-tracked GenX static
   runtime catalog fallback when live GenX model discovery fails, GenX fallback
   routing through degraded discovery-health, canonical GenX discovery base URL
-  handling for `GENX_BASE_URL` and `GENX_API_URL`, and canonical Hugging Face
-  auth-alias alignment across provider config and specialist execution.
+  handling for `GENX_BASE_URL` and `GENX_API_URL`, canonical Hugging Face
+  auth-alias alignment across provider config and specialist execution, and
+  focused research-route contract alignment across Brain and admin research
+  surfaces.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
   artifacts, adult policy, signed connected-app execution, external Brain
   media polling by local job id, and GenX discovery candidates from the existing
@@ -90,6 +92,11 @@ Current operator truth:
 - MiMo canonical provider truth keeps `asyncJobs: false` and does not claim
   unproven STT, voice clone, image/video generation, tool-calling, or artifact
   support
+- `/api/brain/research` routes through the canonical capability runtime and now
+  exposes the canonical execution/artifact fields that runtime already returns
+- `scrape_website` remains a capability-level Brain/runtime concept; admin URL
+  research is an operator surface that persists `research_result` artifacts and
+  explicitly ignores provider/model/endpoint preferences
 - `/api/brain/video-generate/:jobId` is legacy compatibility only; apps poll
   `/api/brain/media-jobs/:jobId`
 - Admin provider-key truth covers only the six approved V1 providers:
@@ -120,6 +127,9 @@ Current operator truth:
   until authenticated live proof upgrades them
 - MiMo non-chat capability rows remain conservative `partial` or `unknown`
   until authenticated live proof upgrades them
+- Research remains partially proven overall: Brain research routing, website
+  scraping, and artifact reporting are locally proven; live provider-backed or
+  deeper multi-agent research completion is still unproven
 
 Never:
 

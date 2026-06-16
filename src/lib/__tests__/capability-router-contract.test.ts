@@ -373,6 +373,37 @@ describe('capability router contract', () => {
     expect(mocks.createArtifact).toHaveBeenCalledTimes(4)
   })
 
+  it('routes scrape_website through the capability-level website execution path without provider/model exposure', async () => {
+    mocks.crawlAppWebsite.mockResolvedValue({
+      success: true,
+      summary: 'crawl summary',
+      pages: [{ url: 'https://example.com' }],
+      detectedNiche: 'software',
+      detectedFeatures: ['docs'],
+      aiCapabilitiesNeeded: ['research'],
+    })
+
+    const result = await executeCapability({
+      input: 'https://example.com',
+      capability: 'scrape_website',
+      saveArtifact: false,
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      capability: 'scrape_website',
+      provider: 'local-crawler',
+      model: null,
+      outputType: 'text',
+      status: 'completed',
+      fallbackUsed: false,
+    })
+    expect(mocks.crawlAppWebsite).toHaveBeenCalledWith('https://example.com')
+    expect(result.output).toContain('crawl summary')
+    expect(result).not.toHaveProperty('providerJobId')
+  })
+
   it('does not create an artifact before an asynchronous job has output', async () => {
     const selected = {
       provider: 'genx',
