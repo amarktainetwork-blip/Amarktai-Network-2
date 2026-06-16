@@ -55,7 +55,7 @@ presence, or theoretical support alone is insufficient.
 | HF | Hub model metadata | pipeline task metadata | inference providers plus configured private/dedicated endpoints |
 | Together | provider model catalog | model metadata when supplied | configured dedicated endpoints |
 | Groq | provider model catalog | model metadata when supplied | tool-calling capability contract |
-| GenX | async `/api/v1/models` family | model metadata when supplied | streaming, async job, and webhook truth |
+| GenX | async `/api/v1/models` family, then existing static runtime catalog if the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming, async job, and webhook truth |
 | Qwen | compatible-mode model catalog | model metadata when supplied | compatible/AIGC split, free-quota and paid guard |
 | MiMo | token-plan model catalog | model metadata when supplied | token-plan endpoint truth |
 
@@ -65,6 +65,12 @@ truth. A discovered model is preferred when its metadata identifies the
 requested capability. PR #118 adds a lower-scored provider-contract fallback
 only for dynamically discovered models whose catalogs omit task metadata.
 Models identified as another modality are not relabeled.
+
+The 2026-06-16 GenX follow-up adds a second GenX-specific provider-contract
+fallback from the existing runtime catalog when configured live GenX model
+discovery fails. This can recover routing candidates for image, image edit,
+video, image-to-video, avatar, music, TTS, STT, adult image, and adult video,
+but it does not prove provider execution or artifact completion.
 
 PR #117 makes this discovery evidence the production routing dependency.
 Provider-native adapters receive the discovered model and contain no fallback
