@@ -45,8 +45,9 @@ import {
   localMediaJobResponse,
   pollLocalMediaJob,
 } from '@/lib/media-job-store'
-import { normalizeGovernedCapability } from '@/lib/provider-capability-governance'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+import { normalizeGovernedCapability } from '@/lib/provider-capability-governance'
+import { clearProviderDiscoveryCache, discoverProvider } from '@/lib/providers/provider-discovery'
 
 const ROOT = path.resolve(__dirname, '../../')
 const read = (relativePath: string) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -55,6 +56,7 @@ beforeEach(() => {
   mocks.records.clear()
   mocks.getGenXJobStatus.mockReset()
   mocks.persistCanonicalMediaResult.mockReset()
+  clearProviderDiscoveryCache()
 })
 
 describe('local media job lifecycle', () => {
@@ -141,6 +143,27 @@ describe('local media job lifecycle', () => {
     expect(failed).toMatchObject({ status: 'failed' })
     expect(failed?.error).toContain('15 minutes')
     expect(mocks.getGenXJobStatus).not.toHaveBeenCalled()
+  })
+})
+
+describe('provider discovery runtime fallbacks', () => {
+  it('uses the GenX static runtime catalog when live model discovery fails', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 404 })
+
+    const snapshot = await discoverProvider('genx', {
+      force: true,
+      credential: 'test-genx-key',
+      keySource: 'test',
+      capability: 'image',
+      fetcher: fetcher as unknown as typeof fetch,
+    })
+
+    expect(snapshot.status).toBe('ready')
+    expect(snapshot.error).toContain('static runtime fallback')
+    expect(snapshot.models.map((model) => model.id)).toContain('gpt-image-2')
+    expect(snapshot.models.every((model) => model.provider === 'genx')).toBe(true)
+    expect(snapshot.models.every((model) => model.capabilities.includes('image'))).toBe(true)
+    expect(snapshot.models.every((model) => model.capabilityEvidence === 'provider_contract')).toBe(true)
   })
 })
 
