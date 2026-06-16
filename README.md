@@ -2,24 +2,31 @@
 
 ## CURRENT IMPLEMENTATION STATUS
 
-- **Date:** 2026-06-15
-- **PR Number:** #118
+- **Date:** 2026-06-16
+- **PR Number:** #118 follow-up on `integration/cline-source-of-truth`
 - **Purpose:** Recover dashboard execution and complete provider runtime
   discovery without changing the final Brain architecture.
 - **Completed:** Added the dynamic model-metadata/provider-contract evidence
   ladder, task-filtered Hugging Face discovery, current Together native
-  adapters, canonical dashboard planning, and dynamic provider diagnostics.
+  adapters, canonical dashboard planning, dynamic provider diagnostics, and
+  Brain media polling recovery for async provider jobs.
 - **Working:** The canonical Brain, provider truth, jobs, artifacts, policy,
-  signed connected-app entry, six-provider boundary, dashboard build, and full
-  repository test suite.
+  signed connected-app entry, six-provider boundary, dashboard build, full PR
+  #118 repository test suite, and external Brain polling by local media job id.
 - **Partial:** Live provider execution proof, token-level streaming, research,
-  long-form composition, avatar, music, and advanced MiMo voice/omni families.
+  long-form composition, avatar, music, advanced MiMo voice/omni families, and
+  the 2026-06-16 VPS smoke proof for GenX image artifact completion.
 - **Broken At Start:** OpenAI-compatible catalogs that returned model IDs
   without task tags produced empty route candidates. Studio also preselected
-  from an obsolete static route layer and passed rejected overrides.
+  from an obsolete static route layer and passed rejected overrides. External
+  media-job polling returned Unauthorized before the 2026-06-16 follow-up.
 - **Proof:** TypeScript passed; 40 suites and 496 tests passed; production build
-  passed with 183 pages.
-- **Next PR:** #119 Research Completion after the production VPS smoke run.
+  passed with 183 pages in PR #118. The 2026-06-16 follow-up was pushed to
+  GitHub, but this environment could not install dependencies or curl the live
+  deployment, so VPS smoke proof is still required before claiming GenX image
+  completion.
+- **Next Step:** Deploy the branch on the VPS, start a GenX image job, poll the
+  returned Brain `pollUrl`, and confirm completed artifact/media output.
 
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 
@@ -456,6 +463,9 @@ APP
   -> ARTIFACT
   -> APP
 ```
+
+Async media jobs returned by the Brain must expose a Brain `pollUrl` and a local
+Brain `jobId`. Apps must poll the Brain URL, not raw provider job endpoints.
 
 Read [`docs/CODEX_CONTEXT.md`](docs/CODEX_CONTEXT.md) first when starting a new
 AI implementation session.
