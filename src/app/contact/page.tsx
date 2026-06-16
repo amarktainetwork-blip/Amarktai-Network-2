@@ -51,19 +51,23 @@ export default function ContactPage() {
       <section className="architecture-band pb-20 pt-24 lg:pb-28 lg:pt-32">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Contact</p>
-          <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
-            Let’s talk about what you want to build, connect, or improve.
+          <h1 className="mt-5 max-w-5xl text-5xl font-black leading-tight text-balance text-white lg:text-7xl">
+            Let’s talk about the workflows, apps, or capability systems you want to operate more effectively.
           </h1>
           <p className="mt-7 max-w-2xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
-            Share the outcome, app, workflow, or operating challenge that matters. A human operator will review the request and respond.
+            Share the outcome, app, workflow, or operating challenge that matters. A human operator reviews every inquiry and responds directly.
           </p>
         </div>
       </section>
 
       <section className="bg-[var(--amarkt-black)] py-24 lg:py-32">
         <div className="mx-auto grid max-w-7xl gap-10 px-5 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:px-8">
-          <aside className="premium-panel p-7">
+          <aside className="premium-panel rounded-[2rem] p-7 shadow-[0_24px_60px_rgba(0,0,0,0.26)]">
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--amarkt-dim)]">Inquiry profile</p>
+            <h2 className="mt-5 text-2xl font-black text-white">Best for teams evaluating serious AI operations.</h2>
+            <p className="mt-4 text-sm leading-7 text-[var(--amarkt-muted)]">
+              Use this form for platform evaluation, connected app planning, creative operations, research workflows, or runtime-control questions.
+            </p>
             <div className="mt-8 space-y-6">
               {[
                 'Connected business apps',
@@ -79,7 +83,7 @@ export default function ContactPage() {
             </div>
           </aside>
 
-          <div className="premium-panel">
+          <div className="premium-panel overflow-hidden rounded-[2rem] shadow-[0_24px_60px_rgba(0,0,0,0.3)]">
             {sent ? (
               <div className="p-8 lg:p-10">
                 <div className="section-line h-px w-16" />
@@ -123,7 +127,7 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="border border-white/[0.14] bg-white/[0.06] px-7 py-3.5 font-mono text-[11px] uppercase tracking-[0.16em] text-white transition hover:bg-white/[0.1] disabled:opacity-45"
+                    className="rounded-full border border-cyan-300/20 bg-cyan-300 px-7 py-3.5 font-mono text-[11px] uppercase tracking-[0.16em] text-slate-950 shadow-[0_18px_45px_rgba(56,189,248,0.22)] transition hover:bg-cyan-200 disabled:opacity-45"
                   >
                     {loading ? 'Submitting' : 'Submit inquiry'}
                   </button>

@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
 
 const ROOT = process.cwd()
 const PUBLIC_FILES = [
@@ -83,6 +84,30 @@ describe('V1 AmarktAI product truth', () => {
     }
   })
 
+  it('keeps the public shell navigation and legal routes consistent across the public site', () => {
+    const shell = source('src/components/public/PublicShell.tsx')
+    expect(shell).toContain('PUBLIC_NAV_ITEMS.map')
+    expect(PUBLIC_NAV_ITEMS.map((item) => item.href)).toEqual(['/', '/platform', '/contact', '/admin/login'])
+    for (const href of ['/privacy', '/terms', '/contact', '/admin/login']) {
+      expect(shell).toContain(href)
+    }
+  })
+
+  it('renders the required 2026 copyright in the public shell footer', () => {
+    const shell = source('src/components/public/PublicShell.tsx')
+    expect(shell).toContain('© 2026')
+    expect(shell).toContain('All rights reserved.')
+  })
+
+  it('keeps the homepage and platform page capability-first without unsupported live-completion claims', () => {
+    const corpus = [source('src/app/page.tsx'), source('src/app/platform/page.tsx')].join('\n')
+    for (const phrase of ['100% complete', 'all providers live', 'fully autonomous everything']) {
+      expect(corpus).not.toContain(phrase)
+    }
+    expect(corpus).toContain('Apps ask for outcomes')
+    expect(corpus).toContain('The Brain')
+  })
+
   it('uses exactly the approved V1 dashboard navigation', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
@@ -132,7 +157,7 @@ describe('V1 AmarktAI product truth', () => {
       expect(file).not.toContain('Model override')
       expect(file).not.toContain('Approved provider')
     }
-    expect(studio).toContain('AmarktAI selects infrastructure automatically')
+    expect(studio).toContain('/api/admin/system/v1-brain-route-matrix')
     expect(command).toContain('Capability')
   })
 
