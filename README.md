@@ -9,8 +9,9 @@
 - **Completed:** Added the dynamic model-metadata/provider-contract evidence
   ladder, task-filtered Hugging Face discovery, current Together native
   adapters, canonical dashboard planning, dynamic provider diagnostics, Brain
-  media polling recovery for async provider jobs, and a GitHub-tracked GenX
-  static runtime catalog fallback when live GenX model discovery fails.
+  media polling recovery for async provider jobs, GitHub-tracked GenX static
+  runtime catalog fallback when live GenX model discovery fails, and GenX
+  fallback routing through degraded discovery-health.
 - **Working:** The canonical Brain, provider truth, jobs, artifacts, policy,
   signed connected-app entry, six-provider boundary, dashboard build, full PR
   #118 repository test suite, external Brain polling by local media job id, and
@@ -23,17 +24,18 @@
   without task tags produced empty route candidates. Studio also preselected
   from an obsolete static route layer and passed rejected overrides. External
   media-job polling returned Unauthorized before the 2026-06-16 follow-up.
-  VPS-local GenX discovery fallback existed outside GitHub until this follow-up.
+  VPS-local GenX discovery fallback existed outside GitHub until this follow-up;
+  VPS proof then exposed that degraded discovery-health could suppress the
+  explicit GenX fallback route.
 - **Proof:** TypeScript passed; 40 suites and 496 tests passed; production build
-  passed with 183 pages in PR #118. The VPS transcript proves the focused media
-  contract test and build passed before the GenX fallback was moved into
-  GitHub. The fallback commit still requires VPS test/build proof, and public
-  smoke is blocked until the correct web process is restarted instead of the
-  missing `amarktai-web.service` unit.
-- **Next Step:** Preserve dirty VPS provider/orchestrator changes, pull the
-  branch, identify the correct web process, restart it, start a GenX image job,
-  poll the returned Brain `pollUrl`, and confirm completed artifact/media
-  output.
+  passed with 183 pages in PR #118. VPS proof on 2026-06-16 confirmed install,
+  Prisma generation, TypeScript, focused media contract tests, production
+  build, local site health, and API health. GenX image failed with
+  `NO_ROUTE_FOUND` before the degraded-health fallback routing fix; rerun VPS
+  proof after pulling the latest branch.
+- **Next Step:** Pull the branch, rerun the focused test and build, restart
+  `amarktai-platform.service`, start a GenX image job, poll the returned Brain
+  `pollUrl`, and confirm completed artifact/media output.
 
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 
