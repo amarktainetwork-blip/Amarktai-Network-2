@@ -2,23 +2,28 @@
 
 ## CURRENT IMPLEMENTATION STATUS
 
-- **Date:** 2026-06-15
-- **PR Number:** #118
+- **Date:** 2026-06-16
+- **PR Number:** #118 follow-up on `integration/cline-source-of-truth`
 - **Purpose:** Repair provider runtime discovery and dashboard execution inside
   the final PR #114-#117 architecture.
 - **Completed:** Model evidence normalization, provider-contract fallback,
   task-filtered Hugging Face discovery, Together native runtime paths,
-  canonical dashboard planning, and provider diagnostics.
+  canonical dashboard planning, provider diagnostics, and Brain media polling
+  recovery for async provider jobs.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
-  artifacts, adult policy, and connected-app scope enforcement.
+  artifacts, adult policy, connected-app scope enforcement, and public Brain
+  media-job polling by opaque local job id.
 - **Partial:** Production live provider proof, true token streaming, research,
   long-form media composition, and advanced provider-specific voice families.
 - **Broken At Start:** The runtime required exact model-level capability tags,
   so healthy provider catalogs containing only model IDs yielded
   `NO_ROUTE_FOUND`. Studio also preplanned through obsolete static truth.
-- **Proof:** TypeScript, 496 tests, and a 183-page production build pass. Live
-  provider execution remains a deployment proof because this checkout has no
-  production credentials.
+  External media-job polling returned Unauthorized before the 2026-06-16
+  follow-up.
+- **Proof:** TypeScript, 496 tests, and a 183-page production build passed in PR
+  #118. The 2026-06-16 follow-up was pushed to GitHub, but this environment
+  could not install dependencies or curl the live deployment; VPS smoke proof is
+  still required before declaring the GenX image job path complete.
 - **Next PR:** #119 Research Completion after production smoke verification.
 
 This document is the law for AmarktAI Network V1. When code, tickets, prompts,
@@ -150,3 +155,11 @@ Specialist Brain routes do not implement separate routing, policy, provider, or
 artifact systems. They delegate to the capability router. Provider connection
 tests may call provider health/catalog endpoints directly because they are
 diagnostics, not product generation.
+
+## Media Job Rule
+
+Async provider media jobs must return a Brain local job id and a Brain poll URL.
+Provider job ids may be exposed separately for diagnostics, but apps poll only
+`/api/brain/media-jobs/:jobId`. The poll route is a Brain runtime surface and
+must not require an admin dashboard session. Completion is only true after the
+provider returns usable media and the artifact layer persists or references it.
