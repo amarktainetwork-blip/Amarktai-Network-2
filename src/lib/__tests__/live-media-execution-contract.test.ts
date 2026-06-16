@@ -71,7 +71,11 @@ import {
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 import { normalizeGovernedCapability } from '@/lib/provider-capability-governance'
 import { getCapability } from '@/lib/providers/capability-registry'
-import { clearProviderDiscoveryCache, discoverProvider } from '@/lib/providers/provider-discovery'
+import {
+  clearProviderDiscoveryCache,
+  discoverProvider,
+  resolveProviderEndpoint,
+} from '@/lib/providers/provider-discovery'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { scoreProviderModel } from '@/lib/providers/provider-scoring'
 import { getRoutingProfile } from '@/lib/providers/routing-profiles'
@@ -110,22 +114,22 @@ describe('local media job lifecycle', () => {
     })
   })
 
-  it('persists completed provider media as a canonical artifact', async () => {
+  it('persists completed GenX image jobs as canonical artifacts', async () => {
     createLocalMediaJob({
-      capability: 'music_generation',
+      capability: 'image_generation',
       appSlug: 'amarktai-network',
-      type: 'music',
-      subType: 'generated_audio',
-      title: 'Song',
-      prompt: 'Cinematic instrumental',
+      type: 'image',
+      subType: 'studio_image',
+      title: 'Image',
+      prompt: 'Cinematic city skyline',
       provider: 'genx',
-      model: 'lyria-3-clip-preview',
+      model: 'gpt-image-2',
       providerJobId: 'provider-job-2',
     })
     mocks.getGenXJobStatus.mockResolvedValue({
       id: 'provider-job-2',
       status: 'completed',
-      resultUrl: 'https://cdn.example/song.mp3',
+      resultUrl: 'https://cdn.example/image.png',
     })
     mocks.persistCanonicalMediaResult.mockResolvedValue({
       artifactId: 'artifact-1',
@@ -139,13 +143,19 @@ describe('local media job lifecycle', () => {
       status: 'completed',
       artifactId: 'artifact-1',
       storageUrl: '/api/admin/artifacts/artifact-1/content',
+      mediaUrl: '/api/admin/artifacts/artifact-1/content',
       error: null,
     })
     expect(mocks.persistCanonicalMediaResult).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'music',
+      type: 'image',
       provider: 'genx',
       traceId: 'media-job-local-media-job-1',
     }))
+    expect(localMediaJobResponse(completed!)).toMatchObject({
+      imageUrl: '/api/admin/artifacts/artifact-1/content',
+      providerJobId: 'provider-job-2',
+      pollUrl: '/api/brain/media-jobs/local-media-job-1',
+    })
   })
 
   it('polls Together async video jobs through the canonical Brain local job surface', async () => {
@@ -271,6 +281,28 @@ describe('local media job lifecycle', () => {
 })
 
 describe('provider discovery runtime fallbacks', () => {
+  it('normalizes GenX base-url env aliases for canonical discovery endpoints', () => {
+    const previousApiUrl = process.env.GENX_API_URL
+    const previousBaseUrl = process.env.GENX_BASE_URL
+    const previousTextBaseUrl = process.env.GENX_TEXT_BASE_URL
+    process.env.GENX_API_URL = 'https://genx.sh/api/v1/models'
+    delete process.env.GENX_BASE_URL
+    delete process.env.GENX_TEXT_BASE_URL
+
+    try {
+      const genx = PROVIDER_TRUTH.find((entry) => entry.id === 'genx')!
+      expect(resolveProviderEndpoint(genx, 'async_generation')).toBe('https://query.genx.sh/api/v1')
+      expect(resolveProviderEndpoint(genx, 'streaming_text')).toBe('https://query.genx.sh/v1')
+    } finally {
+      if (previousApiUrl === undefined) delete process.env.GENX_API_URL
+      else process.env.GENX_API_URL = previousApiUrl
+      if (previousBaseUrl === undefined) delete process.env.GENX_BASE_URL
+      else process.env.GENX_BASE_URL = previousBaseUrl
+      if (previousTextBaseUrl === undefined) delete process.env.GENX_TEXT_BASE_URL
+      else process.env.GENX_TEXT_BASE_URL = previousTextBaseUrl
+    }
+  })
+
   it('uses the GenX static runtime catalog when live model discovery fails', async () => {
     const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 404 })
 
@@ -285,6 +317,7 @@ describe('provider discovery runtime fallbacks', () => {
     expect(snapshot.status).toBe('ready')
     expect(snapshot.error).toContain('static runtime fallback')
     expect(snapshot.models.map((model) => model.id)).toContain('gpt-image-2')
+    expect(snapshot.models.map((model) => model.id)).not.toContain('kling-v3-pro-i2v')
     expect(snapshot.models.every((model) => model.provider === 'genx')).toBe(true)
     expect(snapshot.models.every((model) => model.capabilities.includes('image'))).toBe(true)
     expect(snapshot.models.every((model) => model.capabilityEvidence === 'provider_contract')).toBe(true)
@@ -337,6 +370,36 @@ describe('provider discovery runtime fallbacks', () => {
       model: { id: 'gpt-image-2', capabilityEvidence: 'provider_contract' },
     })
   })
+
+  it('does not expose unsupported static GenX fallback candidates for unproven families', async () => {
+    const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 404 })
+
+    const imageToVideo = await discoverProvider('genx', {
+      force: true,
+      credential: 'test-genx-key',
+      keySource: 'test',
+      capability: 'image_to_video',
+      fetcher: fetcher as unknown as typeof fetch,
+    })
+    const stt = await discoverProvider('genx', {
+      force: true,
+      credential: 'test-genx-key',
+      keySource: 'test',
+      capability: 'stt',
+      fetcher: fetcher as unknown as typeof fetch,
+    })
+    const avatar = await discoverProvider('genx', {
+      force: true,
+      credential: 'test-genx-key',
+      keySource: 'test',
+      capability: 'avatar',
+      fetcher: fetcher as unknown as typeof fetch,
+    })
+
+    expect(imageToVideo).toMatchObject({ status: 'failed', models: [] })
+    expect(stt).toMatchObject({ status: 'failed', models: [] })
+    expect(avatar).toMatchObject({ status: 'failed', models: [] })
+  })
 })
 
 describe('live media route contracts', () => {
@@ -373,5 +436,53 @@ describe('live media route contracts', () => {
     expect(mediaJobRoute).not.toContain('getSession')
     expect(mediaJobRoute).not.toContain('Unauthorized')
     expect(legacyVideoRoute).toContain('Legacy compatibility route')
+  })
+
+  it('returns local Brain image job ids, provider job ids, and poll URLs from the Brain image route', async () => {
+    vi.resetModules()
+    vi.doMock('@/lib/capability-router', () => ({
+      executeCapability: vi.fn().mockResolvedValue({
+        success: true,
+        output: null,
+        jobId: 'brain-job-1',
+        providerJobId: 'provider-job-1',
+        pollUrl: '/api/brain/media-jobs/brain-job-1',
+        status: 'processing',
+        provider: 'genx',
+        model: 'gpt-image-2',
+        artifactId: null,
+        artifactUrl: null,
+        error: null,
+      }),
+    }))
+    vi.doMock('@/lib/execution', () => ({
+      ensureExecution: vi.fn().mockReturnValue({ executionId: 'exec-1' }),
+      startExecution: vi.fn(),
+      recordExecutionResponse: vi.fn().mockReturnValue({ executionId: 'exec-1' }),
+    }))
+
+    const { POST } = await import('@/app/api/brain/image/route')
+    const response = await POST(new Request('http://localhost/api/brain/image', {
+      method: 'POST',
+      body: JSON.stringify({ prompt: 'A glass city' }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as never)
+    const payload = await response.json()
+
+    expect(response.status).toBe(202)
+    expect(payload).toMatchObject({
+      success: true,
+      jobId: 'brain-job-1',
+      providerJobId: 'provider-job-1',
+      pollUrl: '/api/brain/media-jobs/brain-job-1',
+      status: 'processing',
+      provider: 'genx',
+      model: 'gpt-image-2',
+      executionId: 'exec-1',
+    })
+    expect(payload.jobId).not.toBe(payload.providerJobId)
+
+    vi.doUnmock('@/lib/capability-router')
+    vi.doUnmock('@/lib/execution')
   })
 })

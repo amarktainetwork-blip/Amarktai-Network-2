@@ -19,19 +19,19 @@ presence, or theoretical support alone is insufficient.
 | image | partial | partial | unknown | partial | partial | unknown |
 | image edit | unknown | unknown | unknown | unknown | unknown | unknown |
 | video | partial | partial | unknown | partial | partial | unknown |
-| image_to_video | unknown | partial | unknown | partial | partial | unknown |
-| avatar | unknown | unknown | unknown | partial | unknown | unknown |
+| image_to_video | unknown | partial | unknown | unknown | partial | unknown |
+| avatar | unknown | unknown | unknown | unknown | unknown | unknown |
 | music | partial | unknown | unknown | partial | unknown | unknown |
-| tts | unknown | working | working | unknown | unknown | working |
+| tts | unknown | working | working | partial | unknown | working |
 | stt | partial | partial | partial | unknown | unknown | unknown |
 | voice clone | unknown | unknown | unknown | unknown | unknown | unknown |
 | ocr | unknown | unknown | partial | unknown | partial | unknown |
-| vision | partial | partial | partial | partial | partial | partial |
-| embeddings | partial | partial | unknown | partial | partial | unknown |
+| vision | partial | partial | partial | unknown | partial | partial |
+| embeddings | partial | partial | unknown | unknown | partial | unknown |
 | rerank | partial | partial | unknown | unknown | unknown | unknown |
 | translation | partial | unknown | unknown | unknown | partial | unknown |
-| documents | partial | unknown | unknown | partial | unknown | unknown |
-| agents | unknown | unknown | unknown | partial | unknown | unknown |
+| documents | partial | unknown | unknown | unknown | unknown | unknown |
+| agents | unknown | unknown | unknown | unknown | unknown | unknown |
 | adult_text | unknown | unknown | unknown | unknown | unknown | unknown |
 | adult_image | unknown | unknown | unknown | unknown | unknown | unknown |
 | adult_video | unknown | unknown | unknown | unknown | unknown | unknown |
@@ -78,7 +78,7 @@ presence, or theoretical support alone is insufficient.
 | HF | Hub model metadata | pipeline task metadata | inference providers plus configured private/dedicated endpoints |
 | Together | provider model catalog | model metadata when supplied | configured dedicated endpoints |
 | Groq | provider model catalog | model metadata when supplied | tool-calling capability contract |
-| GenX | async `/api/v1/models` family, then existing static runtime catalog if the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming, async job, and webhook truth |
+| GenX | async `/api/v1/models` family, then the existing runtime image/video/music/TTS fallback when the live catalog fails | model metadata or explicit provider-contract runtime catalog fallback | streaming and async job truth |
 | Qwen | compatible-mode model catalog | model metadata when supplied | compatible/AIGC split, free-quota and paid guard |
 | MiMo | token-plan model catalog | model metadata when supplied | token-plan endpoint truth |
 
@@ -91,12 +91,22 @@ Models identified as another modality are not relabeled.
 
 The 2026-06-16 GenX follow-up adds a second GenX-specific provider-contract
 fallback from the existing runtime catalog when configured live GenX model
-discovery fails. This can recover routing candidates for image, image edit,
-video, image-to-video, avatar, music, TTS, STT, adult image, and adult video,
-but it does not prove provider execution or artifact completion.
+discovery fails. This now conservatively recovers routing candidates only for
+image, text-to-video models covered by the explicit GenX video contract,
+music/audio generation, and TTS. Unproven GenX families such as image edit,
+image-to-video, avatar, STT, documents, agents, and adult media are not exposed
+through that fallback.
 
-GenX image remains incomplete until a Brain image job returns a Brain
-`pollUrl`, that `pollUrl` completes, and a canonical artifact persists.
+GenX image is locally proven to return a Brain `pollUrl`, to complete through
+the Brain local media-job surface, and to persist a canonical artifact in the
+focused contract tests. It is not yet live-provider proven in this repo.
+
+GenX video has canonical adapter and polling contracts plus provider-contract
+fallback candidates, but remains `partial` without live provider proof. GenX
+music and TTS have canonical adapter paths and conservative fallback evidence,
+but remain `partial` without live provider proof. GenX STT, avatar, vision,
+documents, agents, and adult families remain `unknown` here because the current
+repo does not prove those GenX families end to end.
 
 PR #117 makes this discovery evidence the production routing dependency.
 Provider-native adapters receive the discovered model and contain no fallback

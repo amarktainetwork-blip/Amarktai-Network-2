@@ -84,7 +84,10 @@ describe('Phase 1 provider truth layer', () => {
       'chat', 'coding', 'vision', 'tts', 'stt', 'voice_clone',
     ]))
     expect(getProviderTruth('genx')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'image', 'video', 'music', 'tts', 'stt', 'avatar',
+      'chat', 'reasoning', 'coding', 'image', 'video', 'music', 'tts',
+    ]))
+    expect(getProviderTruth('genx')?.capabilities).not.toEqual(expect.arrayContaining([
+      'image_to_video', 'stt', 'avatar', 'vision', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
     ]))
 
     const providerDir = path.join(ROOT, 'src/lib/providers')
@@ -116,7 +119,8 @@ describe('Phase 1 provider truth layer', () => {
     expect(genx.features).toMatchObject({
       streaming: true,
       asyncJobs: true,
-      webhooks: true,
+      webhooks: false,
+      toolCalling: false,
     })
   })
 

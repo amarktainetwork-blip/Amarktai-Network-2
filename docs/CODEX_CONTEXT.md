@@ -12,12 +12,15 @@ READ THIS FILE FIRST.
   diagnostics, Studio/Playground/assistant routing repair, Hugging Face
   task-filtered discovery, Together native adapter completion, Brain media
   polling recovery for async image/provider jobs, GitHub-tracked GenX static
-  runtime catalog fallback when live GenX model discovery fails, and GenX
-  fallback routing through degraded discovery-health.
+  runtime catalog fallback when live GenX model discovery fails, GenX fallback
+  routing through degraded discovery-health, and canonical GenX discovery base
+  URL handling for `GENX_BASE_URL` and `GENX_API_URL`.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
   artifacts, adult policy, signed connected-app execution, external Brain
   media polling by local job id, and GenX discovery candidates from the existing
-  runtime catalog when `/api/v1/models` is unavailable.
+  runtime catalog when `/api/v1/models` is unavailable. Focused tests now prove
+  the Brain image local polling contract and canonical artifact persistence for
+  completed GenX jobs.
 - **Partial:** Production live execution, token streaming, research, long-form
   assembly, avatar, music, and advanced MiMo voice/omni require truthful proof.
 - **Broken At Start:** Exact model-task matching rejected discovered models
@@ -64,6 +67,10 @@ Current operator truth:
   but it is not canonical V1 navigation
 - Canonical Brain local async media polling currently supports GenX, Qwen, and
   Together
+- Canonical GenX provider truth is conservative: chat, reasoning, coding,
+  image, text-to-video, music, and TTS are represented; image-to-video, avatar,
+  STT, vision, documents, agents, and adult GenX families are not currently
+  claimed as working canonical provider truth
 - Hugging Face async job truth is narrowed until canonical Brain polling exists
 - `/api/brain/video-generate/:jobId` is legacy compatibility only; apps poll
   `/api/brain/media-jobs/:jobId`
@@ -83,6 +90,12 @@ Current operator truth:
   artifact persistence
 - Keep Together non-image/video capability proof conservative unless live proof
   upgrades it
+- GenX image is locally proven to return a Brain local job id plus separate
+  `providerJobId`, to return `/api/brain/media-jobs/:jobId` as `pollUrl`, and
+  to persist a canonical artifact after completed local polling
+- GenX still lacks live-provider proof in this repo; keep video, music, and TTS
+  partial and keep image-to-video, avatar, STT, vision, documents, agents, and
+  adult GenX rows conservative
 
 Never:
 

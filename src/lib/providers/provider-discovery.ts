@@ -1,13 +1,11 @@
 import {
   GENX_AUDIO_MODELS,
-  GENX_I2V_MODELS,
   GENX_IMAGE_MODELS,
-  GENX_STT_MODELS,
   GENX_TTS_MODELS,
-  GENX_VIDEO_MODELS,
 } from '@/lib/genx-client'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
+import { VIDEO_MODEL_CONTRACTS } from '@/lib/video-route-specs'
 import { ProviderDiscoveryCache } from './provider-cache'
 import { PROVIDER_TRUTH } from './provider-truth'
 import type {
@@ -104,15 +102,11 @@ const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
 
 const GENX_FALLBACK_MODEL_CAPABILITIES: Partial<Record<CapabilityId, readonly string[]>> = {
   image: GENX_IMAGE_MODELS,
-  image_edit: GENX_IMAGE_MODELS,
-  adult_image: GENX_IMAGE_MODELS,
-  video: GENX_VIDEO_MODELS,
-  image_to_video: GENX_I2V_MODELS,
-  adult_video: GENX_VIDEO_MODELS,
-  avatar: GENX_VIDEO_MODELS,
+  video: VIDEO_MODEL_CONTRACTS
+    .filter((contract) => contract.provider === 'genx' && contract.mode === 'text_to_video')
+    .map((contract) => contract.model),
   music: GENX_AUDIO_MODELS,
   tts: GENX_TTS_MODELS,
-  stt: GENX_STT_MODELS,
 }
 
 type FetchLike = typeof fetch
@@ -279,9 +273,11 @@ export function resolveProviderEndpoint(
     ? provider.endpoints.find((entry) => entry.family === family)
     : provider.endpoints[0]
   if (!endpoint) return ''
-  const configured = endpoint.baseUrlEnv && process.env[endpoint.baseUrlEnv]?.trim()
-    ? process.env[endpoint.baseUrlEnv]!.trim()
-    : endpoint.baseUrl
+  const configured = provider.id === 'genx'
+    ? resolveGenXEndpointBaseUrl(endpoint, family)
+    : endpoint.baseUrlEnv && process.env[endpoint.baseUrlEnv]?.trim()
+      ? process.env[endpoint.baseUrlEnv]!.trim()
+      : endpoint.baseUrl
   const normalized = configured.replace(/\/+$/, '')
   if (provider.id === 'genx' && family === 'async_generation' && !/\/api\/v1$/i.test(normalized)) {
     return `${normalized}/api/v1`
@@ -290,6 +286,35 @@ export function resolveProviderEndpoint(
     return `${normalized}/v1`
   }
   return normalized
+}
+
+function resolveGenXEndpointBaseUrl(
+  endpoint: ProviderTruthDefinition['endpoints'][number],
+  family?: string,
+): string {
+  const configured = endpoint.baseUrlEnv && process.env[endpoint.baseUrlEnv]?.trim()
+    ? process.env[endpoint.baseUrlEnv]!.trim()
+    : family === 'streaming_text'
+      ? process.env.GENX_TEXT_BASE_URL?.trim() || process.env.GENX_BASE_URL?.trim() || process.env.GENX_API_URL?.trim() || endpoint.baseUrl
+      : process.env.GENX_BASE_URL?.trim() || process.env.GENX_API_URL?.trim() || endpoint.baseUrl
+  return normalizeGenxBaseUrl(configured)
+}
+
+function normalizeGenxBaseUrl(raw: string): string {
+  try {
+    const url = new URL(raw)
+    if (url.hostname === 'genx.sh') url.hostname = 'query.genx.sh'
+    const path = url.pathname
+      .replace(/\/api\/v1\/models\/?$/, '')
+      .replace(/\/v1\/models\/?$/, '')
+      .replace(/\/api\/v1\/?$/, '')
+      .replace(/\/v1\/?$/, '')
+      .replace(/\/api\/?$/, '')
+      .replace(/\/$/, '')
+    return `${url.origin}${path}`
+  } catch {
+    return raw.replace(/\/+$/, '')
+  }
 }
 
 function resolveDiscoveryUrl(

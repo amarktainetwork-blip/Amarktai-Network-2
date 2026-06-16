@@ -10,12 +10,15 @@
   task-filtered Hugging Face discovery, Together native runtime paths,
   canonical dashboard planning, provider diagnostics, Brain media polling
   recovery for async provider jobs, GitHub-tracked GenX static runtime catalog
-  fallback when live GenX model discovery fails, and GenX fallback routing
-  through degraded discovery-health.
+  fallback when live GenX model discovery fails, GenX fallback routing through
+  degraded discovery-health, and canonical GenX discovery base-url handling for
+  `GENX_BASE_URL` and `GENX_API_URL`.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
   artifacts, adult policy, connected-app scope enforcement, public Brain
   media-job polling by opaque local job id, and GenX discovery candidates from
-  the existing runtime catalog when `/api/v1/models` is unavailable.
+  the existing runtime catalog when `/api/v1/models` is unavailable. GenX image
+  local Brain polling and artifact persistence are proven by focused contract
+  tests.
 - **Partial:** Production live provider proof, true token streaming, research,
   long-form media composition, and advanced provider-specific voice families.
 - **Broken At Start:** The runtime required exact model-level capability tags,
@@ -109,13 +112,21 @@ Provider-specific adapters may contain endpoint protocol identifiers, but no
 fallback model IDs. Capability callers cannot select raw providers or models.
 Models are dynamic and discovery-driven.
 
-GenX discovery uses live `/api/v1/models` first. If that endpoint fails while a
-GenX credential is configured, discovery may expose models from the existing
-GenX runtime catalog as provider-contract evidence. This is a recovery path for
-routing candidates only; it does not prove execution or artifact completion.
-The explicit GenX static runtime fallback may remain routable when discovery
-health is degraded so the provider-native adapter can produce the real success
-or provider error.
+GenX discovery uses live `/api/v1/models` first. Canonical provider discovery
+must honor `GENX_BASE_URL` and `GENX_API_URL`, normalize dashboard-style GenX
+URLs to `query.genx.sh`, and then append the required endpoint family path.
+If live discovery fails while a GenX credential is configured, discovery may
+expose models from the existing GenX runtime catalog as provider-contract
+evidence. This is a recovery path for routing candidates only; it does not by
+itself prove live execution. The explicit GenX static runtime fallback may
+remain routable when discovery health is degraded so the provider-native
+adapter can produce the real success or provider error.
+
+Current GenX fallback truth is conservative. The canonical fallback exposes only
+image, text-to-video models covered by the explicit GenX video contract, music,
+and TTS. Unproven GenX families such as image edit, image-to-video, avatar,
+STT, documents, agents, and adult media are not exposed through the canonical
+fallback path.
 
 ## Routing Profiles
 
@@ -223,5 +234,8 @@ its provider truth must not claim canonical async job support.
 `/api/brain/video-generate/:jobId` remains a legacy compatibility route. Apps
 must treat `/api/brain/media-jobs/:jobId` as the canonical polling surface.
 
-GenX image remains incomplete until a Brain image job returns a Brain
-`pollUrl`, that `pollUrl` completes, and a canonical artifact persists.
+GenX image local completion is now proven in focused contract tests: the Brain
+image route returns a local Brain job id plus `providerJobId`, the returned
+`pollUrl` targets `/api/brain/media-jobs/:jobId`, and completed GenX polling
+persists a canonical artifact. Live GenX provider proof is still required
+before the provider matrix can mark GenX image as fully working.

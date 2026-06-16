@@ -316,6 +316,39 @@ describe('provider adapter contracts', () => {
     expect(providerHasCanonicalPollingContract('huggingface')).toBe(false)
   })
 
+  it('keeps GenX provider truth limited to the proven canonical runtime surface', () => {
+    const genx = PROVIDER_TRUTH.find((provider) => provider.id === 'genx')!
+
+    expect(genx.envAliases).toEqual(['GENX_API_KEY'])
+    expect(genx.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'image',
+      'video',
+      'music',
+      'tts',
+    ]))
+    expect(genx.capabilities).not.toEqual(expect.arrayContaining([
+      'image_to_video',
+      'stt',
+      'avatar',
+      'vision',
+      'documents',
+      'agents',
+      'adult_text',
+      'adult_image',
+      'adult_video',
+    ]))
+    expect(genx.features).toMatchObject({
+      streaming: true,
+      asyncJobs: true,
+      webhooks: false,
+      toolCalling: false,
+      artifactSupport: true,
+    })
+  })
+
   it('keeps admin provider-key truth within the six approved V1 providers', () => {
     const integrationKeysRoute = source('src/app/api/admin/integration-keys/route.ts')
 

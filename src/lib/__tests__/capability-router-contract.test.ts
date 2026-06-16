@@ -425,4 +425,62 @@ describe('capability router contract', () => {
     expect(result.diagnostics).toMatchObject({ controlPlaneJobId: 'control-job-1' })
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
+
+  it('returns a Brain local polling contract for asynchronous GenX image generation', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'gpt-image-2',
+        capabilities: ['image'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'image',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: null,
+      jobId: 'provider-image-job-1',
+      status: 'pending',
+      model: 'gpt-image-2',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'create image',
+      capability: 'image_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result, JSON.stringify(result)).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      provider: 'genx',
+      model: 'gpt-image-2',
+      status: 'processing',
+      providerJobId: 'provider-image-job-1',
+      output: null,
+    })
+    expect(result.jobId).toBeTruthy()
+    expect(result.pollUrl).toContain('/api/brain/media-jobs/')
+    expect(result.jobId).not.toBe(result.providerJobId)
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
+  })
 })
