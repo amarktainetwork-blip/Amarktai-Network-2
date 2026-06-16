@@ -47,7 +47,11 @@ import {
 } from '@/lib/media-job-store'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 import { normalizeGovernedCapability } from '@/lib/provider-capability-governance'
+import { getCapability } from '@/lib/providers/capability-registry'
 import { clearProviderDiscoveryCache, discoverProvider } from '@/lib/providers/provider-discovery'
+import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
+import { scoreProviderModel } from '@/lib/providers/provider-scoring'
+import { getRoutingProfile } from '@/lib/providers/routing-profiles'
 
 const ROOT = path.resolve(__dirname, '../../')
 const read = (relativePath: string) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -164,6 +168,54 @@ describe('provider discovery runtime fallbacks', () => {
     expect(snapshot.models.every((model) => model.provider === 'genx')).toBe(true)
     expect(snapshot.models.every((model) => model.capabilities.includes('image'))).toBe(true)
     expect(snapshot.models.every((model) => model.capabilityEvidence === 'provider_contract')).toBe(true)
+  })
+
+  it('keeps GenX fallback models routable when discovery health is degraded', () => {
+    const provider = PROVIDER_TRUTH.find((entry) => entry.id === 'genx')!
+    const capability = getCapability('image')!
+    const candidate = scoreProviderModel({
+      provider,
+      capability,
+      profile: getRoutingProfile('balanced', {
+        providerPreference: ['genx'],
+        modelPreference: ['gpt-image-2'],
+        artifactSupport: true,
+      }),
+      health: {
+        provider: 'genx',
+        state: 'degraded',
+        configured: true,
+        tested: true,
+        healthy: false,
+        checkedAt: new Date().toISOString(),
+        detail: 'Live model discovery failed.',
+      },
+      model: {
+        provider: 'genx',
+        id: 'gpt-image-2',
+        capabilities: ['image'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        speed: null,
+        quality: null,
+        cost: null,
+        context: null,
+        adult: 'unknown',
+        streaming: 'unknown',
+        research: 'unknown',
+        artifactSupport: true,
+        raw: {
+          source: 'genx_static_runtime_fallback',
+          capabilities: ['image'],
+        },
+        discoveredAt: new Date().toISOString(),
+      },
+    })
+
+    expect(candidate).toMatchObject({
+      provider: 'genx',
+      model: { id: 'gpt-image-2', capabilityEvidence: 'provider_contract' },
+    })
   })
 })
 
