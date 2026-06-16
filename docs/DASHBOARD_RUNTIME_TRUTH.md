@@ -10,12 +10,12 @@ Every page under `src/app/admin` is listed below.
 | Dashboard redirect | `/admin/dashboard` | CANONICAL | Redirects to Command Center. | None. |
 | Command Center | `/admin/dashboard/command` | CANONICAL | Playground execution/history, apps, app safety, approvals, artifact reuse. | Execution still uses compatibility routing below the API. |
 | Studio | `/admin/dashboard/studio` | CANONICAL | Studio execute/poll, route matrix, workspaces, safety, approvals, STT, projects, artifact reuse. | Some media capabilities return honest partial/unavailable states. |
-| Capabilities | `/admin/dashboard/capabilities` | LEGACY | Directly renders `AI_CAPABILITY_TAXONOMY`. | It does not consume the Phase 1 23-capability registry and can diverge from runtime readiness. |
+| Capabilities | `/admin/dashboard/capabilities` | CANONICAL | `/api/admin/system/ai-capabilities-truth` plus Brain route matrix truth. | It still presents the existing grouped UI, but backend capability truth now comes from runtime APIs rather than a page-local static list. |
 | Connected Apps | `/admin/dashboard/connected-apps` | CANONICAL | Server-side connected app/event reads and admin mutation APIs. | App execution still depends on compatibility routing. |
 | Artifacts | `/admin/dashboard/artifacts` | CANONICAL | Artifact list/filter, preview/download, reuse, archive. | External object storage is future adapter work. |
-| Jobs | `/admin/dashboard/jobs` | CANONICAL | Control-plane job list and cancellation. | Some specialist job stores remain local or provider-specific. |
-| Providers | `/admin/dashboard/providers` | LEGACY | Provider diagnostics and live-test APIs. | Uses provider mesh/catalog/registry compatibility layers, not Phase 1 discovery directly. |
-| Settings | `/admin/dashboard/settings` | CANONICAL | Settings truth, routing policy, safety, runtime tools, capability truth, keys, tests. | Several returned truth objects still originate in compatibility registries. |
+| Jobs | `/admin/dashboard/jobs` | CANONICAL | `/api/admin/jobs` canonical job list plus cancellation-compatible links. | Some specialist job stores remain local or provider-specific. |
+| Providers | `/admin/dashboard/providers` | LEGACY | Provider diagnostics and live-test APIs. | Reachable for diagnostics only; not canonical nav and not a provider picker for normal workflows. |
+| Settings | `/admin/dashboard/settings` | CANONICAL | Settings truth, routing policy, safety, runtime tools, capability truth, keys, tests. | Several returned truth objects still originate in compatibility registries or mixed runtime views. |
 | Music Studio | `/admin/dashboard/music-studio` | PARTIAL | Music execution and provider-job polling. | Blueprint output must not be presented as completed audio. |
 | Avatars | `/admin/dashboard/avatars` | PARTIAL | Creative workspace list/update. | No working avatar-video/lip-sync backend. |
 | Projects | `/admin/dashboard/projects` | PARTIAL | Creative workspace CRUD. | Workspace metadata is real; it is not a complete production project pipeline. |
@@ -31,6 +31,11 @@ inside that one UI:
 - Providers reads provider diagnostics backed by compatibility registries.
 - Settings combines platform settings, runtime tools, routing policy, and
   capability truth.
+
+The 2026-06-16 dashboard backend follow-up removes one of the main stale links:
+the Capabilities page now fetches the canonical `ai-capabilities-truth` API, and
+the Jobs page now reads the canonical `/api/admin/jobs` surface instead of the
+older `/api/admin/system/jobs` page-specific feed.
 
 The frontend should eventually consume one normalized backend truth response.
 That is a later parity/cutover task, not a redesign.

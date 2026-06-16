@@ -100,8 +100,8 @@ export default function ProvidersPage() {
           <p className="text-sm font-medium text-teal-400">Operations</p>
           <h1 className="mt-1 text-3xl font-semibold text-white">Providers</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-400">
-            Live readiness for the six approved provider adapters. Models and routes are diagnostics,
-            not a provider picker for normal product work.
+            Live readiness for the six approved provider adapters. This legacy diagnostic route exposes
+            provider diagnostics and live tests, not a provider picker for normal product work.
           </p>
         </div>
         <button

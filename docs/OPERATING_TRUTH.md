@@ -15,6 +15,9 @@
   `GENX_BASE_URL` and `GENX_API_URL`, canonical Hugging Face auth-alias
   alignment across provider config and specialist execution, and focused
   research-route contract alignment across Brain and admin research surfaces.
+  Dashboard backend connections now use the Brain/runtime truth APIs more
+  consistently for capabilities, jobs, and artifacts while keeping Providers as
+  legacy diagnostics only.
 - **Working:** Provider truth, capability routing, scoring, adapters, jobs,
   artifacts, adult policy, connected-app scope enforcement, public Brain
   media-job polling by opaque local job id, and GenX discovery candidates from
@@ -160,6 +163,28 @@ The canonical GitHub branch is `integration/cline-source-of-truth`.
 
 Do not create parallel provider configs, model catalogs, capability lists,
 routers, or product truth documents.
+
+## Dashboard Rule
+
+The canonical V1 dashboard navigation is:
+
+- Command Center
+- Studio
+- Capabilities
+- Connected Apps
+- Jobs
+- Artifacts
+- Settings
+
+`/admin/dashboard/providers` remains reachable as a legacy diagnostic route. It
+is not canonical navigation and must not become the normal app workflow for
+provider/model/endpoint selection.
+
+Dashboard pages should read Brain/runtime truth where a canonical backend
+surface exists. Capabilities should prefer `ai-capabilities-truth` and route
+matrix truth over stale local lists. Jobs should prefer the canonical
+`/api/admin/jobs` surface. Artifacts should prefer the canonical
+`/api/admin/artifacts` surface.
 
 ## Phase 1 Provider Truth Rules
 

@@ -51,6 +51,13 @@ describe('production capability and dashboard contract', () => {
     expect(studio).not.toContain('<option value="genx">')
   })
 
+  it('keeps Providers reachable only as legacy diagnostics, not canonical navigation', () => {
+    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Providers')
+    const providersPage = source('src/app/admin/dashboard/providers/page.tsx')
+    expect(providersPage).toContain('legacy diagnostic route')
+    expect(providersPage).toContain('not a provider picker for normal product work')
+  })
+
   it('exposes approved-provider diagnostics and a guarded hard reset', () => {
     const diagnostics = source('src/app/api/admin/system/provider-diagnostics/route.ts')
     const reset = source('src/app/api/admin/system/hard-reset/route.ts')

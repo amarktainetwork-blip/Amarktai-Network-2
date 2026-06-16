@@ -6,8 +6,10 @@
  * Uses the canonical AI_CAPABILITY_TAXONOMY — no duplicate registry.
  */
 
+'use client'
+
 import Link from 'next/link'
-import { AI_CAPABILITY_TAXONOMY } from '@/lib/ai-capability-taxonomy'
+import { useEffect, useMemo, useState } from 'react'
 import {
   AudioLines,
   Bot,
@@ -22,6 +24,18 @@ import {
   Video,
   XCircle,
 } from 'lucide-react'
+
+type CapabilityEntry = {
+  id: string
+  label: string
+  group: string
+  description: string
+  outputTypes: string[]
+  createsArtifact: boolean
+  blocker: string | null
+  status: string
+  providerRoutes?: Array<{ provider: string; executable: boolean }>
+}
 
 // ── Capability group display config ───────────────────────────────────────────
 
@@ -46,18 +60,29 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 }
 
 export default function CapabilitiesPage() {
+  const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
+
+  useEffect(() => {
+    fetch('/api/admin/system/ai-capabilities-truth', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        setCapabilities(Array.isArray(data.capabilities) ? data.capabilities : [])
+      })
+      .catch(() => setCapabilities([]))
+  }, [])
+
   // Group capabilities by their group
-  const grouped = AI_CAPABILITY_TAXONOMY.reduce<Record<string, typeof AI_CAPABILITY_TAXONOMY[number][]>>(
+  const grouped = useMemo(() => capabilities.reduce<Record<string, CapabilityEntry[]>>(
     (acc, cap) => {
       if (!acc[cap.group]) acc[cap.group] = []
       acc[cap.group].push(cap)
       return acc
     },
     {},
-  )
+  ), [capabilities])
 
-  const totalWorking = AI_CAPABILITY_TAXONOMY.filter((c) => c.status === 'working').length
-  const totalCapabilities = AI_CAPABILITY_TAXONOMY.length
+  const totalWorking = capabilities.filter((c) => c.status === 'working').length
+  const totalCapabilities = capabilities.length
 
   return (
     <div className="space-y-8">
@@ -86,11 +111,11 @@ export default function CapabilitiesPage() {
 
       {/* ── Capability groups ──────────────────────────────────────────────── */}
       <div className="space-y-6">
-        {Object.entries(GROUP_CONFIG).map(([groupKey, groupInfo]) => {
-          const caps = grouped[groupKey] ?? []
-          if (caps.length === 0) return null
-          const Icon = groupInfo.icon
-          const workingInGroup = caps.filter((c) => c.status === 'working').length
+          {Object.entries(GROUP_CONFIG).map(([groupKey, groupInfo]) => {
+            const caps = grouped[groupKey] ?? []
+            if (caps.length === 0) return null
+            const Icon = groupInfo.icon
+            const workingInGroup = caps.filter((c) => c.status === 'working').length
 
           return (
             <section key={groupKey}>

@@ -17,7 +17,8 @@ READ THIS FILE FIRST.
   handling for `GENX_BASE_URL` and `GENX_API_URL`, canonical Hugging Face
   auth-alias alignment across provider config and specialist execution, and
   focused research-route contract alignment across Brain and admin research
-  surfaces.
+  surfaces. Dashboard backend connections now prefer canonical runtime truth for
+  capabilities, jobs, and artifacts where those APIs already exist.
 - **Working:** One Brain, one capability router, six providers, canonical jobs,
   artifacts, adult policy, signed connected-app execution, external Brain
   media polling by local job id, and GenX discovery candidates from the existing
@@ -68,6 +69,11 @@ Current operator truth:
   Apps, Jobs, Artifacts, and Settings
 - `/admin/dashboard/providers` may remain reachable as a legacy diagnostic page,
   but it is not canonical V1 navigation
+- `/admin/dashboard/capabilities` now reads canonical capability/runtime truth
+  from `/api/admin/system/ai-capabilities-truth`
+- `/admin/dashboard/jobs` now reads the canonical `/api/admin/jobs` surface
+- `/admin/dashboard/artifacts` continues to read the canonical
+  `/api/admin/artifacts` surface
 - Canonical Brain local async media polling currently supports GenX, Qwen, and
   Together
 - Canonical GenX provider truth is conservative: chat, reasoning, coding,
@@ -130,6 +136,9 @@ Current operator truth:
 - Research remains partially proven overall: Brain research routing, website
   scraping, and artifact reporting are locally proven; live provider-backed or
   deeper multi-agent research completion is still unproven
+- Dashboard backend parity remains partial overall: Providers is still legacy
+  diagnostics, and some Settings/Studio data still combine canonical runtime
+  truth with compatibility-layer projections
 
 Never:
 

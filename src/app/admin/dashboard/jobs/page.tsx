@@ -102,7 +102,7 @@ export default function JobsPage() {
   const load = async () => {
     setRefreshing(true)
     try {
-      const res = await fetch('/api/admin/system/jobs')
+      const res = await fetch('/api/admin/jobs')
       const data = await res.json()
       // Accept various response shapes
       const jobList = Array.isArray(data.jobs) ? data.jobs : []
