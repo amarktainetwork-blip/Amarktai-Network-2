@@ -42,6 +42,27 @@ presence, or theoretical support alone is insufficient.
   treats that as chat connectivity proof only.
 - PR #113 recorded persisted playable TTS artifacts through Together, Groq, and
   MiMo.
+- Together auth currently depends on `TOGETHER_API_KEY`.
+- Together image uses the native `/images/generations` route, not chat
+  completions.
+- Together video uses canonical Brain local async polling through
+  `/api/brain/media-jobs/:jobId` and persists canonical artifacts locally when
+  provider polling completes.
+- Together TTS, STT, embeddings, and rerank have runtime adapters, but remain
+  conservative `partial` rows until live proof upgrades them.
+- Together does not currently claim music, translation, documents, OCR,
+  voice-clone, or adult-family provider truth in the canonical provider layer.
+- Qwen auth accepts both `QWEN_API_KEY` and `DASHSCOPE_API_KEY`.
+- Qwen uses compatible-mode chat plus AIGC image/video endpoint families.
+- Qwen free-quota routing truth exists in canonical scoring through
+  `QWEN_PAID_ENABLED`; models flagged outside free quota are excluded unless the
+  paid gate is enabled.
+- Free-token-only operation must keep `QWEN_PAID_ENABLED` unset or `false`.
+- Qwen canonical Brain local async media polling exists for Wanx task-based
+  media jobs.
+- Qwen chat remains `working` here, while reasoning, coding, vision, OCR,
+  image, video, image-to-video, embeddings, and translation remain conservative
+  `partial` rows without upgraded live proof.
 - `partial` means a route, adapter, or provider declaration exists in canonical
   V1 code, but live proof is insufficient to call it working.
 - Adult rows remain `unknown` at provider level because adult is a Brain policy

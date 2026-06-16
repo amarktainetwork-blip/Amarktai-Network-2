@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
     getGenXJobStatus: vi.fn(),
     persistCanonicalMediaResult: vi.fn(),
     togetherPoll: vi.fn(),
+    pollQwenWanxTask: vi.fn(),
   }
 })
 
@@ -39,6 +40,10 @@ vi.mock('@/lib/genx-client', async (importOriginal) => {
 
 vi.mock('@/lib/canonical-media-artifact', () => ({
   persistCanonicalMediaResult: mocks.persistCanonicalMediaResult,
+}))
+
+vi.mock('@/lib/qwen-wanx-polling', () => ({
+  pollQwenWanxTask: mocks.pollQwenWanxTask,
 }))
 
 vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
@@ -186,6 +191,57 @@ describe('local media job lifecycle', () => {
       status: 'completed',
       artifactId: 'artifact-together-1',
       mediaUrl: '/api/admin/artifacts/artifact-together-1/content',
+    })
+    expect(localMediaJobResponse(completed!)).toMatchObject({
+      pollUrl: '/api/brain/media-jobs/local-media-job-1',
+      providerJobId: 'together-job-2',
+      videoUrl: '/api/admin/artifacts/artifact-together-1/content',
+    })
+  })
+
+  it('polls Qwen async media jobs through the canonical Brain local job surface', async () => {
+    createLocalMediaJob({
+      capability: 'video_generation',
+      appSlug: 'amarktai-network',
+      type: 'video',
+      subType: 'video_generation',
+      title: 'Qwen Video',
+      prompt: 'City flyover',
+      provider: 'qwen',
+      model: 'wan2.1-t2v-turbo',
+      providerJobId: 'qwen-wan:task-2',
+    })
+    mocks.pollQwenWanxTask.mockResolvedValue({
+      ok: true,
+      executed: true,
+      provider: 'qwen',
+      model: 'wan2.1-t2v-turbo',
+      capability: 'text_to_image_poll',
+      latencyMs: 11,
+      contentType: 'application/json',
+      json: {
+        output: {
+          task_status: 'SUCCEEDED',
+          video_url: 'https://cdn.example/qwen-task.mp4',
+        },
+      },
+    })
+    mocks.persistCanonicalMediaResult.mockResolvedValue({
+      artifactId: 'artifact-qwen-1',
+      storageUrl: '/api/admin/artifacts/artifact-qwen-1/content',
+      mediaUrl: '/api/admin/artifacts/artifact-qwen-1/content',
+    })
+
+    const completed = await pollLocalMediaJob('local-media-job-1')
+
+    expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
+      taskId: 'task-2',
+      model: 'wan2.1-t2v-turbo',
+    })
+    expect(completed).toMatchObject({
+      status: 'completed',
+      artifactId: 'artifact-qwen-1',
+      mediaUrl: '/api/admin/artifacts/artifact-qwen-1/content',
     })
   })
 

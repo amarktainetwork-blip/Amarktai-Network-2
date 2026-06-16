@@ -178,6 +178,26 @@ endpoint. Hugging Face discovery includes public model/task metadata,
 inference-provider mappings, and separately configured private or dedicated
 endpoints.
 
+Free-token-only operation must keep `QWEN_PAID_ENABLED` unset or explicitly set
+to `false`. Paid Qwen routing is disabled by default and only turns on when
+`QWEN_PAID_ENABLED=true` exactly.
+
+Qwen currently has canonical auth alias support for both `QWEN_API_KEY` and
+`DASHSCOPE_API_KEY`, canonical discovery through the DashScope catalog,
+compatible-mode chat/reasoning/coding paths, AIGC image/video generation paths,
+embeddings support, and canonical Brain local async polling for Wanx task-based
+media jobs. Qwen chat is proven in the current conservative matrix; reasoning,
+coding, vision, OCR, image, video, image-to-video, embeddings, and translation
+remain partial until further live proof upgrades them.
+
+Together currently has canonical auth through `TOGETHER_API_KEY`, dynamic model
+discovery from its provider catalog, native image generation through
+`/images/generations`, native video generation through `/videos`, canonical
+Brain local async video polling through `/api/brain/media-jobs/:jobId`, and
+artifact persistence after local Brain polling completion. TTS, STT,
+embeddings, and rerank adapters exist but remain partial until further live
+proof upgrades them.
+
 PR #117 promoted this layer to production execution truth. The compatibility
 `orchestrate()` export now delegates to canonical capability execution. Its old
 provider/model routing body was deleted. Provider-native adapters receive the

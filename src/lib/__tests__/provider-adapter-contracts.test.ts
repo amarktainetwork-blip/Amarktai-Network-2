@@ -7,13 +7,20 @@ const mocks = vi.hoisted(() => ({
   getServiceKey: vi.fn(),
   callGenXMedia: vi.fn(),
   getGenXJobStatus: vi.fn(),
+  pollQwenWanxTask: vi.fn(),
 }))
 
 vi.mock('@/lib/brain', () => ({
   getVaultApiKey: mocks.getVaultApiKey,
   callProvider: vi.fn(),
 }))
-vi.mock('@/lib/service-vault', () => ({ getServiceKey: mocks.getServiceKey }))
+vi.mock('@/lib/service-vault', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/service-vault')>()
+  return {
+    ...actual,
+    getServiceKey: mocks.getServiceKey,
+  }
+})
 vi.mock('@/lib/genx-client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/genx-client')>()
   return {
@@ -22,13 +29,14 @@ vi.mock('@/lib/genx-client', async (importOriginal) => {
     getGenXJobStatus: mocks.getGenXJobStatus,
   }
 })
-vi.mock('@/lib/qwen-wanx-polling', () => ({ pollQwenWanxTask: vi.fn() }))
+vi.mock('@/lib/qwen-wanx-polling', () => ({ pollQwenWanxTask: mocks.pollQwenWanxTask }))
 
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import {
   getProviderCapabilityAdapter,
   providerHasCanonicalPollingContract,
 } from '@/lib/ai-capability-adapters'
+import { getIntegrationKey } from '@/lib/provider-config'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
 
@@ -84,6 +92,47 @@ describe('provider adapter contracts', () => {
     expect(init.headers).toMatchObject({ Authorization: 'Bearer provider-secret' })
   })
 
+  it('normalizes DashScope aliases and preserves Qwen auth/env truth', () => {
+    const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
+
+    expect(getIntegrationKey('dashscope')).toBe('qwen')
+    expect(getIntegrationKey('qwen')).toBe('qwen')
+    expect(qwen.envAliases).toEqual(expect.arrayContaining(['QWEN_API_KEY', 'DASHSCOPE_API_KEY']))
+    expect(qwen.billing).toMatchObject({
+      plan: 'standard_free_quota',
+      freeQuotaEligible: true,
+      paidEnabledEnv: 'QWEN_PAID_ENABLED',
+    })
+  })
+
+  it('represents Qwen chat and reasoning while leaving unsupported families out of provider truth', () => {
+    const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
+
+    expect(qwen.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'vision',
+      'ocr',
+      'image',
+      'video',
+      'image_to_video',
+      'embeddings',
+      'translation',
+    ]))
+    expect(qwen.capabilities).not.toEqual(expect.arrayContaining([
+      'music',
+      'tts',
+      'stt',
+      'voice_clone',
+      'adult_text',
+      'adult_image',
+      'adult_video',
+      'documents',
+      'agents',
+    ]))
+  })
+
   it('uses Together image generations rather than chat completions', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       data: [{ url: 'https://cdn.example/together.png' }],
@@ -97,6 +146,41 @@ describe('provider adapter contracts', () => {
     expect(result.status).toBe('completed')
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.together.ai/v1/images/generations')
     expect(fetchMock.mock.calls[0][0]).not.toContain('chat/completions')
+  })
+
+  it('represents Together provider truth conservatively around supported and unsupported families', () => {
+    const together = PROVIDER_TRUTH.find((provider) => provider.id === 'together')!
+
+    expect(together.envAliases).toEqual(['TOGETHER_API_KEY'])
+    expect(together.capabilities).toEqual(expect.arrayContaining([
+      'chat',
+      'reasoning',
+      'coding',
+      'image',
+      'video',
+      'image_to_video',
+      'tts',
+      'stt',
+      'vision',
+      'embeddings',
+      'rerank',
+      'agents',
+    ]))
+    expect(together.capabilities).not.toEqual(expect.arrayContaining([
+      'music',
+      'translation',
+      'documents',
+      'adult_text',
+      'adult_image',
+      'adult_video',
+      'voice_clone',
+      'ocr',
+    ]))
+    expect(together.features).toMatchObject({
+      asyncJobs: true,
+      artifactSupport: true,
+      streaming: true,
+    })
   })
 
   it('uses the api-key header for MiMo OpenAI-compatible calls', async () => {
@@ -165,6 +249,38 @@ describe('provider adapter contracts', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       mediaUrl: 'https://cdn.example/video.mp4',
+    })
+  })
+
+  it('polls Qwen Wanx tasks through the canonical adapter contract', async () => {
+    mocks.pollQwenWanxTask.mockResolvedValue({
+      ok: true,
+      executed: true,
+      provider: 'qwen',
+      model: 'wan2.1-t2v-turbo',
+      capability: 'text_to_image_poll',
+      latencyMs: 12,
+      contentType: 'application/json',
+      json: {
+        output: {
+          task_status: 'SUCCEEDED',
+          video_url: 'https://cdn.example/qwen-video.mp4',
+        },
+      },
+    })
+
+    const adapter = getProviderCapabilityAdapter('qwen')!
+    const input = adapterInput('text_to_video', 'qwen', 'wan2.1-t2v-turbo')
+    const completed = await adapter.poll!('qwen-task-1', input)
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      providerJobId: 'qwen-task-1',
+      mediaUrl: 'https://cdn.example/qwen-video.mp4',
+    })
+    expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
+      taskId: 'qwen-task-1',
+      model: 'wan2.1-t2v-turbo',
     })
   })
 

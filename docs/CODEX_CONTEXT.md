@@ -71,6 +71,18 @@ Current operator truth:
   Hugging Face, Together, Groq, GenX, Qwen, and MiMo
 - App-facing callers remain capability-only and cannot choose provider, model,
   or endpoint
+- Qwen auth aliases are `QWEN_API_KEY` and `DASHSCOPE_API_KEY`
+- Qwen free-quota gating exists in canonical scoring through
+  `QWEN_PAID_ENABLED`
+- Keep `QWEN_PAID_ENABLED` unset or `false` for free-token-only operation
+- Qwen Wanx async media jobs poll canonically through Brain local media job URLs
+- Keep Qwen non-chat capability proof conservative unless live proof upgrades it
+- Together auth alias is `TOGETHER_API_KEY`
+- Together image uses the native provider image generation route
+- Together video polls canonically through Brain local media job URLs and local
+  artifact persistence
+- Keep Together non-image/video capability proof conservative unless live proof
+  upgrades it
 
 Never:
 

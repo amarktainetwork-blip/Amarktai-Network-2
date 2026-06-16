@@ -279,6 +279,15 @@ describe('Phase 1 provider truth layer', () => {
       profile: getRoutingProfile('balanced'),
     })).toBeNull()
 
+    process.env.QWEN_PAID_ENABLED = 'false'
+    expect(scoreProviderModel({
+      provider,
+      model,
+      capability,
+      health,
+      profile: getRoutingProfile('balanced'),
+    })).toBeNull()
+
     expect(scoreProviderModel({
       provider,
       model: { ...model, raw: { free_quota_eligible: true } },
