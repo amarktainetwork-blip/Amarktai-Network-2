@@ -8,11 +8,14 @@
   discovery without changing the final Brain architecture.
 - **Completed:** Added the dynamic model-metadata/provider-contract evidence
   ladder, task-filtered Hugging Face discovery, current Together native
-  adapters, canonical dashboard planning, dynamic provider diagnostics, and
-  Brain media polling recovery for async provider jobs.
+  adapters, canonical dashboard planning, dynamic provider diagnostics, Brain
+  media polling recovery for async provider jobs, and a GitHub-tracked GenX
+  static runtime catalog fallback when live GenX model discovery fails.
 - **Working:** The canonical Brain, provider truth, jobs, artifacts, policy,
   signed connected-app entry, six-provider boundary, dashboard build, full PR
-  #118 repository test suite, and external Brain polling by local media job id.
+  #118 repository test suite, external Brain polling by local media job id, and
+  GenX discovery candidates from the existing runtime catalog when
+  `/api/v1/models` is unavailable.
 - **Partial:** Live provider execution proof, token-level streaming, research,
   long-form composition, avatar, music, advanced MiMo voice/omni families, and
   the 2026-06-16 VPS smoke proof for GenX image artifact completion.
@@ -20,13 +23,17 @@
   without task tags produced empty route candidates. Studio also preselected
   from an obsolete static route layer and passed rejected overrides. External
   media-job polling returned Unauthorized before the 2026-06-16 follow-up.
+  VPS-local GenX discovery fallback existed outside GitHub until this follow-up.
 - **Proof:** TypeScript passed; 40 suites and 496 tests passed; production build
-  passed with 183 pages in PR #118. The 2026-06-16 follow-up was pushed to
-  GitHub, but this environment could not install dependencies or curl the live
-  deployment, so VPS smoke proof is still required before claiming GenX image
-  completion.
-- **Next Step:** Deploy the branch on the VPS, start a GenX image job, poll the
-  returned Brain `pollUrl`, and confirm completed artifact/media output.
+  passed with 183 pages in PR #118. The VPS transcript proves the focused media
+  contract test and build passed before the GenX fallback was moved into
+  GitHub. The fallback commit still requires VPS test/build proof, and public
+  smoke is blocked until the correct web process is restarted instead of the
+  missing `amarktai-web.service` unit.
+- **Next Step:** Preserve dirty VPS provider/orchestrator changes, pull the
+  branch, identify the correct web process, restart it, start a GenX image job,
+  poll the returned Brain `pollUrl`, and confirm completed artifact/media
+  output.
 
 **The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
 
@@ -466,6 +473,9 @@ APP
 
 Async media jobs returned by the Brain must expose a Brain `pollUrl` and a local
 Brain `jobId`. Apps must poll the Brain URL, not raw provider job endpoints.
+GenX discovery uses live `/api/v1/models` first and may fall back to the
+existing runtime catalog as provider-contract evidence if live discovery fails;
+that fallback creates routing candidates only, not execution proof.
 
 Read [`docs/CODEX_CONTEXT.md`](docs/CODEX_CONTEXT.md) first when starting a new
 AI implementation session.
