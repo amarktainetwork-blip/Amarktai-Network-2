@@ -1,13 +1,5 @@
-import { getServiceKey } from '@/lib/service-vault'
+import { getProviderKey } from '@/lib/provider-config'
 import type { SpecialistResult } from '@/lib/specialist-provider-routes'
-
-async function firstKey(provider: string, envVars: string[]) {
-  for (const envVar of envVars) {
-    const key = await getServiceKey(provider, envVar)
-    if (key) return key.trim().replace(/^Bearer\s+/i, '')
-  }
-  return null
-}
 
 export async function pollQwenWanxTask(params: {
   taskId: string
@@ -15,7 +7,7 @@ export async function pollQwenWanxTask(params: {
   timeoutMs?: number
 }): Promise<SpecialistResult> {
   const startedAt = Date.now()
-  const key = await firstKey('qwen', ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'])
+  const key = (await getProviderKey('qwen'))?.trim().replace(/^Bearer\s+/i, '') ?? null
   const model = params.model ?? 'wanx2.1-t2i-turbo'
 
   if (!key) {

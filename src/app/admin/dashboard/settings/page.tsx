@@ -14,6 +14,7 @@ import {
   TestTube2,
 } from 'lucide-react'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
+import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { settingsRuntimeTools } from '@/lib/settings-runtime-tools'
 import {
   DashboardMetricCard,
@@ -49,13 +50,13 @@ type RoutingPolicy = {
   connectedApps: 'cheap' | 'balanced' | 'premium' | 'auto'
 }
 
-const PROVIDER_DOCS: Record<string, { url: string; hint: string }> = {
-  genx: { url: 'https://query.genx.sh', hint: 'Text, image, video, audio, music, avatar, TTS, and STT' },
-  huggingface: { url: 'https://huggingface.co/settings/tokens', hint: 'Text, image, audio, STT, embeddings, and specialist models' },
-  qwen: { url: 'https://dashscope.aliyuncs.com', hint: 'Text, image, video, audio, embeddings, and async jobs' },
-  mimo: { url: 'https://api.xiaomimimo.com', hint: 'Text, reasoning, vision, audio, TTS, STT, and web search' },
-  groq: { url: 'https://console.groq.com/keys', hint: 'Fast text, reasoning, STT, and TTS' },
-  together: { url: 'https://api.together.xyz/settings/api-keys', hint: 'Text, image, embeddings, reranking, and open models' },
+const PROVIDER_DOCS: Record<string, { url: string }> = {
+  genx: { url: 'https://query.genx.sh' },
+  huggingface: { url: 'https://huggingface.co/settings/tokens' },
+  qwen: { url: 'https://dashscope.aliyuncs.com' },
+  mimo: { url: 'https://api.xiaomimimo.com' },
+  groq: { url: 'https://console.groq.com/keys' },
+  together: { url: 'https://api.together.xyz/settings/api-keys' },
 }
 
 export default function SettingsPage() {
@@ -499,7 +500,7 @@ function ProviderConnectionCard({
         <div>
           <p className="font-black text-slate-100">{entry.label}</p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            {docs?.hint ?? `Unlocks ${entry.unlocks}.`}
+            {canonicalProviderHint(entry)}
           </p>
         </div>
         <DashboardStatusBadge value={ready ? 'ready' : failed ? 'failed' : entry.configured ? 'partial' : 'unavailable'} map={{ ready: { label: 'ready', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, partial: { label: 'needs test', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unavailable: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
@@ -569,6 +570,29 @@ function ProviderConnectionCard({
       </div>
     </article>
   )
+}
+
+function canonicalProviderHint(entry: SettingsTruthEntry) {
+  const truth = PROVIDER_TRUTH.find((provider) => provider.id === entry.key)
+  if (!truth) return `Unlocks ${entry.unlocks}.`
+  return `Canonical: ${humanList(truth.capabilities.map(formatCapabilityLabel))}.`
+}
+
+function formatCapabilityLabel(value: string) {
+  const map: Record<string, string> = {
+    tts: 'TTS',
+    stt: 'STT',
+    image_to_video: 'image-to-video',
+  }
+  if (map[value]) return map[value]
+  return value.replaceAll('_', ' ')
+}
+
+function humanList(values: string[]) {
+  if (values.length === 0) return 'capability routes unavailable'
+  if (values.length === 1) return values[0]
+  if (values.length === 2) return `${values[0]} and ${values[1]}`
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`
 }
 
 function StatusPill({

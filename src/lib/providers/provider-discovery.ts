@@ -2,6 +2,7 @@ import {
   GENX_AUDIO_MODELS,
   GENX_IMAGE_MODELS,
   GENX_TTS_MODELS,
+  normalizeGenXBaseUrl,
 } from '@/lib/genx-client'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
@@ -301,20 +302,7 @@ function resolveGenXEndpointBaseUrl(
 }
 
 function normalizeGenxBaseUrl(raw: string): string {
-  try {
-    const url = new URL(raw)
-    if (url.hostname === 'genx.sh') url.hostname = 'query.genx.sh'
-    const path = url.pathname
-      .replace(/\/api\/v1\/models\/?$/, '')
-      .replace(/\/v1\/models\/?$/, '')
-      .replace(/\/api\/v1\/?$/, '')
-      .replace(/\/v1\/?$/, '')
-      .replace(/\/api\/?$/, '')
-      .replace(/\/$/, '')
-    return `${url.origin}${path}`
-  } catch {
-    return raw.replace(/\/+$/, '')
-  }
+  return normalizeGenXBaseUrl(raw) ?? raw.replace(/\/+$/, '')
 }
 
 function resolveDiscoveryUrl(

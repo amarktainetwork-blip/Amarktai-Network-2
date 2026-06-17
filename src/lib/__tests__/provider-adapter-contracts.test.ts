@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   getVaultApiKey: vi.fn(),
   getServiceKey: vi.fn(),
+  getMeshCredential: vi.fn(),
   callGenXMedia: vi.fn(),
   getGenXJobStatus: vi.fn(),
   pollQwenWanxTask: vi.fn(),
@@ -19,6 +20,13 @@ vi.mock('@/lib/service-vault', async (importOriginal) => {
   return {
     ...actual,
     getServiceKey: mocks.getServiceKey,
+  }
+})
+vi.mock('@/lib/provider-mesh-status', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/provider-mesh-status')>()
+  return {
+    ...actual,
+    getMeshCredential: mocks.getMeshCredential,
   }
 })
 vi.mock('@/lib/genx-client', async (importOriginal) => {
@@ -36,7 +44,7 @@ import {
   getProviderCapabilityAdapter,
   providerHasCanonicalPollingContract,
 } from '@/lib/ai-capability-adapters'
-import { getEnvKeyForProvider, getIntegrationKey } from '@/lib/provider-config'
+import { getEnvKeyForProvider, getIntegrationKey, getProviderKey } from '@/lib/provider-config'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
@@ -69,6 +77,7 @@ describe('provider adapter contracts', () => {
     vi.clearAllMocks()
     mocks.getVaultApiKey.mockResolvedValue('provider-secret')
     mocks.getServiceKey.mockResolvedValue('mimo-secret')
+    mocks.getMeshCredential.mockResolvedValue('provider-secret')
   })
 
   afterEach(() => vi.unstubAllGlobals())
@@ -104,6 +113,10 @@ describe('provider adapter contracts', () => {
       freeQuotaEligible: true,
       paidEnabledEnv: 'QWEN_PAID_ENABLED',
     })
+    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("getProviderKey('qwen')")
+    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("getVaultApiKey('qwen')")
+    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("proofType: 'chat_route_probe'")
+    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain('capabilityExecutionProven: false')
   })
 
   it('preserves Groq auth/env truth conservatively', () => {
@@ -113,6 +126,8 @@ describe('provider adapter contracts', () => {
     expect(getIntegrationKey('groq')).toBe('groq')
     expect(getEnvKeyForProvider('groq')).toBe('groq-env-token')
     expect(groq.envAliases).toEqual(['GROQ_API_KEY'])
+    expect(source('src/app/api/admin/settings/test-groq/route.ts')).toContain("proofType: 'key_and_model_catalog_check'")
+    expect(source('src/app/api/admin/settings/test-groq/route.ts')).toContain('capabilityExecutionProven: false')
   })
 
   it('represents Qwen chat and reasoning while leaving unsupported families out of provider truth', () => {
@@ -191,6 +206,8 @@ describe('provider adapter contracts', () => {
       artifactSupport: true,
       streaming: true,
     })
+    expect(source('src/app/api/admin/settings/test-together/route.ts')).toContain("proofType: 'key_and_model_catalog_check'")
+    expect(source('src/app/api/admin/settings/test-together/route.ts')).toContain('capabilityExecutionProven: false')
   })
 
   it('uses the api-key header for MiMo OpenAI-compatible calls', async () => {
@@ -218,6 +235,7 @@ describe('provider adapter contracts', () => {
     expect(getIntegrationKey('mimo')).toBe('mimo')
     expect(getEnvKeyForProvider('mimo')).toBe('mimo-env-token')
     expect(mimo.envAliases).toEqual(['MIMO_API_KEY', 'XIAOMI_API_KEY'])
+    expect(mimo.envAliases).not.toContain('MINIMAX_API_KEY')
     expect(mimo.capabilities).toEqual(expect.arrayContaining([
       'chat',
       'reasoning',
@@ -240,6 +258,36 @@ describe('provider adapter contracts', () => {
       toolCalling: false,
       artifactSupport: false,
     })
+    expect(source('src/lib/universal-provider-call.ts')).toContain("envVars: ['MIMO_API_KEY', 'XIAOMI_API_KEY']")
+    expect(source('src/lib/universal-provider-call.ts')).not.toContain('MINIMAX_API_KEY')
+    expect(source('src/lib/universal-provider-call.ts')).not.toContain('api.minimax.io')
+    expect(source('src/lib/universal-model-catalog.ts')).not.toContain("['chat', 'reasoning', 'coding', 'image']")
+  })
+
+  it('keeps the canonical provider list free of MiniMax', () => {
+    expect(PROVIDER_TRUTH.map((provider) => provider.id)).toEqual([
+      'huggingface',
+      'together',
+      'groq',
+      'genx',
+      'qwen',
+      'mimo',
+    ])
+    expect(source('src/lib/provider-mesh.ts')).not.toContain("id: 'minimax'")
+    expect(source('src/app/api/admin/settings/test-provider/route.ts')).not.toContain("id === 'minimax'")
+  })
+
+  it('reads a dashboard-saved GenX key through the same provider-key path Brain uses', async () => {
+    process.env.GENX_API_KEY = ''
+
+    expect(await getProviderKey('genx')).toBe('provider-secret')
+  })
+
+  it('reads a dashboard-saved Qwen key through the same provider-key path Brain uses', async () => {
+    process.env.QWEN_API_KEY = ''
+    process.env.DASHSCOPE_API_KEY = ''
+
+    expect(await getProviderKey('qwen')).toBe('provider-secret')
   })
 
   it('treats Hugging Face loading and 503 responses as retryable', async () => {
@@ -269,6 +317,7 @@ describe('provider adapter contracts', () => {
     process.env.HUGGINGFACE_API_KEY = ''
     process.env.HUGGINGFACEHUB_API_TOKEN = ''
     process.env.HF_TOKEN = 'hf-token-env'
+    mocks.getMeshCredential.mockResolvedValue('hf-token-from-vault')
     mocks.getServiceKey.mockImplementation(async (_provider: string, envVar: string) =>
       envVar === 'HF_TOKEN' ? 'hf-token-from-vault' : null,
     )
@@ -290,6 +339,30 @@ describe('provider adapter contracts', () => {
     expect(result.ok).toBe(true)
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       headers: expect.objectContaining({ Authorization: 'Bearer hf-token-from-vault' }),
+    })
+  })
+
+  it('keeps Hugging Face specialist execution on the canonical provider-key path', async () => {
+    process.env.HUGGINGFACE_API_KEY = ''
+    process.env.HUGGINGFACEHUB_API_TOKEN = ''
+    process.env.HF_TOKEN = ''
+    mocks.getMeshCredential.mockResolvedValue('hf-canonical-saved-key')
+
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await runHuggingFaceInference({
+      modelId: 'sentence-transformers/all-MiniLM-L6-v2',
+      inputs: 'hello',
+      capability: 'embeddings',
+    })
+
+    expect(result.ok).toBe(true)
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: 'Bearer hf-canonical-saved-key' }),
     })
   })
 
@@ -319,6 +392,16 @@ describe('provider adapter contracts', () => {
       status: 'completed',
       mediaUrl: 'https://cdn.example/video.mp4',
     })
+  })
+
+  it('keeps the GenX settings test scoped to catalog/chat probing rather than full capability proof', () => {
+    const genxTest = source('src/app/api/admin/settings/test-genx/route.ts')
+
+    expect(genxTest).toContain("proofType: 'catalog_and_chat_probe'")
+    expect(genxTest).toContain('capabilityExecutionProven: false')
+    expect(genxTest).toContain('catalogOk')
+    expect(genxTest).toContain('chatOk')
+    expect(genxTest).toContain('generateOk')
   })
 
   it('polls Qwen Wanx tasks through the canonical adapter contract', async () => {

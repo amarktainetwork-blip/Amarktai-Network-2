@@ -66,7 +66,6 @@ const PROHIBITED_DIRECT = new Set([
   'anthropic',
   'gemini',
   'deepseek',
-  'minimax',
   'replicate',
   'suno',
   'udio',

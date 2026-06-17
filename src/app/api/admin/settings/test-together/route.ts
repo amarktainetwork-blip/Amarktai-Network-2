@@ -2,6 +2,8 @@
  * POST /api/admin/settings/test-together
  *
  * Tests the Together AI API key by hitting the models list endpoint.
+ * This proves account/key and catalog reachability only. It does not prove
+ * image, video, TTS, STT, embeddings, or rerank execution.
  * Returns real results — never faked.
  */
 
@@ -39,16 +41,38 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const msg = res.status === 401 || res.status === 403 ? 'API key invalid or expired' : `Together AI returned HTTP ${res.status}`
-      return NextResponse.json({ success: false, error: msg, latencyMs, nextAction: 'Check the Together AI key in Settings' })
+      return NextResponse.json({
+        success: false,
+        error: msg,
+        latencyMs,
+        proofType: 'key_and_model_catalog_check',
+        capabilityExecutionProven: false,
+        nextAction: 'Check the Together AI key in Settings, then run a real capability route or provider-capability smoke for the required feature.',
+      })
     }
 
     const data = await res.json() as unknown[]
     const modelCount = Array.isArray(data) ? data.length : 0
 
-    return NextResponse.json({ success: true, modelCount, latencyMs })
+    return NextResponse.json({
+      success: true,
+      modelCount,
+      latencyMs,
+      proofType: 'key_and_model_catalog_check',
+      capabilityExecutionProven: false,
+      detail: 'Together key and model catalog check passed. Capability execution still requires a real route proof for image, video, audio, embeddings, or rerank.',
+      nextAction: 'Run a real Brain or provider-capability execution for the specific Together capability you want to mark ready.',
+    })
   } catch (err) {
     const latencyMs = Date.now() - start
     const message = err instanceof Error ? err.message : 'Connection failed'
-    return NextResponse.json({ success: false, error: message, latencyMs, nextAction: 'Check network connectivity and Together AI key' })
+    return NextResponse.json({
+      success: false,
+      error: message,
+      latencyMs,
+      proofType: 'key_and_model_catalog_check',
+      capabilityExecutionProven: false,
+      nextAction: 'Check network connectivity and the Together AI key, then run a real capability route for execution proof.',
+    })
   }
 }

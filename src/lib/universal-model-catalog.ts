@@ -146,8 +146,8 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('qwen', 'wan2.1-t2v-turbo', 'Wan Text to Video Turbo', 'Wan', ['video'], ['video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
   route('qwen', 'wan2.1-i2v-turbo', 'Wan Image to Video', 'Wan', ['video'], ['video', 'image_to_video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
 
-  route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
-  route('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding', 'image'], ['text', 'reasoning', 'code', 'vision', 'tools'], { costTier: 'premium', contextWindow: 128_000 }),
+  route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
+  route('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'premium', contextWindow: 128_000 }),
 
   route('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B on Groq', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'low', latencyTier: 'ultra_low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('groq', 'whisper-large-v3-turbo', 'Whisper Large v3 Turbo on Groq', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),

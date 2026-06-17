@@ -23,6 +23,11 @@ import {
 
 type AppOption = { slug: string; name: string }
 type SafetyPolicy = { safeMode: boolean; adultMode: boolean; suggestiveMode: boolean }
+type AdultCapabilityProfile = {
+  globalAvailable: boolean
+  capabilities: Record<string, boolean>
+  approvedProviders: string[]
+}
 type CapabilityTruth = {
   id: string
   readiness: string
@@ -87,6 +92,11 @@ export default function StudioPage() {
   const [apps, setApps] = useState<AppOption[]>([])
   const [appSlug, setAppSlug] = useState('amarktai-network')
   const [policy, setPolicy] = useState<SafetyPolicy>({ safeMode: true, adultMode: false, suggestiveMode: false })
+  const [adultProfile, setAdultProfile] = useState<AdultCapabilityProfile>({
+    globalAvailable: false,
+    capabilities: {},
+    approvedProviders: [],
+  })
   const [capabilityTruth, setCapabilityTruth] = useState<CapabilityTruth[]>([])
   const [task, setTask] = useState<(typeof TASKS)[number]['id']>('image')
   const [mode, setMode] = useState<'normal' | 'adult'>('normal')
@@ -146,6 +156,13 @@ export default function StudioPage() {
         safeMode: data.safeMode !== false,
         adultMode: Boolean(data.adultMode),
         suggestiveMode: Boolean(data.suggestiveMode),
+      })
+      setAdultProfile({
+        globalAvailable: Boolean(data.adultCapabilities?.globalAvailable),
+        capabilities: data.adultCapabilities?.capabilities ?? {},
+        approvedProviders: Array.isArray(data.adultCapabilities?.approvedProviders)
+          ? data.adultCapabilities.approvedProviders
+          : [],
       })
     }).catch(() => setPolicy({ safeMode: true, adultMode: false, suggestiveMode: false }))
   }, [appSlug])
@@ -320,8 +337,21 @@ export default function StudioPage() {
     if (capability.startsWith('adult_') && (policy.safeMode || !policy.adultMode)) {
       return 'Adult media requires explicit app opt-in with safe mode disabled.'
     }
+    if (capability.startsWith('adult_') && !adultProfile.globalAvailable) {
+      return 'Global adult mode availability is disabled.'
+    }
+    const governedCapability = adultCapabilityKey(capability)
+    if (governedCapability && adultProfile.capabilities[governedCapability] === false) {
+      return `${friendly(governedCapability)} is disabled for this app.`
+    }
+    if (capability.startsWith('adult_') && adultProfile.approvedProviders.length === 0) {
+      return 'No adult provider is approved for this app.'
+    }
+    if (capability === 'adult_video') {
+      return 'Adult video remains blocked until an approved provider exposes a canonical adult-video execution route.'
+    }
     return ''
-  }, [capability, policy])
+  }, [adultProfile, capability, policy])
   const isImage = capability.includes('image') || capability.includes('avatar')
   const isMusic = capability === 'music_generation'
   const isVoice = capability === 'tts' || capability === 'stt' || capability === 'adult_voice'
@@ -335,6 +365,10 @@ export default function StudioPage() {
       ? runtimeTruth.blocker || 'No implemented V1 adapter is available.'
       : runtimeTruth?.readiness === 'provider_config_missing'
         ? runtimeTruth.blocker || 'No configured provider can execute this capability.'
+        : runtimeTruth?.readiness === 'blocked'
+          ? runtimeTruth.blocker || 'This capability is policy-blocked.'
+          : runtimeTruth?.readiness === 'post_launch'
+            ? runtimeTruth.blocker || 'This capability is not launch-ready.'
         : ''
   const activeResultMessage = active ? resultMessage(active.result) : ''
   const activeAttempts = active ? resultAttempts(active.result) : []
@@ -548,6 +582,17 @@ function taxonomyCapability(capability: string) {
     suggestive_image: 'text_to_image',
   }
   return map[capability] ?? capability
+}
+
+function adultCapabilityKey(capability: string) {
+  const map: Record<string, string> = {
+    adult_text: 'adult_text',
+    adult_image: 'adult_image',
+    adult_voice: 'adult_voice',
+    adult_avatar: 'adult_avatar',
+    adult_video: 'adult_short_video',
+  }
+  return map[capability] ?? null
 }
 
 function friendly(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) }

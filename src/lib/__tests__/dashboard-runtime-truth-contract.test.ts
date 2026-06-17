@@ -95,4 +95,89 @@ describe('dashboard runtime truth contract', () => {
     expect(settings).toContain("fetch('/api/admin/settings/runtime-tools'")
     expect(settings).toContain("fetch('/api/admin/system/ai-capabilities-truth'")
   })
+
+  it('keeps Hugging Face readiness truthful by separating token checks from capability proof', () => {
+    const settings = source('src/app/api/admin/settings/test-huggingface/route.ts')
+    const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(settings).toContain('capabilityExecutionProven: false')
+    expect(settings).toContain('token/account check passed')
+    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps Together readiness truthful by separating model-catalog checks from capability proof', () => {
+    const together = source('src/app/api/admin/settings/test-together/route.ts')
+    const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(together).toContain('capabilityExecutionProven: false')
+    expect(together).toContain('model catalog check passed')
+    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps GenX readiness truthful by separating catalog/chat probes from Brain-route proof', () => {
+    const genx = source('src/app/api/admin/settings/test-genx/route.ts')
+    const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(genx).toContain('capabilityExecutionProven: false')
+    expect(genx).toContain('catalog and direct chat probe passed')
+    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps Qwen readiness truthful by separating chat probes from capability-specific route proof', () => {
+    const qwen = source('src/app/api/admin/settings/test-qwen/route.ts')
+    const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(qwen).toContain('capabilityExecutionProven: false')
+    expect(qwen).toContain('chat probe passed')
+    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps Hugging Face task proof on specialist/admin surfaces instead of pretending Brain route readiness', () => {
+    const capabilityTest = source('src/app/api/admin/provider-capability-test/route.ts')
+    const hfTest = source('src/app/api/admin/settings/test-huggingface/route.ts')
+    const imageEdit = source('src/app/api/brain/image-edit/route.ts')
+    const adultImage = source('src/app/api/brain/adult-image/route.ts')
+
+    expect(hfTest).toContain("proofType: 'account_token_check'")
+    expect(capabilityTest).toContain("provider === 'huggingface'")
+    expect(capabilityTest).toContain('needs_specialist_route')
+    expect(imageEdit).toContain("capability: 'image_edit'")
+    expect(adultImage).toContain("capability: 'adult_image'")
+  })
+
+  it('keeps Groq readiness truthful by separating model-catalog checks from Brain route proof', () => {
+    const groq = source('src/app/api/admin/settings/test-groq/route.ts')
+    const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+    const tts = source('src/app/api/brain/tts/route.ts')
+    const stt = source('src/app/api/brain/stt/route.ts')
+
+    expect(groq).toContain('capabilityExecutionProven: false')
+    expect(groq).toContain('model catalog check passed')
+    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(tts).toContain("capability: body.capability === 'adult_voice' ? 'adult_voice' : 'tts'")
+    expect(stt).toContain("capability: 'stt'")
+  })
+
+  it('keeps Xiaomi MiMo distinct from MiniMax across runtime and settings surfaces', () => {
+    const providerMesh = source('src/lib/provider-mesh.ts')
+    const universalProvider = source('src/lib/universal-provider-call.ts')
+    const testProvider = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(providerMesh).toContain("displayName: 'Xiaomi MiMo'")
+    expect(providerMesh).not.toContain('MiniMax')
+    expect(universalProvider).toContain("providerKey: 'mimo'")
+    expect(universalProvider).not.toContain('MINIMAX_API_KEY')
+    expect(universalProvider).not.toContain('api.minimax.io')
+    expect(testProvider).toContain("id === 'mimo'")
+  })
+
+  it('keeps Studio adult blockers tied to app safety truth instead of provider-choice UI', () => {
+    const studio = source('src/app/admin/dashboard/studio/page.tsx')
+
+    expect(studio).toContain('adultCapabilities?.globalAvailable')
+    expect(studio).toContain('adultCapabilities?.approvedProviders')
+    expect(studio).toContain('adultCapabilityKey(capability)')
+    expect(studio).not.toContain('Provider override')
+    expect(studio).not.toContain('Model override')
+  })
 })

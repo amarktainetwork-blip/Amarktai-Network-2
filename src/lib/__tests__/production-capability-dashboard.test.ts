@@ -85,6 +85,111 @@ describe('production capability and dashboard contract', () => {
     expect(providers).toContain('Legacy diagnostics')
   })
 
+  it('keeps Settings provider cards aligned with canonical provider truth instead of stale marketing copy', () => {
+    const settings = source('src/app/admin/dashboard/settings/page.tsx')
+
+    expect(settings).toContain('canonicalProviderHint(entry)')
+    expect(settings).toContain('PROVIDER_TRUTH.find')
+    expect(settings).not.toContain('Text, image, video, audio, music, avatar, TTS, and STT')
+    expect(settings).not.toContain('Text, reasoning, vision, audio, TTS, STT, and web search')
+    expect(settings).not.toContain('Text, image, video, audio, embeddings, and async jobs')
+  })
+
+  it('does not treat the Hugging Face account-token check as capability execution proof', () => {
+    const hfTest = source('src/app/api/admin/settings/test-huggingface/route.ts')
+    const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(hfTest).toContain("proofType: 'account_token_check'")
+    expect(hfTest).toContain('capabilityExecutionProven: false')
+    expect(hfTest).toContain('provider-capability test')
+    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('does not treat the Together model-catalog check as full capability execution proof', () => {
+    const togetherTest = source('src/app/api/admin/settings/test-together/route.ts')
+    const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(togetherTest).toContain("proofType: 'key_and_model_catalog_check'")
+    expect(togetherTest).toContain('capabilityExecutionProven: false')
+    expect(togetherTest).toContain('real route proof')
+    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('does not treat the GenX catalog/chat probe as full capability execution proof', () => {
+    const genxTest = source('src/app/api/admin/settings/test-genx/route.ts')
+    const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(genxTest).toContain("proofType: 'catalog_and_chat_probe'")
+    expect(genxTest).toContain('capabilityExecutionProven: false')
+    expect(genxTest).toContain('real Brain/runtime route proof')
+    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('does not treat the Qwen chat probe as full capability execution proof', () => {
+    const qwenTest = source('src/app/api/admin/settings/test-qwen/route.ts')
+    const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(qwenTest).toContain("proofType: 'chat_route_probe'")
+    expect(qwenTest).toContain('capabilityExecutionProven: false')
+    expect(qwenTest).toContain('Image, video/Wanx, image-to-video, embeddings, and translation still require their own Brain/runtime route proof.')
+    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps Hugging Face task-based specialist proofs separate from Brain product-route readiness', () => {
+    const capabilityTest = source('src/app/api/admin/provider-capability-test/route.ts')
+    const hfSpecialist = source('src/app/api/admin/specialist/huggingface/route.ts')
+    const matrix = source('src/lib/brain/v1-capability-matrix.ts')
+
+    expect(capabilityTest).toContain("provider === 'huggingface'")
+    expect(capabilityTest).toContain('needs_specialist_route')
+    expect(hfSpecialist).toContain('runHuggingFaceInference')
+    expect(matrix).toContain('is available through Hugging Face task models but is not wired into the capability gateway.')
+    expect(matrix).toContain('The honest endpoint exists, but no approved source-image provider adapter is wired.')
+  })
+
+  it('does not treat the Groq model-catalog check as full capability execution proof', () => {
+    const groqTest = source('src/app/api/admin/settings/test-groq/route.ts')
+    const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+
+    expect(groqTest).toContain("proofType: 'key_and_model_catalog_check'")
+    expect(groqTest).toContain('capabilityExecutionProven: false')
+    expect(groqTest).toContain('chat, TTS, or STT')
+    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+  })
+
+  it('keeps MiniMax out of canonical provider and settings surfaces while preserving Xiaomi MiMo only', () => {
+    const settings = source('src/app/admin/dashboard/settings/page.tsx')
+    const providerMesh = source('src/lib/provider-mesh.ts')
+    const integrationKeys = source('src/app/api/admin/integration-keys/route.ts')
+
+    expect(providerMesh).toContain("displayName: 'Xiaomi MiMo'")
+    expect(providerMesh).not.toContain('MiniMax')
+    expect(integrationKeys).toContain("displayName: 'Xiaomi MiMo'")
+    expect(integrationKeys).not.toContain('MINIMAX_API_KEY')
+    expect(settings).not.toContain('MiniMax')
+  })
+
+  it('does not advertise Hugging Face image generation as executable from Studio unless the route is actually wired', () => {
+    const studio = source('src/app/admin/dashboard/studio/page.tsx')
+    const matrix = source('src/lib/brain/v1-capability-matrix.ts')
+
+    expect(studio).toContain("fetch('/api/admin/system/v1-brain-route-matrix'")
+    expect(matrix).toContain('The honest endpoint exists, but no approved source-image provider adapter is wired.')
+    expect(matrix).toContain('Text to Image')
+  })
+
+  it('keeps Studio capability-first and shows honest blockers for governed adult or blocked routes', () => {
+    const studio = source('src/app/admin/dashboard/studio/page.tsx')
+    const studioRoute = source('src/app/api/admin/studio/execute/route.ts')
+
+    expect(studio).toContain('adultCapabilityKey(capability)')
+    expect(studio).toContain('No adult provider is approved for this app.')
+    expect(studio).toContain('Adult video remains blocked until an approved provider exposes a canonical adult-video execution route.')
+    expect(studio).toContain("runtimeTruth?.readiness === 'blocked'")
+    expect(studio).toContain("runtimeTruth?.readiness === 'post_launch'")
+    expect(studioRoute).toContain('musicStudioPost')
+  })
+
   it('exposes approved-provider diagnostics and a guarded hard reset', () => {
     const diagnostics = source('src/app/api/admin/system/provider-diagnostics/route.ts')
     const reset = source('src/app/api/admin/system/hard-reset/route.ts')

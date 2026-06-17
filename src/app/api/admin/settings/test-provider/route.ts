@@ -94,11 +94,16 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now()
   try {
     const result = await runExistingTest(node.id, request) ?? await runNewTest(node.id)
-    const success = result.success === true && (node.id !== 'redis' || result.connected === true)
+    const capabilityExecutionProven = result.capabilityExecutionProven !== false
+    const success = result.success === true
+      && capabilityExecutionProven
+      && (node.id !== 'redis' || result.connected === true)
     const error = success ? '' : sanitizeProviderError(result.error || result.detail || result.note || 'Live test failed')
     const detail = success
       ? String(result.detail || result.note || `${node.displayName} live test passed.`)
-      : error
+      : node.id === 'huggingface' && result.success === true
+        ? String(result.detail || result.note || 'Token/account check passed, but capability execution is not proven by this test.')
+        : error
     try {
       await recordMeshTestResult({
         id: node.id,
@@ -122,9 +127,13 @@ export async function POST(request: NextRequest) {
       success,
       connected: success,
       capabilities: success ? node.capabilities : [],
+      capabilityExecutionProven: success,
       lastTestedAt: new Date().toISOString(),
       detail: success ? detail : undefined,
       error: success ? undefined : error,
+      note: !success && node.id === 'huggingface' && result.success === true
+        ? 'Hugging Face account-token check passed, but no capability execution route was proven.'
+        : undefined,
       latencyMs: Date.now() - startedAt,
     })
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getProviderKey } from '@/lib/provider-config'
+import { getVaultApiKey } from '@/lib/brain'
 import {
   discoverProvider,
   resolveProviderEndpoint,
@@ -16,11 +17,13 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({})) as { apiKey?: unknown }
   const inlineKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : ''
-  const key = inlineKey || await getProviderKey('qwen') || ''
+  const key = inlineKey || await getProviderKey('qwen') || await getVaultApiKey('qwen') || ''
   if (!key) {
     return NextResponse.json({
       success: false,
       error: 'No Qwen/DashScope API key configured',
+      proofType: 'chat_route_probe',
+      capabilityExecutionProven: false,
       nextAction: 'Add QWEN_API_KEY or DASHSCOPE_API_KEY in Settings',
     })
   }
@@ -38,6 +41,8 @@ export async function POST(req: NextRequest) {
         success: false,
         error: discovery.error || 'Qwen catalog returned no chat-capable model.',
         latencyMs: Date.now() - start,
+        proofType: 'chat_route_probe',
+        capabilityExecutionProven: false,
         nextAction: 'Verify the DashScope International catalog and account access.',
       })
     }
@@ -65,6 +70,8 @@ export async function POST(req: NextRequest) {
         error,
         latencyMs,
         model: chatModel.id,
+        proofType: 'chat_route_probe',
+        capabilityExecutionProven: false,
         nextAction: 'Check the Qwen API key and model access in Settings',
       })
     }
@@ -74,12 +81,18 @@ export async function POST(req: NextRequest) {
       model: chatModel.id,
       modelCount: discovery.models.length,
       capabilityEvidence: chatModel.capabilityEvidence,
+      proofType: 'chat_route_probe',
+      capabilityExecutionProven: false,
+      detail: 'Qwen catalog plus direct chat probe passed. Image, video/Wanx, image-to-video, embeddings, and translation still require their own Brain/runtime route proof.',
+      nextAction: 'Run the specific Brain/runtime route for the Qwen capability you want to mark ready.',
     })
   } catch (error) {
     return NextResponse.json({
       success: false,
       error: error instanceof Error ? error.message : 'Connection failed',
       latencyMs: Date.now() - start,
+      proofType: 'chat_route_probe',
+      capabilityExecutionProven: false,
       nextAction: 'Check network connectivity and the Qwen API key',
     })
   }

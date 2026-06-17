@@ -15,50 +15,17 @@
  *   error            string?  — top-level error if unconfigured
  *   catalogError     string?  — catalog endpoint error detail
  *   chatError        string?  — chat endpoint error detail
+ *
+ * This route proves key/config validity plus direct provider catalog/chat reachability.
+ * It does not prove every Brain/runtime capability path (image, video, music, TTS)
+ * is working end-to-end through product routes.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { prisma } from '@/lib/prisma'
-import { decryptVaultKey } from '@/lib/crypto-vault'
+import { getProviderKey } from '@/lib/provider-config'
+import { normalizeGenXBaseUrl, resolveGenXConfig } from '@/lib/genx-client'
 import { normalizeProviderCatalog } from '@/lib/providers/provider-discovery'
-
-/**
- * Normalise a GenX base URL:
- *   - Remove trailing slashes
- *   - Strip well-known path suffixes (/api/v1/models, /api/v1, /api)
- *   - Auto-correct the dashboard hostname (genx.sh) to the API hostname
- *     (query.genx.sh) — entering the sign-up URL instead of the API URL
- *     would otherwise return HTML and cause JSON parse errors.
- *   - Return just the origin (no path), so callers can safely append /api/v1/models
- */
-function normaliseBaseUrl(raw: string): string {
-  let url: URL
-  try {
-    url = new URL(raw)
-  } catch {
-    return raw
-  }
-
-  // Redirect dashboard hostname to the API hostname
-  if (url.hostname === 'genx.sh') {
-    url.hostname = 'query.genx.sh'
-  }
-
-  // Strip known endpoint suffixes from the path
-  const path = url.pathname
-    .replace(/\/api\/v1\/models\/?$/, '')
-    .replace(/\/api\/v1\/?$/, '')
-    .replace(/\/api\/?$/, '')
-    .replace(/\/$/, '')
-
-  // If path is now empty or just '/', use the bare origin
-  if (!path || path === '/') {
-    return url.origin
-  }
-
-  return `${url.origin}${path}`
-}
 
 /** Translate an HTTP status to a user-facing error string */
 function httpStatusToError(status: number): string {
@@ -84,30 +51,17 @@ export async function POST(req: NextRequest) {
     inlineUrl = typeof body.apiUrl === 'string' ? body.apiUrl.trim() : ''
   } catch { /* ignore — use stored config */ }
 
-  // Resolve credentials: inline > DB > env var
-  let apiKey = inlineKey
-  let apiUrl = inlineUrl
-
-  if (!apiKey || !apiUrl) {
-    try {
-      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
-      if (!apiKey && row?.apiKey) {
-        apiKey = decryptVaultKey(row.apiKey) ?? ''
-      }
-      if (!apiUrl && row?.apiUrl) {
-        apiUrl = row.apiUrl
-      }
-    } catch { /* ignore */ }
-  }
-
-  if (!apiKey) apiKey = process.env.GENX_API_KEY ?? ''
-  if (!apiUrl) apiUrl = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? 'https://query.genx.sh'
+  const stored = await resolveGenXConfig()
+  const apiKey = inlineKey || await getProviderKey('genx') || stored.apiKey || ''
+  const apiUrl = inlineUrl || stored.apiUrl || 'https://query.genx.sh'
   if (!apiKey) {
     return NextResponse.json({
       success: false,
       catalogOk: false,
       chatOk: false,
       modelCount: 0,
+      proofType: 'catalog_and_chat_probe',
+      capabilityExecutionProven: false,
       error: 'GenX API key is not configured',
     })
   }
@@ -119,12 +73,16 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
+      proofType: 'catalog_and_chat_probe',
+      capabilityExecutionProven: false,
       error: 'Invalid URL',
     })
   }
   if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
+      proofType: 'catalog_and_chat_probe',
+      capabilityExecutionProven: false,
       error: 'URL must use http or https',
     })
   }
@@ -133,12 +91,14 @@ export async function POST(req: NextRequest) {
   if (/^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(hostname) && process.env.NODE_ENV === 'production') {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
+      proofType: 'catalog_and_chat_probe',
+      capabilityExecutionProven: false,
       error: 'Private or loopback URLs are not allowed',
     })
   }
 
   // Normalise the base URL (strip path suffixes, trailing slash)
-  const baseUrl = normaliseBaseUrl(apiUrl)
+  const baseUrl = normalizeGenXBaseUrl(apiUrl) ?? apiUrl
 
   // Mask URL to origin for response (no path, no key)
   let maskedUrl: string
@@ -275,6 +235,14 @@ export async function POST(req: NextRequest) {
     generateNotTested,
     modelCount,
     latencyMs,
+    proofType: 'catalog_and_chat_probe',
+    capabilityExecutionProven: false,
+    detail: success
+      ? 'GenX catalog and direct chat probe passed. Product capability readiness still requires real Brain/runtime route proof for image, video, music, and TTS.'
+      : undefined,
+    nextAction: success
+      ? 'Run real Brain/runtime capability routes for the target GenX feature before marking it ready.'
+      : undefined,
     apiUrl: maskedUrl,
     testedUrls: {
       catalog:  resolvedCatalogUrl,

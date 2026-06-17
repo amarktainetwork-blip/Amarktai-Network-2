@@ -303,6 +303,41 @@ describe('provider discovery runtime fallbacks', () => {
     }
   })
 
+  it('strips GenX /v1 and /api/v1 variants without double-appending endpoint paths', () => {
+    const genx = PROVIDER_TRUTH.find((entry) => entry.id === 'genx')!
+    const previousApiUrl = process.env.GENX_API_URL
+    const previousBaseUrl = process.env.GENX_BASE_URL
+
+    const cases = [
+      'https://query.genx.sh',
+      'https://query.genx.sh/v1',
+      'https://query.genx.sh/v1/models',
+      'https://query.genx.sh/v1/chat/completions',
+      'https://query.genx.sh/api/v1',
+      'https://query.genx.sh/api/v1/models',
+      'https://genx.sh',
+    ]
+
+    try {
+      for (const raw of cases) {
+        process.env.GENX_API_URL = raw
+        process.env.GENX_BASE_URL = raw
+        const asyncEndpoint = resolveProviderEndpoint(genx, 'async_generation')
+        const textEndpoint = resolveProviderEndpoint(genx, 'streaming_text')
+        expect(asyncEndpoint).toBe('https://query.genx.sh/api/v1')
+        expect(textEndpoint).toBe('https://query.genx.sh/v1')
+        expect(asyncEndpoint).not.toContain('/v1/v1')
+        expect(asyncEndpoint).not.toContain('/v1/api/v1')
+        expect(asyncEndpoint).not.toContain('/api/v1/api/v1')
+      }
+    } finally {
+      if (previousApiUrl === undefined) delete process.env.GENX_API_URL
+      else process.env.GENX_API_URL = previousApiUrl
+      if (previousBaseUrl === undefined) delete process.env.GENX_BASE_URL
+      else process.env.GENX_BASE_URL = previousBaseUrl
+    }
+  })
+
   it('uses the GenX static runtime catalog when live model discovery fails', async () => {
     const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 404 })
 

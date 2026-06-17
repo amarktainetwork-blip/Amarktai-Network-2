@@ -16,6 +16,7 @@ import {
   mediaStudioResponse,
   type MediaStudioCapability,
 } from '@/lib/media-studio'
+import { POST as musicStudioPost } from '@/app/api/admin/music-studio/route'
 import { POST as videoPlanPost } from '@/app/api/brain/video/route'
 import { executeCapabilityOrchestration } from '@/lib/orchestrator'
 import {
@@ -153,6 +154,29 @@ async function dispatchStudio(
   qualityTier: 'cheap' | 'balanced' | 'premium' | 'auto',
 ) {
   const capability = execution.detectedCapability
+  if (capability === 'music_generation' || capability === 'lyrics_generation') {
+    return musicStudioPost(jsonRequest(original, '/api/admin/music-studio', {
+      action: capability === 'lyrics_generation' ? 'lyrics_only' : 'create',
+      request: {
+        executionId: execution.executionId,
+        appSlug: execution.appSlug,
+        theme: execution.input.prompt,
+        title: execution.input.prompt.slice(0, 80),
+        genre: normalizeGenre(body.genre),
+        genres: normalizeGenres(body.genres, body.genre),
+        moods: body.moods ?? [],
+        vocalStyle: normalizeVocalStyle(body.vocalStyle, body.instrumental),
+        instrumental: Boolean(body.instrumental),
+        language: body.language,
+        existingLyrics: body.lyrics,
+        durationSeconds: body.duration,
+        productionNotes: normalizeGenres(body.genres, body.genre).length > 1
+          ? `Blend styles: ${normalizeGenres(body.genres, body.genre).join(' + ')}`
+          : undefined,
+        qualityTier,
+      },
+    }))
+  }
   if (capability === 'video_generation' && body.scenePlanOnly) {
     return videoPlanPost(jsonRequest(original, '/api/brain/video', {
       script: execution.input.prompt,

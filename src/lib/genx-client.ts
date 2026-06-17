@@ -296,6 +296,10 @@ export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: str
   return { apiUrl: normalizedUrl, apiKey: normalizedKey, configured: !!normalizedKey }
 }
 
+export function normalizeGenXBaseUrl(raw: string): string | null {
+  return normaliseBaseUrl(raw)
+}
+
 /**
  * Normalise a raw URL to a clean base URL (no trailing slash, no
  * well-known path suffixes).  Returns null when the URL is invalid.
@@ -315,6 +319,7 @@ function normaliseBaseUrl(raw: string): string | null {
   const clean = url.pathname
     .replace(/\/api\/v1\/models\/?$/, '')
     .replace(/\/v1\/models\/?$/, '')
+    .replace(/\/v1\/chat\/completions\/?$/, '')
     .replace(/\/api\/v1\/?$/, '')
     .replace(/\/v1\/?$/, '')
     .replace(/\/api\/?$/, '')

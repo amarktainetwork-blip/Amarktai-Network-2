@@ -164,6 +164,16 @@ describe('Phase 1 provider truth layer', () => {
     })
   })
 
+  it('keeps the GenX dashboard test route aligned with the shared runtime normalizer', () => {
+    const testRoute = fs.readFileSync(path.join(ROOT, 'src/app/api/admin/settings/test-genx/route.ts'), 'utf8')
+
+    expect(testRoute).toContain("resolveGenXConfig")
+    expect(testRoute).toContain("normalizeGenXBaseUrl")
+    expect(testRoute).not.toContain('/v1/v1/models')
+    expect(testRoute).not.toContain('/v1/api/v1/models')
+    expect(testRoute).not.toContain('/api/v1/api/v1/models')
+  })
+
   it('discovers Hugging Face tasks, inference providers, and configured endpoints', async () => {
     process.env.HF_PRIVATE_ENDPOINTS_JSON = JSON.stringify(['https://private.example'])
     process.env.HF_DEDICATED_ENDPOINTS_JSON = JSON.stringify([

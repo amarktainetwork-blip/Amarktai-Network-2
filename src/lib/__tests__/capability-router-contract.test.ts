@@ -514,4 +514,112 @@ describe('capability router contract', () => {
     expect(result.jobId).not.toBe(result.providerJobId)
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
+
+  it('returns a canonical local job and poll URL for asynchronous music generation', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'genx-music',
+        capabilities: ['music'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: null,
+      jobId: 'music-job-1',
+      status: 'pending',
+      model: 'genx-music',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result, JSON.stringify(result)).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      provider: 'genx',
+      model: 'genx-music',
+      status: 'processing',
+      providerJobId: 'music-job-1',
+      output: null,
+    })
+    expect(result.jobId).toBeTruthy()
+    expect(result.pollUrl).toContain('/api/brain/media-jobs/')
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
+  })
+
+  it('keeps a forced GenX image route routable when static discovery fallback candidates exist', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'gpt-image-2',
+        capabilities: ['image'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: { source: 'genx_static_runtime_fallback' },
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'degraded', configured: true, tested: true, healthy: false },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'image',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'GenX discovery failed; using static runtime fallback.',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: 'https://media.example/genx.png',
+      jobId: null,
+      status: 'completed',
+      model: 'gpt-image-2',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'create image',
+      capability: 'image_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      provider: 'genx',
+      model: 'gpt-image-2',
+    })
+  })
 })
