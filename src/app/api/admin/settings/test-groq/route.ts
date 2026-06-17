@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       success: false,
       error: 'No Groq API key configured',
       proofType: 'key_and_model_catalog_check',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       nextAction: 'Add GROQ_API_KEY in Settings',
     })
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
         error: msg,
         latencyMs,
         proofType: 'key_and_model_catalog_check',
+        proofKind: 'catalog_discovery_test',
         capabilityExecutionProven: false,
         nextAction: 'Check the Groq API key in Settings, then run a real Brain route for chat, TTS, or STT proof.',
       })
@@ -66,6 +68,7 @@ export async function POST(req: NextRequest) {
       modelCount,
       latencyMs,
       proofType: 'key_and_model_catalog_check',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       detail: 'Groq key and model catalog check passed. Capability execution still requires a real Brain/runtime route proof for chat, TTS, or STT.',
       nextAction: 'Run a real Brain/runtime route for the Groq capability you want to mark ready.',
@@ -78,6 +81,7 @@ export async function POST(req: NextRequest) {
       error: message,
       latencyMs,
       proofType: 'key_and_model_catalog_check',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       nextAction: 'Check network connectivity and the Groq API key, then run a real Brain route for the target capability.',
     })

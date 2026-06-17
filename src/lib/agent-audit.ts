@@ -41,7 +41,9 @@ function auditAgent(definition: AgentDefinition): AgentAuditEntry {
   const reasons = [
     `Compatibility role maps to canonical "${canonicalAgentType(definition.type)}".`,
     'Provider and model readiness are resolved per request by canonical live discovery.',
+    'This audit is a diagnostic registration check, not runtime capability execution proof.',
   ]
+  const missingHandoffs = definition.canHandoff.filter((target) => !getAgentDefinitions().has(target))
   for (const target of definition.canHandoff) {
     if (!getAgentDefinitions().has(target)) {
       reasons.push(`Handoff target "${target}" is not registered.`)
@@ -50,15 +52,15 @@ function auditAgent(definition: AgentDefinition): AgentAuditEntry {
   return {
     agentType: definition.type,
     name: definition.name,
-    readiness: 'PARTIAL',
+    readiness: missingHandoffs.length === 0 ? 'READY' : 'NOT_CONNECTED',
     reasons,
     definitionExists: true,
     providerRegistered: true,
     defaultProvider: 'dynamic_discovery',
     defaultModel: 'dynamic_discovery',
     providerHealth: 'dynamic_discovery',
-    providerCallable: true,
-    modelExists: true,
+    providerCallable: missingHandoffs.length === 0,
+    modelExists: missingHandoffs.length === 0,
     capabilityCount: definition.capabilities.length,
     canHandoff: definition.canHandoff,
     memoryEnabled: definition.memoryEnabled,
@@ -71,9 +73,9 @@ export function auditAllAgents(): AgentAuditResult {
     agents,
     summary: {
       total: agents.length,
-      ready: 0,
-      partial: agents.length,
-      notConnected: 0,
+      ready: agents.filter((agent) => agent.readiness === 'READY').length,
+      partial: agents.filter((agent) => agent.readiness === 'PARTIAL').length,
+      notConnected: agents.filter((agent) => agent.readiness === 'NOT_CONNECTED').length,
       auditedAt: new Date().toISOString(),
     },
   }

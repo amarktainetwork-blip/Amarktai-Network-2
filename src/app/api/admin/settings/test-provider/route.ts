@@ -9,6 +9,27 @@ import { getProviderTruth } from '@/lib/providers/registry'
 
 type TestPayload = { success?: boolean; error?: string; detail?: string; note?: string; connected?: boolean; [key: string]: unknown }
 
+function classifyProof(result: TestPayload) {
+  const proofType = typeof result.proofType === 'string' ? result.proofType : 'unknown'
+  const capabilityExecutionProven = result.capabilityExecutionProven === true
+  if (capabilityExecutionProven) {
+    return {
+      proofKind: 'live_capability_execution_proof' as const,
+      proofSummary: 'This test executed a real capability path for the selected provider.',
+    }
+  }
+  if (proofType.includes('catalog') || proofType.includes('probe') || proofType.includes('models')) {
+    return {
+      proofKind: 'catalog_discovery_test' as const,
+      proofSummary: 'This test verified credentials plus catalog or discovery reachability only. It did not prove a product capability route.',
+    }
+  }
+  return {
+    proofKind: 'credential_test_only' as const,
+    proofSummary: 'This test verified credentials or account access only. It did not prove a product capability route.',
+  }
+}
+
 async function runExistingTest(id: ProviderMeshId, request: NextRequest): Promise<TestPayload | null> {
   const forwarded = new NextRequest(request.url, { method: 'POST', headers: request.headers, body: '{}' })
   if (id === 'genx') return (await (await import('@/app/api/admin/settings/test-genx/route')).POST(forwarded)).json()
@@ -95,6 +116,7 @@ export async function POST(request: NextRequest) {
   try {
     const result = await runExistingTest(node.id, request) ?? await runNewTest(node.id)
     const capabilityExecutionProven = result.capabilityExecutionProven !== false
+    const proof = classifyProof(result)
     const success = result.success === true
       && capabilityExecutionProven
       && (node.id !== 'redis' || result.connected === true)
@@ -128,6 +150,8 @@ export async function POST(request: NextRequest) {
       connected: success,
       capabilities: success ? node.capabilities : [],
       capabilityExecutionProven: success,
+      proofKind: proof.proofKind,
+      proofSummary: proof.proofSummary,
       lastTestedAt: new Date().toISOString(),
       detail: success ? detail : undefined,
       error: success ? undefined : error,

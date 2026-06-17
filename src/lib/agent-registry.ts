@@ -235,6 +235,7 @@ export function listOperatorAgents(appSlug = 'dashboard') {
     })
     return {
       ...agent,
+      surface: 'operator_catalog' as const,
       status: route.blockedReason ? 'unavailable' : 'available',
       executionRoute: route.blockedReason ? null : {
         provider: route.selectedProvider,

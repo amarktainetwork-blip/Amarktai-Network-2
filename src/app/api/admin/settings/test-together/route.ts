@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const key = inlineKey || await getProviderKey('together') || ''
 
   if (!key) {
-    return NextResponse.json({ success: false, error: 'No Together AI API key configured', nextAction: 'Add TOGETHER_API_KEY in Settings' })
+    return NextResponse.json({ success: false, error: 'No Together AI API key configured', proofType: 'key_and_model_catalog_check', proofKind: 'catalog_discovery_test', capabilityExecutionProven: false, nextAction: 'Add TOGETHER_API_KEY in Settings' })
   }
 
   const start = Date.now()
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
         error: msg,
         latencyMs,
         proofType: 'key_and_model_catalog_check',
+        proofKind: 'catalog_discovery_test',
         capabilityExecutionProven: false,
         nextAction: 'Check the Together AI key in Settings, then run a real capability route or provider-capability smoke for the required feature.',
       })
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
       modelCount,
       latencyMs,
       proofType: 'key_and_model_catalog_check',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       detail: 'Together key and model catalog check passed. Capability execution still requires a real route proof for image, video, audio, embeddings, or rerank.',
       nextAction: 'Run a real Brain or provider-capability execution for the specific Together capability you want to mark ready.',
@@ -71,6 +73,7 @@ export async function POST(req: NextRequest) {
       error: message,
       latencyMs,
       proofType: 'key_and_model_catalog_check',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       nextAction: 'Check network connectivity and the Together AI key, then run a real capability route for execution proof.',
     })

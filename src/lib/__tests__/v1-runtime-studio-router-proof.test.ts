@@ -34,9 +34,9 @@ describe('V1 runtime, Studio, and capability router proof', () => {
       'DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"',
     )
     const deploy = source('docs/deploy/backend-deploy-checklist.md')
-    expect(deploy).toContain('apt-get install -y mariadb-server')
-    expect(deploy).toContain('CREATE DATABASE amarktai')
-    expect(deploy).toContain('prisma db push')
+    expect(deploy).toContain('npx prisma generate')
+    expect(deploy).toContain('npm run build')
+    expect(deploy).toContain('amarktai-platform.service')
     expect(deploy).not.toMatch(/postgresql:|mongodb:/i)
   })
 

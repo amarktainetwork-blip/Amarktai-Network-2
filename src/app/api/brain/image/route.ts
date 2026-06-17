@@ -20,22 +20,23 @@ export async function POST(request: NextRequest) {
   if (!body?.prompt?.trim()) {
     return NextResponse.json({ error: 'prompt is required and must be a non-empty string' }, { status: 400 })
   }
+  if (body.providerOverride?.trim() || body.modelOverride?.trim() || body.model?.trim()) {
+    return NextResponse.json({
+      error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+    }, { status: 400 })
+  }
 
   const execution = ensureExecution({
     appSlug: body.appSlug || 'amarktai-network',
     requestedCapability: 'image_generation',
     prompt: body.prompt.trim(),
     action: 'generate',
-    selectedProvider: body.providerOverride,
-    selectedModel: body.modelOverride ?? body.model,
     costMode: body.qualityTier === 'auto' ? 'balanced' : body.qualityTier,
   }, body.executionId)
   startExecution(execution.executionId)
   const result = await executeCapability({
     input: body.prompt.trim(),
     capability: 'image_generation',
-    providerOverride: body.providerOverride,
-    modelOverride: body.modelOverride ?? body.model,
     qualityTier: body.qualityTier,
     appId: body.appSlug || 'amarktai-network',
     saveArtifact: true,

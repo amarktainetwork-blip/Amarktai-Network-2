@@ -11,13 +11,16 @@ export async function POST(request: NextRequest) {
   if (!(file instanceof Blob)) {
     return NextResponse.json({ error: 'An audio file is required.' }, { status: 400 })
   }
+  if (value(form.get('provider')) || value(form.get('model'))) {
+    return NextResponse.json({
+      error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+    }, { status: 400 })
+  }
   const result = await executeCapability({
     input: 'Transcribe the supplied audio accurately.',
     capability: 'stt',
     files: ['inline:audio'],
     appId: value(form.get('appSlug')),
-    providerOverride: value(form.get('provider')),
-    modelOverride: value(form.get('model')),
     saveArtifact: true,
     metadata: {
       executionId: value(form.get('executionId')),

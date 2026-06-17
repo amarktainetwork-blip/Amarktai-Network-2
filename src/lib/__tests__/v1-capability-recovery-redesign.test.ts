@@ -18,13 +18,13 @@ describe('V1 capability recovery and visible product replacement', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Command Center',
       'Studio',
+      'Capabilities',
       'Apps',
       'Jobs',
       'Artifacts',
-      'Providers',
       'Settings',
     ])
-    for (const hidden of ['Capabilities', 'Repo Workbench', 'App Builder', 'MCP']) {
+    for (const hidden of ['Providers', 'Repo Workbench', 'App Builder', 'MCP']) {
       expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain(hidden)
     }
   })
@@ -75,11 +75,11 @@ describe('V1 capability recovery and visible product replacement', () => {
   it('keeps settings truth consolidated and adult mode accessible', () => {
     const settings = read('src/app/admin/dashboard/settings/page.tsx')
     for (const term of [
-      'Provider Connections',
-      'Artifact Storage',
-      'Content Safety / Adult Mode',
-      'Local Runtime Tools',
-      'Capability Matrix',
+      'AI provider connections',
+      'Artifact storage',
+      'Content safety / adult mode',
+      'Local runtime tools',
+      'Capability matrix',
       '/api/admin/settings/runtime-tools',
       '/api/admin/app-safety',
     ]) expect(settings).toContain(term)
@@ -87,7 +87,9 @@ describe('V1 capability recovery and visible product replacement', () => {
 
   it('uses the shared wordmark and branded public/login shells', () => {
     expect(read('src/components/BrandName.tsx')).toContain('AmarktAI Network')
-    expect(read('src/components/public/PublicShell.tsx')).toContain('<BrandName />')
+    const publicShell = read('src/components/public/PublicShell.tsx')
+    expect(publicShell).toContain("import BrandName from '@/components/BrandName'")
+    expect(publicShell).toContain('<BrandName className=')
     const login = read('src/app/admin/login/page.tsx')
     expect(login).toContain('<BrandName />')
     expect(login).toContain('Sign in to your creative command center')

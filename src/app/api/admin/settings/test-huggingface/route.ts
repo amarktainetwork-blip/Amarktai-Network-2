@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const key = inlineKey || await getProviderKey('huggingface') || ''
 
   if (!key) {
-    return NextResponse.json({ success: false, error: 'No Hugging Face token configured', nextAction: 'Add HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, or HF_TOKEN in Settings' })
+    return NextResponse.json({ success: false, error: 'No Hugging Face token configured', proofType: 'account_token_check', proofKind: 'credential_test_only', capabilityExecutionProven: false, nextAction: 'Add HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, or HF_TOKEN in Settings' })
   }
 
   const start = Date.now()
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         error: msg,
         latencyMs,
         proofType: 'account_token_check',
+        proofKind: 'credential_test_only',
         capabilityExecutionProven: false,
         nextAction: 'Check the Hugging Face token in Settings, then run a provider-capability test for the required task route.',
       })
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       accountType: data.type,
       latencyMs,
       proofType: 'account_token_check',
+      proofKind: 'credential_test_only',
       capabilityExecutionProven: false,
       detail: 'Hugging Face token/account check passed. Capability execution still requires provider-capability tests or a wired Brain route.',
       nextAction: 'Run a provider-capability test for the specific Hugging Face task or use a Brain route that is already wired.',
@@ -69,6 +71,7 @@ export async function POST(req: NextRequest) {
       error: message,
       latencyMs,
       proofType: 'account_token_check',
+      proofKind: 'credential_test_only',
       capabilityExecutionProven: false,
       nextAction: 'Check network connectivity and the Hugging Face token, then run a provider-capability test for the target capability.',
     })

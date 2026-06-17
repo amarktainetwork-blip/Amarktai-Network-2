@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
   const appSlug = request.nextUrl.searchParams.get('appSlug') || 'dashboard'
   return NextResponse.json({
     success: true,
+    surface: 'operator_catalog',
+    runtimeExecutionOwner: 'src/lib/agent-runtime.ts',
+    note: 'This endpoint lists operator/admin agent catalog entries. It is not the canonical runtime readiness or deployment truth for app-executed agents.',
     agents: listOperatorAgents(appSlug),
   })
 }

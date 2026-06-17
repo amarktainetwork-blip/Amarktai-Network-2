@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
   if (!body?.prompt?.trim() || !body.appSlug) {
     return NextResponse.json({ error: 'prompt and appSlug are required' }, { status: 400 })
   }
+  if (body.providerOverride?.trim() || body.modelOverride?.trim()) {
+    return NextResponse.json({
+      error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+    }, { status: 400 })
+  }
   const duration = requestedVideoDuration(body.prompt)
   const longForm = shouldUseLongFormVideo({ prompt: body.prompt, duration })
   const adultProfile = await getAdultAppCapabilityProfile(body.appSlug)
@@ -60,8 +65,6 @@ export async function POST(request: NextRequest) {
       prompt: body.prompt.trim(),
       totalDuration: duration,
       capability: 'adult_video',
-      requestedProvider: body.providerOverride,
-      requestedModel: body.modelOverride,
       idempotencyKey: `${body.appSlug}:adult_video:${body.prompt}:${duration}`,
     })
     return NextResponse.json({
@@ -72,20 +75,10 @@ export async function POST(request: NextRequest) {
       pollUrl: `/api/admin/video-projects?id=${project.id}`,
     }, { status: 202 })
   }
-  if (body.providerOverride && !adultProfile.approvedProviders.includes(body.providerOverride)) {
-    return NextResponse.json({
-      capability: 'adult_video',
-      executed: false,
-      error: `Provider "${body.providerOverride}" is not approved for this app.`,
-    }, { status: 403 })
-  }
-
   const result = await executeCapability({
     input: body.prompt.trim(),
     capability: 'adult_video',
     appId: body.appSlug,
-    providerOverride: body.providerOverride,
-    modelOverride: body.modelOverride,
     adultMode: true,
     safeMode: false,
   })

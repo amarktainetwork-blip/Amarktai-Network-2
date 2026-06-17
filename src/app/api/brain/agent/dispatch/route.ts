@@ -88,6 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         executed: false,
         agentType,
         readiness: audit.readiness,
+        readinessKind: 'diagnostic_registration_check',
         error: audit.reasons[0] ?? `Agent ${agentType} requires a provider that is not configured`,
         requiredProvider: audit.defaultProvider,
       },

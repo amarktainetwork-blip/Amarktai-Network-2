@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       success: false,
       error: 'No Qwen/DashScope API key configured',
       proofType: 'chat_route_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       nextAction: 'Add QWEN_API_KEY or DASHSCOPE_API_KEY in Settings',
     })
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
         error: discovery.error || 'Qwen catalog returned no chat-capable model.',
         latencyMs: Date.now() - start,
         proofType: 'chat_route_probe',
+        proofKind: 'catalog_discovery_test',
         capabilityExecutionProven: false,
         nextAction: 'Verify the DashScope International catalog and account access.',
       })
@@ -71,6 +73,7 @@ export async function POST(req: NextRequest) {
         latencyMs,
         model: chatModel.id,
         proofType: 'chat_route_probe',
+        proofKind: 'catalog_discovery_test',
         capabilityExecutionProven: false,
         nextAction: 'Check the Qwen API key and model access in Settings',
       })
@@ -82,6 +85,7 @@ export async function POST(req: NextRequest) {
       modelCount: discovery.models.length,
       capabilityEvidence: chatModel.capabilityEvidence,
       proofType: 'chat_route_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       detail: 'Qwen catalog plus direct chat probe passed. Image, video/Wanx, image-to-video, embeddings, and translation still require their own Brain/runtime route proof.',
       nextAction: 'Run the specific Brain/runtime route for the Qwen capability you want to mark ready.',
@@ -92,6 +96,7 @@ export async function POST(req: NextRequest) {
       error: error instanceof Error ? error.message : 'Connection failed',
       latencyMs: Date.now() - start,
       proofType: 'chat_route_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       nextAction: 'Check network connectivity and the Qwen API key',
     })

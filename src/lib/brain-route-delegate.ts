@@ -16,6 +16,17 @@ export async function delegateJsonCapability(
 ) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+  const forcedProvider = firstString(body, ['providerOverride', 'provider'])
+  const forcedModel = firstString(body, ['modelOverride', 'model'])
+  if (forcedProvider || forcedModel) {
+    return NextResponse.json({
+      error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+      rejected: {
+        provider: forcedProvider ?? null,
+        model: forcedModel ?? null,
+      },
+    }, { status: 400 })
+  }
   const input = firstString(body, options.inputFields ?? ['input', 'prompt', 'text', 'query'])
   if (!input) return NextResponse.json({ error: 'A non-empty input is required.' }, { status: 400 })
   const files = [
@@ -41,8 +52,6 @@ export async function delegateJsonCapability(
       ...metadata,
       executionId: firstString(body, ['executionId']) ?? metadata.executionId,
       routingProfile: body.routingProfile ?? body.qualityTier ?? metadata.routingProfile,
-      ignoredProviderPreference: firstString(body, ['providerOverride', 'provider']) ?? null,
-      ignoredModelPreference: firstString(body, ['modelOverride', 'model']) ?? null,
     },
   })
   return NextResponse.json(result, { status: capabilityHttpStatus(result) })

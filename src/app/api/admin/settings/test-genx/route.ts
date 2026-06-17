@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       chatOk: false,
       modelCount: 0,
       proofType: 'catalog_and_chat_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       error: 'GenX API key is not configured',
     })
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
       proofType: 'catalog_and_chat_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       error: 'Invalid URL',
     })
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
       proofType: 'catalog_and_chat_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       error: 'URL must use http or https',
     })
@@ -92,6 +95,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false, catalogOk: false, chatOk: false, modelCount: 0,
       proofType: 'catalog_and_chat_probe',
+      proofKind: 'catalog_discovery_test',
       capabilityExecutionProven: false,
       error: 'Private or loopback URLs are not allowed',
     })
@@ -236,6 +240,7 @@ export async function POST(req: NextRequest) {
     modelCount,
     latencyMs,
     proofType: 'catalog_and_chat_probe',
+    proofKind: 'catalog_discovery_test',
     capabilityExecutionProven: false,
     detail: success
       ? 'GenX catalog and direct chat probe passed. Product capability readiness still requires real Brain/runtime route proof for image, video, music, and TTS.'

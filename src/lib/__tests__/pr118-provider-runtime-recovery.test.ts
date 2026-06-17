@@ -62,6 +62,6 @@ describe('PR118 provider runtime and dashboard recovery', () => {
   it('does not present wiring as live provider readiness', () => {
     const capabilities = source('src/app/admin/dashboard/capabilities/page.tsx')
     expect(capabilities).toContain("working: { label: 'Wired'")
-    expect(capabilities).toContain('Live availability depends on provider discovery')
+    expect(capabilities).toContain('Live provider availability may still vary by discovery and configuration')
   })
 })

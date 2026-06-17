@@ -14,6 +14,11 @@ export async function POST(request: NextRequest) {
   if (!body?.prompt?.trim()) {
     return NextResponse.json({ error: 'prompt is required and must be a non-empty string' }, { status: 400 })
   }
+  if (body.providerOverride?.trim() || body.modelOverride?.trim()) {
+    return NextResponse.json({
+      error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+    }, { status: 400 })
+  }
   if (!body.appSlug?.trim()) {
     return NextResponse.json({
       capability: 'suggestive_image_generation',
@@ -54,8 +59,6 @@ export async function POST(request: NextRequest) {
   const result = await executeCapability({
     input: prompt,
     capability: 'suggestive_image',
-    providerOverride: body.providerOverride,
-    modelOverride: body.modelOverride,
     appId: body.appSlug,
     safeMode: false,
     saveArtifact: true,

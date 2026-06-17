@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   startControlPlaneAttempt: vi.fn(),
   finishControlPlaneAttempt: vi.fn(),
   planCanonicalExecution: vi.fn(),
+  localRecords: new Map<string, Record<string, unknown>>(),
 }))
 
 vi.mock('@/lib/artifact-store', () => ({ createArtifact: mocks.createArtifact }))
@@ -94,6 +95,26 @@ vi.mock('@/lib/universal-provider-call', () => ({
 vi.mock('@/lib/providers/execution', () => ({
   planCanonicalExecution: mocks.planCanonicalExecution,
 }))
+vi.mock('@/lib/local-json-store', () => ({
+  LOCAL_STORE_FILES: {
+    mediaJobs: 'jobs/media-jobs.json',
+  },
+  generateId: vi.fn(() => `local-job-${mocks.localRecords.size + 1}`),
+  appendRecord: vi.fn((_file: string, record: Record<string, unknown>) => {
+    const id = typeof record.id === 'string' && record.id ? record.id : `local-job-${mocks.localRecords.size + 1}`
+    const stored = { ...record, id }
+    mocks.localRecords.set(id, stored)
+    return stored
+  }),
+  findRecord: vi.fn((_file: string, id: string) => mocks.localRecords.get(id) ?? null),
+  updateRecord: vi.fn((_file: string, id: string, updates: Record<string, unknown>) => {
+    const existing = mocks.localRecords.get(id)
+    if (!existing) return null
+    const updated = { ...existing, ...updates }
+    mocks.localRecords.set(id, updated)
+    return updated
+  }),
+}))
 
 import {
   CAPABILITY_ROUTER_CAPABILITIES,
@@ -128,6 +149,7 @@ const REQUIRED_CAPABILITIES: CapabilityRouterCapability[] = [
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.localRecords.clear()
   mocks.createArtifact.mockResolvedValue({ id: 'artifact-1' })
   mocks.getVaultApiKey.mockResolvedValue(null)
   mocks.getAppSafetyConfig.mockReturnValue({

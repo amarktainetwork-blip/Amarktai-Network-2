@@ -336,14 +336,31 @@ export async function POST(request: NextRequest) {
   // orchestrate() can inject it via the provider's native system role mechanism
   // (OpenAI system message, Anthropic `system` field, Gemini systemInstruction).
   // This keeps it out of the user message turn entirely.
+  const providerOverride = typeof body.metadata?.provider_override === 'string'
+    ? body.metadata.provider_override.trim()
+    : ''
+  const modelOverride = typeof body.metadata?.model_override === 'string'
+    ? body.metadata.model_override.trim()
+    : ''
+  if (providerOverride || modelOverride) {
+    return NextResponse.json(
+      errorResponse({
+        traceId,
+        taskType: body.taskType,
+        app,
+        error: 'Apps request capabilities only. Provider and model forcing is not allowed on this route.',
+        statusCode: 400,
+        latencyMs: Date.now() - start,
+      }),
+      { status: 400 },
+    )
+  }
   const result = await orchestrate({
     appSlug: app.slug,
     appCategory: app.category,
     taskType: effectiveTaskType,
     message: suggestiveModeNote + emotionContext + federatedMemoryContext + memoryContext + body.message,
     agentSystemPrompt,
-    providerOverride: typeof body.metadata?.provider_override === 'string' ? body.metadata.provider_override : undefined,
-    modelOverride: typeof body.metadata?.model_override === 'string' ? body.metadata.model_override : undefined,
     allowFallback: body.metadata?.allow_fallback === true,
   })
 

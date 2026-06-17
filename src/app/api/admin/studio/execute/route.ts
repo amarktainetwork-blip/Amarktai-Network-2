@@ -110,8 +110,6 @@ export async function POST(request: NextRequest) {
       parameters: studioParameters(body),
       qualityTier,
       canonicalCapability: taxonomyId,
-      ignoredProviderPreference: body.provider && body.provider !== 'auto' ? body.provider : null,
-      ignoredModelPreference: body.model && body.model !== 'auto' ? body.model : null,
     },
   })
   if (['blocked', 'awaiting_approval', 'cancelled'].includes(execution.status)) {
@@ -179,7 +177,7 @@ async function dispatchStudio(
   }
   if (capability === 'video_generation' && body.scenePlanOnly) {
     return videoPlanPost(jsonRequest(original, '/api/brain/video', {
-      script: execution.input.prompt,
+      prompt: execution.input.prompt,
       appSlug: execution.appSlug,
       executionId: execution.executionId,
       style: body.style,
