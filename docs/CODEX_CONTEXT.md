@@ -45,6 +45,12 @@ READ THIS FILE FIRST.
   `amarktai-worker.service` aligned with the same deploy, start a GenX image
   job, poll the returned Brain `pollUrl`, and confirm canonical artifact
   completion before marking GenX image complete.
+- **Deploy Readiness Note:** Use `docs/deploy/backend-deploy-checklist.md` as
+  the canonical Phase 8 VPS checklist. It now matches branch
+  `integration/cline-source-of-truth`, path `/var/www/amarktai/platform`,
+  services `amarktai-platform.service` and `amarktai-worker.service`, the
+  required standalone static/public copy steps, local `http://127.0.0.1:3000/api/health`
+  verification, CSS asset checks, public-domain checks, and rollback sequence.
 
 Single source of truth:
 

@@ -1,69 +1,69 @@
-# Backend Deploy Checklist
+# Deploy Readiness Checklist
 
-Use this checklist before restarting the VPS service.
+Use this checklist before restarting the VPS services for branch
+`integration/cline-source-of-truth`.
 
-1. Install and start MariaDB:
-   `apt-get update && apt-get install -y mariadb-server`
-   `systemctl enable --now mariadb`
-
-2. Create the production database and least-privilege application user:
-   `sudo mariadb`
-
-   ```sql
-   CREATE DATABASE amarktai CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'amarktai'@'127.0.0.1' IDENTIFIED BY 'STRONG_PASSWORD';
-   GRANT ALL PRIVILEGES ON amarktai.* TO 'amarktai'@'127.0.0.1';
-   FLUSH PRIVILEGES;
-   ```
-
-3. Set a real URL in `/var/www/amarktai/platform/.env`. The required format is:
-   `DATABASE_URL="mysql://amarktai:STRONG_PASSWORD@127.0.0.1:3306/amarktai"`
-
-   Replace `STRONG_PASSWORD` with a unique generated secret; do not deploy the
-   template literally.
-
-4. Prepare persistent local storage:
-   `install -d -o www-data -g www-data -m 0750 /var/www/amarktai/storage/{artifacts,uploads,repos,workspaces,logs}`
-
-   Set:
-   `STORAGE_DRIVER="local_vps"`
-   `AMARKTAI_STORAGE_ROOT="/var/www/amarktai/storage"`
-
-   Keep the VPS layout:
-   `/var/www/amarktai/platform`
-   `/var/www/amarktai/apps/<app-slug>`
-   `/var/www/amarktai/storage`
-   `/var/www/amarktai/logs`
-   `/var/www/amarktai/backups`
-
-5. Confirm the target branch and commit:
+1. Confirm the target checkout and VPS path:
+   `cd /var/www/amarktai/platform`
    `git status --short --branch`
+   `git rev-parse --abbrev-ref HEAD`
    `git rev-parse HEAD`
 
-6. Install dependencies:
+2. Confirm the canonical branch is checked out:
+   `integration/cline-source-of-truth`
+
+3. Install dependencies:
    `npm ci`
 
-7. Generate and validate the MariaDB Prisma client:
-   `npm exec -- prisma generate`
-   `npm exec -- prisma validate`
+4. Generate Prisma client:
+   `npx prisma generate`
 
-8. Apply the schema:
-   `npm exec -- prisma db push`
-
-9. Verify the database and storage before building:
-   `printf 'SELECT 1;' | npm exec -- prisma db execute --stdin`
-   `sudo -u www-data test -w /var/www/amarktai/storage/artifacts`
-
-10. Run repository proof:
-   `npx tsc --noEmit`
-   `npm test`
+5. Build the production app:
    `npm run build`
 
-11. Confirm systemd service is canonical:
-   `systemctl status amarktai-web`
+   Windows equivalent when running locally from PowerShell or `cmd.exe`:
+   `npm.cmd run build`
 
-12. Restart and verify:
-   `systemctl restart amarktai-web`
-   `curl -sf --max-time 10 http://localhost:3000/api/health/ping`
+6. Copy standalone static assets after every successful build:
+   `rm -rf .next/standalone/.next/static`
+   `cp -R .next/static .next/standalone/.next/static`
+   `rm -rf .next/standalone/public`
+   `cp -R public .next/standalone/public`
 
-Do not mark media, repo, or AI routes live-ready unless their status endpoints report real providers available or a truthful blocker.
+   Required paths:
+   `.next/static -> .next/standalone/.next/static`
+   `public -> .next/standalone/public`
+
+7. Restart the canonical services:
+   `sudo systemctl restart amarktai-platform.service`
+   `sudo systemctl restart amarktai-worker.service`
+
+8. Verify local health on the VPS:
+   `curl -sf --max-time 10 http://127.0.0.1:3000/api/health`
+
+9. Verify CSS asset delivery from the standalone output:
+   `CSS=$(ls /var/www/amarktai/platform/.next/standalone/.next/static/css/*.css | head -1)`
+   `CSS_NAME=$(basename "$CSS")`
+   `curl -I http://127.0.0.1:3000/_next/static/css/$CSS_NAME`
+
+10. Verify the public domain:
+    `curl -I https://amarktai.co.za/_next/static/css/$CSS_NAME`
+    `curl -I https://amarktai.co.za/api/health`
+
+11. Roll back quickly if the deploy is unhealthy:
+    `git log --oneline -10`
+    `git checkout <known-good-sha>`
+    `npm ci`
+    `npx prisma generate`
+    `npm run build`
+    `rm -rf .next/standalone/.next/static`
+    `cp -R .next/static .next/standalone/.next/static`
+    `rm -rf .next/standalone/public`
+    `cp -R public .next/standalone/public`
+    `sudo systemctl restart amarktai-platform.service`
+    `sudo systemctl restart amarktai-worker.service`
+
+Do not mark deploy readiness complete unless local health, CSS asset delivery,
+and public-domain checks all pass on `/var/www/amarktai/platform` with
+`amarktai-platform.service` and `amarktai-worker.service` running the same
+build output.

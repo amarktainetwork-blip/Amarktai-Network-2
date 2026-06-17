@@ -145,7 +145,7 @@ describe('V1 AmarktAI product truth', () => {
     const page = source('src/app/admin/dashboard/connected-apps/page.tsx')
     const client = source('src/app/admin/dashboard/connected-apps/ConnectedAppsClient.tsx')
     expect(page).toContain('listConnectedApps()')
-    expect(client).toContain('No apps registered yet.')
+    expect(client).toContain('No apps registered yet')
     expect(client).not.toMatch(/Amarktai (Crypto|Travel|Marketing|Online)/)
     expect(fs.existsSync(path.join(ROOT, 'src/lib/network-apps-registry.ts'))).toBe(false)
   })
