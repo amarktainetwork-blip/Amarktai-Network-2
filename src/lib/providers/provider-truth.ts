@@ -165,7 +165,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     id: 'mimo',
     displayName: 'Xiaomi MiMo',
     envAliases: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
-    auth: { header: 'Authorization', prefix: 'Bearer ' },
+    auth: { header: 'api-key', prefix: '' },
     endpoints: [{
       family: 'token_plan',
       baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',

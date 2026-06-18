@@ -5,6 +5,7 @@ import {
 } from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
 import { getProviderReadiness } from '@/lib/provider-registry'
+import { discoverProvider } from '@/lib/providers/provider-discovery'
 import { verifyStorage, type StorageHealth } from '@/lib/storage-driver'
 import { getLatestCreativeSmokeReport } from '@/lib/creative-smoke-report'
 
@@ -17,6 +18,13 @@ export interface SettingsTruthEntry {
   status: SettingsTruthStatus
   configured: boolean
   connected: boolean
+  keyPresent: boolean
+  providerCatalogWorks: boolean
+  providerCatalogSource: string
+  providerCatalogModelCount: number
+  providerLiveTestPassed: boolean
+  capabilityLiveProven: boolean
+  routeAdapterExists: boolean
   optional: boolean
   requiresSecret: boolean
   testRoute: string
@@ -38,8 +46,19 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
   const providerReadiness = node.kind === 'provider'
     ? await getProviderReadiness(node.id as never)
     : null
+  const providerDiscovery = node.kind === 'provider'
+    ? await discoverProvider(node.id as never, { force: true }).catch((error) => ({
+        status: 'failed' as const,
+        models: [],
+        discoverySource: 'none' as const,
+        error: error instanceof Error ? error.message : String(error),
+      }))
+    : null
   const credential = localRuntime ? 'local-runtime' : await getMeshCredential(id)
   const configured = Boolean(credential) || storageWritable
+  const providerLiveTestPassed = providerReadiness?.state === 'ready'
+  const capabilityLiveProven = notes.capabilityExecutionProven === true || notes.proofKind === 'live_capability_execution_proof'
+  const providerCatalogWorks = providerDiscovery?.status === 'ready' && providerDiscovery.models.length > 0
   const connected = providerReadiness
     ? providerReadiness.state === 'ready'
     : Boolean(configured && (notes.lastTestPassed || storageWritable))
@@ -63,6 +82,13 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
     status,
     configured,
     connected,
+    keyPresent: configured,
+    providerCatalogWorks,
+    providerCatalogSource: providerDiscovery?.discoverySource ?? 'none',
+    providerCatalogModelCount: providerDiscovery?.models.length ?? 0,
+    providerLiveTestPassed,
+    capabilityLiveProven,
+    routeAdapterExists: node.kind === 'provider' ? node.capabilities.length > 0 : connected,
     optional: Boolean(node.optional),
     requiresSecret: !localRuntime && node.envAliases.length > 0,
     testRoute: node.testRoute,
@@ -72,7 +98,9 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
     lastTestedAt: providerReadiness?.checkedAt
       ?? (typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null),
     blocker: connected
-      ? ''
+      ? capabilityLiveProven
+        ? ''
+        : 'Provider live test passed; product capability routes still need live proof.'
       : failed
         ? notes.lastError || 'Live test failed'
         : configured

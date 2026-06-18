@@ -13,10 +13,17 @@ import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 import { getLocalMediaJob } from '@/lib/media-job-store'
 import { listArtifacts } from '@/lib/artifact-store'
 
-type ProofStatus = 'LIVE_PROVEN' | 'BLOCKED_WITH_EXACT_PROVIDER_ERROR' | 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX'
+type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
 type CapabilityProof = {
   capabilityId: string
+  capabilityName?: string
+  routeFile?: string
+  providerCandidates?: string[]
+  requiredKeys?: string[]
+  requiredLocalTools?: string[]
+  artifactBehavior?: string
+  jobBehavior?: string
   providerSelected: string | null
   modelSelected: string | null
   routeOrAdapter: string
@@ -38,7 +45,12 @@ type ProviderKeyResult = {
 type ProviderDiscoveryResult = {
   provider: string
   status: string
+  discoverySource: string
   modelCount: number
+  liveAuthenticatedModels: number
+  publicCatalogModels: number
+  staticFallbackModels: number
+  catalogDerivedModels: number
   imageModels: number
   videoModels: number
   imageToVideoModels: number
@@ -58,7 +70,7 @@ const CONNECTED_APP_SECRET = process.env.AMARKTAI_CONNECTED_APP_SECRET?.trim() |
 async function main() {
   const providerKeyResults = await collectProviderKeys()
   const providerDiscoveryResults = await collectProviderDiscovery()
-  const capabilityResults = await collectCapabilityProofs()
+  const capabilityResults = enrichCapabilityProofs(await collectCapabilityProofs())
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -79,6 +91,97 @@ async function main() {
   await fs.writeFile(OUTPUT_JSON, JSON.stringify(report, null, 2), 'utf8')
   await fs.writeFile(OUTPUT_MD, renderMarkdown(report), 'utf8')
   console.log(JSON.stringify(report.summary, null, 2))
+}
+
+const PROOF_TAXONOMY: Record<string, string> = {
+  chat_text_generation: 'chat',
+  reasoning: 'reasoning',
+  coding_assistant: 'text_generation',
+  web_research: 'research',
+  summarization: 'summarization',
+  translation: 'translation',
+  embeddings: 'embeddings',
+  rerank_search_relevance: 'rerank',
+  text_to_image: 'text_to_image',
+  image_editing_source_transform: 'image_text_to_image',
+  text_to_video_short_clip: 'text_to_video',
+  text_to_speech: 'text_to_speech',
+  speech_to_text: 'automatic_speech_recognition',
+  image_to_video: 'image_to_video',
+  long_form_multi_scene_video_assembly: 'text_to_video',
+  avatar_library_avatar_image_generation: 'avatar_generation',
+  talking_avatar_video: 'avatar_video',
+  adult_media_policy_gated_generation: 'text_to_image',
+  agent_request_execution: 'chat',
+  connected_app_capability_execution: 'chat',
+  provider_auto_selection: 'chat',
+  provider_fallback: 'chat',
+  strict_provider_proof_mode: 'chat',
+  route_outcome_logging: 'chat',
+  worker_job_retry_and_polling_completion: 'text_to_video',
+}
+
+const PROVIDER_KEY_ENVS: Record<string, string[]> = {
+  genx: ['GENX_API_KEY'],
+  huggingface: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
+  qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
+  mimo: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
+  groq: ['GROQ_API_KEY'],
+  together: ['TOGETHER_API_KEY'],
+}
+
+function enrichCapabilityProofs(results: CapabilityProof[]): CapabilityProof[] {
+  return results.map((entry) => {
+    const taxonomyId = PROOF_TAXONOMY[entry.capabilityId] ?? entry.capabilityId
+    const definition = getCapabilityDefinition(taxonomyId)
+    const providerCandidates = definition?.providerRoutes
+      .filter((route) => route.executable)
+      .map((route) => `${route.provider}:${route.modelIds.join(',') || 'provider-discovery'}`)
+      ?? []
+    const requiredKeys = [...new Set(
+      providerCandidates.flatMap((candidate) => PROVIDER_KEY_ENVS[candidate.split(':')[0]] ?? []),
+    )]
+    return {
+      ...entry,
+      capabilityName: entry.capabilityName ?? definition?.label ?? entry.capabilityId.replace(/_/g, ' '),
+      routeFile: entry.routeFile ?? entry.sourceFileResponsible ?? routeFileFor(entry.routeOrAdapter),
+      providerCandidates: entry.providerCandidates ?? providerCandidates,
+      requiredKeys: entry.requiredKeys ?? requiredKeys,
+      requiredLocalTools: entry.requiredLocalTools ?? localToolsFor(entry.capabilityId),
+      artifactBehavior: entry.artifactBehavior ?? artifactBehaviorFor(entry, definition?.createsArtifact ?? false),
+      jobBehavior: entry.jobBehavior ?? jobBehaviorFor(entry, definition?.longRunning ?? false),
+    }
+  })
+}
+
+function routeFileFor(routeOrAdapter: string): string {
+  if (routeOrAdapter.includes('researchRuntime')) return 'src/lib/research-runtime.ts'
+  if (routeOrAdapter.includes('processAppAgentRequest')) return 'src/lib/app-agent.ts'
+  if (routeOrAdapter.includes('executeConnectedAppCapability')) return 'src/lib/connected-app-capability-engine.ts'
+  if (routeOrAdapter.includes('control-plane-jobs')) return 'src/lib/control-plane-jobs.ts'
+  if (routeOrAdapter.startsWith('/api/')) return `src/app${routeOrAdapter}/route.ts`
+  return 'src/lib/orchestrator.ts'
+}
+
+function localToolsFor(capabilityId: string): string[] {
+  if (capabilityId === 'web_research') return ['Playwright', 'Scrapy', 'Trafilatura']
+  if (capabilityId.includes('talking_avatar')) return ['ffmpeg', 'Rhubarb/lip-sync adapter']
+  if (capabilityId.includes('video') || capabilityId.includes('music') || capabilityId.includes('voice')) return ['ffmpeg']
+  if (capabilityId.includes('worker_job')) return ['Redis/BullMQ worker', 'local storage']
+  return []
+}
+
+function artifactBehaviorFor(entry: CapabilityProof, createsArtifact: boolean): string {
+  if (entry.artifactId) return `Intentional artifact persisted: ${entry.artifactId}.`
+  if (createsArtifact) return 'Intentional output should persist an artifact when execution succeeds.'
+  return 'No artifact by default; normal chat/text response remains transient unless explicitly requested.'
+}
+
+function jobBehaviorFor(entry: CapabilityProof, longRunning: boolean): string {
+  if (entry.jobId || entry.pollUrl) return `Async job tracked${entry.jobId ? ` as ${entry.jobId}` : ''}${entry.pollUrl ? ` via ${entry.pollUrl}` : ''}.`
+  return longRunning
+    ? 'Async job/polling expected when provider returns processing.'
+    : 'Synchronous completion expected; no durable job required.'
 }
 
 async function collectProviderKeys(): Promise<ProviderKeyResult[]> {
@@ -111,7 +214,12 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
       return {
         provider,
         status: snapshot.status,
+        discoverySource: snapshot.discoverySource ?? 'none',
         modelCount: snapshot.models.length,
+        liveAuthenticatedModels: snapshot.models.filter((model) => model.discoverySource === 'live_authenticated').length,
+        publicCatalogModels: snapshot.models.filter((model) => model.discoverySource === 'public_catalog').length,
+        staticFallbackModels: snapshot.models.filter((model) => model.discoverySource === 'static_fallback').length,
+        catalogDerivedModels: snapshot.models.filter((model) => (model.discoverySource ?? 'catalog_derived') === 'catalog_derived').length,
         imageModels: modelsForCapability(snapshot, 'image').length,
         videoModels: modelsForCapability(snapshot, 'video').length,
         imageToVideoModels: modelsForCapability(snapshot, 'image_to_video').length,
@@ -126,7 +234,12 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
       return {
         provider,
         status: 'failed',
+        discoverySource: 'none',
         modelCount: 0,
+        liveAuthenticatedModels: 0,
+        publicCatalogModels: 0,
+        staticFallbackModels: 0,
+        catalogDerivedModels: 0,
         imageModels: 0,
         videoModels: 0,
         imageToVideoModels: 0,
@@ -195,7 +308,7 @@ async function proveExecuteCapability(label: string, capabilityId: string, reque
       providerSelected: null,
       modelSelected: null,
       routeOrAdapter: label,
-      status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+      status: 'BLOCKED',
       artifactId: null,
       jobId: null,
       pollUrl: null,
@@ -234,7 +347,7 @@ async function proveAdminTextCapability(capabilityId: string, taxonomyId: string
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: '/api/admin/provider-capability-test',
-    status: capability?.executableEndpoint ? 'BLOCKED_WITH_EXACT_PROVIDER_ERROR' : 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX',
+    status: capability?.executableEndpoint ? 'SOURCE_WIRED' : 'NOT_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -267,7 +380,7 @@ async function proveAgentRequest(): Promise<CapabilityProof> {
           providerSelected: result.routedProvider ?? null,
           modelSelected: result.routedModel ?? null,
           routeOrAdapter: 'processAppAgentRequest',
-          status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+          status: 'BLOCKED',
           artifactId: null,
           jobId: null,
           pollUrl: null,
@@ -285,7 +398,7 @@ async function proveConnectedAppExecution(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: 'executeConnectedAppCapability',
-    status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: 'BLOCKED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -302,7 +415,7 @@ async function proveLongFormVideo(): Promise<CapabilityProof> {
       providerSelected: null,
       modelSelected: null,
       routeOrAdapter: '/api/admin/video-projects',
-      status: jobs.length >= 0 ? 'BLOCKED_WITH_EXACT_PROVIDER_ERROR' : 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX',
+      status: jobs.length >= 0 ? 'BLOCKED' : 'NOT_WIRED',
       artifactId: null,
       jobId: null,
       pollUrl: null,
@@ -352,7 +465,7 @@ async function proveAutoSelection(): Promise<CapabilityProof> {
           providerSelected: result.provider,
           modelSelected: result.model ?? null,
           routeOrAdapter: 'executeCapability:chat',
-          status: result.success ? 'LIVE_PROVEN' : 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+          status: result.success ? 'LIVE_PROVEN' : 'BLOCKED',
           artifactId: null,
           jobId: null,
           pollUrl: null,
@@ -371,7 +484,7 @@ async function proveFallback(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: 'executeCapabilityOrchestration fallback loop',
-    status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: 'SOURCE_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -386,7 +499,7 @@ async function proveStrictProviderProofMode(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: '/api/admin/provider-capability-test',
-    status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: 'SOURCE_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -402,7 +515,7 @@ async function proveRouteOutcomeLogging(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: 'logRouteOutcome/capability-tracing',
-    status: artifacts ? 'BLOCKED_WITH_EXACT_PROVIDER_ERROR' : 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX',
+    status: artifacts ? 'SOURCE_WIRED' : 'NOT_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -418,7 +531,7 @@ async function proveWorkerRetryAndPolling(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: '/api/brain/media-jobs/[jobId] + control-plane-jobs',
-    status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: 'SOURCE_WIRED',
     artifactId: null,
     jobId: job?.id ?? null,
     pollUrl: job?.id ? `/api/brain/media-jobs/${job.id}` : null,
@@ -433,7 +546,7 @@ async function classifyNotWired(label: string, capabilityId: string, sourceFile:
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: label,
-    status: 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX',
+    status: 'NOT_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -448,16 +561,12 @@ function classifyFailure(capabilityId: string, routeOrAdapter: string, result: A
     providerSelected: result.provider ?? null,
     modelSelected: result.model ?? null,
     routeOrAdapter,
-    status: result.readiness === 'NEEDS_CONFIGURATION' || result.readiness === 'UNAVAILABLE' || result.error_category === 'no_route_found'
-      ? 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX'
-      : 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: classifyFailureStatus(result),
     artifactId: result.artifactId ?? null,
     jobId: result.jobId ?? null,
     pollUrl: result.pollUrl ?? null,
     exactError: result.error ?? result.code ?? result.readiness,
-    sourceFileResponsible: result.readiness === 'NEEDS_CONFIGURATION' || result.readiness === 'UNAVAILABLE' || result.error_category === 'no_route_found'
-      ? 'src/lib/orchestrator.ts'
-      : null,
+    sourceFileResponsible: sourceFileForFailure(result),
   }
 }
 
@@ -467,7 +576,7 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter,
-    status: 'BLOCKED_WITH_EXACT_PROVIDER_ERROR',
+    status: 'BLOCKED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
@@ -476,12 +585,39 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
   }
 }
 
+function classifyFailureStatus(result: Awaited<ReturnType<typeof executeCapability>>): ProofStatus {
+  if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') return 'NOT_WIRED'
+  if (result.error_category === 'unsupported_endpoint') return 'NOT_WIRED'
+  if (result.readiness === 'NEEDS_INPUT' || result.readiness === 'BLOCKED') return 'BLOCKED'
+  if (result.readiness === 'NEEDS_CONFIGURATION' || result.readiness === 'UNAVAILABLE') {
+    return result.providerAttempts?.length ? 'BLOCKED' : 'NOT_WIRED'
+  }
+  return 'BLOCKED'
+}
+
+function sourceFileForFailure(result: Awaited<ReturnType<typeof executeCapability>>): string | null {
+  if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') return 'src/lib/providers/execution.ts'
+  if (result.error_category === 'unsupported_endpoint') return 'src/lib/ai-capability-adapters.ts'
+  if (result.readiness === 'NEEDS_CONFIGURATION' && !result.providerAttempts?.length) return 'src/lib/brain/v1-capability-matrix.ts'
+  if (result.readiness === 'UNAVAILABLE' && !result.providerAttempts?.length) return 'src/lib/providers/execution.ts'
+  return null
+}
+
 function summarize(capabilities: CapabilityProof[]) {
   return {
     liveProven: capabilities.filter((entry) => entry.status === 'LIVE_PROVEN').length,
-    blocked: capabilities.filter((entry) => entry.status === 'BLOCKED_WITH_EXACT_PROVIDER_ERROR').length,
-    notWired: capabilities.filter((entry) => entry.status === 'NOT_WIRED_WITH_EXACT_FILE_AND_FIX').length,
+    sourceWired: capabilities.filter((entry) => entry.status === 'SOURCE_WIRED').length,
+    providerAvailable: capabilities.filter((entry) => entry.status === 'PROVIDER_AVAILABLE').length,
+    blocked: capabilities.filter((entry) => entry.status === 'BLOCKED').length,
+    notWired: capabilities.filter((entry) => entry.status === 'NOT_WIRED').length,
   }
+}
+
+function mdCell(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\r?\n/g, '<br>')
+    .replace(/\|/g, '\\|')
+    .trim()
 }
 
 function renderMarkdown(report: {
@@ -490,7 +626,7 @@ function renderMarkdown(report: {
   providerKeyPath: ProviderKeyResult[]
   providerDiscovery: ProviderDiscoveryResult[]
   capabilities: CapabilityProof[]
-  summary: { liveProven: number; blocked: number; notWired: number }
+  summary: { liveProven: number; sourceWired: number; providerAvailable: number; blocked: number; notWired: number }
   nextVpsCommand: string | null
 }) {
   const lines = [
@@ -505,35 +641,37 @@ function renderMarkdown(report: {
     '## Summary',
     '',
     `- LIVE_PROVEN: ${report.summary.liveProven}`,
-    `- BLOCKED_WITH_EXACT_PROVIDER_ERROR: ${report.summary.blocked}`,
-    `- NOT_WIRED_WITH_EXACT_FILE_AND_FIX: ${report.summary.notWired}`,
+    `- SOURCE_WIRED: ${report.summary.sourceWired}`,
+    `- PROVIDER_AVAILABLE: ${report.summary.providerAvailable}`,
+    `- BLOCKED: ${report.summary.blocked}`,
+    `- NOT_WIRED: ${report.summary.notWired}`,
     '',
     '## Provider Key Path',
     '',
     '| Provider | Configured | Masked | Error |',
     '|---|---:|---|---|',
-    ...report.providerKeyPath.map((entry) => `| ${entry.provider} | ${entry.configured ? 'yes' : 'no'} | ${entry.masked ?? ''} | ${entry.error ?? ''} |`),
+    ...report.providerKeyPath.map((entry) => `| ${entry.provider} | ${entry.configured ? 'yes' : 'no'} | ${mdCell(entry.masked)} | ${mdCell(entry.error)} |`),
     '',
     '## Provider Discovery',
     '',
-    '| Provider | Status | Models | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |',
-    '|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|',
-    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${entry.status} | ${entry.modelCount} | ${entry.imageModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.error ?? ''} |`),
+    '| Provider | Status | Source | Models | Live-auth | Public | Static | Catalog-derived | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |',
+    '|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${entry.status} | ${entry.discoverySource} | ${entry.modelCount} | ${entry.liveAuthenticatedModels} | ${entry.publicCatalogModels} | ${entry.staticFallbackModels} | ${entry.catalogDerivedModels} | ${entry.imageModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${mdCell(entry.error)} |`),
     '',
     '## Capabilities',
     '',
     '| Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Source File |',
     '|---|---|---|---|---|---|---|---|---|---|',
-    ...report.capabilities.map((entry) => `| ${entry.capabilityId} | ${entry.status} | ${entry.providerSelected ?? ''} | ${entry.modelSelected ?? ''} | ${entry.routeOrAdapter} | ${entry.artifactId ?? ''} | ${entry.jobId ?? ''} | ${entry.pollUrl ?? ''} | ${entry.exactError ?? ''} | ${entry.sourceFileResponsible ?? ''} |`),
+    ...report.capabilities.map((entry) => `| ${entry.capabilityId} | ${entry.status} | ${mdCell(entry.providerSelected)} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.routeOrAdapter)} | ${mdCell(entry.artifactId)} | ${mdCell(entry.jobId)} | ${mdCell(entry.pollUrl)} | ${mdCell(entry.exactError)} | ${mdCell(entry.routeFile ?? entry.sourceFileResponsible)} |`),
+    '',
+    '## Capability Contracts',
+    '',
+    '| Capability | User-facing name | Provider candidates | Required keys | Required local tools | Artifact behavior | Job behavior |',
+    '|---|---|---|---|---|---|---|',
+    ...report.capabilities.map((entry) => `| ${entry.capabilityId} | ${mdCell(entry.capabilityName)} | ${mdCell((entry.providerCandidates ?? []).join('<br>'))} | ${mdCell((entry.requiredKeys ?? []).join('<br>'))} | ${mdCell((entry.requiredLocalTools ?? []).join('<br>'))} | ${mdCell(entry.artifactBehavior)} | ${mdCell(entry.jobBehavior)} |`),
   ]
   if (report.nextVpsCommand) {
-    lines.push('', '## VPS Command', '', `- \
-
-	\
-
-	\
-
-	${report.nextVpsCommand}`)
+    lines.push('', '## VPS Command', '', `- ${report.nextVpsCommand}`)
   }
   return lines.join('\n')
 }

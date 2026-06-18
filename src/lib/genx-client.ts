@@ -3,7 +3,7 @@
  *
  * GenX is the primary AI execution layer for the AmarktAI Network.
  * All AI requests are routed through GenX by default. Direct provider
- * routing (openai/groq/gemini/etc.) is only used as a fallback when
+ * routing through the approved direct-provider mesh is only used as a fallback when
  * GenX is unavailable or returns an error.
  *
  * Endpoints:

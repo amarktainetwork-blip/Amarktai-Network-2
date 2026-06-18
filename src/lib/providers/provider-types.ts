@@ -49,6 +49,7 @@ export const ROUTING_PROFILE_IDS = [
 export type RoutingProfileId = typeof ROUTING_PROFILE_IDS[number]
 export type DiscoveryStatus = 'ready' | 'not_configured' | 'failed'
 export type CapabilityEvidence = 'provider_contract' | 'model_metadata' | 'policy_gate'
+export type ModelDiscoverySource = 'live_authenticated' | 'public_catalog' | 'static_fallback' | 'catalog_derived'
 export type HealthState = 'healthy' | 'degraded' | 'unknown' | 'unconfigured'
 
 export interface ProviderEndpoint {
@@ -112,6 +113,7 @@ export interface CapabilityDefinition {
 export interface DiscoveredModel {
   provider: ProviderId
   id: string
+  discoverySource?: ModelDiscoverySource
   capabilities: CapabilityId[]
   capabilityEvidence: CapabilityEvidence | 'unknown'
   status: 'available' | 'unavailable' | 'unknown'
@@ -132,6 +134,7 @@ export interface ProviderDiscoverySnapshot {
   status: DiscoveryStatus
   endpoint: string | null
   keySource: string
+  discoverySource?: ModelDiscoverySource | 'none'
   models: DiscoveredModel[]
   tasks: string[]
   inferenceProviders: string[]

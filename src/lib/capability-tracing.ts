@@ -43,6 +43,7 @@ export async function recordCapabilityTrace(input: CapabilityTraceInput) {
 }
 
 export async function recordCapabilityTraceSafe(input: CapabilityTraceInput) {
+  if (!process.env.DATABASE_URL?.trim()) return null
   try {
     return await recordCapabilityTrace(input)
   } catch (error) {

@@ -33,7 +33,7 @@ export async function GET() {
     recommendations: {
       keepCore: ['genx', 'github', 'qwen', 'groq', 'together', 'huggingface'],
       keepActiveOptional: ['smtp'],
-      advancedOnly: ['openai', 'xai'],
+      advancedOnly: [],
       debateBeforeAdding: [],
       hideFromPrimarySetup: providers.filter((provider) => !provider.showInPrimarySetup).map((provider) => provider.key),
     },

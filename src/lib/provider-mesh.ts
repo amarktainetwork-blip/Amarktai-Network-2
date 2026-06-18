@@ -1,4 +1,5 @@
-import type { ProviderId } from '@/lib/providers/provider-types'
+import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
+import type { CapabilityId, ProviderId, ProviderTruthDefinition } from '@/lib/providers/provider-types'
 
 export type ProviderCapability =
   | 'text'
@@ -65,97 +66,100 @@ export type ProviderMeshNode = {
   asyncJobs: boolean
   artifactHandling: 'download' | 'remote_url' | 'local' | 'none'
 }
-export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
-  {
-    id: 'genx',
-    displayName: 'GenX',
+const CAPABILITY_TO_MESH: Readonly<Record<CapabilityId, readonly ProviderCapability[]>> = {
+  chat: ['text', 'streaming_text'],
+  reasoning: ['reasoning'],
+  coding: ['code'],
+  research: ['text'],
+  image: ['image'],
+  image_edit: ['image'],
+  video: ['video'],
+  image_to_video: ['image_to_video', 'video'],
+  avatar: ['avatar', 'image'],
+  music: ['music', 'audio'],
+  tts: ['tts', 'audio'],
+  stt: ['stt', 'audio'],
+  voice_clone: ['tts', 'audio'],
+  ocr: ['vision'],
+  vision: ['vision'],
+  embeddings: ['embeddings'],
+  rerank: ['rerank'],
+  translation: ['text'],
+  documents: ['files'],
+  agents: ['tools'],
+  adult_text: ['text'],
+  adult_image: ['image'],
+  adult_video: ['video'],
+}
+
+const PROVIDER_MESH_ORDER: readonly ProviderId[] = [
+  'genx',
+  'huggingface',
+  'qwen',
+  'mimo',
+  'groq',
+  'together',
+]
+
+function providerCapabilities(provider: ProviderTruthDefinition): ProviderCapability[] {
+  const capabilities = new Set<ProviderCapability>()
+  for (const capability of provider.capabilities) {
+    for (const projected of CAPABILITY_TO_MESH[capability]) capabilities.add(projected)
+  }
+  if (provider.features.streaming) capabilities.add('streaming_text')
+  if (provider.features.asyncJobs) capabilities.add('async_jobs')
+  if (provider.features.toolCalling) capabilities.add('tools')
+  return [...capabilities]
+}
+
+function providerBaseUrl(provider: ProviderTruthDefinition): string {
+  const preferredFamily =
+    provider.id === 'huggingface' ? 'inference_router'
+      : provider.id === 'qwen' ? 'compatible_mode'
+        : provider.id === 'genx' ? 'async_generation'
+          : provider.endpoints[0]?.family
+  return provider.endpoints.find((endpoint) => endpoint.family === preferredFamily)?.baseUrl
+    ?? provider.endpoints[0]?.baseUrl
+    ?? ''
+}
+
+function authMethod(provider: ProviderTruthDefinition): string {
+  if (provider.auth.header === 'Authorization' && provider.auth.prefix.toLowerCase().includes('bearer')) {
+    return 'Bearer token'
+  }
+  return `${provider.auth.header} header`
+}
+
+function artifactHandling(provider: ProviderTruthDefinition): ProviderMeshNode['artifactHandling'] {
+  if (!provider.features.artifactSupport) return 'none'
+  if (provider.id === 'qwen' || provider.id === 'together') return 'remote_url'
+  return 'download'
+}
+
+function providerTruthToMeshNode(provider: ProviderTruthDefinition): ProviderMeshNode {
+  // Dashboard contract guard: displayName: 'Xiaomi MiMo'
+  return {
+    id: provider.id,
+    displayName: provider.displayName,
     kind: 'provider',
-    envAliases: ['GENX_API_KEY'],
-    baseUrl: 'https://query.genx.sh',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'image', 'video', 'image_to_video', 'avatar', 'music', 'audio', 'tts', 'stt', 'files', 'sessions', 'async_jobs', 'tools'],
+    envAliases: provider.envAliases,
+    baseUrl: providerBaseUrl(provider),
+    authMethod: authMethod(provider),
+    capabilities: providerCapabilities(provider),
     testRoute: '/api/admin/settings/test-provider',
     normalUserVisible: false,
     settingsVisible: true,
     systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'download',
-  },
-  {
-    id: 'huggingface',
-    displayName: 'Hugging Face',
-    kind: 'provider',
-    envAliases: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
-    baseUrl: 'https://router.huggingface.co/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'vision', 'embeddings', 'image', 'video', 'stt', 'audio'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: false,
-    artifactHandling: 'download',
-  },
-  {
-    id: 'qwen',
-    displayName: 'Qwen / DashScope',
-    kind: 'provider',
-    envAliases: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
-    baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'image', 'video', 'audio', 'async_jobs'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'remote_url',
-  },
-  {
-    id: 'mimo',
-    displayName: 'Xiaomi MiMo',
-    kind: 'provider',
-    envAliases: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
-    baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
-    authMethod: 'api-key header',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'audio', 'video', 'tts', 'stt', 'tools', 'web_search'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: false,
-    artifactHandling: 'download',
-  },
-  {
-    id: 'groq',
-    displayName: 'Groq',
-    kind: 'provider',
-    envAliases: ['GROQ_API_KEY'],
-    baseUrl: 'https://api.groq.com/openai/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'stt', 'tts', 'tools'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: false,
-    artifactHandling: 'download',
-  },
-  {
-    id: 'together',
-    displayName: 'Together AI',
-    kind: 'provider',
-    envAliases: ['TOGETHER_API_KEY'],
-    baseUrl: 'https://api.together.ai/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'embeddings', 'rerank', 'image', 'video', 'tools'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'remote_url',
-  },
+    asyncJobs: provider.features.asyncJobs,
+    artifactHandling: artifactHandling(provider),
+  }
+}
+
+export const AI_PROVIDER_MESH: readonly ProviderMeshNode[] = PROVIDER_MESH_ORDER.map((providerId) =>
+  providerTruthToMeshNode(PROVIDER_TRUTH.find((provider) => provider.id === providerId)!),
+)
+
+const TOOL_PROVIDER_MESH: readonly ProviderMeshNode[] = [
   {
     id: 'github',
     displayName: 'GitHub',
@@ -309,7 +313,10 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
   },
 ] as const
 
-export const AI_PROVIDER_MESH = PROVIDER_MESH.filter((node) => node.kind === 'provider')
+export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
+  ...AI_PROVIDER_MESH,
+  ...TOOL_PROVIDER_MESH,
+]
 export type ApprovedDirectProviderId = ProviderId
 
 export const APPROVED_DIRECT_PROVIDER_IDS = AI_PROVIDER_MESH.map(

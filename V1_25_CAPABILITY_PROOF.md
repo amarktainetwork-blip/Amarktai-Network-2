@@ -1,6 +1,6 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T07:36:51.201Z
+Generated: 2026-06-18T11:24:47.151Z
 
 Database available locally: no
 Proof app slug: amarktai-network
@@ -9,8 +9,10 @@ Connected-app secret present locally: no
 ## Summary
 
 - LIVE_PROVEN: 0
-- BLOCKED_WITH_EXACT_PROVIDER_ERROR: 10
-- NOT_WIRED_WITH_EXACT_FILE_AND_FIX: 15
+- SOURCE_WIRED: 6
+- PROVIDER_AVAILABLE: 0
+- BLOCKED: 4
+- NOT_WIRED: 15
 
 ## Provider Key Path
 
@@ -25,78 +27,75 @@ Connected-app secret present locally: no
 
 ## Provider Discovery
 
-| Provider | Status | Models | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| mimo | not_configured | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| genx | not_configured | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| huggingface | ready | 100 | 50 | 9 | 4 | 5 | 2 | 6 | 0 |  |
-| qwen | not_configured | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| together | not_configured | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| groq | not_configured | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| Provider | Status | Source | Models | Live-auth | Public | Static | Catalog-derived | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| mimo | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| genx | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| huggingface | ready | public_catalog | 100 | 0 | 100 | 0 | 0 | 49 | 8 | 3 | 5 | 2 | 6 | 0 |  |
+| qwen | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| together | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| groq | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
 
 ## Capabilities
 
 | Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Source File |
 |---|---|---|---|---|---|---|---|---|---|
-| chat_text_generation | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| reasoning | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:reasoning |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| coding_assistant | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:code |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| web_research | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | researchRuntime.execute |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| summarization | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. |  |
-| translation | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. |  |
-| embeddings | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:embeddings |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| rerank_search_relevance | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:rerank |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| text_to_image | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:image_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| image_editing_source_transform | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:image_edit |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| text_to_video_short_clip | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:video_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| text_to_speech | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:tts |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| speech_to_text | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:stt |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| agent_request_execution | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/brain/agent-request |  |  |  | Execution failed. |  |
-| connected_app_capability_execution | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | executeConnectedAppCapability |  |  |  | Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity. |  |
-| image_to_video | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:image_to_video |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| long_form_multi_scene_video_assembly | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/admin/video-projects |  |  |  | 
-Invalid `prisma.controlPlaneJob.findMany()` invocation in
-C:\Users\digit\Code\Amarktai-Network-2\src\lib\control-plane-jobs.ts:234:33
+| chat_text_generation | NOT_WIRED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| reasoning | NOT_WIRED |  |  | executeCapability:reasoning |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| coding_assistant | NOT_WIRED |  |  | executeCapability:code |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| web_research | NOT_WIRED |  |  | researchRuntime.execute |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| summarization | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. | src/app/api/admin/provider-capability-test/route.ts |
+| translation | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. | src/app/api/admin/provider-capability-test/route.ts |
+| embeddings | NOT_WIRED |  |  | executeCapability:embeddings |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| rerank_search_relevance | NOT_WIRED |  |  | executeCapability:rerank |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| text_to_image | NOT_WIRED |  |  | executeCapability:image_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| image_editing_source_transform | NOT_WIRED |  |  | executeCapability:image_edit |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| text_to_video_short_clip | NOT_WIRED |  |  | executeCapability:video_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| text_to_speech | NOT_WIRED |  |  | executeCapability:tts |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| speech_to_text | NOT_WIRED |  |  | executeCapability:stt |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| agent_request_execution | BLOCKED |  |  | /api/brain/agent-request |  |  |  | Execution failed. | src/app/api/brain/agent-request/route.ts |
+| connected_app_capability_execution | BLOCKED |  |  | executeConnectedAppCapability |  |  |  | Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity. | src/lib/connected-app-capability-engine.ts |
+| image_to_video | NOT_WIRED |  |  | executeCapability:image_to_video |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| long_form_multi_scene_video_assembly | BLOCKED |  |  | /api/admin/video-projects |  |  |  | <br>Invalid `prisma.controlPlaneJob.findMany()` invocation in<br>C:\Users\digit\Code\Amarktai-Network-2\src\lib\control-plane-jobs.ts:234:33<br><br>  231 }<br>  232 <br>  233 export async function listControlPlaneJobs(limit = 100) {<br>→ 234   return prisma.controlPlaneJob.findMany(<br>error: Environment variable not found: DATABASE_URL.<br>  -->  schema.prisma:7<br>   \| <br> 6 \|   provider = "mysql"<br> 7 \|   url      = env("DATABASE_URL")<br>   \| <br><br>Validation Error Count: 1 | src/app/api/admin/video-projects/route.ts |
+| avatar_library_avatar_image_generation | NOT_WIRED |  |  | executeCapability:avatar_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| talking_avatar_video | NOT_WIRED |  |  | talking-avatar video |  |  |  | avatar_video hard-stops with NEEDS_CONFIGURATION; no approved lip-sync adapter is wired. | src/lib/orchestrator.ts |
+| adult_media_policy_gated_generation | BLOCKED |  |  | executeCapability:adult_image |  |  |  | <br>Invalid `prisma.appAiProfile.findUnique()` invocation in<br>C:\Users\digit\Code\Amarktai-Network-2\src\lib\adult-app-capabilities.ts:46:41<br><br>  43 <br>  44 export async function getAdultAppCapabilityProfile(appSlug: string): Promise<AdultAppCapabilityProfile> {<br>  45   await loadGlobalAdultModeFromDB()<br>→ 46   const row = await prisma.appAiProfile.findUnique(<br>error: Environment variable not found: DATABASE_URL.<br>  -->  schema.prisma:7<br>   \| <br> 6 \|   provider = "mysql"<br> 7 \|   url      = env("DATABASE_URL")<br>   \| <br><br>Validation Error Count: 1 | src/lib/orchestrator.ts |
+| provider_auto_selection | NOT_WIRED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/execution.ts |
+| provider_fallback | SOURCE_WIRED |  |  | executeCapabilityOrchestration fallback loop |  |  |  | Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers. | src/lib/orchestrator.ts |
+| strict_provider_proof_mode | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment. | src/app/api/admin/provider-capability-test/route.ts |
+| route_outcome_logging | SOURCE_WIRED |  |  | logRouteOutcome/capability-tracing |  |  |  | Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment. | src/lib/orchestrator.ts |
+| worker_job_retry_and_polling_completion | SOURCE_WIRED |  |  | /api/brain/media-jobs/[jobId] + control-plane-jobs |  |  |  | Polling and retry code is wired, but live proof requires an actual queued async provider job plus Redis/BullMQ and media job persistence in the target environment. | src/lib/control-plane-jobs.ts |
 
-  231 }
-  232 
-  233 export async function listControlPlaneJobs(limit = 100) {
-→ 234   return prisma.controlPlaneJob.findMany(
-error: Environment variable not found: DATABASE_URL.
-  -->  schema.prisma:7
-   | 
- 6 |   provider = "mysql"
- 7 |   url      = env("DATABASE_URL")
-   | 
+## Capability Contracts
 
-Validation Error Count: 1 |  |
-| avatar_library_avatar_image_generation | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:avatar_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| talking_avatar_video | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | talking-avatar video |  |  |  | avatar_video hard-stops with NEEDS_CONFIGURATION; no approved lip-sync adapter is wired. | src/lib/orchestrator.ts |
-| adult_media_policy_gated_generation | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | executeCapability:adult_image |  |  |  | 
-Invalid `prisma.appAiProfile.findUnique()` invocation in
-C:\Users\digit\Code\Amarktai-Network-2\src\lib\adult-app-capabilities.ts:46:41
-
-  43 
-  44 export async function getAdultAppCapabilityProfile(appSlug: string): Promise<AdultAppCapabilityProfile> {
-  45   await loadGlobalAdultModeFromDB()
-→ 46   const row = await prisma.appAiProfile.findUnique(
-error: Environment variable not found: DATABASE_URL.
-  -->  schema.prisma:7
-   | 
- 6 |   provider = "mysql"
- 7 |   url      = env("DATABASE_URL")
-   | 
-
-Validation Error Count: 1 |  |
-| provider_auto_selection | NOT_WIRED_WITH_EXACT_FILE_AND_FIX |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/orchestrator.ts |
-| provider_fallback | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | executeCapabilityOrchestration fallback loop |  |  |  | Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers. |  |
-| strict_provider_proof_mode | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/admin/provider-capability-test |  |  |  | Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment. |  |
-| route_outcome_logging | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | logRouteOutcome/capability-tracing |  |  |  | Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment. |  |
-| worker_job_retry_and_polling_completion | BLOCKED_WITH_EXACT_PROVIDER_ERROR |  |  | /api/brain/media-jobs/[jobId] + control-plane-jobs |  |  |  | Polling and retry code is wired, but live proof requires an actual queued async provider job plus Redis/BullMQ and media job persistence in the target environment. |  |
+| Capability | User-facing name | Provider candidates | Required keys | Required local tools | Artifact behavior | Job behavior |
+|---|---|---|---|---|---|---|
+| chat_text_generation | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| reasoning | Reasoning | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| coding_assistant | Text Generation | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| web_research | Research | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY | Playwright<br>Scrapy<br>Trafilatura | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| summarization | Summarization | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| translation | Translation | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| embeddings | Embeddings | qwen:provider-discovery | QWEN_API_KEY<br>DASHSCOPE_API_KEY |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| rerank_search_relevance | Rerank | huggingface:sentence-transformers/all-MiniLM-L6-v2 | HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| text_to_image | Text to Image | genx:gemini-2.5-pro,gpt-image-1<br>qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro<br>together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro<br>huggingface:stabilityai/stable-diffusion-xl-base-1.0 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| image_editing_source_transform | Image and Text to Image |  |  |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| text_to_video_short_clip | Text to Video | genx:veo-3.1<br>qwen:wan2.1-t2v-turbo<br>together:provider-discovery | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY | ffmpeg | Intentional output should persist an artifact when execution succeeds. | Async job/polling expected when provider returns processing. |
+| text_to_speech | Text to Speech | mimo:provider-discovery<br>together:provider-discovery<br>groq:canopylabs/orpheus-v1-english<br>genx:gpt-4o-mini-tts<br>huggingface:facebook/mms-tts-eng | MIMO_API_KEY<br>XIAOMI_API_KEY<br>TOGETHER_API_KEY<br>GROQ_API_KEY<br>GENX_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| speech_to_text | Automatic Speech Recognition | genx:gpt-4o-transcribe<br>groq:whisper-large-v3-turbo<br>together:provider-discovery<br>huggingface:openai/whisper-large-v3 | GENX_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| agent_request_execution | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| connected_app_capability_execution | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| image_to_video | Image to Video | qwen:wan2.1-i2v-turbo<br>genx:provider-discovery<br>together:provider-discovery | QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>GENX_API_KEY<br>TOGETHER_API_KEY | ffmpeg | Intentional output should persist an artifact when execution succeeds. | Async job/polling expected when provider returns processing. |
+| long_form_multi_scene_video_assembly | Text to Video | genx:veo-3.1<br>qwen:wan2.1-t2v-turbo<br>together:provider-discovery | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY | ffmpeg | Intentional output should persist an artifact when execution succeeds. | Async job/polling expected when provider returns processing. |
+| avatar_library_avatar_image_generation | Avatar Generation | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo | GENX_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| talking_avatar_video | Avatar Video |  |  | ffmpeg<br>Rhubarb/lip-sync adapter | Intentional output should persist an artifact when execution succeeds. | Async job/polling expected when provider returns processing. |
+| adult_media_policy_gated_generation | Text to Image | genx:gemini-2.5-pro,gpt-image-1<br>qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro<br>together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro<br>huggingface:stabilityai/stable-diffusion-xl-base-1.0 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | Intentional output should persist an artifact when execution succeeds. | Synchronous completion expected; no durable job required. |
+| provider_auto_selection | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| provider_fallback | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| strict_provider_proof_mode | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| route_outcome_logging | Chat | genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro<br>qwen:qwen-turbo,qwen-plus,qwen-max<br>mimo:mimo-v2.5,mimo-v2.5-pro<br>groq:llama-3.3-70b-versatile<br>together:meta-llama/Llama-3.3-70B-Instruct-Turbo<br>huggingface:mistralai/Mistral-7B-Instruct-v0.3 | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>MIMO_API_KEY<br>XIAOMI_API_KEY<br>GROQ_API_KEY<br>TOGETHER_API_KEY<br>HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN |  | No artifact by default; normal chat/text response remains transient unless explicitly requested. | Synchronous completion expected; no durable job required. |
+| worker_job_retry_and_polling_completion | Text to Video | genx:veo-3.1<br>qwen:wan2.1-t2v-turbo<br>together:provider-discovery | GENX_API_KEY<br>QWEN_API_KEY<br>DASHSCOPE_API_KEY<br>TOGETHER_API_KEY | Redis/BullMQ worker<br>local storage | Intentional output should persist an artifact when execution succeeds. | Async job/polling expected when provider returns processing. |
 
 ## VPS Command
 
-- 
-	
-	
-	DATABASE_URL="<production mysql url>" npx tsx scripts/v1-25-capability-proof.ts
+- DATABASE_URL="<production mysql url>" npx tsx scripts/v1-25-capability-proof.ts

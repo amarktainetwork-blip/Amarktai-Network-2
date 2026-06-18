@@ -4,6 +4,7 @@ import {
   type ApprovedDirectProviderId,
   type ProviderCapability,
 } from '@/lib/provider-mesh'
+import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import {
   getMeshCredential,
   getMeshTestNotes,
@@ -104,43 +105,31 @@ const REGISTRY_OVERRIDES: Record<
   ApprovedDirectProviderId,
   Pick<
     ProviderRegistryEntry,
-    'authHeaderName' | 'authPrefix' | 'supportsDynamicModels' | 'region' | 'readinessCheck'
+    'supportsDynamicModels' | 'region' | 'readinessCheck'
   >
 > = {
   genx: {
-    authHeaderName: 'Authorization',
-    authPrefix: 'Bearer ',
     supportsDynamicModels: true,
     readinessCheck: 'genx_models',
   },
   huggingface: {
-    authHeaderName: 'Authorization',
-    authPrefix: 'Bearer ',
     supportsDynamicModels: true,
     readinessCheck: 'identity',
   },
   qwen: {
-    authHeaderName: 'Authorization',
-    authPrefix: 'Bearer ',
     supportsDynamicModels: true,
     region: process.env.DASHSCOPE_REGION?.trim() || 'international',
     readinessCheck: 'models',
   },
   mimo: {
-    authHeaderName: 'api-key',
-    authPrefix: '',
     supportsDynamicModels: true,
     readinessCheck: 'models',
   },
   groq: {
-    authHeaderName: 'Authorization',
-    authPrefix: 'Bearer ',
     supportsDynamicModels: true,
     readinessCheck: 'chat_probe',
   },
   together: {
-    authHeaderName: 'Authorization',
-    authPrefix: 'Bearer ',
     supportsDynamicModels: true,
     readinessCheck: 'models',
   },
@@ -154,12 +143,13 @@ const modelDiscoveryCache = new Map<
 export const PROVIDER_REGISTRY: readonly ProviderRegistryEntry[] = AI_PROVIDER_MESH.map((node) => {
   const id = node.id as ApprovedDirectProviderId
   const override = REGISTRY_OVERRIDES[id]
+  const truth = PROVIDER_TRUTH.find((provider) => provider.id === id)!
   return {
     id,
     displayName: node.displayName,
     baseUrl: providerBaseUrl(id, node.baseUrl),
-    authHeaderName: override.authHeaderName,
-    authPrefix: override.authPrefix,
+    authHeaderName: truth.auth.header === 'Authorization' ? 'Authorization' : 'api-key',
+    authPrefix: truth.auth.prefix,
     capabilities: node.capabilities,
     defaultModelsByCapability: DEFAULT_MODELS[id],
     supportedModels: supportedModels(id),

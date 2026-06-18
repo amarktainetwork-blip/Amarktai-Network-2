@@ -47,19 +47,19 @@ async function githubAuthenticated(token: string | null): Promise<boolean> {
 }
 
 export async function getRepoWorkbenchStatus() {
-  const [gitInstalled, ghInstalled, githubToken, writable, genx, openai, groq, qwen] = await Promise.all([
+  const [gitInstalled, ghInstalled, githubToken, writable, genx, groq, qwen, together] = await Promise.all([
     commandInstalled('git'),
     commandInstalled('gh'),
     getGitHubToken(),
     workspaceWritable(),
     getGenXStatusAsync(),
-    isProviderConfigured('openai'),
     isProviderConfigured('groq'),
     isProviderConfigured('qwen'),
+    isProviderConfigured('together'),
   ])
 
   const githubOk = await githubAuthenticated(githubToken)
-  const aiAvailable = genx.available || openai || groq || qwen
+  const aiAvailable = genx.available || groq || qwen || together
   const blockers: string[] = []
   const warnings: string[] = []
   if (!gitInstalled) blockers.push('git is not installed on the server')
@@ -79,7 +79,7 @@ export async function getRepoWorkbenchStatus() {
     workspaceWritable: writable,
     genxConfigured: genx.configured,
     genxAvailable: genx.available,
-    directProviderAvailable: openai || groq || qwen,
+    directProviderAvailable: groq || qwen || together,
     canListRepos: !!githubToken && githubOk,
     canImport: gitInstalled && writable,
     canReadFiles: gitInstalled && writable,

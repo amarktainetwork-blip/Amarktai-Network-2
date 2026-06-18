@@ -141,7 +141,7 @@ export default function SettingsPage() {
   useEffect(() => { void load() }, [load])
 
   const providers = truth?.providers ?? []
-  const connectedProviders = providers.filter((provider) => provider.connected).length
+  const connectedProviders = providers.filter((provider) => provider.providerLiveTestPassed).length
 
   async function saveRoutingPolicy() {
     setRoutingMessage('')
@@ -205,7 +205,7 @@ export default function SettingsPage() {
 
       {!loading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <DashboardMetricCard label="Providers ready" value={`${connectedProviders}/${providers.length}`} tone={connectedProviders === providers.length ? 'emerald' : connectedProviders > 0 ? 'amber' : 'slate'} detail="Connected providers with successful live-test state." />
+          <DashboardMetricCard label="Provider live tests" value={`${connectedProviders}/${providers.length}`} tone={connectedProviders === providers.length ? 'emerald' : connectedProviders > 0 ? 'amber' : 'slate'} detail="Successful provider checks only; capability proof is counted separately." />
           <DashboardMetricCard label="Storage" value={storage?.ready ? 'Ready' : 'Needs setup'} tone={storage?.ready ? 'emerald' : 'amber'} detail="Artifact storage truth from the backend status surface." />
           <DashboardMetricCard label="Runtime tools" value={runtimeTools.filter((tool) => tool.connected).length} tone="cyan" detail="Local runtime tools currently reporting as connected." />
           <DashboardMetricCard label="Capabilities" value={capabilities.length} tone="slate" detail="Capability truth entries currently returned for operator review." />
@@ -216,7 +216,7 @@ export default function SettingsPage() {
         <div className="flex flex-wrap gap-3">
           {truth ? (
             <StatusPill
-              label={`${connectedProviders} of ${providers.length} providers ready`}
+              label={`${connectedProviders} of ${providers.length} provider live tests passed`}
               status={
                 providers.length > 0 && connectedProviders === providers.length
                   ? 'ready'
@@ -285,7 +285,7 @@ export default function SettingsPage() {
           </div>
       </DashboardSectionPanel>
 
-      <DashboardSectionPanel title="AI provider connections" eyebrow="Secure credentials and live tests">
+      <DashboardSectionPanel title="AI provider connections" eyebrow="Keys, catalogs, provider tests, and capability proof">
         {loading ? (
           <LoadingCard label="Checking provider configuration..." />
         ) : truth ? (
@@ -375,9 +375,9 @@ export default function SettingsPage() {
         </div>
       </DashboardSectionPanel>
 
-      <DashboardSectionPanel title="Capability matrix" eyebrow="Mixed truth view">
+      <DashboardSectionPanel title="Capability matrix" eyebrow="Proof status view">
         <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40">
-          {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_130px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.readiness ?? entry.status ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
+          {capabilities.length === 0 ? <p className="p-5 text-sm text-slate-500">Capability truth is currently unavailable.</p> : capabilities.map((entry) => <div key={entry.id ?? entry.capability} className="grid gap-2 border-b border-slate-800/70 p-4 text-xs last:border-0 md:grid-cols-[1fr_150px_100px_100px_2fr]"><p className="font-black text-slate-200">{entry.label ?? String(entry.id ?? entry.capability).replaceAll('_', ' ')}</p><p className="font-bold text-cyan-300">{entry.status ?? entry.readiness ?? 'unknown'}</p><p className="text-slate-500">{entry.createsArtifact ? 'Artifact' : 'Direct result'}</p><p className="text-slate-500">{entry.longRunning ? 'Long-running' : 'Immediate'}</p><p className="text-slate-500">{entry.blocker || 'No declared blocker'}</p></div>)}
         </div>
       </DashboardSectionPanel>
 
@@ -491,7 +491,7 @@ function ProviderConnectionCard({
     }
   }
 
-  const ready = entry.connected
+  const ready = entry.providerLiveTestPassed
   const failed = entry.status === 'Failed'
 
   return (
@@ -503,7 +503,19 @@ function ProviderConnectionCard({
             {canonicalProviderHint(entry)}
           </p>
         </div>
-        <DashboardStatusBadge value={ready ? 'ready' : failed ? 'failed' : entry.configured ? 'partial' : 'unavailable'} map={{ ready: { label: 'ready', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, partial: { label: 'needs test', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unavailable: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
+        <DashboardStatusBadge value={entry.capabilityLiveProven ? 'live_proven' : ready ? 'provider_tested' : failed ? 'failed' : entry.configured ? 'partial' : 'unavailable'} map={{ live_proven: { label: 'capability live-proven', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, provider_tested: { label: 'provider tested', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, partial: { label: 'needs test', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unavailable: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
+      </div>
+
+      <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">
+        <ProviderEvidence label="Key present" active={entry.keyPresent} />
+        <ProviderEvidence
+          label={`Catalog ${entry.providerCatalogSource !== 'none' ? `(${entry.providerCatalogSource.replaceAll('_', ' ')})` : ''}`}
+          active={entry.providerCatalogWorks}
+          detail={`${entry.providerCatalogModelCount} models`}
+        />
+        <ProviderEvidence label="Provider live test passed" active={entry.providerLiveTestPassed} />
+        <ProviderEvidence label="Capability live-proven" active={entry.capabilityLiveProven} />
+        <ProviderEvidence label="Route/adapter exists" active={entry.routeAdapterExists} />
       </div>
 
       {entry.requiresSecret && (
@@ -576,6 +588,25 @@ function canonicalProviderHint(entry: SettingsTruthEntry) {
   const truth = PROVIDER_TRUTH.find((provider) => provider.id === entry.key)
   if (!truth) return `Unlocks ${entry.unlocks}.`
   return `Canonical: ${humanList(truth.capabilities.map(formatCapabilityLabel))}.`
+}
+
+function ProviderEvidence({
+  label,
+  active,
+  detail,
+}: {
+  label: string
+  active: boolean
+  detail?: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/45 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className={`mt-1 text-xs font-black ${active ? 'text-emerald-300' : 'text-slate-500'}`}>
+        {active ? 'yes' : 'no'}{detail ? ` · ${detail}` : ''}
+      </p>
+    </div>
+  )
 }
 
 function formatCapabilityLabel(value: string) {

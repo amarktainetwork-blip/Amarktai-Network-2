@@ -61,7 +61,9 @@ describe('PR118 provider runtime and dashboard recovery', () => {
 
   it('does not present wiring as live provider readiness', () => {
     const capabilities = source('src/app/admin/dashboard/capabilities/page.tsx')
-    expect(capabilities).toContain("working: { label: 'Wired'")
-    expect(capabilities).toContain('Live provider availability may still vary by discovery and configuration')
+    expect(capabilities).not.toContain("working: { label: 'Wired'")
+    expect(capabilities).toContain('LIVE_PROVEN')
+    expect(capabilities).toContain('SOURCE_WIRED')
+    expect(capabilities).toContain('Provider/catalog evidence exists, but the product route is not wired.')
   })
 })

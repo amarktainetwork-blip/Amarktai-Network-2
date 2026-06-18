@@ -39,7 +39,28 @@ type CapabilityEntry = {
   createsArtifact: boolean
   blocker: string | null
   status: string
+  backendStatus?: string
+  proofStatus?: 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
+  routeAdapterExists?: boolean
+  providerAvailable?: boolean
+  providerCatalogWorks?: boolean
+  providerLiveTestPassed?: boolean
+  capabilityLiveProven?: boolean
+  exactProofError?: string | null
   providerRoutes?: Array<{ provider: string; executable: boolean }>
+}
+
+type CapabilityTruthResponse = {
+  capabilities?: CapabilityEntry[]
+  proofSummary?: {
+    liveProven?: number
+    sourceWired?: number
+    providerAvailable?: number
+    blocked?: number
+    notWired?: number
+  }
+  proofGeneratedAt?: string | null
+  error?: string
 }
 
 // ── Capability group display config ───────────────────────────────────────────
@@ -58,27 +79,34 @@ const GROUP_CONFIG: Record<string, { label: string; icon: React.ElementType; col
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  working: { label: 'Wired', color: 'bg-emerald-900/60 text-emerald-300' },
-  partially_wired: { label: 'Partial', color: 'bg-amber-900/60 text-amber-300' },
-  provider_available_not_wired: { label: 'Provider available', color: 'bg-slate-800 text-slate-400' },
-  unavailable: { label: 'Unavailable', color: 'bg-red-900/60 text-red-300' },
+  LIVE_PROVEN: { label: 'Live proven', color: 'bg-emerald-900/60 text-emerald-300' },
+  SOURCE_WIRED: { label: 'Source wired', color: 'bg-cyan-900/50 text-cyan-300' },
+  PROVIDER_AVAILABLE: { label: 'Provider available', color: 'bg-slate-800 text-slate-300' },
+  BLOCKED: { label: 'Blocked', color: 'bg-amber-900/60 text-amber-300' },
+  NOT_WIRED: { label: 'Not wired', color: 'bg-red-900/60 text-red-300' },
 }
 
 export default function CapabilitiesPage() {
   const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
+  const [proofSummary, setProofSummary] = useState<CapabilityTruthResponse['proofSummary'] | null>(null)
+  const [proofGeneratedAt, setProofGeneratedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetch('/api/admin/system/ai-capabilities-truth', { cache: 'no-store' })
       .then((response) => response.json())
-      .then((data) => {
+      .then((data: CapabilityTruthResponse) => {
         if (data?.error) throw new Error(data.error)
         setCapabilities(Array.isArray(data.capabilities) ? data.capabilities : [])
+        setProofSummary(data.proofSummary ?? null)
+        setProofGeneratedAt(data.proofGeneratedAt ?? null)
         setError('')
       })
       .catch((loadError) => {
         setCapabilities([])
+        setProofSummary(null)
+        setProofGeneratedAt(null)
         setError(loadError instanceof Error ? loadError.message : 'Capability runtime truth is unavailable.')
       })
       .finally(() => setLoading(false))
@@ -94,17 +122,20 @@ export default function CapabilitiesPage() {
     {},
   ), [capabilities])
 
-  const totalWorking = capabilities.filter((c) => c.status === 'working').length
+  const proofStatus = (capability: CapabilityEntry) => capability.proofStatus ?? capability.status
+  const totalLiveProven = proofSummary?.liveProven ?? capabilities.filter((c) => proofStatus(c) === 'LIVE_PROVEN').length
+  const totalSourceWired = proofSummary?.sourceWired ?? capabilities.filter((c) => proofStatus(c) === 'SOURCE_WIRED').length
+  const totalProviderAvailable = proofSummary?.providerAvailable ?? capabilities.filter((c) => proofStatus(c) === 'PROVIDER_AVAILABLE').length
+  const totalBlocked = proofSummary?.blocked ?? capabilities.filter((c) => proofStatus(c) === 'BLOCKED').length
+  const totalNotWired = proofSummary?.notWired ?? capabilities.filter((c) => proofStatus(c) === 'NOT_WIRED').length
   const totalCapabilities = capabilities.length
-  const totalPartial = capabilities.filter((c) => c.status === 'partially_wired').length
-  const totalUnavailable = capabilities.filter((c) => c.status !== 'working' && c.status !== 'partially_wired').length
 
   return (
     <div className="space-y-8">
       <DashboardPageHeader
         eyebrow="Capabilities"
         title="Runtime capability browser"
-        description="Brain runtime truth grouped by capability family. Working, partial, and unavailable states stay explicit so the dashboard never overclaims execution readiness."
+        description="Brain runtime truth grouped by capability family. Live proof, source wiring, provider availability, blockers, and missing routes stay separate so the dashboard never overclaims execution readiness."
         actions={
           <Link
             href="/admin/dashboard/studio"
@@ -115,11 +146,16 @@ export default function CapabilitiesPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <DashboardMetricCard label="Wired" value={totalWorking} tone="emerald" detail="Capabilities with runtime adapters and a working route contract." />
-        <DashboardMetricCard label="Partial" value={totalPartial} tone="amber" detail="Capabilities that are wired but still limited by inputs, setup, or incomplete adapter coverage." />
-        <DashboardMetricCard label="Unavailable" value={totalUnavailable} tone="slate" detail="Capabilities that remain blocked or not wired yet." />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <DashboardMetricCard label="LIVE_PROVEN" value={totalLiveProven} tone="emerald" detail="A generated proof executed the real route successfully." />
+        <DashboardMetricCard label="SOURCE_WIRED" value={totalSourceWired} tone="cyan" detail="Route and adapter source exist, but live execution proof is absent." />
+        <DashboardMetricCard label="PROVIDER_AVAILABLE" value={totalProviderAvailable} tone="slate" detail="Provider/catalog evidence exists, but the product route is not wired." />
+        <DashboardMetricCard label="BLOCKED" value={totalBlocked} tone="amber" detail="Blocked by configuration, policy, input, or runtime dependency." />
+        <DashboardMetricCard label="NOT_WIRED" value={totalNotWired} tone="slate" detail="No executable route mapping or adapter contract is present." />
       </div>
+      {proofGeneratedAt ? (
+        <p className="-mt-4 text-xs font-semibold text-slate-500">Proof file read: {new Date(proofGeneratedAt).toLocaleString()}</p>
+      ) : null}
 
       {loading ? (
         <DashboardEmptyState title="Loading capability truth" detail="Reading canonical Brain capability and route-matrix truth." />
@@ -133,12 +169,12 @@ export default function CapabilitiesPage() {
             const caps = grouped[groupKey] ?? []
             if (caps.length === 0) return null
             const Icon = groupInfo.icon
-            const workingInGroup = caps.filter((c) => c.status === 'working').length
+            const liveInGroup = caps.filter((c) => proofStatus(c) === 'LIVE_PROVEN').length
 
             return (
               <DashboardSectionPanel
                 key={groupKey}
-                eyebrow={`${workingInGroup} of ${caps.length} wired`}
+                eyebrow={`${liveInGroup} of ${caps.length} live-proven`}
                 title={groupInfo.label}
               >
                 <div className="mb-4 flex items-center gap-3">
@@ -156,15 +192,20 @@ export default function CapabilitiesPage() {
                           <p className="text-sm font-black text-slate-100">{cap.label}</p>
                           <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{cap.id}</p>
                         </div>
-                        <DashboardStatusBadge value={STATUS_LABELS[cap.status]?.label ?? cap.status} map={{
-                          Wired: { label: 'Wired', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
-                          Partial: { label: 'Partial', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' },
+                        <DashboardStatusBadge value={STATUS_LABELS[proofStatus(cap)]?.label ?? proofStatus(cap)} map={{
+                          'Live proven': { label: 'Live proven', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' },
+                          'Source wired': { label: 'Source wired', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' },
                           'Provider available': { label: 'Provider available', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' },
-                          Unavailable: { label: 'Unavailable', className: 'border-rose-500/25 bg-rose-500/12 text-rose-200' },
+                          Blocked: { label: 'Blocked', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' },
+                          'Not wired': { label: 'Not wired', className: 'border-rose-500/25 bg-rose-500/12 text-rose-200' },
                         }} />
                       </div>
                       <p className="mt-3 text-sm leading-6 text-slate-400">{cap.description}</p>
                       <div className="mt-4 flex flex-wrap gap-2">
+                        <EvidenceChip label="Key/catalog" active={cap.providerCatalogWorks === true} />
+                        <EvidenceChip label="Provider live test" active={cap.providerLiveTestPassed === true} />
+                        <EvidenceChip label="Route/adapter" active={cap.routeAdapterExists === true} />
+                        <EvidenceChip label="Capability live proof" active={cap.capabilityLiveProven === true} />
                         {cap.outputTypes.slice(0, 4).map((type) => (
                           <span key={type} className="rounded-full border border-slate-700/60 bg-slate-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                             {type}
@@ -177,7 +218,7 @@ export default function CapabilitiesPage() {
                         ) : null}
                       </div>
                       <p className="mt-4 text-xs leading-5 text-slate-500">
-                        {cap.blocker || 'No declared blocker. Capability readiness still depends on runtime route truth and provider discovery.'}
+                        {cap.exactProofError || cap.blocker || 'No declared blocker. Capability readiness still depends on runtime route truth and provider discovery.'}
                       </p>
                     </article>
                   ))}
@@ -188,5 +229,17 @@ export default function CapabilitiesPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function EvidenceChip({ label, active }: { label: string; active: boolean }) {
+  return (
+    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
+      active
+        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+        : 'border-slate-700/60 bg-slate-900/70 text-slate-500'
+    }`}>
+      {label}: {active ? 'yes' : 'no'}
+    </span>
   )
 }

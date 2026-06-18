@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T07:36:51.201Z",
+  "generatedAt": "2026-06-18T11:24:47.151Z",
   "environment": {
     "hasDatabaseUrl": false,
     "appSlug": "amarktai-network",
@@ -47,7 +47,12 @@
     {
       "provider": "mimo",
       "status": "not_configured",
+      "discoverySource": "none",
       "modelCount": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
       "imageModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
@@ -61,7 +66,12 @@
     {
       "provider": "genx",
       "status": "not_configured",
+      "discoverySource": "none",
       "modelCount": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
       "imageModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
@@ -75,10 +85,15 @@
     {
       "provider": "huggingface",
       "status": "ready",
+      "discoverySource": "public_catalog",
       "modelCount": 100,
-      "imageModels": 50,
-      "videoModels": 9,
-      "imageToVideoModels": 4,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 100,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 49,
+      "videoModels": 8,
+      "imageToVideoModels": 3,
       "ttsModels": 5,
       "sttModels": 2,
       "embeddingsModels": 6,
@@ -89,7 +104,12 @@
     {
       "provider": "qwen",
       "status": "not_configured",
+      "discoverySource": "none",
       "modelCount": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
       "imageModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
@@ -103,7 +123,12 @@
     {
       "provider": "together",
       "status": "not_configured",
+      "discoverySource": "none",
       "modelCount": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
       "imageModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
@@ -117,7 +142,12 @@
     {
       "provider": "groq",
       "status": "not_configured",
+      "discoverySource": "none",
       "modelCount": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
       "imageModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
@@ -135,305 +165,819 @@
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:chat",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "reasoning",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:reasoning",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Reasoning",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "coding_assistant",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:code",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Text Generation",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "web_research",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "researchRuntime.execute",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Research",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "Playwright",
+        "Scrapy",
+        "Trafilatura"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "summarization",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/admin/provider-capability-test",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Summarization",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "translation",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/admin/provider-capability-test",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Translation",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "embeddings",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:embeddings",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Embeddings",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "qwen:provider-discovery"
+      ],
+      "requiredKeys": [
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "rerank_search_relevance",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:rerank",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Rerank",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "huggingface:sentence-transformers/all-MiniLM-L6-v2"
+      ],
+      "requiredKeys": [
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "text_to_image",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_generation",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Text to Image",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gemini-2.5-pro,gpt-image-1",
+        "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
+        "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
+        "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "image_editing_source_transform",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_edit",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Image and Text to Image",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [],
+      "requiredKeys": [],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "text_to_video_short_clip",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:video_generation",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Text to Video",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "qwen:wan2.1-t2v-turbo",
+        "together:provider-discovery"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
       "capabilityId": "text_to_speech",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:tts",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Text to Speech",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "mimo:provider-discovery",
+        "together:provider-discovery",
+        "groq:canopylabs/orpheus-v1-english",
+        "genx:gpt-4o-mini-tts",
+        "huggingface:facebook/mms-tts-eng"
+      ],
+      "requiredKeys": [
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "TOGETHER_API_KEY",
+        "GROQ_API_KEY",
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "speech_to_text",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:stt",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Automatic Speech Recognition",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-4o-transcribe",
+        "groq:whisper-large-v3-turbo",
+        "together:provider-discovery",
+        "huggingface:openai/whisper-large-v3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "agent_request_execution",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/brain/agent-request",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Execution failed.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/app/api/brain/agent-request/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "connected_app_capability_execution",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeConnectedAppCapability",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/connected-app-capability-engine.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "image_to_video",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_to_video",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Image to Video",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "qwen:wan2.1-i2v-turbo",
+        "genx:provider-discovery",
+        "together:provider-discovery"
+      ],
+      "requiredKeys": [
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
       "capabilityId": "long_form_multi_scene_video_assembly",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/admin/video-projects",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "\nInvalid `prisma.controlPlaneJob.findMany()` invocation in\nC:\\Users\\digit\\Code\\Amarktai-Network-2\\src\\lib\\control-plane-jobs.ts:234:33\n\n  231 }\n  232 \n  233 export async function listControlPlaneJobs(limit = 100) {\n→ 234   return prisma.controlPlaneJob.findMany(\nerror: Environment variable not found: DATABASE_URL.\n  -->  schema.prisma:7\n   | \n 6 |   provider = \"mysql\"\n 7 |   url      = env(\"DATABASE_URL\")\n   | \n\nValidation Error Count: 1",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Video",
+      "routeFile": "src/app/api/admin/video-projects/route.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "qwen:wan2.1-t2v-turbo",
+        "together:provider-discovery"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
       "capabilityId": "avatar_library_avatar_image_generation",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:avatar_generation",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Avatar Generation",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "talking_avatar_video",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "talking-avatar video",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "avatar_video hard-stops with NEEDS_CONFIGURATION; no approved lip-sync adapter is wired.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/orchestrator.ts",
+      "capabilityName": "Avatar Video",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [],
+      "requiredKeys": [],
+      "requiredLocalTools": [
+        "ffmpeg",
+        "Rhubarb/lip-sync adapter"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
       "capabilityId": "adult_media_policy_gated_generation",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:adult_image",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "\nInvalid `prisma.appAiProfile.findUnique()` invocation in\nC:\\Users\\digit\\Code\\Amarktai-Network-2\\src\\lib\\adult-app-capabilities.ts:46:41\n\n  43 \n  44 export async function getAdultAppCapabilityProfile(appSlug: string): Promise<AdultAppCapabilityProfile> {\n  45   await loadGlobalAdultModeFromDB()\n→ 46   const row = await prisma.appAiProfile.findUnique(\nerror: Environment variable not found: DATABASE_URL.\n  -->  schema.prisma:7\n   | \n 6 |   provider = \"mysql\"\n 7 |   url      = env(\"DATABASE_URL\")\n   | \n\nValidation Error Count: 1",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Image",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gemini-2.5-pro,gpt-image-1",
+        "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
+        "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
+        "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "provider_auto_selection",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapability:chat",
-      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "status": "NOT_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
-      "sourceFileResponsible": "src/lib/orchestrator.ts"
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "provider_fallback",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "executeCapabilityOrchestration fallback loop",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "strict_provider_proof_mode",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/admin/provider-capability-test",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "route_outcome_logging",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "logRouteOutcome/capability-tracing",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "qwen:qwen-turbo,qwen-plus,qwen-max",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "worker_job_retry_and_polling_completion",
       "providerSelected": null,
       "modelSelected": null,
       "routeOrAdapter": "/api/brain/media-jobs/[jobId] + control-plane-jobs",
-      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": "Polling and retry code is wired, but live proof requires an actual queued async provider job plus Redis/BullMQ and media job persistence in the target environment.",
-      "sourceFileResponsible": null
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Video",
+      "routeFile": "src/lib/control-plane-jobs.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "qwen:wan2.1-t2v-turbo",
+        "together:provider-discovery"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "QWEN_API_KEY",
+        "DASHSCOPE_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "Redis/BullMQ worker",
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     }
   ],
   "summary": {
     "liveProven": 0,
-    "blocked": 10,
+    "sourceWired": 6,
+    "providerAvailable": 0,
+    "blocked": 4,
     "notWired": 15
   },
   "nextVpsCommand": "DATABASE_URL=\"<production mysql url>\" npx tsx scripts/v1-25-capability-proof.ts"

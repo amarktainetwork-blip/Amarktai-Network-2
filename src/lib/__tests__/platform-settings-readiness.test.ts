@@ -186,7 +186,7 @@ describe('platform Settings readiness truth', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'https://token-plan-sgp.xiaomimimo.com/v1/chat/completions',
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: 'Bearer tp-production-key' }),
+        headers: expect.objectContaining({ 'api-key': 'tp-production-key' }),
       }),
     )
 

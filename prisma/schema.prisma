@@ -189,7 +189,7 @@ model WaitlistEntry {
 
 model AiProvider {
   id            Int       @id @default(autoincrement())
-  providerKey   String    @unique @map("provider_key") // openai | gemini | grok | qwen | huggingface | nvidia
+  providerKey   String    @unique @map("provider_key") // genx | huggingface | qwen | mimo | groq | together
   displayName   String    @map("display_name")
   enabled       Boolean   @default(false)
   apiKey        String    @default("") @map("api_key") // stored server-side only — never returned raw

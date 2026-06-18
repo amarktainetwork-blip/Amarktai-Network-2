@@ -68,7 +68,7 @@ async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
     const baseUrl = resolveProviderEndpoint(getProviderTruth('mimo')!, 'token_plan')
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
+      headers: { 'api-key': credential, 'Content-Type': 'application/json' },
       body: JSON.stringify({ model: chatModel.id, messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
       signal: AbortSignal.timeout(20_000),
     })
@@ -133,7 +133,12 @@ export async function POST(request: NextRequest) {
         capabilities: node.capabilities,
         detail,
         error,
-        metadata: { latencyMs: Date.now() - startedAt },
+        metadata: {
+          latencyMs: Date.now() - startedAt,
+          capabilityExecutionProven,
+          proofKind: proof.proofKind,
+          proofSummary: proof.proofSummary,
+        },
       })
     } catch (persistenceError) {
       console.error(`[settings/test-provider] Failed to persist ${node.id} live-test status:`, persistenceError)

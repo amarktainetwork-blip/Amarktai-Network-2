@@ -15,6 +15,7 @@ import { PROVIDER_TRUTH } from './provider-truth'
 import type {
   CapabilityId,
   DiscoveredModel,
+  ModelDiscoverySource,
   ProviderDiscoverySnapshot,
   ProviderId,
   ProviderTruthDefinition,
@@ -157,6 +158,7 @@ export async function discoverProvider(
       status: 'not_configured',
       endpoint: resolveDiscoveryUrl(provider, options.capability),
       keySource: credentialResult.source,
+      discoverySource: 'none',
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -175,6 +177,7 @@ export async function discoverProvider(
       status: 'failed',
       endpoint: null,
       keySource: credentialResult.source,
+      discoverySource: 'none',
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -196,8 +199,13 @@ export async function discoverProvider(
     const records = providerId === 'genx'
       ? await fetchGenxCategoryRecords(endpoint, headers, options.fetcher ?? fetch)
       : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
+    const discoverySource: ModelDiscoverySource = credentialResult.key
+      ? 'live_authenticated'
+      : publicDiscovery
+        ? 'public_catalog'
+        : 'catalog_derived'
     const models = records
-      .map((record) => normalizeModel(provider, record, discoveredAt))
+      .map((record) => normalizeModel(provider, record, discoveredAt, discoverySource))
       .filter((model): model is DiscoveredModel => Boolean(model))
     const tasks = [...new Set(models.flatMap((model) =>
       stringList(model.raw.pipeline_tag ?? model.raw.task ?? model.raw.tasks),
@@ -210,6 +218,7 @@ export async function discoverProvider(
       status: 'ready',
       endpoint,
       keySource: credentialResult.source,
+      discoverySource,
       models,
       tasks,
       inferenceProviders,
@@ -230,6 +239,7 @@ export async function discoverProvider(
         status: 'ready',
         endpoint,
         keySource: credentialResult.source,
+        discoverySource: 'static_fallback',
         models: fallbackModels,
         tasks,
         inferenceProviders: [],
@@ -246,6 +256,7 @@ export async function discoverProvider(
       status: 'failed',
       endpoint,
       keySource: credentialResult.source,
+      discoverySource: 'none',
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -271,7 +282,7 @@ export function normalizeProviderCatalog(
   const provider = PROVIDER_TRUTH.find((entry) => entry.id === providerId)
   if (!provider) return []
   return modelRecords(payload)
-    .map((record) => normalizeModel(provider, record, discoveredAt))
+    .map((record) => normalizeModel(provider, record, discoveredAt, 'catalog_derived'))
     .filter((model): model is DiscoveredModel => Boolean(model))
 }
 
@@ -359,6 +370,7 @@ function genxFallbackModels(
     return {
       provider: 'genx',
       id,
+      discoverySource: 'static_fallback',
       capabilities,
       capabilityEvidence: 'provider_contract',
       status: 'available',
@@ -393,6 +405,7 @@ function normalizeModel(
   provider: ProviderTruthDefinition,
   record: Record<string, unknown>,
   discoveredAt: string,
+  discoverySource: ModelDiscoverySource,
 ): DiscoveredModel | null {
   const id = firstString(record.id, record.model, record.modelId, record.name)
   if (!id) return null
@@ -421,6 +434,7 @@ function normalizeModel(
   return {
     provider: provider.id,
     id,
+    discoverySource,
     capabilities,
     capabilityEvidence: taskCapabilities.length > 0 || descriptorCapabilities(provider.id, id, descriptor).length > 0
       ? 'model_metadata'

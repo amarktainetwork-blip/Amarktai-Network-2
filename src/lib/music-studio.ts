@@ -646,16 +646,13 @@ async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<stri
  * Generate lyrics by calling the platform's internal chat API.
  *
  * Provider resolution order:
- * 1. OpenAI key from DB vault (set via Admin Ã¢â€ â€™ AI Providers UI)
- * 2. OPENAI_API_KEY environment variable fallback (local dev / CI)
- * 3. Groq fallback via vault Ã¢â€ â€™ env (cheap, fast, supports long output)
- * 4. Template fallback when no key is available anywhere
+ * 1. Groq via vault/env (cheap, fast, supports long output)
+ * 2. Template fallback when no approved text key is available
  */
 async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
-  // Try OpenAI first (vault Ã¢â€ â€™ env)
-  // Groq fallback (vault Ã¢â€ â€™ env) Ã¢â‚¬â€ fast and cost-effective for text generation
+  // Groq fallback via vault/env is fast and cost-effective for text generation.
   const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
   if (groqKey) {
     const prompt = buildLyricsPrompt(request)

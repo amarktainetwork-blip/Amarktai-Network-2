@@ -1,76 +1,55 @@
 # Delete Review Required
 
-## Not deleted in this pass because proof was insufficient or callers remain
+Last audited: 2026-06-18
 
-### `src/lib/agent-audit.ts`
+No source file was blindly deleted in this pass. The files below are either active callers, compatibility shims, or stale docs that need removal/rewrite after their import/reference graph is migrated.
 
-- Reason: still used by `/api/brain/agent/dispatch`.
-- Current state: downgraded to diagnostic registration/readiness semantics; it is not runtime capability proof.
-- Required follow-up: remove entirely once `/api/brain/agent/dispatch` no longer depends on a separate audit layer.
+## Delete Now
 
-### `src/lib/agent-registry.ts`
+None proven safe in this audit.
 
-- Reason: still used by `/api/admin/agents` and `/api/admin/amarktai-assistant/context`.
-- Problem: operator catalog can be mistaken for runtime agent deployment truth.
-- Cleanup action already taken: relabeled as `operator_catalog` surface.
+## Replace Now
 
-### `src/lib/provider-mesh.ts`
+| File | Why | Current action |
+|---|---|---|
+| `src/lib/provider-mesh.ts` | Previously duplicated AI provider endpoint/capability truth. | Replaced AI provider entries with projection from `src/lib/providers/provider-truth.ts`; kept tool/storage inventory. |
+| `src/lib/provider-registry.ts` | Compatibility registry could disagree on auth headers. | Auth/header now follows `provider-truth.ts`; still a shim. |
+| `scripts/v1-25-capability-proof.ts` | Proof report missed required contract fields. | Expanded JSON/Markdown output. |
 
-- Reason: active settings/governance/admin callers remain.
-- Problem: overlaps conceptually with canonical provider truth.
-- Required follow-up: narrow it to inventory/governance only.
+## Compatibility Shim
 
-### `src/lib/provider-registry.ts`
+| File | Active callers | Keep condition |
+|---|---|---|
+| `src/lib/capability-router.ts` | Brain/admin/connected-app routes | Must remain a thin wrapper over `orchestrator.ts`. |
+| `src/lib/provider-mesh.ts` | Settings/governance/admin routes | AI provider data must continue projecting from `provider-truth.ts`. |
+| `src/lib/provider-registry.ts` | Provider admin/readiness/legacy route callers | Must not introduce provider truth not found in `provider-truth.ts`. |
+| `src/lib/provider-catalog.ts` | Provider catalog route | Projection only. |
+| `src/lib/media-capability-registry.ts` | Adult gate, smart route UI | Projection over V1 matrix only. |
+| `src/lib/runtime-capability-truth.ts` | Dashboard/readiness routes | Reader only. |
+| `src/lib/brain/v1-route-matrix.ts` | Dashboard/admin route matrix | Reader/projection only. |
 
-- Reason: active compatibility/admin readiness callers remain.
-- Problem: name collides with canonical `src/lib/providers/registry.ts`.
-- Active importers: `src/lib/brain/v1-route-matrix.ts`, `src/lib/capability-routing-policy.ts`, `src/lib/platform-settings-truth.ts`, `src/lib/provider-catalog.ts`, `src/lib/provider-gateway.ts`, `src/lib/providers.ts`, `src/lib/universal-provider-call.ts`, `src/app/api/admin/system/provider-gateway/route.ts`, `src/app/api/admin/providers/route.ts`
-- Required follow-up: reduce or rename after callers migrate.
+## Keep
 
-### `src/lib/model-registry.ts`
+| File | Reason |
+|---|---|
+| `src/lib/providers/provider-truth.ts` | Canonical AI provider contracts. |
+| `src/lib/providers/provider-discovery.ts` | Canonical model/provider discovery. |
+| `src/lib/providers/model-discovery.ts` | Canonical capability model filtering. |
+| `src/lib/providers/execution.ts` | Canonical route planning. |
+| `src/lib/providers/capability-registry.ts` | Canonical compact capability IDs. |
+| `src/lib/brain/v1-capability-matrix.ts` | Canonical V1 product capability matrix. |
+| `src/lib/orchestrator.ts` | Canonical runtime execution/fallback/artifact/job owner. |
+| `src/lib/ai-capability-adapters.ts` | Canonical provider adapters. |
+| `src/lib/artifact-store.ts` | Canonical artifact persistence. |
+| `src/lib/control-plane-jobs.ts` | Canonical durable job state. |
 
-- Reason: active compatibility/admin callers remain.
-- Problem: compatibility projection over other model truth layers.
-- Active importers: `src/lib/ai-model-catalog.ts`, `src/lib/ai-routing-policy.ts`, `src/lib/brain.ts`, `src/lib/coding-agent.ts`, `src/lib/multimodal-router.ts`, `src/lib/routing-engine.ts`, `src/lib/repo-workbench.ts`, `src/app/api/admin/ai-partner/chat/route.ts`, `src/app/api/admin/benchmark/route.ts`, `src/app/api/admin/multimodal/route.ts`, `src/app/api/admin/routing/route.ts`
+## Doc Delete Or Rewrite Required
 
-### `src/lib/ai-model-catalog.ts`
-
-- Reason: active admin/model catalog callers remain.
-- Problem: static/admin catalog, not runtime truth.
-
-### `src/lib/approved-ai-catalog.ts`
-
-- Reason: active governance/admin callers remain.
-- Problem: approval projection, not runtime execution truth.
-
-### `src/lib/universal-model-catalog.ts`
-
-- Reason: active static catalog callers remain.
-- Problem: static catalog can be confused with live execution/discovery truth.
-
-### `src/lib/media-capability-registry.ts`
-
-- Reason: active runtime/dashboard adult-gate projection callers remain.
-- Problem: legacy projection over V1 capability truth.
-- Active importers: `src/lib/provider-capability-governance.ts`, `src/app/api/admin/ai-routing/smart/route.ts`, `src/lib/runtime-capability-truth.ts`
-
-### `src/lib/brain/v1-route-matrix.ts`
-
-- Reason: active dashboard/admin callers remain.
-- Problem: diagnostic route matrix still depends on compatibility catalog/readiness layers.
-- Active importers: `src/lib/runtime-capability-truth.ts`, `src/app/api/admin/ai-routing/route.ts`, `src/app/api/admin/system/v1-brain-route-matrix/route.ts`, `src/app/api/admin/system/ai-capabilities-truth/route.ts`, `src/app/api/admin/system/production-capabilities/route.ts`, `src/app/api/admin/system/operational-control-plane/route.ts`, `src/app/api/admin/models/route.ts`, `src/app/api/admin/media-studio/models/route.ts`
-
-### `src/lib/ai-routing-policy.ts`
-
-- Reason: still used by isolated admin smart-routing and conversation surfaces.
-- Active importers: `src/app/api/admin/ai-routing/smart/route.ts`, `src/app/api/admin/conversation/stream/route.ts`
-
-### `src/lib/runtime-capability-truth.ts`
-
-- Reason: active runtime/dashboard/admin readers remain.
-- Active importers: `src/lib/ai-routing-policy.ts`, `src/app/api/admin/voice/preview/route.ts`, `src/app/api/admin/voice/options/route.ts`, `src/app/api/admin/truth/route.ts`, `src/app/api/admin/system/readiness/route.ts`, `src/app/api/admin/ai-routing/smart/route.ts`, `src/app/api/admin/system/live-readiness/route.ts`, `src/app/api/admin/global-adult-mode/route.ts`, `src/app/api/admin/provider-governance/route.ts`, `src/lib/readiness-audit.ts`, `src/lib/tool-registry.ts`, `src/app/api/admin/runtime-truth/route.ts`
-
-### `src/app/api/admin/truth/route.ts`
-
-- Reason: retained for backward compatibility as a legacy aggregation endpoint.
-- Cleanup action already taken: removed false single-source-of-truth claim and rewired to real runtime/model sources.
+| File | Problem | Action |
+|---|---|---|
+| `docs/adding-a-provider.md` | Tells developers to edit legacy registries and dashboard arrays. | Rewrite to point at `provider-truth.ts` and proof harness. |
+| `docs/registering-models.md` | Presents `MODEL_REGISTRY` as active truth. | Rewrite as compatibility-only or delete. |
+| `docs/brain-api.md` | Contains OpenAI/Whisper examples and provider/model response examples as if active. | Rewrite around capability-only requests. |
+| `docs/developer-guide.md` | Shows provider/model selection in app calls. | Rewrite around app capability requests. |
+| `docs/budget-management.md` | Uses old OpenAI pricing examples as current. | Rewrite using provider-agnostic cost buckets. |
+| `docs/provider-truth.json`, `docs/provider-capabilities.json`, `docs/model-catalog.json` | Static docs can be confused with runtime truth. | Move under archived docs or regenerate from canonical runtime. |

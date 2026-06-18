@@ -24,7 +24,7 @@ export interface AudioRecorderProps {
   onBlobReady?: (blob: Blob, filename: string) => void
   /** Optional STT endpoint override (default: /api/brain/stt). */
   sttEndpoint?: string
-  /** Whisper model to use (default: whisper-1). */
+  /** Deprecated compatibility prop. Normal runtime routing owns model choice. */
   model?: string
   /** ISO language code for transcription. */
   language?: string
@@ -36,7 +36,7 @@ export default function AudioRecorder({
   onTranscript,
   onBlobReady,
   sttEndpoint = '/api/brain/stt',
-  model = 'whisper-1',
+  model: _model,
   language,
   onAvailabilityChange,
 }: AudioRecorderProps) {
@@ -107,7 +107,6 @@ export default function AudioRecorder({
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
       const formData = new FormData()
       formData.append('file', blob, 'recording.webm')
-      formData.append('model', model)
       if (language) formData.append('language', language)
 
       const response = await fetch(sttEndpoint, {
@@ -129,7 +128,7 @@ export default function AudioRecorder({
     } finally {
       setIsTranscribing(false)
     }
-  }, [model, language, sttEndpoint, onTranscript])
+  }, [language, sttEndpoint, onTranscript])
 
   return (
     <div className="flex flex-col gap-3 p-4 rounded-lg border border-white/10 bg-black/20">

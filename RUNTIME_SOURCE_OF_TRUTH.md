@@ -1,51 +1,61 @@
 # Runtime Source Of Truth
 
-## Canonical runtime path
+Last audited: 2026-06-18
 
-For app-facing execution, the source of truth is:
+The main platform is the Brain runtime. Apps request capabilities; apps do not choose providers, models, endpoints, fallback paths, artifact storage, or async job behavior.
 
-`route -> executeCapability()/orchestrate() -> executeCapabilityOrchestration() -> planCanonicalExecution() -> provider discovery/model discovery/route scoring -> provider adapter -> artifact/job persistence`
+## Canonical Runtime Path
 
-Primary files:
+`route -> executeCapability()/orchestrate() -> executeCapabilityOrchestration() -> planCanonicalExecution() -> provider discovery/model discovery/route scoring -> provider adapter -> job/artifact persistence`
 
-- `src/lib/orchestrator.ts`
-- `src/lib/capability-router.ts`
-- `src/lib/providers/execution.ts`
-- `src/lib/providers/registry.ts`
-- `src/lib/providers/provider-truth.ts`
-- `src/lib/providers/provider-discovery.ts`
-- `src/lib/providers/model-discovery.ts`
-- `src/lib/ai-capability-adapters.ts`
-- `src/lib/artifact-store.ts`
-- `src/lib/media-job-store.ts`
+## Canonical Files
 
-## Canonical rules enforced in this cleanup
+| Truth area | Canonical owner | Notes |
+|---|---|---|
+| Provider contracts/endpoints/auth | `src/lib/providers/provider-truth.ts` | Only canonical AI provider contract table. |
+| Provider discovery | `src/lib/providers/provider-discovery.ts` | Owns live catalog fetch, GenX fallback catalog, endpoint resolution. |
+| Model discovery/filtering | `src/lib/providers/model-discovery.ts` | Filters discovered models by capability evidence. |
+| Capability registry | `src/lib/providers/capability-registry.ts` | Canonical compact capability IDs and aliases. |
+| V1 product matrix | `src/lib/brain/v1-capability-matrix.ts` | Dashboard/user-facing capability matrix. |
+| Runtime route selection | `src/lib/providers/execution.ts` | Plans canonical execution from discovery, health, and scoring. |
+| Orchestration/fallback/policy/artifacts/jobs | `src/lib/orchestrator.ts` | Runtime execution owner. |
+| Provider adapters | `src/lib/ai-capability-adapters.ts` | Provider-native calls and polling contracts. |
+| Artifact truth | `src/lib/artifact-store.ts` | Durable artifact metadata and storage references. |
+| Async job truth | `src/lib/control-plane-jobs.ts`, `src/lib/media-job-store.ts` | Durable control-plane jobs and local media polling bridge. |
+| Dashboard readiness projection | `src/lib/runtime-capability-truth.ts` | Reader/projection only. |
+| Proof harness | `scripts/v1-25-capability-proof.ts` | Emits JSON/Markdown proof with required blocker fields. |
 
-- Apps request capabilities only.
-- Public/app-facing Brain routes do not allow provider or model forcing.
-- Admin proof routes may still force a single provider/model for diagnostics and proof.
-- Dashboard/status surfaces are readers of runtime truth, not owners of runtime truth.
-- Provider IDs are restricted to: `genx`, `qwen`, `huggingface`, `together`, `groq`, `mimo`.
-- `minimax` is not a provider ID.
-- Together-hosted model IDs containing `minimax/` are not blocked solely because of the model name.
+## Compatibility Shims
 
-## Current app-facing route behavior
+| File | What it controls | Used by | Classification | Risk | Exact action |
+|---|---|---|---|---|---|
+| `src/lib/capability-router.ts` | App-facing execution entry | Brain/admin/connected-app routes | Compatibility shim | Low | Keep as wrapper over `orchestrator.ts`. |
+| `src/lib/provider-mesh.ts` | Provider/tool settings inventory | Settings, governance, tests | Compatibility shim | Medium | AI provider entries now project from `provider-truth.ts`; keep tools/storage here. |
+| `src/lib/provider-registry.ts` | Admin readiness/model compatibility | Provider routes, route matrix, older admin surfaces | Compatibility shim | Medium | Auth/header now follows `provider-truth.ts`; migrate callers later. |
+| `src/lib/provider-catalog.ts` | Admin provider catalog projection | Provider catalog route | Compatibility shim | Low | Keep as projection only. |
+| `src/lib/model-registry.ts` | Legacy model registry projection | Routing/workbench/older admin routes | Replace later | High | Must be reduced after `ai-routing-policy`, workbench, and multimodal routes migrate. |
+| `src/lib/universal-model-catalog.ts` | Static seed model catalog | V1 matrix and compatibility callers | Keep with caution | Medium | Static seed only; not live proof. |
+| `src/lib/media-capability-registry.ts` | Media route projection | Adult gate, smart route UI | Compatibility shim | Medium | Keep as projection over V1 matrix. |
+| `src/lib/brain/v1-route-matrix.ts` | Dashboard route matrix | Dashboard/admin readiness | Projection | Medium | Keep as reader; no provider truth may originate here. |
+| `src/lib/runtime-capability-truth.ts` | Dashboard truth response | Dashboard/admin/readiness routes | Projection | Medium | Keep as dashboard reader only. |
+| `src/lib/ai-routing-policy.ts` | Older admin smart routing | Admin conversation/smart route | Replace later | High | Migrate to `planCanonicalExecution()`. |
 
-- Delegate-based Brain routes now reject provider/model forcing with `400` instead of silently ignoring it.
-- `/api/brain/request` rejects `metadata.provider_override` and `metadata.model_override`.
-- `/api/brain/image`, `/api/brain/stt`, `/api/brain/suggestive-image`, and `/api/brain/adult-video` also reject provider/model forcing.
-- `/api/admin/provider-capability-test` remains the explicit single-provider proof surface.
-- `/api/admin/settings/test-*` routes remain settings/probe surfaces, not canonical execution proof.
+## Runtime Rules
 
-## Dashboard and settings truth boundaries
+- Normal chat and ordinary text responses must not create artifacts by default.
+- Intentional outputs may create artifacts: image, video, audio, music, voiceover, code, document, research report, exported campaign/brand output.
+- Async media jobs must expose Brain job status and must not force apps to poll raw provider job endpoints.
+- Provider errors must be sanitized but specific enough to prove whether a key, endpoint, model, policy, tool, or adapter blocked execution.
+- Dashboard/admin routes are readers of runtime truth, not owners of provider or model policy.
 
-- `src/lib/runtime-capability-truth.ts`: runtime projection layer for dashboard/status consumers.
-- `src/lib/platform-settings-truth.ts`: settings inventory/probe projection layer.
-- `src/app/api/admin/truth/route.ts`: legacy compatibility aggregation only.
-- `src/lib/dashboard-truth.ts`: deleted as dead duplicate projection.
+## Verification Commands
 
-## Verification Rule
+Use these before claiming readiness:
 
-- For this Next.js app, use `npm run build` as the authoritative TypeScript validity check during commit-readiness verification.
-- Standalone `npx tsc --noEmit` is not authoritative until the separate `.next/types` generation mismatch is fixed.
-- Current evidence: `next build` passes and generates the app route type tree that Next expects, while standalone `tsc` still reports missing `.next/types/**/*.ts` route files because the Next-managed include resolves more generated paths than are present in this environment.
+```powershell
+npm test -- --run
+npm run build
+npx.cmd tsx scripts/v1-25-capability-proof.ts
+git diff --check
+git diff --stat
+```
