@@ -1,10 +1,14 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T15:43:22.712Z
+Generated: 2026-06-18T17:04:04.700Z
 
 Database available locally: no
 Env loader: scripts/load-repo-env.ts
 Env files loaded: none
+Env cwd: C:\Users\digit\Code\Amarktai-Network-2
+Env repo root: C:\Users\digit\Code\Amarktai-Network-2
+Env searched paths: C:\Users\digit\Code\Amarktai-Network-2\.env.production.local<br>C:\Users\digit\Code\Amarktai-Network-2\.env.local<br>C:\Users\digit\Code\Amarktai-Network-2\.env.production<br>C:\Users\digit\Code\Amarktai-Network-2\.env<br>C:\Users\digit\Code\Amarktai-Network-2\prisma\.env.production.local<br>C:\Users\digit\Code\Amarktai-Network-2\prisma\.env.local<br>C:\Users\digit\Code\Amarktai-Network-2\prisma\.env.production<br>C:\Users\digit\Code\Amarktai-Network-2\prisma\.env<br>C:\Users\digit\Code\.env.production.local<br>C:\Users\digit\Code\.env.local<br>C:\Users\digit\Code\.env.production<br>C:\Users\digit\Code\.env<br>C:\Users\digit\.env.production.local<br>C:\Users\digit\.env.local<br>C:\Users\digit\.env.production<br>C:\Users\digit\.env<br>C:\Users\.env.production.local<br>C:\Users\.env.local<br>C:\Users\.env.production<br>C:\Users\.env
+Env found paths: none
 Proof app slug: amarktai-network
 Connected-app secret present locally: no
 
@@ -40,40 +44,40 @@ Connected-app secret present locally: no
 
 ## Model-Level Smoke Proof
 
-| Provider | Capability | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
-| genx | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
-| huggingface | chat | no | yes | no | no | no | no | no |  | Provider credential is not configured. |
-| qwen | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
-| mimo | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
-| groq | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
-| together | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| Provider | Capability | Model status | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| genx | chat | FAILED_PROVIDER | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| huggingface | chat | FAILED_PROVIDER | no | yes | no | no | no | no | no |  | Provider credential is not configured. |
+| qwen | chat | FAILED_PROVIDER | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| mimo | chat | FAILED_PROVIDER | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| groq | chat | FAILED_PROVIDER | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| together | chat | FAILED_PROVIDER | no | no | no | no | no | no | no |  | Provider credential is not configured. |
 
 ## Capabilities
 
 | Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Source File |
 |---|---|---|---|---|---|---|---|---|---|
-| chat_text_generation | BLOCKED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| reasoning | BLOCKED |  |  | executeCapability:reasoning |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| coding_assistant | BLOCKED |  |  | executeCapability:code |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| web_research | BLOCKED |  |  | researchRuntime.execute |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
+| chat_text_generation | BLOCKED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
+| reasoning | BLOCKED |  |  | executeCapability:reasoning |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
+| coding_assistant | BLOCKED |  |  | executeCapability:code |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
+| web_research | BLOCKED |  |  | researchRuntime.execute |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. Fallback was allowed. | src/lib/providers/provider-scoring.ts |
 | summarization | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. | src/app/api/admin/provider-capability-test/route.ts |
 | translation | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | A dedicated connected-app request schema and normalized result contract are not wired. | src/app/api/admin/provider-capability-test/route.ts |
-| embeddings | BLOCKED |  |  | executeCapability:embeddings |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| rerank_search_relevance | BLOCKED |  |  | executeCapability:rerank |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| text_to_image | BLOCKED |  |  | executeCapability:image_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| image_editing_source_transform | BLOCKED |  |  | executeCapability:image_edit |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| text_to_video_short_clip | BLOCKED |  |  | executeCapability:video_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| text_to_speech | BLOCKED |  |  | executeCapability:tts |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| speech_to_text | BLOCKED |  |  | executeCapability:stt |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
+| embeddings | BLOCKED |  |  | executeCapability:embeddings |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
+| rerank_search_relevance | BLOCKED |  |  | executeCapability:rerank |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
+| text_to_image | BLOCKED |  |  | executeCapability:image_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
+| image_editing_source_transform | BLOCKED |  |  | executeCapability:image_edit |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
+| text_to_video_short_clip | BLOCKED |  |  | executeCapability:video_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
+| text_to_speech | BLOCKED |  |  | executeCapability:tts |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
+| speech_to_text | BLOCKED |  |  | executeCapability:stt |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
 | agent_request_execution | BLOCKED |  |  | /api/brain/agent-request |  |  |  | AMARKTAI_CONNECTED_APP_SECRET or AMARKTAI_APP_SECRET_AMARKTAI_NETWORK is required for local proof. | src/app/api/brain/agent-request/route.ts |
 | connected_app_capability_execution | BLOCKED |  |  | executeConnectedAppCapability |  |  |  | Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity. | src/lib/connected-app-capability-engine.ts |
-| image_to_video | BLOCKED |  |  | executeCapability:image_to_video |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
+| image_to_video | BLOCKED |  |  | executeCapability:image_to_video |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
 | long_form_multi_scene_video_assembly | BLOCKED |  |  | /api/admin/video-projects |  |  |  | DATABASE_URL is required to inspect/create control-plane video project jobs for live proof. | src/app/api/admin/video-projects/route.ts |
-| avatar_library_avatar_image_generation | BLOCKED |  |  | executeCapability:avatar_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
+| avatar_library_avatar_image_generation | BLOCKED |  |  | executeCapability:avatar_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. Provider credenti | src/lib/providers/provider-scoring.ts |
 | talking_avatar_video | BLOCKED |  |  | talking-avatar video |  |  |  | src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run. | src/lib/orchestrator.ts |
 | adult_media_policy_gated_generation | BLOCKED |  |  | executeCapability:adult_image |  |  |  | DATABASE_URL is required to load adult policy gates before adult media live proof; capability remains blocked. | src/lib/orchestrator.ts |
-| provider_auto_selection | BLOCKED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
+| provider_auto_selection | BLOCKED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. | src/lib/providers/provider-scoring.ts |
 | provider_fallback | SOURCE_WIRED |  |  | executeCapabilityOrchestration fallback loop |  |  |  | Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers. | src/lib/orchestrator.ts |
 | strict_provider_proof_mode | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment. | src/app/api/admin/provider-capability-test/route.ts |
 | route_outcome_logging | SOURCE_WIRED |  |  | logRouteOutcome/capability-tracing |  |  |  | Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment. | src/lib/orchestrator.ts |

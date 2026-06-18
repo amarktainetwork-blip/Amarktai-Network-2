@@ -17,9 +17,12 @@ The main platform is the Brain runtime. Apps request capabilities; apps do not c
 | Model discovery/filtering | `src/lib/providers/model-discovery.ts` | Filters discovered models by capability evidence. |
 | Capability registry | `src/lib/providers/capability-registry.ts` | Canonical compact capability IDs and aliases. |
 | V1 product matrix | `src/lib/brain/v1-capability-matrix.ts` | Dashboard/user-facing capability matrix. |
-| Runtime route selection | `src/lib/providers/execution.ts` | Plans canonical execution from discovery, health, and scoring. |
+| Runtime route selection | `src/lib/providers/execution.ts`, `src/lib/providers/registry.ts` | Plans canonical execution from discovery, health, scoring, fallback, provider/model pins, and policy. |
+| Provider scoring/rejection | `src/lib/providers/provider-scoring.ts` | Owns accepted/rejected model candidate rules, adult/artifact gates, and GenX premium preference. |
+| Dashboard selector API | `src/app/api/admin/brain/selector/route.ts` | Dry-run/smoke projection of canonical Brain selector for operators. |
 | Orchestration/fallback/policy/artifacts/jobs | `src/lib/orchestrator.ts` | Runtime execution owner. |
 | Provider adapters | `src/lib/ai-capability-adapters.ts` | Provider-native calls and polling contracts. |
+| Media normalization | `src/lib/canonical-media-artifact.ts` | Provider URL/base64/job result normalization before artifact persistence. |
 | Artifact truth | `src/lib/artifact-store.ts` | Durable artifact metadata and storage references. |
 | Async job truth | `src/lib/control-plane-jobs.ts`, `src/lib/media-job-store.ts` | Durable control-plane jobs and local media polling bridge. |
 | Dashboard readiness projection | `src/lib/runtime-capability-truth.ts` | Reader/projection only. |

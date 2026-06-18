@@ -34,9 +34,22 @@ const URL_KEYS = [
   'videoUrl',
   'resultUrl',
   'outputUrl',
+  'previewUrl',
+  'downloadUrl',
+  'playbackUrl',
+  'assetUrl',
+  'asset_url',
+  'fileUrl',
+  'file_url',
+  'download_url',
+  'preview_url',
+  'video_url',
+  'image_url',
+  'audio_url',
+  'music_url',
   'url',
 ]
-const BASE64_KEYS = ['imageBase64', 'audioBase64', 'videoBase64', 'base64', 'b64_json', 'bytesBase64Encoded']
+const BASE64_KEYS = ['imageBase64', 'audioBase64', 'videoBase64', 'image_base64', 'audio_base64', 'video_base64', 'base64', 'b64_json', 'bytesBase64Encoded']
 const JOB_KEYS = ['jobId', 'taskId', 'predictionId', 'providerJobId']
 
 function asRecord(value: unknown): JsonRecord | null {

@@ -2,47 +2,65 @@
 
 Last audited: 2026-06-18
 
-## VPS Proof Summary
+This document is a human-readable projection of `V1_25_CAPABILITY_PROOF.json`. Do not update its counts independently of the proof harness.
 
-The VPS proof supplied for this pass is the active source input for this document.
+## Current Local Proof Summary
 
-| Status | Count | Meaning for finish work |
+The latest local Codex run has no `.env`, no `DATABASE_URL`, and no local provider credentials. That is expected for this workstation; the VPS must rerun `npx tsx scripts/v1-25-capability-proof.ts` after the env loader fix.
+
+| Status | Count | Meaning |
 |---|---:|---|
-| `LIVE_PROVEN` | 2 | Only these capabilities may be presented as live-ready. |
-| `BLOCKED` | 10 | Source exists, but runtime proof is gated by environment, DB, signing, worker, policy, local tool, or provider approval. |
-| `NOT_WIRED` | 13 | Route/adapter/model mapping is missing or yields no executable provider candidate. |
+| `LIVE_PROVEN` | 0 | No local live provider/capability execution proof because env/DB/provider keys are absent locally. |
+| `SOURCE_WIRED` | 6 | Source route/contract exists, but live proof requires DB, controlled failure, signed app, or worker/job runtime. |
+| `PROVIDER_AVAILABLE` | 0 | No capability is counted as provider-available without route proof in this local run. |
+| `BLOCKED` | 19 | Runtime requires provider credentials, DB, signing, adult policy, research provider route, lip-sync adapter, or video project/job state. |
+| `NOT_WIRED` | 0 | The current local proof found source paths for V1 capabilities but blocked execution honestly where environment/runtime prerequisites were absent. |
 
-Provider keys are present on the VPS for GenX, Hugging Face, Qwen, MiMo, Groq, and Together. Key presence is not capability proof. Provider catalog success is not capability proof. A route file existing is not capability proof.
+## Source-Wired
 
-MiMo is the only provider represented in the VPS proof as live-proven for chat/provider auto-selection. GenX is key-ready, but its model discovery produced zero normalized models; because `executeCapability` requires discovered model metadata or provider-contract evidence, GenX currently produces `NO_ROUTE_FOUND` instead of an executable route candidate.
+| Capability | Exact blocker |
+|---|---|
+| `summarization` | Dedicated connected-app request schema and normalized result contract are not wired. |
+| `translation` | Dedicated connected-app request schema and normalized result contract are not wired. |
+| `provider_fallback` | Needs a controlled first-provider failure and second-provider success in the target runtime. |
+| `strict_provider_proof_mode` | Needs authenticated server-side invocation in the target environment. |
+| `route_outcome_logging` | Needs a DB-backed runtime request and persisted trace/log row. |
+| `worker_job_retry_and_polling_completion` | Needs Redis/BullMQ, worker process, actual queued async provider job, and media job persistence. |
 
-## Not Wired From Proof
+## Blocked
 
-| Count | Area | Exact blocker | File/fix |
-|---:|---|---|---|
-| 12 | Provider-backed capability execution | `executeCapability` cannot find a configured provider model with model metadata or provider-contract evidence for the requested capability. This affects the provider-routed text, reasoning, coding, research, embeddings, rerank, image, image-edit, video, TTS, STT, image-to-video, and avatar families when discovery does not produce executable candidates. | Fix route/model mapping in `src/lib/providers/execution.ts`, `src/lib/providers/model-discovery.ts`, and provider-specific adapter contracts. Do not mark these live until proof returns `LIVE_PROVEN`. |
-| 1 | Talking avatar video | The route hard-stops because no approved lip-sync/render adapter is wired. | Add a provider or local render adapter in `src/lib/ai-capability-adapters.ts`; route `/api/brain/avatar-video` through it; prove job/artifact output. |
-
-## Blocked From Proof
-
-| Count | Area | Exact blocker | File/fix |
-|---:|---|---|---|
-| 1 | Connected app capability execution | Live proof requires an active signed app registry entry and signing secret. The harness must not fabricate HMAC identity. | Run against a real connected-app registration and signing secret in `src/lib/connected-app-capability-engine.ts`. |
-| 1 | Agent request execution | Request path exists, but proof did not complete a live runtime execution. | Finish the provider/model route proof around `/api/brain/agent-request`. |
-| 1 | Long-form video assembly | Requires DB-backed video project state and at least one completed generated clip. | Prove `src/lib/long-form-video.ts` and `/api/admin/video-projects` with DB and generated clips. |
-| 1 | Adult media generation | Requires DB-backed adult profile/policy state plus approved provider/model execution. | Prove `src/lib/adult-app-capabilities.ts` and adult media routes with explicit approval/configuration. |
-| 1 | Qwen paid media gate | Paid media paths must be deliberately enabled before proof can execute. | Set and document `QWEN_PAID_ENABLED` only when paid routes are approved. |
-| 1 | Hugging Face specialist execution | Some specialist tasks require explicit endpoint/model JSON rather than public catalog discovery alone. | Wire `HF_SPECIALIST_MODELS_JSON`, `HF_SPECIALIST_ENDPOINTS_JSON`, or dedicated endpoint configuration. |
-| 1 | Async media proof | Requires provider job creation, worker/storage, and poll completion. | Prove media jobs through `src/lib/control-plane-jobs.ts` and `src/lib/media-job-store.ts`. |
-| 1 | Research tools | Provider-only research is insufficient when crawler/render/extraction is required. | Prove local research tools and provider fallback in the research runtime. |
-| 1 | Route outcome logging | Source logging exists, but proof needs a DB-backed runtime request and persisted trace/log row. | Prove `logRouteOutcome` and capability tracing persistence. |
-| 1 | Provider fallback | Source fallback loop exists, but proof needs a controlled first-provider failure and second-provider success. | Add a harness mode or fixture that proves fallback without spoofing live provider success. |
-
-## Source-Wired Or Provider-Available Is Not Done
-
-| Area | Current truth | Next proof step |
+| Capability | Exact blocker | Next action |
 |---|---|---|
-| Provider keys | Keys may be present for GenX, HF, Qwen, MiMo, Groq, and Together. | Show key present separately from catalog/live provider test/capability proof. |
-| Provider catalogs | Catalogs may work and may be public, live-authenticated, static fallback, or catalog-derived. | Surface catalog source in Settings and Capabilities; do not count catalog models as `LIVE_PROVEN`. |
-| Routes/adapters | Several routes and source paths exist. | Require route/adapter execution plus provider result before setting `LIVE_PROVEN`. |
-| Dashboard counts | Old "Wired/Partial/Unavailable" labels overclaimed readiness. | Use only `LIVE_PROVEN`, `SOURCE_WIRED`, `PROVIDER_AVAILABLE`, `BLOCKED`, and `NOT_WIRED`. |
+| Provider/model execution family | No configured provider/model route locally for chat, reasoning, coding, embeddings, rerank, image, image edit, video, TTS, STT, image-to-video, avatar image, provider auto-selection, and research. | Rerun on VPS with DB-backed provider keys; inspect model smoke errors for endpoint/body/parser/gated/catalog-only/artifact failures. |
+| `agent_request_execution` | Connected-app secret env is missing locally. | Configure `AMARKTAI_CONNECTED_APP_SECRET` or app-specific secret and run signed proof. |
+| `connected_app_capability_execution` | Requires active signed app registry entry and signing secret. | Use real registered app/HMAC request; do not fabricate proof. |
+| `long_form_multi_scene_video_assembly` | `DATABASE_URL` is required to inspect/create video project jobs. | Rerun on VPS with DB and completed clip/job state. |
+| `talking_avatar_video` | No approved Rhubarb/lip-sync binary/service adapter is configured. | Install/configure lip-sync boundary, then prove avatar-video output artifact. |
+| `adult_media_policy_gated_generation` | `DATABASE_URL` is required to load adult policy gates; provider approval also required. | Configure explicit adult app policy and approved provider/model before proof. |
+
+## Environment-Blocked In Local No-Credential Proof
+
+The following are blocked locally because no configured provider/model candidate was visible to runtime. On VPS, these must move to `LIVE_PROVEN`, `SOURCE_WIRED`, or a more precise `BLOCKED` reason based on real DB-backed keys and model execution results:
+
+- `chat_text_generation`
+- `reasoning`
+- `coding_assistant`
+- `embeddings`
+- `rerank_search_relevance`
+- `text_to_image`
+- `image_editing_source_transform`
+- `text_to_video_short_clip`
+- `text_to_speech`
+- `speech_to_text`
+- `image_to_video`
+- `avatar_library_avatar_image_generation`
+- `provider_auto_selection`
+
+## Required Truth Rules
+
+- Key present is not provider smoke.
+- Provider catalog reachable is not model execution.
+- Model execution is not capability route proof.
+- Capability route proof is not durable output proof unless required artifacts/preview/download are present.
+- Normal chat must not create an artifact by default.
+- Dashboard labels must use `LIVE_PROVEN`, `SOURCE_WIRED`, `PROVIDER_AVAILABLE`, `BLOCKED`, and `NOT_WIRED`; no generic green "ready" for source-wired/catalog-only states.

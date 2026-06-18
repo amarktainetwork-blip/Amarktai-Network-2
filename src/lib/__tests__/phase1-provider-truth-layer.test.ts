@@ -544,4 +544,45 @@ describe('Phase 1 provider truth layer', () => {
     expect(empty.reason).toContain('model metadata or provider-contract evidence')
     vi.restoreAllMocks()
   })
+
+  it('exposes Brain selector policy, fallback, and rejected candidate evidence', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () =>
+      new Response(JSON.stringify({
+        data: [{
+          id: 'runtime-chat-model',
+          capabilities: ['chat'],
+          available: true,
+          quality: 0.7,
+          speed: 0.7,
+          cost: 0.4,
+        }],
+      }), { status: 200 }),
+    )
+
+    const premium = await planDynamicCapabilityRoute({
+      capability: 'chat',
+      profile: 'premium',
+    })
+    expect(premium.selected?.provider).toBe('genx')
+    expect(premium.fallbackChain.length).toBeGreaterThan(0)
+    expect(premium.reason).toContain('GenX')
+
+    clearProviderDiscoveryCache()
+    const pinned = await planDynamicCapabilityRoute({
+      capability: 'chat',
+      profile: 'pinned',
+      preferences: {
+        providerPreference: ['groq'],
+        modelPreference: ['missing-model'],
+      },
+      fallbackAllowed: false,
+    })
+    expect(pinned.selected).toBeNull()
+    expect(pinned.fallbackAllowed).toBe(false)
+    expect(pinned.providerPin).toBe('groq')
+    expect(pinned.modelPin).toBe('missing-model')
+    expect(pinned.rejectedCandidates.some((entry) => entry.code === 'MODEL_NOT_PINNED')).toBe(true)
+
+    fetchMock.mockRestore()
+  })
 })

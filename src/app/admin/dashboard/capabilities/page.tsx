@@ -153,12 +153,20 @@ export default function CapabilitiesPage() {
         title="Runtime capability browser"
         description="Brain runtime truth grouped by capability family. The top counters are the V1 proof run; the catalog cards below show the broader capability browser without overclaiming live execution."
         actions={
-          <Link
-            href="/admin/dashboard/studio"
-            className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
-          >
-            Open Studio
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/admin/dashboard/provider-matrix"
+              className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-cyan-100 transition hover:bg-cyan-400/15"
+            >
+              Provider Matrix
+            </Link>
+            <Link
+              href="/admin/dashboard/studio"
+              className="inline-flex items-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-950 transition hover:bg-cyan-200"
+            >
+              Open Studio
+            </Link>
+          </div>
         }
       />
 

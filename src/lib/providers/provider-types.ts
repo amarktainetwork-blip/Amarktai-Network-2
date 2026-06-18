@@ -41,6 +41,7 @@ export const ROUTING_PROFILE_IDS = [
   'cheap',
   'balanced',
   'premium',
+  'pinned',
   'mixed',
   'best_available',
   'custom',
@@ -203,11 +204,36 @@ export interface ProviderRouteCandidate {
   scoreBreakdown: Record<string, number>
 }
 
+export interface ProviderRouteRejection {
+  provider: ProviderId
+  modelId: string | null
+  capability: CapabilityId
+  reason: string
+  code:
+    | 'PROVIDER_NOT_PINNED'
+    | 'MODEL_NOT_PINNED'
+    | 'MODEL_UNAVAILABLE'
+    | 'CAPABILITY_UNSUPPORTED'
+    | 'DEDICATED_ENDPOINT_REQUIRED'
+    | 'CATALOG_ONLY'
+    | 'ADULT_GATE_REQUIRED'
+    | 'PROVIDER_NOT_CONFIGURED'
+    | 'PROVIDER_DEGRADED'
+    | 'STREAMING_UNSUPPORTED'
+    | 'ARTIFACT_UNSUPPORTED'
+    | 'BILLING_DISABLED'
+}
+
 export interface DynamicRoutePlan {
   capability: CapabilityId
   profile: RoutingProfileId
   selected: ProviderRouteCandidate | null
   candidates: ProviderRouteCandidate[]
+  fallbackChain: ProviderRouteCandidate[]
+  rejectedCandidates: ProviderRouteRejection[]
+  fallbackAllowed: boolean
+  providerPin: ProviderId | null
+  modelPin: string | null
   reason: string
 }
 
@@ -225,6 +251,8 @@ export interface CanonicalExecutionPlan {
   profile: RoutingProfileId
   selected: CanonicalExecutionRoute | null
   candidates: CanonicalExecutionRoute[]
+  fallbackChain?: CanonicalExecutionRoute[]
+  rejectedCandidates?: ProviderRouteRejection[]
   code: 'ROUTE_FOUND' | 'NO_ROUTE_FOUND'
   reason: string
 }

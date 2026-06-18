@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const loadedFiles: string[] = []
+const searchedEnvPaths: string[] = []
+const foundEnvPaths: string[] = []
 const mode = process.env.NODE_ENV?.trim() || 'production'
 const candidates = [
   `.env.${mode}.local`,
@@ -10,14 +13,99 @@ const candidates = [
   '.env',
 ].filter((entry): entry is string => Boolean(entry))
 
-for (const filename of candidates) {
-  const filePath = path.join(process.cwd(), filename)
-  if (!fs.existsSync(filePath)) continue
-  const parsed = parseEnvFile(fs.readFileSync(filePath, 'utf8'))
-  for (const [key, value] of Object.entries(parsed)) {
-    if (process.env[key] === undefined || process.env[key] === '') process.env[key] = value
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = findRepoRoot(process.cwd()) ?? findRepoRoot(scriptDir) ?? process.cwd()
+const envRoots = uniquePaths([
+  repoRoot,
+  path.join(repoRoot, 'prisma'),
+  process.cwd(),
+  path.join(process.cwd(), 'prisma'),
+  ...ancestorPaths(process.cwd(), 3),
+])
+
+for (const root of envRoots) {
+  for (const filename of candidates) {
+    const filePath = path.join(root, filename)
+    searchedEnvPaths.push(filePath)
+    if (!fs.existsSync(filePath)) continue
+    foundEnvPaths.push(filePath)
+    const parsed = expandEnvValues(parseEnvFile(fs.readFileSync(filePath, 'utf8')))
+    for (const [key, value] of Object.entries(parsed)) {
+      if (process.env[key] === undefined || process.env[key] === '') {
+        process.env[key] = value
+      }
+    }
+    loadedFiles.push(path.relative(repoRoot, filePath) || filename)
   }
-  loadedFiles.push(filename)
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __AMARKTAI_ENV_DIAGNOSTICS__: {
+    cwd: string
+    repoRoot: string
+    searchedEnvPaths: string[]
+    foundEnvPaths: string[]
+    loadedEnvPaths: string[]
+  } | undefined
+}
+
+globalThis.__AMARKTAI_ENV_DIAGNOSTICS__ = {
+  cwd: process.cwd(),
+  repoRoot,
+  searchedEnvPaths,
+  foundEnvPaths,
+  loadedEnvPaths: loadedFiles,
+}
+
+function findRepoRoot(start: string): string | null {
+  for (const candidate of [start, ...ancestorPaths(start, 8)]) {
+    const manifest = path.join(candidate, 'package.json')
+    if (!fs.existsSync(manifest)) continue
+    try {
+      const pkg = JSON.parse(fs.readFileSync(manifest, 'utf8')) as { name?: string }
+      if (pkg.name === 'amarktai-network') return candidate
+      if (fs.existsSync(path.join(candidate, 'prisma', 'schema.prisma'))) return candidate
+    } catch {
+      if (fs.existsSync(path.join(candidate, 'prisma', 'schema.prisma'))) return candidate
+    }
+  }
+  return null
+}
+
+function ancestorPaths(start: string, maxDepth: number): string[] {
+  const roots: string[] = []
+  let current = path.resolve(start)
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    const parent = path.dirname(current)
+    if (parent === current) break
+    roots.push(parent)
+    current = parent
+  }
+  return roots
+}
+
+function uniquePaths(paths: string[]): string[] {
+  const seen = new Set<string>()
+  return paths
+    .map((entry) => path.resolve(entry))
+    .filter((entry) => {
+      const key = process.platform === 'win32' ? entry.toLowerCase() : entry
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function expandEnvValues(values: Record<string, string>): Record<string, string> {
+  const expanded: Record<string, string> = {}
+  for (const [key, value] of Object.entries(values)) {
+    expanded[key] = value.replace(/\$([A-Za-z_][A-Za-z0-9_]*)|\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_match, bare: string | undefined, braced: string | undefined) => {
+      const name = bare ?? braced ?? ''
+      return expanded[name] ?? values[name] ?? process.env[name] ?? ''
+    })
+  }
+  return expanded
 }
 
 declare global {

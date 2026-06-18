@@ -15,6 +15,7 @@ export async function planCanonicalExecution(input: {
   capability: string
   profile?: RoutingProfileId
   preferences?: RoutingPreferences
+  fallbackAllowed?: boolean
 }): Promise<CanonicalExecutionPlan> {
   const capability = resolveCanonicalCapability(input.capability)
   if (!capability || !getCapability(capability)) {
@@ -24,8 +25,17 @@ export async function planCanonicalExecution(input: {
     capability,
     profile: input.profile,
     preferences: input.preferences,
+    fallbackAllowed: input.fallbackAllowed,
   })
   const candidates = plan.candidates.map((candidate) => ({
+    provider: candidate.provider,
+    model: candidate.model,
+    score: candidate.score,
+    scoreBreakdown: candidate.scoreBreakdown,
+    health: candidate.health,
+    adapter: `${candidate.provider}_capability_adapter` as const,
+  }))
+  const fallbackChain = plan.fallbackChain.map((candidate) => ({
     provider: candidate.provider,
     model: candidate.model,
     score: candidate.score,
@@ -38,6 +48,8 @@ export async function planCanonicalExecution(input: {
     profile: plan.profile,
     selected: candidates[0] ?? null,
     candidates,
+    fallbackChain,
+    rejectedCandidates: plan.rejectedCandidates,
     code: candidates.length ? 'ROUTE_FOUND' : 'NO_ROUTE_FOUND',
     reason: plan.reason,
   }
@@ -94,6 +106,8 @@ function noRoute(
     profile: profile ?? 'balanced',
     selected: null,
     candidates: [],
+    fallbackChain: [],
+    rejectedCandidates: [],
     code: 'NO_ROUTE_FOUND',
     reason,
   }

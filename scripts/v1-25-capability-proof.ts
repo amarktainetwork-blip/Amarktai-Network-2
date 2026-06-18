@@ -83,6 +83,7 @@ type ProviderDiscoveryResult = {
 type ModelSmokeProof = {
   provider: string
   capability: string
+  modelStatus: 'EXECUTABLE' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT' | 'GATED_OR_UNAVAILABLE' | 'ADULT_GATED' | 'FAILED_CONTRACT' | 'FAILED_PROVIDER' | 'FAILED_ARTIFACT'
   credentialPresent: boolean
   catalogReachable: boolean
   providerSmokePassed: boolean
@@ -120,6 +121,10 @@ async function main() {
       connectedAppSecretPresent: Boolean(CONNECTED_APP_SECRET),
       envLoader: 'scripts/load-repo-env.ts',
       envFilesLoaded: globalThis.__AMARKTAI_LOADED_ENV_FILES__ ?? [],
+      envDiagnostics: globalThis.__AMARKTAI_ENV_DIAGNOSTICS__ ?? null,
+      providerKeyPresent: Object.fromEntries(
+        providerKeyResults.map((entry) => [entry.provider, entry.configured]),
+      ),
     },
     providerKeyPath: providerKeyResults,
     providerDiscovery: providerDiscoveryResults,
@@ -366,6 +371,7 @@ function modelSmokeBlocked(
   return {
     provider,
     capability,
+    modelStatus: credentialPresent ? (catalogReachable ? 'FAILED_CONTRACT' : 'GATED_OR_UNAVAILABLE') : 'FAILED_PROVIDER',
     credentialPresent,
     catalogReachable,
     providerSmokePassed: false,
@@ -389,21 +395,51 @@ async function modelSmokeFromResult(
 ): Promise<ModelSmokeProof> {
   const artifactId = result.artifactId ?? null
   const artifact = artifactId ? await getArtifact(artifactId).catch(() => null) : null
+  const artifactPersisted = Boolean(artifactId && artifact)
+  const previewReachable = Boolean(artifact?.previewUrl || artifact?.downloadUrl || result.mediaUrl || result.artifactUrl)
+  const modelExecutionPassed = result.success === true && Boolean(result.model)
+  const capabilityRoutePassed = result.success === true
   return {
     provider,
     capability,
+    modelStatus: modelExecutionStatus({
+      modelExecutionPassed,
+      capabilityRoutePassed,
+      artifactPersisted,
+      previewReachable,
+      result,
+    }),
     credentialPresent,
     catalogReachable,
     providerSmokePassed: result.provider === provider,
-    modelExecutionPassed: result.success === true && Boolean(result.model),
-    capabilityRoutePassed: result.success === true,
-    artifactPersisted: Boolean(artifactId && artifact),
-    previewReachable: Boolean(artifact?.previewUrl || artifact?.downloadUrl || result.mediaUrl || result.artifactUrl),
+    modelExecutionPassed,
+    capabilityRoutePassed,
+    artifactPersisted,
+    previewReachable,
     providerSelected: result.provider ?? null,
     modelSelected: result.model ?? null,
     artifactId,
     error: result.success ? null : result.error ?? result.code ?? result.readiness,
   }
+}
+
+function modelExecutionStatus(input: {
+  modelExecutionPassed: boolean
+  capabilityRoutePassed: boolean
+  artifactPersisted: boolean
+  previewReachable: boolean
+  result: Awaited<ReturnType<typeof executeCapability>>
+}): ModelSmokeProof['modelStatus'] {
+  if (input.modelExecutionPassed && input.capabilityRoutePassed) {
+    if (input.result.artifactId && !input.artifactPersisted) return 'FAILED_ARTIFACT'
+    return 'EXECUTABLE'
+  }
+  const reason = `${input.result.error ?? input.result.code ?? input.result.readiness ?? ''}`.toLowerCase()
+  if (/catalog.only|catalog-only/.test(reason)) return 'CATALOG_ONLY'
+  if (/dedicated endpoint|specialist endpoint/.test(reason)) return 'REQUIRES_DEDICATED_ENDPOINT'
+  if (/adult|gated|permission|policy/.test(reason)) return 'ADULT_GATED'
+  if (/provider|credential|key|endpoint|http|unauthorized|forbidden/.test(reason)) return 'FAILED_PROVIDER'
+  return 'FAILED_CONTRACT'
 }
 
 const AUDIT_CAPABILITIES = [
@@ -914,6 +950,14 @@ function renderMarkdown(report: {
     connectedAppSecretPresent: boolean
     envLoader?: string
     envFilesLoaded?: string[]
+    envDiagnostics?: {
+      cwd: string
+      repoRoot: string
+      searchedEnvPaths: string[]
+      foundEnvPaths: string[]
+      loadedEnvPaths: string[]
+    } | null
+    providerKeyPresent?: Record<string, boolean>
   }
   providerKeyPath: ProviderKeyResult[]
   providerDiscovery: ProviderDiscoveryResult[]
@@ -930,6 +974,10 @@ function renderMarkdown(report: {
     `Database available locally: ${report.environment.hasDatabaseUrl ? 'yes' : 'no'}`,
     `Env loader: ${report.environment.envLoader ?? 'none'}`,
     `Env files loaded: ${(report.environment.envFilesLoaded ?? []).join(', ') || 'none'}`,
+    `Env cwd: ${report.environment.envDiagnostics?.cwd ?? 'unknown'}`,
+    `Env repo root: ${report.environment.envDiagnostics?.repoRoot ?? 'unknown'}`,
+    `Env searched paths: ${(report.environment.envDiagnostics?.searchedEnvPaths ?? []).map(mdCell).join('<br>') || 'none'}`,
+    `Env found paths: ${(report.environment.envDiagnostics?.foundEnvPaths ?? []).map(mdCell).join('<br>') || 'none'}`,
     `Proof app slug: ${report.environment.appSlug}`,
     `Connected-app secret present locally: ${report.environment.connectedAppSecretPresent ? 'yes' : 'no'}`,
     '',
@@ -955,9 +1003,9 @@ function renderMarkdown(report: {
     '',
     '## Model-Level Smoke Proof',
     '',
-    '| Provider | Capability | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |',
-    '|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|',
-    ...report.modelSmokeProofs.map((entry) => `| ${entry.provider} | ${entry.capability} | ${entry.credentialPresent ? 'yes' : 'no'} | ${entry.catalogReachable ? 'yes' : 'no'} | ${entry.providerSmokePassed ? 'yes' : 'no'} | ${entry.modelExecutionPassed ? 'yes' : 'no'} | ${entry.capabilityRoutePassed ? 'yes' : 'no'} | ${entry.artifactPersisted ? 'yes' : 'no'} | ${entry.previewReachable ? 'yes' : 'no'} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.error)} |`),
+    '| Provider | Capability | Model status | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |',
+    '|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|',
+    ...report.modelSmokeProofs.map((entry) => `| ${entry.provider} | ${entry.capability} | ${entry.modelStatus} | ${entry.credentialPresent ? 'yes' : 'no'} | ${entry.catalogReachable ? 'yes' : 'no'} | ${entry.providerSmokePassed ? 'yes' : 'no'} | ${entry.modelExecutionPassed ? 'yes' : 'no'} | ${entry.capabilityRoutePassed ? 'yes' : 'no'} | ${entry.artifactPersisted ? 'yes' : 'no'} | ${entry.previewReachable ? 'yes' : 'no'} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.error)} |`),
     '',
     '## Capabilities',
     '',

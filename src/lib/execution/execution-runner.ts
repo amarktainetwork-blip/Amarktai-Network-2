@@ -282,6 +282,9 @@ function executionCompletionEvidence(
   if (artifactId && (storageUrl || artifactUrl || previewUrl || downloadUrl || mediaUrl || output)) {
     return { complete: true, warning: false, error: '' }
   }
+  if (storageUrl || artifactUrl || previewUrl || downloadUrl || mediaUrl) {
+    return { complete: true, warning: false, error: '' }
+  }
   if (artifactId) {
     return {
       complete: true,

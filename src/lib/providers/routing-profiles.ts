@@ -41,6 +41,12 @@ export const ROUTING_PROFILES: Readonly<Record<RoutingProfileId, RoutingProfile>
     weights: weights(0.34, 0.08, 0.04, 0.12, 0.32),
     preferences: { quality: 1 },
   },
+  pinned: {
+    id: 'pinned',
+    label: 'Pinned Provider',
+    weights: weights(0.2, 0.12, 0.08, 0.2, 0.3),
+    preferences: {},
+  },
   mixed: {
     id: 'mixed',
     label: 'Mixed',
