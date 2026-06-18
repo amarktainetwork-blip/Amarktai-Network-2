@@ -9,13 +9,28 @@ import { discoverProvider } from '@/lib/providers/provider-discovery'
 import { verifyStorage, type StorageHealth } from '@/lib/storage-driver'
 import { getLatestCreativeSmokeReport } from '@/lib/creative-smoke-report'
 
-export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
+export type ProviderRuntimeReadinessStatus =
+  | 'CREDENTIAL_MISSING'
+  | 'CREDENTIAL_PRESENT'
+  | 'CATALOG_READY'
+  | 'CATALOG_FAILED'
+  | 'CHAT_SMOKE_PASSED'
+  | 'CAPABILITY_SMOKE_PARTIAL'
+  | 'CAPABILITY_SMOKE_FAILED'
+  | 'LIVE_READY'
+
+export type SettingsTruthStatus =
+  | ProviderRuntimeReadinessStatus
+  | 'Connected'
+  | 'Optional'
+  | 'Needs key'
 
 export interface SettingsTruthEntry {
   key: ProviderMeshId
   label: string
   kind: 'provider' | 'tool' | 'storage'
   status: SettingsTruthStatus
+  providerRuntimeStatus: ProviderRuntimeReadinessStatus | null
   configured: boolean
   connected: boolean
   keyPresent: boolean
@@ -59,27 +74,42 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
   const providerLiveTestPassed = providerReadiness?.state === 'ready'
   const capabilityLiveProven = notes.capabilityExecutionProven === true || notes.proofKind === 'live_capability_execution_proof'
   const providerCatalogWorks = providerDiscovery?.status === 'ready' && providerDiscovery.models.length > 0
-  const connected = providerReadiness
-    ? providerReadiness.state === 'ready'
+  const providerRuntimeStatus: ProviderRuntimeReadinessStatus | null = node.kind === 'provider'
+    ? !configured
+      ? 'CREDENTIAL_MISSING'
+      : capabilityLiveProven
+        ? 'LIVE_READY'
+        : notes.capabilitySmokeFailed === true
+          || (providerCatalogWorks && notes.lastTestStatus === 'failed')
+          ? 'CAPABILITY_SMOKE_FAILED'
+          : notes.capabilitySmokePartial === true
+            ? 'CAPABILITY_SMOKE_PARTIAL'
+            : providerLiveTestPassed
+              ? 'CHAT_SMOKE_PASSED'
+              : providerCatalogWorks
+                ? 'CATALOG_READY'
+                : providerDiscovery?.status === 'failed'
+                  ? 'CATALOG_FAILED'
+                  : 'CREDENTIAL_PRESENT'
+    : null
+  const connected = providerRuntimeStatus
+    ? providerRuntimeStatus === 'CHAT_SMOKE_PASSED' || providerRuntimeStatus === 'LIVE_READY'
     : Boolean(configured && (notes.lastTestPassed || storageWritable))
-  const failed = providerReadiness
-    ? providerReadiness.state === 'misconfigured'
-    : configured && notes.lastTestStatus === 'failed'
-  const status: SettingsTruthStatus = connected
-    ? 'Connected'
-    : failed
-      ? 'Failed'
+  const status: SettingsTruthStatus = providerRuntimeStatus
+    ?? (connected
+      ? 'Connected'
       : configured
-        ? 'Needs live test'
+        ? 'Connected'
         : node.optional
           ? 'Optional'
-          : 'Needs key'
+          : 'Needs key')
 
   return {
     key: id,
     label: node.displayName,
     kind: node.kind,
     status,
+    providerRuntimeStatus,
     configured,
     connected,
     keyPresent: configured,
@@ -94,20 +124,34 @@ async function buildEntry(id: ProviderMeshId, verifiedStorage: StorageHealth): P
     testRoute: node.testRoute,
     envVars: [...node.envAliases],
     capabilities: [...node.capabilities],
-    lastTestResult: connected ? 'Live test passed' : failed ? 'Live test failed' : 'Not tested',
+    lastTestResult: providerRuntimeStatus ?? (connected ? 'Connected' : 'Not tested'),
     lastTestedAt: providerReadiness?.checkedAt
       ?? (typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null),
-    blocker: connected
+    blocker: providerRuntimeStatus === 'LIVE_READY'
+      ? ''
+      : providerRuntimeStatus === 'CHAT_SMOKE_PASSED'
+        ? 'Provider chat smoke passed; product capability routes still need live proof.'
+        : providerRuntimeStatus === 'CATALOG_READY'
+          ? 'Credential and catalog are ready; capability route proof is pending.'
+          : providerRuntimeStatus === 'CATALOG_FAILED'
+            ? providerDiscovery?.error || 'Provider catalog discovery failed.'
+            : providerRuntimeStatus === 'CREDENTIAL_PRESENT'
+              ? 'Credential is present; run catalog and provider smoke checks.'
+              : providerRuntimeStatus === 'CAPABILITY_SMOKE_PARTIAL'
+                ? 'Some capability smoke checks passed; at least one route remains unproven.'
+                : providerRuntimeStatus === 'CAPABILITY_SMOKE_FAILED'
+                  ? notes.lastError || 'Capability smoke check failed.'
+                  : providerRuntimeStatus === 'CREDENTIAL_MISSING'
+                    ? `Add ${node.envAliases.join(' or ') || 'the local runtime'}`
+                    : connected
       ? capabilityLiveProven
         ? ''
         : 'Provider live test passed; product capability routes still need live proof.'
-      : failed
-        ? notes.lastError || 'Live test failed'
-        : configured
-          ? `Run the ${node.displayName} live test`
-          : node.optional
-            ? 'Optional connection is not configured'
-            : `Add ${node.envAliases.join(' or ') || 'the local runtime'}`,
+      : configured
+        ? `Run the ${node.displayName} live test`
+        : node.optional
+          ? 'Optional connection is not configured'
+          : `Add ${node.envAliases.join(' or ') || 'the local runtime'}`,
     error: typeof notes.lastError === 'string' ? notes.lastError : '',
     unlocks: node.capabilities.join(', '),
   }

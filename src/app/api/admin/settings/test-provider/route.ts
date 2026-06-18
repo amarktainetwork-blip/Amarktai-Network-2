@@ -115,10 +115,9 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now()
   try {
     const result = await runExistingTest(node.id, request) ?? await runNewTest(node.id)
-    const capabilityExecutionProven = result.capabilityExecutionProven !== false
+    const capabilityExecutionProven = result.capabilityExecutionProven === true
     const proof = classifyProof(result)
     const success = result.success === true
-      && capabilityExecutionProven
       && (node.id !== 'redis' || result.connected === true)
     const error = success ? '' : sanitizeProviderError(result.error || result.detail || result.note || 'Live test failed')
     const detail = success
@@ -154,7 +153,7 @@ export async function POST(request: NextRequest) {
       success,
       connected: success,
       capabilities: success ? node.capabilities : [],
-      capabilityExecutionProven: success,
+      capabilityExecutionProven,
       proofKind: proof.proofKind,
       proofSummary: proof.proofSummary,
       lastTestedAt: new Date().toISOString(),

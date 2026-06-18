@@ -44,20 +44,32 @@ type ProviderKeyResult = {
 
 type ProviderDiscoveryResult = {
   provider: string
+  credentialEnvNames: string[]
+  catalogEndpoint: string | null
   status: string
   discoverySource: string
+  rawCatalogCount: number
   modelCount: number
+  executableCandidateCount: number
+  chatModels: number
+  reasoningModels: number
+  codingModels: number
   liveAuthenticatedModels: number
   publicCatalogModels: number
   staticFallbackModels: number
   catalogDerivedModels: number
   imageModels: number
+  imageEditModels: number
   videoModels: number
   imageToVideoModels: number
   ttsModels: number
   sttModels: number
   embeddingsModels: number
   rerankModels: number
+  musicModels: number
+  avatarModels: number
+  adultImageModels: number
+  executableBlocker: string | null
   error: string | null
   endpoint: string | null
 }
@@ -213,45 +225,110 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
       const snapshot = await discoverProvider(provider, { force: true })
       return {
         provider,
+        credentialEnvNames: PROVIDER_KEY_ENVS[provider] ?? [],
+        catalogEndpoint: snapshot.endpoint,
         status: snapshot.status,
         discoverySource: snapshot.discoverySource ?? 'none',
+        rawCatalogCount: snapshot.rawCatalogCount ?? snapshot.models.length,
         modelCount: snapshot.models.length,
+        executableCandidateCount: executableCandidateCount(snapshot),
+        chatModels: modelsForCapability(snapshot, 'chat').length,
+        reasoningModels: modelsForCapability(snapshot, 'reasoning').length,
+        codingModels: modelsForCapability(snapshot, 'coding').length,
         liveAuthenticatedModels: snapshot.models.filter((model) => model.discoverySource === 'live_authenticated').length,
         publicCatalogModels: snapshot.models.filter((model) => model.discoverySource === 'public_catalog').length,
         staticFallbackModels: snapshot.models.filter((model) => model.discoverySource === 'static_fallback').length,
         catalogDerivedModels: snapshot.models.filter((model) => (model.discoverySource ?? 'catalog_derived') === 'catalog_derived').length,
         imageModels: modelsForCapability(snapshot, 'image').length,
+        imageEditModels: modelsForCapability(snapshot, 'image_edit').length,
         videoModels: modelsForCapability(snapshot, 'video').length,
         imageToVideoModels: modelsForCapability(snapshot, 'image_to_video').length,
         ttsModels: modelsForCapability(snapshot, 'tts').length,
         sttModels: modelsForCapability(snapshot, 'stt').length,
         embeddingsModels: modelsForCapability(snapshot, 'embeddings').length,
         rerankModels: modelsForCapability(snapshot, 'rerank').length,
+        musicModels: modelsForCapability(snapshot, 'music').length,
+        avatarModels: modelsForCapability(snapshot, 'avatar').length,
+        adultImageModels: modelsForCapability(snapshot, 'adult_image').length,
+        executableBlocker: providerExecutableBlocker(snapshot),
         error: snapshot.error,
         endpoint: snapshot.endpoint,
       }
     } catch (error) {
       return {
         provider,
+        credentialEnvNames: PROVIDER_KEY_ENVS[provider] ?? [],
+        catalogEndpoint: getProviderTruth(provider) ? resolveProviderEndpoint(getProviderTruth(provider)!) : null,
         status: 'failed',
         discoverySource: 'none',
+        rawCatalogCount: 0,
         modelCount: 0,
+        executableCandidateCount: 0,
+        chatModels: 0,
+        reasoningModels: 0,
+        codingModels: 0,
         liveAuthenticatedModels: 0,
         publicCatalogModels: 0,
         staticFallbackModels: 0,
         catalogDerivedModels: 0,
         imageModels: 0,
+        imageEditModels: 0,
         videoModels: 0,
         imageToVideoModels: 0,
         ttsModels: 0,
         sttModels: 0,
         embeddingsModels: 0,
         rerankModels: 0,
+        musicModels: 0,
+        avatarModels: 0,
+        adultImageModels: 0,
+        executableBlocker: error instanceof Error ? error.message : 'Provider discovery failed.',
         error: error instanceof Error ? error.message : 'Provider discovery failed.',
         endpoint: getProviderTruth(provider) ? resolveProviderEndpoint(getProviderTruth(provider)!) : null,
       }
     }
   }))
+}
+
+const AUDIT_CAPABILITIES = [
+  'chat',
+  'reasoning',
+  'coding',
+  'image',
+  'image_edit',
+  'video',
+  'image_to_video',
+  'tts',
+  'stt',
+  'embeddings',
+  'rerank',
+  'music',
+  'avatar',
+  'adult_image',
+] as const
+
+function executableCandidateCount(snapshot: Awaited<ReturnType<typeof discoverProvider>>): number {
+  const unique = new Set<string>()
+  for (const capability of AUDIT_CAPABILITIES) {
+    for (const model of modelsForCapability(snapshot, capability)) {
+      unique.add(`${snapshot.provider}:${model.id}`)
+    }
+  }
+  return unique.size
+}
+
+function providerExecutableBlocker(snapshot: Awaited<ReturnType<typeof discoverProvider>>): string | null {
+  const executableCount = executableCandidateCount(snapshot)
+  const rawCount = snapshot.rawCatalogCount ?? snapshot.models.length
+  if (executableCount > 0) return null
+  if (snapshot.status !== 'ready') return snapshot.error ?? 'Provider catalog is not ready.'
+  if (rawCount > 0 && snapshot.models.length === 0) {
+    return 'Raw catalog returned records, but normalization produced zero models. Check model id/parser shape.'
+  }
+  if (snapshot.models.length > 0) {
+    return 'Catalog normalized models, but none mapped to executable capability candidates.'
+  }
+  return snapshot.error ?? 'No catalog models were returned.'
 }
 
 async function collectCapabilityProofs(): Promise<CapabilityProof[]> {
@@ -654,9 +731,9 @@ function renderMarkdown(report: {
     '',
     '## Provider Discovery',
     '',
-    '| Provider | Status | Source | Models | Live-auth | Public | Static | Catalog-derived | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |',
-    '|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
-    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${entry.status} | ${entry.discoverySource} | ${entry.modelCount} | ${entry.liveAuthenticatedModels} | ${entry.publicCatalogModels} | ${entry.staticFallbackModels} | ${entry.catalogDerivedModels} | ${entry.imageModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${mdCell(entry.error)} |`),
+    '| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |',
+    '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${mdCell(entry.credentialEnvNames.join('<br>'))} | ${mdCell(entry.catalogEndpoint)} | ${entry.status} | ${entry.discoverySource} | ${entry.rawCatalogCount} | ${entry.modelCount} | ${entry.executableCandidateCount} | ${entry.chatModels} | ${entry.reasoningModels} | ${entry.codingModels} | ${entry.imageModels} | ${entry.imageEditModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.musicModels} | ${entry.avatarModels} | ${entry.adultImageModels} | ${mdCell(entry.executableBlocker ?? entry.error)} |`),
     '',
     '## Capabilities',
     '',

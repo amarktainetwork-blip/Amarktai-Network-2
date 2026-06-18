@@ -102,7 +102,7 @@ describe('dashboard runtime truth contract', () => {
 
     expect(settings).toContain('capabilityExecutionProven: false')
     expect(settings).toContain('token/account check passed')
-    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps Together readiness truthful by separating model-catalog checks from capability proof', () => {
@@ -111,7 +111,7 @@ describe('dashboard runtime truth contract', () => {
 
     expect(together).toContain('capabilityExecutionProven: false')
     expect(together).toContain('model catalog check passed')
-    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps GenX readiness truthful by separating catalog/chat probes from Brain-route proof', () => {
@@ -120,7 +120,7 @@ describe('dashboard runtime truth contract', () => {
 
     expect(genx).toContain('capabilityExecutionProven: false')
     expect(genx).toContain('catalog and direct chat probe passed')
-    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps Qwen readiness truthful by separating chat probes from capability-specific route proof', () => {
@@ -129,7 +129,7 @@ describe('dashboard runtime truth contract', () => {
 
     expect(qwen).toContain('capabilityExecutionProven: false')
     expect(qwen).toContain('chat probe passed')
-    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps Hugging Face task proof on specialist/admin surfaces instead of pretending Brain route readiness', () => {
@@ -153,7 +153,7 @@ describe('dashboard runtime truth contract', () => {
 
     expect(groq).toContain('capabilityExecutionProven: false')
     expect(groq).toContain('model catalog check passed')
-    expect(providerTest).toContain('result.capabilityExecutionProven !== false')
+    expect(providerTest).toContain('result.capabilityExecutionProven === true')
     expect(tts).toContain("capability: body.capability === 'adult_voice' ? 'adult_voice' : 'tts'")
     expect(stt).toContain("capability: 'stt'")
   })

@@ -492,7 +492,18 @@ function ProviderConnectionCard({
   }
 
   const ready = entry.providerLiveTestPassed
-  const failed = entry.status === 'Failed'
+  const failed = entry.status === 'CATALOG_FAILED' || entry.status === 'CAPABILITY_SMOKE_FAILED'
+  const statusValue = entry.capabilityLiveProven
+    ? 'live_proven'
+    : ready
+      ? 'provider_tested'
+      : failed
+        ? 'failed'
+        : entry.status === 'CATALOG_READY'
+          ? 'catalog_ready'
+          : entry.keyPresent
+            ? 'credential_present'
+            : 'unavailable'
 
   return (
     <article className={`rounded-[1.35rem] border p-5 shadow-[0_20px_50px_rgba(0,0,0,0.16)] ${ready ? 'border-emerald-800/40 bg-emerald-900/10' : failed ? 'border-red-800/40 bg-red-900/10' : 'border-amber-800/30 bg-amber-900/10'}`}>
@@ -503,7 +514,7 @@ function ProviderConnectionCard({
             {canonicalProviderHint(entry)}
           </p>
         </div>
-        <DashboardStatusBadge value={entry.capabilityLiveProven ? 'live_proven' : ready ? 'provider_tested' : failed ? 'failed' : entry.configured ? 'partial' : 'unavailable'} map={{ live_proven: { label: 'capability live-proven', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, provider_tested: { label: 'provider tested', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' }, failed: { label: 'test failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, partial: { label: 'needs test', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, unavailable: { label: 'needs setup', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
+        <DashboardStatusBadge value={statusValue} map={{ live_proven: { label: 'capability live-proven', className: 'border-emerald-500/30 bg-emerald-500/12 text-emerald-200' }, provider_tested: { label: 'chat smoke passed', className: 'border-cyan-500/30 bg-cyan-500/12 text-cyan-200' }, catalog_ready: { label: 'catalog ready', className: 'border-sky-500/30 bg-sky-500/12 text-sky-200' }, credential_present: { label: 'credential present', className: 'border-amber-500/30 bg-amber-500/12 text-amber-200' }, failed: { label: 'catalog/capability failed', className: 'border-rose-500/30 bg-rose-500/12 text-rose-200' }, unavailable: { label: 'credential missing', className: 'border-slate-700/60 bg-slate-800/60 text-slate-300' } }} />
       </div>
 
       <div className="mt-4 grid gap-2 text-xs sm:grid-cols-2">

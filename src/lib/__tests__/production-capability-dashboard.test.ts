@@ -102,7 +102,7 @@ describe('production capability and dashboard contract', () => {
     expect(hfTest).toContain("proofType: 'account_token_check'")
     expect(hfTest).toContain('capabilityExecutionProven: false')
     expect(hfTest).toContain('provider-capability test')
-    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+    expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('does not treat the Together model-catalog check as full capability execution proof', () => {
@@ -112,7 +112,7 @@ describe('production capability and dashboard contract', () => {
     expect(togetherTest).toContain("proofType: 'key_and_model_catalog_check'")
     expect(togetherTest).toContain('capabilityExecutionProven: false')
     expect(togetherTest).toContain('real route proof')
-    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+    expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('does not treat the GenX catalog/chat probe as full capability execution proof', () => {
@@ -122,7 +122,7 @@ describe('production capability and dashboard contract', () => {
     expect(genxTest).toContain("proofType: 'catalog_and_chat_probe'")
     expect(genxTest).toContain('capabilityExecutionProven: false')
     expect(genxTest).toContain('real Brain/runtime route proof')
-    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+    expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('does not treat the Qwen chat probe as full capability execution proof', () => {
@@ -132,7 +132,7 @@ describe('production capability and dashboard contract', () => {
     expect(qwenTest).toContain("proofType: 'chat_route_probe'")
     expect(qwenTest).toContain('capabilityExecutionProven: false')
     expect(qwenTest).toContain('Image, video/Wanx, image-to-video, embeddings, and translation still require their own Brain/runtime route proof.')
-    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+    expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps Hugging Face task-based specialist proofs separate from Brain product-route readiness', () => {
@@ -154,7 +154,7 @@ describe('production capability and dashboard contract', () => {
     expect(groqTest).toContain("proofType: 'key_and_model_catalog_check'")
     expect(groqTest).toContain('capabilityExecutionProven: false')
     expect(groqTest).toContain('chat, TTS, or STT')
-    expect(genericTest).toContain('result.capabilityExecutionProven !== false')
+    expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
   it('keeps MiniMax out of canonical provider and settings surfaces while preserving Xiaomi MiMo only', () => {

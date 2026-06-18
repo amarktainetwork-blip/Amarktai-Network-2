@@ -160,8 +160,9 @@ describe('platform Settings readiness truth', () => {
     expect(truth.providers.find((provider) => provider.key === 'genx')).toMatchObject({
       configured: true,
       connected: true,
-      status: 'Connected',
-      lastTestResult: 'Live test passed',
+      status: 'CHAT_SMOKE_PASSED',
+      providerRuntimeStatus: 'CHAT_SMOKE_PASSED',
+      lastTestResult: 'CHAT_SMOKE_PASSED',
     })
   })
 
@@ -205,7 +206,8 @@ describe('platform Settings readiness truth', () => {
     expect(truth.providers.find((provider) => provider.key === 'mimo')).toMatchObject({
       configured: true,
       connected: true,
-      status: 'Connected',
+      status: 'CHAT_SMOKE_PASSED',
+      providerRuntimeStatus: 'CHAT_SMOKE_PASSED',
     })
   })
 
@@ -241,7 +243,8 @@ describe('platform Settings readiness truth', () => {
     expect(truth.providers.find((provider) => provider.key === 'mimo')).toMatchObject({
       configured: true,
       connected: false,
-      status: 'Failed',
+      status: 'CAPABILITY_SMOKE_FAILED',
+      providerRuntimeStatus: 'CAPABILITY_SMOKE_FAILED',
       error: 'Xiaomi MiMo returned HTTP 401',
     })
   })

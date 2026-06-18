@@ -125,6 +125,13 @@ export interface DiscoveredModel {
   streaming: boolean | 'unknown'
   research: boolean | 'unknown'
   artifactSupport: boolean
+  metadata?: {
+    task?: string | null
+    providerAvailable?: boolean | 'unknown'
+    license?: string | null
+    safetyNotes?: string | null
+    executable?: boolean | 'candidate'
+  }
   raw: Record<string, unknown>
   discoveredAt: string
 }
@@ -135,6 +142,7 @@ export interface ProviderDiscoverySnapshot {
   endpoint: string | null
   keySource: string
   discoverySource?: ModelDiscoverySource | 'none'
+  rawCatalogCount?: number
   models: DiscoveredModel[]
   tasks: string[]
   inferenceProviders: string[]

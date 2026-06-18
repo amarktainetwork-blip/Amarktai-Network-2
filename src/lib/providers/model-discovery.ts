@@ -44,6 +44,22 @@ export function modelsForCapability(
   )
   if (modelEvidence.length > 0) return modelEvidence
 
+  const compatibleEvidence = available
+    .filter((model) => compatibleCapabilities(normalizedCapability)
+      .some((candidateCapability) => model.capabilities.includes(candidateCapability)))
+  if (compatibleEvidence.length > 0) {
+    return compatibleEvidence.map((model) => ({
+      ...model,
+      capabilities: [...new Set([...model.capabilities, normalizedCapability])],
+      raw: {
+        ...model.raw,
+        capability_evidence: model.capabilityEvidence,
+        capability_contract: normalizedCapability,
+        compatible_capability_source: model.capabilities,
+      },
+    }))
+  }
+
   const provider = PROVIDER_TRUTH.find((entry) => entry.id === snapshot.provider)
   if (
     snapshot.status !== 'ready'
@@ -69,10 +85,18 @@ export function modelsForCapability(
 
 function providerContractEligible(provider: ProviderId, capability: CapabilityId) {
   if (provider === 'huggingface') return false
-  if (provider === 'groq') return ['chat', 'reasoning', 'coding'].includes(capability)
+  if (provider === 'groq') return ['chat', 'reasoning', 'coding', 'tts', 'stt'].includes(capability)
   if (provider === 'mimo') return ['chat', 'reasoning', 'coding', 'tts'].includes(capability)
-  if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings'].includes(capability)
-  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'embeddings', 'rerank', 'agents'].includes(capability)
-  if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'music', 'tts'].includes(capability)
+  if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings', 'image', 'image_edit', 'video', 'image_to_video'].includes(capability)
+  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'tts', 'stt', 'embeddings', 'rerank', 'agents'].includes(capability)
+  if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'music', 'tts', 'stt'].includes(capability)
   return false
+}
+
+function compatibleCapabilities(capability: CapabilityId): CapabilityId[] {
+  if (capability === 'reasoning' || capability === 'coding' || capability === 'research' || capability === 'agents') return ['chat']
+  if (capability === 'avatar' || capability === 'adult_image') return ['image']
+  if (capability === 'image_edit') return ['image']
+  if (capability === 'adult_video') return ['video', 'image_to_video']
+  return []
 }

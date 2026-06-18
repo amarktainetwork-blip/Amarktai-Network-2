@@ -559,8 +559,21 @@ function inferCapabilities(raw: Record<string, unknown>, id: string): GenXCapabi
 }
 
 function normaliseModel(raw: unknown): GenXModel | null {
+  if (typeof raw === 'string') {
+    const id = raw.trim()
+    if (!id) return null
+    return {
+      id,
+      name: id,
+      capabilities: inferCapabilities({ id }, id),
+      costTier: 'medium',
+      latencyTier: 'medium',
+      contextWindow: 0,
+      supportsAdult: false,
+    }
+  }
   if (!isRecord(raw)) return null
-  const id = asString(raw.id) ?? asString(raw.model) ?? asString(raw.model_id) ?? asString(raw.slug)
+  const id = asString(raw.id) ?? asString(raw.model) ?? asString(raw.model_id) ?? asString(raw.modelId) ?? asString(raw.slug) ?? asString(raw.name)
   if (!id) return null
   const provider = asString(raw.provider)
   const category = asString(raw.category) ?? asString(raw.type)
@@ -586,14 +599,25 @@ export interface GenXStreamEvent {
   model?: string
 }
 
-function extractModelList(data: unknown): unknown[] {
-  if (Array.isArray(data)) return data
+function extractModelList(data: unknown, inherited: Record<string, unknown> = {}): unknown[] {
+  if (typeof data === 'string') return [{ ...inherited, id: data }]
+  if (Array.isArray(data)) return data.flatMap((entry) => extractModelList(entry, inherited))
   if (!isRecord(data)) return []
-  const candidates = [data.models, data.data, data.items, data.results]
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate
+  if (asString(data.id) || asString(data.model) || asString(data.model_id) || asString(data.modelId) || asString(data.slug) || asString(data.name)) {
+    return [{ ...inherited, ...data }]
   }
-  return []
+  const values: unknown[] = []
+  for (const [key, value] of Object.entries(data)) {
+    if (!['data', 'models', 'items', 'results', 'catalog', 'catalogue', 'available_models'].includes(key)
+      && !['text', 'chat', 'reasoning', 'code', 'coding', 'image', 'images', 'video', 'videos', 'image_to_video', 'voice', 'voices', 'audio', 'music', 'transcription', 'tts', 'stt'].includes(key.toLowerCase())) {
+      continue
+    }
+    const nextInherited = ['text', 'chat', 'reasoning', 'code', 'coding', 'image', 'images', 'video', 'videos', 'image_to_video', 'voice', 'voices', 'audio', 'music', 'transcription', 'tts', 'stt'].includes(key.toLowerCase())
+      ? { ...inherited, category: inherited.category ?? key }
+      : inherited
+    values.push(...extractModelList(value, nextInherited))
+  }
+  return values
 }
 
 /** Fetch the GenX model catalog using the discovered catalog endpoint. */

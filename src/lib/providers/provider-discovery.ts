@@ -125,6 +125,21 @@ const GENX_FALLBACK_MODEL_CAPABILITIES: Partial<Record<CapabilityId, readonly st
   tts: GENX_TTS_MODELS,
 }
 
+const HF_CORE_MODEL_ALLOWLIST = new Set([
+  'mistralai/Mistral-7B-Instruct-v0.3',
+  'sentence-transformers/all-MiniLM-L6-v2',
+  'cross-encoder/ms-marco-MiniLM-L-6-v2',
+  'stabilityai/stable-diffusion-xl-base-1.0',
+  'timbrooks/instruct-pix2pix',
+  'Wan-AI/Wan2.1-T2V-14B',
+  'facebook/musicgen-small',
+  'facebook/mms-tts-eng',
+  'openai/whisper-large-v3',
+  'Salesforce/blip-image-captioning-base',
+  'Salesforce/blip2-opt-2.7b',
+  'impira/layoutlm-document-qa',
+])
+
 type FetchLike = typeof fetch
 
 export interface ProviderDiscoveryOptions {
@@ -159,6 +174,7 @@ export async function discoverProvider(
       endpoint: resolveDiscoveryUrl(provider, options.capability),
       keySource: credentialResult.source,
       discoverySource: 'none',
+      rawCatalogCount: 0,
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -178,6 +194,7 @@ export async function discoverProvider(
       endpoint: null,
       keySource: credentialResult.source,
       discoverySource: 'none',
+      rawCatalogCount: 0,
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -196,9 +213,12 @@ export async function discoverProvider(
           Accept: 'application/json',
         }
       : { Accept: 'application/json' }
-    const records = providerId === 'genx'
+    const rawRecords = providerId === 'genx'
       ? await fetchGenxCategoryRecords(endpoint, headers, options.fetcher ?? fetch)
       : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
+    const records = providerId === 'huggingface'
+      ? curateHuggingFaceRecords(rawRecords, options.capability)
+      : rawRecords
     const discoverySource: ModelDiscoverySource = credentialResult.key
       ? 'live_authenticated'
       : publicDiscovery
@@ -219,6 +239,7 @@ export async function discoverProvider(
       endpoint,
       keySource: credentialResult.source,
       discoverySource,
+      rawCatalogCount: rawRecords.length,
       models,
       tasks,
       inferenceProviders,
@@ -240,6 +261,7 @@ export async function discoverProvider(
         endpoint,
         keySource: credentialResult.source,
         discoverySource: 'static_fallback',
+        rawCatalogCount: 0,
         models: fallbackModels,
         tasks,
         inferenceProviders: [],
@@ -257,6 +279,7 @@ export async function discoverProvider(
       endpoint,
       keySource: credentialResult.source,
       discoverySource: 'none',
+      rawCatalogCount: 0,
       models: [],
       tasks: [],
       inferenceProviders: [],
@@ -284,6 +307,26 @@ export function normalizeProviderCatalog(
   return modelRecords(payload)
     .map((record) => normalizeModel(provider, record, discoveredAt, 'catalog_derived'))
     .filter((model): model is DiscoveredModel => Boolean(model))
+}
+
+function curateHuggingFaceRecords(
+  records: Record<string, unknown>[],
+  capability?: CapabilityId,
+): Record<string, unknown>[] {
+  const curated = records.filter((record) => {
+    const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
+    if (!id) return false
+    if (HF_CORE_MODEL_ALLOWLIST.has(id)) return true
+    if (capability) {
+      const descriptor = [
+        id,
+        ...stringList(record.pipeline_tag, record.task, record.tasks, record.tags),
+      ].join(' ').toLowerCase()
+      return descriptorCapabilities('huggingface', id, descriptor).includes(capability)
+    }
+    return false
+  })
+  return curated.length > 0 ? curated : records.slice(0, 12)
 }
 
 export function resolveProviderEndpoint(
@@ -382,6 +425,13 @@ function genxFallbackModels(
       streaming: 'unknown',
       research: 'unknown',
       artifactSupport: true,
+      metadata: {
+        task: capabilities[0] ?? null,
+        providerAvailable: 'unknown',
+        license: null,
+        safetyNotes: 'Static GenX fallback candidate; not counted as live-authenticated discovery.',
+        executable: 'candidate',
+      },
       raw: {
         source: 'genx_static_runtime_fallback',
         capabilities,
@@ -391,14 +441,63 @@ function genxFallbackModels(
   })
 }
 
-function modelRecords(payload: unknown): Record<string, unknown>[] {
-  if (Array.isArray(payload)) return payload.filter(isRecord)
-  if (!isRecord(payload)) return []
-  for (const key of ['data', 'models', 'items', 'results']) {
-    const value = payload[key]
-    if (Array.isArray(value)) return value.filter(isRecord)
+function modelRecords(payload: unknown, inherited: Record<string, unknown> = {}): Record<string, unknown>[] {
+  if (typeof payload === 'string' && payload.trim()) {
+    return [{ ...inherited, id: payload.trim(), name: payload.trim() }]
   }
-  return []
+  if (Array.isArray(payload)) return payload.flatMap((entry) => modelRecords(entry, inherited))
+  if (!isRecord(payload)) return []
+  if (looksLikeModelRecord(payload)) return [{ ...inherited, ...payload }]
+
+  const records: Record<string, unknown>[] = []
+  for (const [key, value] of Object.entries(payload)) {
+    if (!isModelContainerKey(key) && !isKnownCapabilityKey(key)) continue
+    const nextInherited = isKnownCapabilityKey(key)
+      ? { ...inherited, category: inherited.category ?? key }
+      : inherited
+    records.push(...modelRecords(value, nextInherited))
+  }
+  return records
+}
+
+function looksLikeModelRecord(record: Record<string, unknown>): boolean {
+  return Boolean(firstString(
+    record.id,
+    record.model,
+    record.modelId,
+    record.model_id,
+    record.slug,
+    record.name,
+  ))
+}
+
+function isModelContainerKey(key: string): boolean {
+  return ['data', 'models', 'items', 'results', 'catalog', 'catalogue', 'available_models'].includes(key)
+}
+
+function isKnownCapabilityKey(key: string): boolean {
+  return [
+    'text',
+    'chat',
+    'reasoning',
+    'code',
+    'coding',
+    'image',
+    'images',
+    'image_edit',
+    'video',
+    'videos',
+    'image_to_video',
+    'voice',
+    'voices',
+    'audio',
+    'music',
+    'transcription',
+    'stt',
+    'tts',
+    'embeddings',
+    'rerank',
+  ].includes(key.toLowerCase())
 }
 
 function normalizeModel(
@@ -407,15 +506,17 @@ function normalizeModel(
   discoveredAt: string,
   discoverySource: ModelDiscoverySource,
 ): DiscoveredModel | null {
-  const id = firstString(record.id, record.model, record.modelId, record.name)
+  const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
   if (!id) return null
   const tasks = stringList(
     record.pipeline_tag,
     record.task,
     record.tasks,
+    record.task_type,
     record.capability,
     record.capabilities,
     record.type,
+    record.category,
     record.tags,
   )
   const descriptor = [
@@ -423,22 +524,28 @@ function normalizeModel(
     ...tasks,
     firstString(record.display_name, record.displayName, record.description) ?? '',
   ].join(' ').toLowerCase()
-  const taskCapabilities = tasks.flatMap((task) => TASK_CAPABILITY_MAP[task.toLowerCase()] ?? [])
+  const taskCapabilities = tasks.flatMap((task) =>
+    TASK_CAPABILITY_MAP[task.toLowerCase()]
+      ?? TASK_CAPABILITY_MAP[task.toLowerCase().replace(/\s+/g, '_')]
+      ?? [],
+  )
+  const descriptorCapabilityMatches = descriptorCapabilities(provider.id, id, descriptor)
   const inferredContractCapabilities = inferProviderContractCapabilities(provider.id, id, descriptor, record)
   const capabilities = [...new Set([
     ...taskCapabilities,
-    ...descriptorCapabilities(provider.id, id, descriptor),
+    ...descriptorCapabilityMatches,
     ...(taskCapabilities.length === 0 ? inferredContractCapabilities : []),
   ])]
   const pricing = isRecord(record.pricing) ? Object.values(record.pricing) : []
+  const capabilityEvidence: DiscoveredModel['capabilityEvidence'] = taskCapabilities.length > 0 || descriptorCapabilityMatches.length > 0
+    ? 'model_metadata'
+    : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown'
   return {
     provider: provider.id,
     id,
     discoverySource,
     capabilities,
-    capabilityEvidence: taskCapabilities.length > 0 || descriptorCapabilities(provider.id, id, descriptor).length > 0
-      ? 'model_metadata'
-      : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown',
+    capabilityEvidence,
     status: availability(record),
     speed: metric(record.speed, record.latency_score),
     quality: metric(record.quality, record.quality_score),
@@ -450,6 +557,13 @@ function normalizeModel(
     ),
     research: booleanOrUnknown(record.research),
     artifactSupport: provider.features.artifactSupport,
+    metadata: {
+      task: tasks[0] ?? null,
+      providerAvailable: availability(record) === 'unavailable' ? false : availability(record) === 'available' ? true : 'unknown',
+      license: firstString(record.license, nestedString(record.cardData, 'license')),
+      safetyNotes: firstString(record.safety, record.safetyNotes, record.safety_notes),
+      executable: capabilityEvidence === 'unknown' ? 'candidate' : true,
+    },
     raw: record,
     discoveredAt,
   }
@@ -575,6 +689,7 @@ function inferProviderContractCapabilities(
   if (providerId === 'genx') {
     const capabilities = new Set<CapabilityId>()
     if (GENX_IMAGE_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'image') capabilities.add('image')
+    if (GENX_IMAGE_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'image') capabilities.add('avatar')
     if (GENX_VIDEO_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'video') capabilities.add('video')
     if (GENX_I2V_MODELS.some((entry) => entry.toLowerCase() === lowerModelId)) capabilities.add('image_to_video')
     if (GENX_AUDIO_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'audio') capabilities.add('music')
@@ -590,6 +705,7 @@ function inferProviderContractCapabilities(
 
   if (providerId === 'qwen') return providerContractFromPatterns(lowerModelId, descriptor, {
     image: [/qwen-image/, /wanx.*(?:t2i|image)/],
+    image_edit: [/qwen-image.*edit/, /image[-_\s]?edit/],
     video: [/wan.*t2v/, /video[-_\s]?synthesis/],
     image_to_video: [/wan.*i2v/, /image[-_\s]?to[-_\s]?video/, /\bi2v\b/],
     tts: [/qwen3-tts/],
@@ -603,6 +719,7 @@ function inferProviderContractCapabilities(
 
   if (providerId === 'together') return providerContractFromPatterns(lowerModelId, descriptor, {
     image: [/flux/, /recraft/, /stable[-_]?diffusion/, /playground/, /seedream/, /image/],
+    image_edit: [/flux/, /recraft/, /stable[-_]?diffusion/, /image[-_\s]?edit/],
     video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /luma/, /minimax\//],
     image_to_video: [/\bi2v\b/, /image[-_\s]?to[-_\s]?video/],
     tts: [/orpheus/, /\btts\b/, /speech/],
@@ -733,6 +850,11 @@ function stringList(...values: unknown[]): string[] {
 
 function firstString(...values: unknown[]): string | null {
   return values.find((value): value is string => typeof value === 'string' && value.trim().length > 0)?.trim() ?? null
+}
+
+function nestedString(value: unknown, key: string): string | null {
+  if (!isRecord(value)) return null
+  return firstString(value[key])
 }
 
 function metric(...values: unknown[]): number | null {

@@ -1,6 +1,6 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T11:24:47.151Z
+Generated: 2026-06-18T12:35:43.141Z
 
 Database available locally: no
 Proof app slug: amarktai-network
@@ -27,14 +27,14 @@ Connected-app secret present locally: no
 
 ## Provider Discovery
 
-| Provider | Status | Source | Models | Live-auth | Public | Static | Catalog-derived | Image | Video | I2V | TTS | STT | Embeddings | Rerank | Error |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| mimo | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| genx | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| huggingface | ready | public_catalog | 100 | 0 | 100 | 0 | 0 | 49 | 8 | 3 | 5 | 2 | 6 | 0 |  |
-| qwen | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| together | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| groq | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| mimo | MIMO_API_KEY<br>XIAOMI_API_KEY | https://token-plan-sgp.xiaomimimo.com/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| genx | GENX_API_KEY | https://query.genx.sh/api/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| huggingface | HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN | https://huggingface.co/api/models?limit=100&full=true | ready | public_catalog | 100 | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 0 | 0 | 0 |  |
+| qwen | QWEN_API_KEY<br>DASHSCOPE_API_KEY | https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| together | TOGETHER_API_KEY | https://api.together.ai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| groq | GROQ_API_KEY | https://api.groq.com/openai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
 
 ## Capabilities
 
