@@ -1,8 +1,15 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T17:04:04.700Z
+Generated: 2026-06-18T17:54:21.987Z
+Partial proof: no
+Active phase: CAPABILITY_PROOF_DONE
+Watchdog/failure: none
+Active handle types: Socket
 
 Database available locally: no
+Database check attempted: no
+Database check passed: no
+Database check error: DATABASE_URL is not present after env loading.
 Env loader: scripts/load-repo-env.ts
 Env files loaded: none
 Env cwd: C:\Users\digit\Code\Amarktai-Network-2
@@ -24,12 +31,12 @@ Connected-app secret present locally: no
 
 | Provider | Configured | Masked | Error |
 |---|---:|---|---|
-| genx | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
-| huggingface | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
-| qwen | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
-| mimo | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
-| groq | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
-| together | no |  | No credential resolved from integrationConfig/aiProvider/env path. |
+| genx | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
+| huggingface | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
+| qwen | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
+| mimo | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
+| groq | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
+| together | no |  | DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path. |
 
 ## Provider Discovery
 

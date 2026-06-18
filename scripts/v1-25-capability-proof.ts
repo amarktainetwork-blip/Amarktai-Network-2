@@ -97,6 +97,65 @@ type ModelSmokeProof = {
   error: string | null
 }
 
+type PhaseName =
+  | 'BOOT'
+  | 'ENV_LOAD_START'
+  | 'ENV_LOAD_DONE'
+  | 'DB_CHECK_START'
+  | 'DB_CHECK_DONE'
+  | 'PROVIDER_KEY_RESOLUTION_START'
+  | 'PROVIDER_KEY_RESOLUTION_DONE'
+  | 'PROVIDER_DISCOVERY_START'
+  | 'PROVIDER_DISCOVERY_DONE'
+  | 'MODEL_SMOKE_START'
+  | 'MODEL_SMOKE_DONE'
+  | 'CAPABILITY_PROOF_START'
+  | 'CAPABILITY_PROOF_DONE'
+  | 'WRITE_PROOF_START'
+  | 'WRITE_PROOF_DONE'
+  | 'CLEANUP_START'
+  | 'CLEANUP_DONE'
+  | 'EXIT'
+
+type DbCheckResult = {
+  attempted: boolean
+  available: boolean
+  error: string | null
+}
+
+type ProofReport = {
+  generatedAt: string
+  environment: {
+    hasDatabaseUrl: boolean
+    appSlug: string
+    connectedAppSecretPresent: boolean
+    envLoader?: string
+    envFilesLoaded?: string[]
+    envDiagnostics?: {
+      cwd: string
+      repoRoot: string
+      searchedEnvPaths: string[]
+      foundEnvPaths: string[]
+      loadedEnvPaths: string[]
+    } | null
+    providerKeyPresent?: Record<string, boolean>
+    dbCheck?: DbCheckResult
+  }
+  providerKeyPath: ProviderKeyResult[]
+  providerDiscovery: ProviderDiscoveryResult[]
+  modelSmokeProofs: ModelSmokeProof[]
+  capabilities: CapabilityProof[]
+  summary: { liveProven: number; sourceWired: number; providerAvailable: number; blocked: number; notWired: number }
+  proofState?: {
+    partial: boolean
+    activePhase: string
+    completedPhases: string[]
+    failure: string | null
+    activeHandleTypes: string[]
+  }
+  nextVpsCommand: string | null
+}
+
 const OUTPUT_JSON = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.json')
 const OUTPUT_MD = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.md')
 const APP_SLUG = process.env.AMARKTAI_PROOF_APP_SLUG?.trim() || 'amarktai-network'
@@ -104,16 +163,113 @@ const CONNECTED_APP_SECRET = process.env.AMARKTAI_CONNECTED_APP_SECRET?.trim() |
 const PROVIDER_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_PROVIDER_TIMEOUT_MS ?? 15_000)
 const CAPABILITY_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_CAPABILITY_TIMEOUT_MS ?? 90_000)
 const QUICK_PROOF_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_QUICK_TIMEOUT_MS ?? 10_000)
+const DB_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_DB_TIMEOUT_MS ?? 10_000)
+const CLI_WATCHDOG_MS = Number(process.env.AMARKTAI_PROOF_CLI_WATCHDOG_MS ?? 300_000)
 const PROOF_SOURCE_IMAGE_URL = process.env.AMARKTAI_PROOF_SOURCE_IMAGE_URL?.trim()
   || 'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/coco_sample.png'
 
-async function main() {
-  const providerKeyResults = await collectProviderKeys()
-  const providerDiscoveryResults = await collectProviderDiscovery()
-  const capabilityResults = enrichCapabilityProofs(await collectCapabilityProofs())
-  const modelSmokeProofs = await collectModelSmokeProofs(providerKeyResults, providerDiscoveryResults)
+let activePhase: PhaseName = 'BOOT'
+const completedPhases: string[] = []
+let watchdog: ReturnType<typeof setTimeout> | null = null
+let exiting = false
+let dbCheckResult: DbCheckResult = { attempted: false, available: false, error: null }
+let providerKeyResults: ProviderKeyResult[] = []
+let providerDiscoveryResults: ProviderDiscoveryResult[] = []
+let modelSmokeProofs: ModelSmokeProof[] = []
+let capabilityResults: CapabilityProof[] = []
 
-  const report = {
+async function main() {
+  startWatchdog()
+
+  setPhase('DB_CHECK_START')
+  dbCheckResult = await checkDatabase()
+  setPhase('DB_CHECK_DONE')
+  await writePartialProof(null)
+
+  setPhase('PROVIDER_KEY_RESOLUTION_START')
+  providerKeyResults = await collectProviderKeys(dbCheckResult)
+  setPhase('PROVIDER_KEY_RESOLUTION_DONE')
+  await writePartialProof(null)
+
+  setPhase('PROVIDER_DISCOVERY_START')
+  providerDiscoveryResults = await collectProviderDiscovery()
+  setPhase('PROVIDER_DISCOVERY_DONE')
+  await writePartialProof(null)
+
+  setPhase('MODEL_SMOKE_START')
+  modelSmokeProofs = await collectModelSmokeProofs(providerKeyResults, providerDiscoveryResults)
+  setPhase('MODEL_SMOKE_DONE')
+  await writePartialProof(null)
+
+  setPhase('CAPABILITY_PROOF_START')
+  capabilityResults = enrichCapabilityProofs(await collectCapabilityProofs())
+  setPhase('CAPABILITY_PROOF_DONE')
+
+  const report = buildReport(false, null)
+  await writeProof(report)
+  console.log(JSON.stringify(report.summary, null, 2))
+}
+
+function setPhase(phase: PhaseName) {
+  activePhase = phase
+  completedPhases.push(phase)
+  console.log(phase)
+}
+
+function startWatchdog() {
+  if (watchdog) clearTimeout(watchdog)
+  watchdog = setTimeout(() => {
+    void handleWatchdogTimeout()
+  }, CLI_WATCHDOG_MS)
+}
+
+async function handleWatchdogTimeout() {
+  if (exiting) return
+  exiting = true
+  const message = `CLI watchdog timed out after ${CLI_WATCHDOG_MS}ms during ${activePhase}.`
+  console.error(message)
+  await writePartialProof(message).catch((error) => {
+    console.error(`Partial proof write failed during watchdog: ${sanitizeProofError(error)}`)
+  })
+  await cleanup()
+  console.log('EXIT')
+  process.exit(2)
+}
+
+async function cleanup() {
+  setPhase('CLEANUP_START')
+  if (watchdog) {
+    clearTimeout(watchdog)
+    watchdog = null
+  }
+  await withTimeout(
+    () => prisma.$disconnect(),
+    DB_TIMEOUT_MS,
+    undefined,
+  ).catch(() => undefined)
+  setPhase('CLEANUP_DONE')
+}
+
+async function checkDatabase(): Promise<DbCheckResult> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return { attempted: false, available: false, error: 'DATABASE_URL is not present after env loading.' }
+  }
+  return withTimeout(async () => {
+    try {
+      await prisma.$queryRawUnsafe('SELECT 1')
+      return { attempted: true, available: true, error: null }
+    } catch (error) {
+      return { attempted: true, available: false, error: sanitizeProofError(error) }
+    }
+  }, DB_TIMEOUT_MS, {
+    attempted: true,
+    available: false,
+    error: `Database check timed out after ${DB_TIMEOUT_MS}ms.`,
+  })
+}
+
+function buildReport(partial: boolean, failure: string | null): ProofReport {
+  return {
     generatedAt: new Date().toISOString(),
     environment: {
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
@@ -125,20 +281,54 @@ async function main() {
       providerKeyPresent: Object.fromEntries(
         providerKeyResults.map((entry) => [entry.provider, entry.configured]),
       ),
+      dbCheck: dbCheckResult,
     },
     providerKeyPath: providerKeyResults,
     providerDiscovery: providerDiscoveryResults,
     modelSmokeProofs,
     capabilities: capabilityResults,
     summary: summarize(capabilityResults),
+    proofState: {
+      partial,
+      activePhase,
+      completedPhases: [...completedPhases],
+      failure,
+      activeHandleTypes: activeHandleTypes(),
+    },
     nextVpsCommand: process.env.DATABASE_URL?.trim()
       ? null
       : 'DATABASE_URL="<production mysql url>" npx tsx scripts/v1-25-capability-proof.ts',
   }
+}
 
+async function writePartialProof(failure: string | null) {
+  await writeProof(buildReport(true, failure))
+}
+
+async function writeProof(report: ProofReport) {
+  setPhase('WRITE_PROOF_START')
   await fs.writeFile(OUTPUT_JSON, JSON.stringify(report, null, 2), 'utf8')
   await fs.writeFile(OUTPUT_MD, renderMarkdown(report), 'utf8')
-  console.log(JSON.stringify(report.summary, null, 2))
+  setPhase('WRITE_PROOF_DONE')
+}
+
+function activeHandleTypes(): string[] {
+  const getter = (process as unknown as { _getActiveHandles?: () => unknown[] })._getActiveHandles
+  if (!getter) return []
+  return [...new Set(getter.call(process).map((handle) =>
+    handle && typeof handle === 'object' && 'constructor' in handle
+      ? (handle as { constructor?: { name?: string } }).constructor?.name ?? 'Object'
+      : typeof handle,
+  ))].sort()
+}
+
+function sanitizeProofError(error: unknown): string {
+  const raw = error instanceof Error ? error.message : String(error ?? 'unknown error')
+  return raw
+    .replace(/(mysql:\/\/|postgres(?:ql)?:\/\/)([^:@/\s]+):([^@/\s]+)@/gi, '$1$2:[redacted]@')
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/-]+=*/gi, '$1[redacted]')
+    .replace(/\b(api[-_]?key|token|secret|password)=([^&\s]+)/gi, '$1=[redacted]')
+    .slice(0, 800)
 }
 
 const PROOF_TAXONOMY: Record<string, string> = {
@@ -232,23 +422,28 @@ function jobBehaviorFor(entry: CapabilityProof, longRunning: boolean): string {
     : 'Synchronous completion expected; no durable job required.'
 }
 
-async function collectProviderKeys(): Promise<ProviderKeyResult[]> {
+async function collectProviderKeys(dbCheck: DbCheckResult): Promise<ProviderKeyResult[]> {
   const providers = ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'] as const
   return Promise.all(providers.map((provider) => withTimeout(async () => {
     try {
       const credential = await getMeshCredential(provider)
+      const dbPrefix = process.env.DATABASE_URL?.trim()
+        ? dbCheck.available
+          ? 'DB lookup completed'
+          : `DB lookup unavailable: ${dbCheck.error ?? 'unknown database error'}`
+        : 'DATABASE_URL not loaded; only environment fallback was checked'
       return {
         provider,
         configured: Boolean(credential),
         masked: credential ? `${credential.slice(0, 4)}...${credential.slice(-4)}` : null,
-        error: credential ? null : 'No credential resolved from integrationConfig/aiProvider/env path.',
+        error: credential ? null : `${dbPrefix}. No credential resolved from integrationConfig/aiProvider/env path.`,
       }
     } catch (error) {
       return {
         provider,
         configured: false,
         masked: null,
-        error: error instanceof Error ? error.message : 'Credential lookup failed.',
+        error: sanitizeProofError(error),
       }
     }
   }, PROVIDER_TIMEOUT_MS, {
@@ -942,36 +1137,20 @@ function mdCell(value: unknown): string {
     .trim()
 }
 
-function renderMarkdown(report: {
-  generatedAt: string
-  environment: {
-    hasDatabaseUrl: boolean
-    appSlug: string
-    connectedAppSecretPresent: boolean
-    envLoader?: string
-    envFilesLoaded?: string[]
-    envDiagnostics?: {
-      cwd: string
-      repoRoot: string
-      searchedEnvPaths: string[]
-      foundEnvPaths: string[]
-      loadedEnvPaths: string[]
-    } | null
-    providerKeyPresent?: Record<string, boolean>
-  }
-  providerKeyPath: ProviderKeyResult[]
-  providerDiscovery: ProviderDiscoveryResult[]
-  modelSmokeProofs: ModelSmokeProof[]
-  capabilities: CapabilityProof[]
-  summary: { liveProven: number; sourceWired: number; providerAvailable: number; blocked: number; notWired: number }
-  nextVpsCommand: string | null
-}) {
+function renderMarkdown(report: ProofReport) {
   const lines = [
     '# V1 25 Capability Proof',
     '',
     `Generated: ${report.generatedAt}`,
+    `Partial proof: ${report.proofState?.partial ? 'yes' : 'no'}`,
+    `Active phase: ${report.proofState?.activePhase ?? 'unknown'}`,
+    `Watchdog/failure: ${report.proofState?.failure ?? 'none'}`,
+    `Active handle types: ${(report.proofState?.activeHandleTypes ?? []).join(', ') || 'none'}`,
     '',
     `Database available locally: ${report.environment.hasDatabaseUrl ? 'yes' : 'no'}`,
+    `Database check attempted: ${report.environment.dbCheck?.attempted ? 'yes' : 'no'}`,
+    `Database check passed: ${report.environment.dbCheck?.available ? 'yes' : 'no'}`,
+    `Database check error: ${mdCell(report.environment.dbCheck?.error) || 'none'}`,
     `Env loader: ${report.environment.envLoader ?? 'none'}`,
     `Env files loaded: ${(report.environment.envFilesLoaded ?? []).join(', ') || 'none'}`,
     `Env cwd: ${report.environment.envDiagnostics?.cwd ?? 'unknown'}`,
@@ -1027,10 +1206,19 @@ function renderMarkdown(report: {
 
 void main()
   .catch((error) => {
-    console.error(error)
-    process.exitCode = 1
+    const message = sanitizeProofError(error)
+    console.error(message)
+    return writePartialProof(message)
+      .catch((writeError) => console.error(`Partial proof write failed: ${sanitizeProofError(writeError)}`))
+      .finally(() => {
+        process.exitCode = 1
+      })
   })
   .finally(async () => {
-    await prisma.$disconnect().catch(() => undefined)
+    if (!exiting) {
+      exiting = true
+      await cleanup()
+    }
+    console.log('EXIT')
     process.exit(process.exitCode ?? 0)
   })

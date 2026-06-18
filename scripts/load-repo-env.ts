@@ -2,6 +2,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+console.log('BOOT')
+console.log('ENV_LOAD_START')
+
 const loadedFiles: string[] = []
 const searchedEnvPaths: string[] = []
 const foundEnvPaths: string[] = []
@@ -114,6 +117,13 @@ declare global {
 }
 
 globalThis.__AMARKTAI_LOADED_ENV_FILES__ = loadedFiles
+console.log(`ENV_LOAD_DONE ${JSON.stringify({
+  cwd: process.cwd(),
+  repoRoot,
+  foundEnvPaths,
+  loadedEnvPaths: loadedFiles,
+  hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
+})}`)
 
 function parseEnvFile(source: string): Record<string, string> {
   const values: Record<string, string> = {}

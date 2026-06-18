@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-18T17:04:04.700Z",
+  "generatedAt": "2026-06-18T17:54:21.987Z",
   "environment": {
     "hasDatabaseUrl": false,
     "appSlug": "amarktai-network",
@@ -41,6 +41,11 @@
       "mimo": false,
       "groq": false,
       "together": false
+    },
+    "dbCheck": {
+      "attempted": false,
+      "available": false,
+      "error": "DATABASE_URL is not present after env loading."
     }
   },
   "providerKeyPath": [
@@ -48,37 +53,37 @@
       "provider": "genx",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "huggingface",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "qwen",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "mimo",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "groq",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "together",
       "configured": false,
       "masked": null,
-      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     }
   ],
   "providerDiscovery": [
@@ -1242,6 +1247,34 @@
     "providerAvailable": 0,
     "blocked": 19,
     "notWired": 0
+  },
+  "proofState": {
+    "partial": false,
+    "activePhase": "CAPABILITY_PROOF_DONE",
+    "completedPhases": [
+      "DB_CHECK_START",
+      "DB_CHECK_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "PROVIDER_KEY_RESOLUTION_START",
+      "PROVIDER_KEY_RESOLUTION_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "PROVIDER_DISCOVERY_START",
+      "PROVIDER_DISCOVERY_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "MODEL_SMOKE_START",
+      "MODEL_SMOKE_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "CAPABILITY_PROOF_START",
+      "CAPABILITY_PROOF_DONE"
+    ],
+    "failure": null,
+    "activeHandleTypes": [
+      "Socket"
+    ]
   },
   "nextVpsCommand": "DATABASE_URL=\"<production mysql url>\" npx tsx scripts/v1-25-capability-proof.ts"
 }
