@@ -127,9 +127,12 @@ export interface DiscoveredModel {
   artifactSupport: boolean
   metadata?: {
     task?: string | null
+    routeType?: string | null
     providerAvailable?: boolean | 'unknown'
     license?: string | null
+    safetyPolicy?: string | null
     safetyNotes?: string | null
+    adultGate?: boolean
     executable?: boolean | 'candidate'
   }
   raw: Record<string, unknown>

@@ -134,6 +134,7 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('huggingface', 'openai/whisper-large-v3', 'Whisper Large v3 on Hugging Face', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', taskBased: true }),
   route('huggingface', 'facebook/mms-tts-eng', 'MMS TTS English', 'MMS', ['voice/TTS'], ['tts', 'audio'], { costTier: 'low', taskBased: true }),
   route('huggingface', 'sentence-transformers/all-MiniLM-L6-v2', 'MiniLM Embeddings', 'Sentence Transformers', ['embeddings/moderation'], ['embeddings'], { costTier: 'free', taskBased: true }),
+  route('huggingface', 'cross-encoder/ms-marco-MiniLM-L-6-v2', 'MS MARCO MiniLM Reranker', 'Cross Encoder', ['embeddings/moderation'], ['rerank'], { costTier: 'free', taskBased: true }),
 
   route('qwen', 'qwen-turbo', 'Qwen Turbo', 'Qwen', ['chat', 'coding'], ['text', 'code'], { costTier: 'very_low', latencyTier: 'low', recommendedFor: ['repo_workbench'] }),
   route('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant'] }),

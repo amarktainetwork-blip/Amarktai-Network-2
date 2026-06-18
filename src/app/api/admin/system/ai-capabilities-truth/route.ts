@@ -55,12 +55,14 @@ export async function GET() {
       exactProofError: proof?.exactError ?? null,
     }
   })
-  const proofSummary = summarizeRuntimeProofStatuses(capabilities.map((entry) => entry.proofStatus))
+  const catalogProofSummary = summarizeRuntimeProofStatuses(capabilities.map((entry) => entry.proofStatus))
+  const proofSummary = proofReport?.summary ?? catalogProofSummary
   return NextResponse.json({
     success: true,
     version: 'v1',
     summary: getAiCapabilityTruthSummary(),
     proofSummary,
+    catalogProofSummary,
     proofGeneratedAt: proofReport?.generatedAt ?? null,
     scopes: CONNECTED_APP_AI_SCOPES,
     groups: getCapabilityTaxonomyByGroup(),

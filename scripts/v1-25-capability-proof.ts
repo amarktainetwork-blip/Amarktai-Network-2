@@ -12,6 +12,7 @@ import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 import { getLocalMediaJob } from '@/lib/media-job-store'
 import { listArtifacts } from '@/lib/artifact-store'
+import { prisma } from '@/lib/prisma'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
@@ -78,6 +79,11 @@ const OUTPUT_JSON = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.json')
 const OUTPUT_MD = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.md')
 const APP_SLUG = process.env.AMARKTAI_PROOF_APP_SLUG?.trim() || 'amarktai-network'
 const CONNECTED_APP_SECRET = process.env.AMARKTAI_CONNECTED_APP_SECRET?.trim() || process.env.AMARKTAI_APP_SECRET_AMARKTAI_NETWORK?.trim() || ''
+const PROVIDER_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_PROVIDER_TIMEOUT_MS ?? 15_000)
+const CAPABILITY_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_CAPABILITY_TIMEOUT_MS ?? 90_000)
+const QUICK_PROOF_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_QUICK_TIMEOUT_MS ?? 10_000)
+const PROOF_SOURCE_IMAGE_URL = process.env.AMARKTAI_PROOF_SOURCE_IMAGE_URL?.trim()
+  || 'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/coco_sample.png'
 
 async function main() {
   const providerKeyResults = await collectProviderKeys()
@@ -198,7 +204,7 @@ function jobBehaviorFor(entry: CapabilityProof, longRunning: boolean): string {
 
 async function collectProviderKeys(): Promise<ProviderKeyResult[]> {
   const providers = ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'] as const
-  return Promise.all(providers.map(async (provider) => {
+  return Promise.all(providers.map((provider) => withTimeout(async () => {
     try {
       const credential = await getMeshCredential(provider)
       return {
@@ -215,12 +221,17 @@ async function collectProviderKeys(): Promise<ProviderKeyResult[]> {
         error: error instanceof Error ? error.message : 'Credential lookup failed.',
       }
     }
-  }))
+  }, PROVIDER_TIMEOUT_MS, {
+    provider,
+    configured: false,
+    masked: null,
+    error: `Credential lookup timed out after ${PROVIDER_TIMEOUT_MS}ms.`,
+  })))
 }
 
 async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
   const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
-  return Promise.all(providers.map(async (provider) => {
+  return Promise.all(providers.map((provider) => withTimeout(async () => {
     try {
       const snapshot = await discoverProvider(provider, { force: true })
       return {
@@ -287,7 +298,7 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
         endpoint: getProviderTruth(provider) ? resolveProviderEndpoint(getProviderTruth(provider)!) : null,
       }
     }
-  }))
+  }, PROVIDER_TIMEOUT_MS, timedOutProviderDiscovery(provider))))
 }
 
 const AUDIT_CAPABILITIES = [
@@ -333,32 +344,98 @@ function providerExecutableBlocker(snapshot: Awaited<ReturnType<typeof discoverP
 
 async function collectCapabilityProofs(): Promise<CapabilityProof[]> {
   const results: CapabilityProof[] = []
-  results.push(await proveExecuteCapability('chat/text generation', 'chat_text_generation', { input: 'Reply with OK.', capability: 'chat' }))
-  results.push(await proveExecuteCapability('reasoning', 'reasoning', { input: 'Explain in two steps why the sky is blue.', capability: 'reasoning' }))
-  results.push(await proveExecuteCapability('coding assistant', 'coding_assistant', { input: 'Write a hello world function in TypeScript.', capability: 'code' }))
-  results.push(await proveResearch())
-  results.push(await proveAdminTextCapability('summarization', 'summarization'))
-  results.push(await proveAdminTextCapability('translation', 'translation'))
-  results.push(await proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' }))
-  results.push(await proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> }))
-  results.push(await proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true }))
-  results.push(await proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: ['https://example.invalid/source.png'], saveArtifact: true }))
-  results.push(await proveExecuteCapability('text-to-video short clip', 'text_to_video_short_clip', { input: 'A four second cinematic sunrise.', capability: 'video_generation', saveArtifact: true }))
-  results.push(await proveExecuteCapability('text-to-speech', 'text_to_speech', { input: 'AmarktAI proof speech.', capability: 'tts', saveArtifact: true }))
-  results.push(await proveExecuteCapability('speech-to-text', 'speech_to_text', { input: 'Transcribe the supplied audio accurately.', capability: 'stt', files: ['inline:audio'], metadata: { referenceData: Buffer.from('proof-audio'), referenceMimeType: 'audio/webm' } as Record<string, unknown>, saveArtifact: true }))
-  results.push(await proveAgentRequest())
-  results.push(await proveConnectedAppExecution())
-  results.push(await proveExecuteCapability('image-to-video', 'image_to_video', { input: 'Animate the image.', capability: 'image_to_video', files: ['https://example.invalid/source.png'], saveArtifact: true }))
-  results.push(await proveLongFormVideo())
-  results.push(await proveExecuteCapability('avatar library/avatar image generation', 'avatar_library_avatar_image_generation', { input: 'Create a professional avatar portrait.', capability: 'avatar_generation', saveArtifact: true }))
-  results.push(await classifyNotWired('talking-avatar video', 'talking_avatar_video', 'src/lib/orchestrator.ts', 'avatar_video hard-stops with NEEDS_CONFIGURATION; no approved lip-sync adapter is wired.'))
-  results.push(await proveAdultMedia())
-  results.push(await proveAutoSelection())
-  results.push(await proveFallback())
-  results.push(await proveStrictProviderProofMode())
-  results.push(await proveRouteOutcomeLogging())
-  results.push(await proveWorkerRetryAndPolling())
+  results.push(await proveStep('chat_text_generation', () => proveExecuteCapability('chat/text generation', 'chat_text_generation', { input: 'Reply with OK.', capability: 'chat' })))
+  results.push(await proveStep('reasoning', () => proveExecuteCapability('reasoning', 'reasoning', { input: 'Explain in two steps why the sky is blue.', capability: 'reasoning' })))
+  results.push(await proveStep('coding_assistant', () => proveExecuteCapability('coding assistant', 'coding_assistant', { input: 'Write a hello world function in TypeScript.', capability: 'code' })))
+  results.push(await proveStep('web_research', () => proveResearch()))
+  results.push(await proveStep('summarization', () => proveAdminTextCapability('summarization', 'summarization'), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('translation', () => proveAdminTextCapability('translation', 'translation'), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' })))
+  results.push(await proveStep('rerank_search_relevance', () => proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> })))
+  results.push(await proveStep('text_to_image', () => proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true })))
+  results.push(await proveStep('image_editing_source_transform', () => proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })))
+  results.push(await proveStep('text_to_video_short_clip', () => proveExecuteCapability('text-to-video short clip', 'text_to_video_short_clip', { input: 'A four second cinematic sunrise.', capability: 'video_generation', saveArtifact: true })))
+  results.push(await proveStep('text_to_speech', () => proveExecuteCapability('text-to-speech', 'text_to_speech', { input: 'AmarktAI proof speech.', capability: 'tts', saveArtifact: true })))
+  results.push(await proveStep('speech_to_text', () => proveExecuteCapability('speech-to-text', 'speech_to_text', { input: 'Transcribe the supplied audio accurately.', capability: 'stt', files: ['inline:audio'], metadata: { referenceData: Buffer.from('proof-audio'), referenceMimeType: 'audio/webm' } as Record<string, unknown>, saveArtifact: true })))
+  results.push(await proveStep('agent_request_execution', () => proveAgentRequest()))
+  results.push(await proveStep('connected_app_capability_execution', () => proveConnectedAppExecution(), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('image_to_video', () => proveExecuteCapability('image-to-video', 'image_to_video', { input: 'Animate the image.', capability: 'image_to_video', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })))
+  results.push(await proveStep('long_form_multi_scene_video_assembly', () => proveLongFormVideo()))
+  results.push(await proveStep('avatar_library_avatar_image_generation', () => proveExecuteCapability('avatar library/avatar image generation', 'avatar_library_avatar_image_generation', { input: 'Create a professional avatar portrait.', capability: 'avatar_generation', saveArtifact: true })))
+  results.push(await proveStep('talking_avatar_video', () => classifyBlocked('talking-avatar video', 'talking_avatar_video', 'src/lib/orchestrator.ts', 'src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run.'), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('adult_media_policy_gated_generation', () => proveAdultMedia()))
+  results.push(await proveStep('provider_auto_selection', () => proveAutoSelection()))
+  results.push(await proveStep('provider_fallback', () => proveFallback(), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('strict_provider_proof_mode', () => proveStrictProviderProofMode(), QUICK_PROOF_TIMEOUT_MS))
+  results.push(await proveStep('route_outcome_logging', () => proveRouteOutcomeLogging()))
+  results.push(await proveStep('worker_job_retry_and_polling_completion', () => proveWorkerRetryAndPolling(), QUICK_PROOF_TIMEOUT_MS))
   return results
+}
+
+function timedOutProviderDiscovery(provider: keyof typeof PROVIDER_KEY_ENVS): ProviderDiscoveryResult {
+  const truth = getProviderTruth(provider)
+  return {
+    provider,
+    credentialEnvNames: PROVIDER_KEY_ENVS[provider] ?? [],
+    catalogEndpoint: truth ? resolveProviderEndpoint(truth) : null,
+    status: 'failed',
+    discoverySource: 'none',
+    rawCatalogCount: 0,
+    modelCount: 0,
+    executableCandidateCount: 0,
+    chatModels: 0,
+    reasoningModels: 0,
+    codingModels: 0,
+    liveAuthenticatedModels: 0,
+    publicCatalogModels: 0,
+    staticFallbackModels: 0,
+    catalogDerivedModels: 0,
+    imageModels: 0,
+    imageEditModels: 0,
+    videoModels: 0,
+    imageToVideoModels: 0,
+    ttsModels: 0,
+    sttModels: 0,
+    embeddingsModels: 0,
+    rerankModels: 0,
+    musicModels: 0,
+    avatarModels: 0,
+    adultImageModels: 0,
+    executableBlocker: `Provider discovery timed out after ${PROVIDER_TIMEOUT_MS}ms.`,
+    error: `Provider discovery timed out after ${PROVIDER_TIMEOUT_MS}ms.`,
+    endpoint: truth ? resolveProviderEndpoint(truth) : null,
+  }
+}
+
+function proveStep(
+  capabilityId: string,
+  step: () => Promise<CapabilityProof>,
+  timeoutMs = CAPABILITY_TIMEOUT_MS,
+): Promise<CapabilityProof> {
+  return withTimeout(step, timeoutMs, {
+    capabilityId,
+    providerSelected: null,
+    modelSelected: null,
+    routeOrAdapter: 'v1-25-capability-proof timeout guard',
+    status: 'BLOCKED',
+    artifactId: null,
+    jobId: null,
+    pollUrl: null,
+    exactError: `Capability proof timed out after ${timeoutMs}ms.`,
+    sourceFileResponsible: 'scripts/v1-25-capability-proof.ts',
+  })
+}
+
+function withTimeout<T>(work: () => Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  return Promise.race([
+    work().finally(() => {
+      if (timeout) clearTimeout(timeout)
+    }),
+    new Promise<T>((resolve) => {
+      timeout = setTimeout(() => resolve(fallback), timeoutMs)
+    }),
+  ])
 }
 
 async function proveExecuteCapability(label: string, capabilityId: string, request: Parameters<typeof executeCapability>[0]): Promise<CapabilityProof> {
@@ -632,6 +709,21 @@ async function classifyNotWired(label: string, capabilityId: string, sourceFile:
   }
 }
 
+async function classifyBlocked(label: string, capabilityId: string, sourceFile: string, fix: string): Promise<CapabilityProof> {
+  return {
+    capabilityId,
+    providerSelected: null,
+    modelSelected: null,
+    routeOrAdapter: label,
+    status: 'BLOCKED',
+    artifactId: null,
+    jobId: null,
+    pollUrl: null,
+    exactError: fix,
+    sourceFileResponsible: sourceFile,
+  }
+}
+
 function classifyFailure(capabilityId: string, routeOrAdapter: string, result: Awaited<ReturnType<typeof executeCapability>>): CapabilityProof {
   return {
     capabilityId,
@@ -663,6 +755,7 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
 }
 
 function classifyFailureStatus(result: Awaited<ReturnType<typeof executeCapability>>): ProofStatus {
+  if (/no configured provider/i.test(result.error ?? '')) return 'BLOCKED'
   if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') return 'NOT_WIRED'
   if (result.error_category === 'unsupported_endpoint') return 'NOT_WIRED'
   if (result.readiness === 'NEEDS_INPUT' || result.readiness === 'BLOCKED') return 'BLOCKED'
@@ -673,6 +766,7 @@ function classifyFailureStatus(result: Awaited<ReturnType<typeof executeCapabili
 }
 
 function sourceFileForFailure(result: Awaited<ReturnType<typeof executeCapability>>): string | null {
+  if (/no configured provider/i.test(result.error ?? '')) return 'src/lib/providers/provider-scoring.ts'
   if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') return 'src/lib/providers/execution.ts'
   if (result.error_category === 'unsupported_endpoint') return 'src/lib/ai-capability-adapters.ts'
   if (result.readiness === 'NEEDS_CONFIGURATION' && !result.providerAttempts?.length) return 'src/lib/brain/v1-capability-matrix.ts'
@@ -753,7 +847,11 @@ function renderMarkdown(report: {
   return lines.join('\n')
 }
 
-void main().catch((error) => {
-  console.error(error)
-  process.exitCode = 1
-})
+void main()
+  .catch((error) => {
+    console.error(error)
+    process.exitCode = 1
+  })
+  .finally(async () => {
+    await prisma.$disconnect().catch(() => undefined)
+  })

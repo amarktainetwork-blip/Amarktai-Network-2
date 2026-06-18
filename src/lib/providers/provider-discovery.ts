@@ -68,6 +68,9 @@ const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
   rerank: ['rerank'],
   documents: ['documents'],
   agents: ['agents'],
+  adult_text: ['adult_text'],
+  adult_image: ['adult_image'],
+  adult_video: ['adult_video'],
   conversational: ['chat'],
   'text-generation': ['chat', 'reasoning', 'coding'],
   'text2text-generation': ['chat', 'reasoning', 'translation'],
@@ -125,20 +128,32 @@ const GENX_FALLBACK_MODEL_CAPABILITIES: Partial<Record<CapabilityId, readonly st
   tts: GENX_TTS_MODELS,
 }
 
-const HF_CORE_MODEL_ALLOWLIST = new Set([
-  'mistralai/Mistral-7B-Instruct-v0.3',
-  'sentence-transformers/all-MiniLM-L6-v2',
-  'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  'stabilityai/stable-diffusion-xl-base-1.0',
-  'timbrooks/instruct-pix2pix',
-  'Wan-AI/Wan2.1-T2V-14B',
-  'facebook/musicgen-small',
-  'facebook/mms-tts-eng',
-  'openai/whisper-large-v3',
-  'Salesforce/blip-image-captioning-base',
-  'Salesforce/blip2-opt-2.7b',
-  'impira/layoutlm-document-qa',
-])
+const HF_CURATED_MODELS: Array<{
+  id: string
+  task: string
+  capabilities: CapabilityId[]
+  routeType: 'hf_inference_model_api' | 'hf_specialist_endpoint' | 'policy_gated_candidate'
+  safetyPolicy: 'standard' | 'adult_gate_required'
+  safetyNotes: string
+}> = [
+  { id: 'mistralai/Mistral-7B-Instruct-v0.3', task: 'text-generation', capabilities: ['chat', 'reasoning', 'coding'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated core text model.' },
+  { id: 'sentence-transformers/all-MiniLM-L6-v2', task: 'feature-extraction', capabilities: ['embeddings'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated embeddings model.' },
+  { id: 'cross-encoder/ms-marco-MiniLM-L-6-v2', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated rerank model.' },
+  { id: 'stabilityai/stable-diffusion-xl-base-1.0', task: 'text-to-image', capabilities: ['image'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image generation model.' },
+  { id: 'timbrooks/instruct-pix2pix', task: 'image-to-image', capabilities: ['image_edit'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated source-image transform model.' },
+  { id: 'Wan-AI/Wan2.1-T2V-14B', task: 'text-to-video', capabilities: ['video'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated video model; specialist endpoint required before execution.' },
+  { id: 'Wan-AI/Wan2.1-I2V-14B-480P', task: 'image-to-video', capabilities: ['image_to_video'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated image-to-video model; specialist endpoint required before execution.' },
+  { id: 'facebook/musicgen-small', task: 'text-to-audio', capabilities: ['music'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated music model; specialist endpoint required before execution.' },
+  { id: 'facebook/mms-tts-eng', task: 'text-to-speech', capabilities: ['tts'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated TTS model.' },
+  { id: 'openai/whisper-large-v3', task: 'automatic-speech-recognition', capabilities: ['stt'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated STT model.' },
+  { id: 'Salesforce/blip-image-captioning-base', task: 'image-to-text', capabilities: ['vision', 'ocr'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image captioning/OCR-adjacent model.' },
+  { id: 'Salesforce/blip2-opt-2.7b', task: 'image-text-to-text', capabilities: ['vision'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated vision-language model.' },
+  { id: 'impira/layoutlm-document-qa', task: 'document-question-answering', capabilities: ['documents', 'ocr'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated document QA/OCR model.' },
+  { id: 'runwayml/stable-diffusion-v1-5', task: 'text-to-image', capabilities: ['adult_image'], routeType: 'policy_gated_candidate', safetyPolicy: 'adult_gate_required', safetyNotes: 'Adult-capable candidate only when explicit adult policy/app gate allows it.' },
+  { id: 'Wan-AI/Wan2.1-T2V-14B', task: 'text-to-video', capabilities: ['adult_video'], routeType: 'policy_gated_candidate', safetyPolicy: 'adult_gate_required', safetyNotes: 'Adult video candidate only when explicit adult policy/app gate allows it and specialist endpoint is configured.' },
+]
+
+const HF_CORE_MODEL_ALLOWLIST = new Set(HF_CURATED_MODELS.map((model) => model.id))
 
 type FetchLike = typeof fetch
 
@@ -218,7 +233,7 @@ export async function discoverProvider(
       : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
     const records = providerId === 'huggingface'
       ? curateHuggingFaceRecords(rawRecords, options.capability)
-      : rawRecords
+      : mergeProviderContractRecords(providerId, rawRecords, options.capability)
     const discoverySource: ModelDiscoverySource = credentialResult.key
       ? 'live_authenticated'
       : publicDiscovery
@@ -313,6 +328,7 @@ function curateHuggingFaceRecords(
   records: Record<string, unknown>[],
   capability?: CapabilityId,
 ): Record<string, unknown>[] {
+  if (records.length === 0) return []
   const curated = records.filter((record) => {
     const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
     if (!id) return false
@@ -326,7 +342,58 @@ function curateHuggingFaceRecords(
     }
     return false
   })
-  return curated.length > 0 ? curated : records.slice(0, 12)
+  const filtered = curated.length > 0 ? curated : records.slice(0, 12)
+  const existing = new Set(filtered.map((record) =>
+    firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name),
+  ).filter((value): value is string => Boolean(value)))
+  const curatedDefaults = HF_CURATED_MODELS
+    .filter((model) => !capability || model.capabilities.includes(capability))
+    .filter((model) => !existing.has(model.id))
+    .map((model) => ({
+      id: model.id,
+      model: model.id,
+      pipeline_tag: model.task,
+      task: model.task,
+      capabilities: model.capabilities,
+      tags: [model.task, ...model.capabilities],
+      available: 'unknown',
+      license: null,
+      curated: true,
+      routeType: model.routeType,
+      safetyPolicy: model.safetyPolicy,
+      safetyNotes: model.safetyNotes,
+      adult: model.safetyPolicy === 'adult_gate_required',
+    }))
+  return [...filtered, ...curatedDefaults]
+}
+
+function mergeProviderContractRecords(
+  providerId: ProviderId,
+  records: Record<string, unknown>[],
+  capability?: CapabilityId,
+): Record<string, unknown>[] {
+  const existing = new Set(records.map((record) =>
+    firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)?.toLowerCase(),
+  ).filter((value): value is string => Boolean(value)))
+  const contractRecords = VIDEO_MODEL_CONTRACTS
+    .filter((contract) => contract.provider === providerId)
+    .filter((contract) => !capability || (
+      capability === 'video' && contract.mode === 'text_to_video'
+      || capability === 'image_to_video' && contract.mode === 'image_to_video'
+    ))
+    .filter((contract) => !existing.has(contract.model.toLowerCase()))
+    .map((contract) => ({
+      id: contract.model,
+      model: contract.model,
+      task: contract.mode === 'image_to_video' ? 'image-to-video' : 'text-to-video',
+      capabilities: [contract.mode === 'image_to_video' ? 'image_to_video' : 'video'],
+      available: 'unknown',
+      async: true,
+      routeType: 'provider_safe_video_contract',
+      safetyPolicy: 'standard',
+      safetyNotes: 'Curated provider-safe video contract; live proof still requires provider execution.',
+    }))
+  return [...records, ...contractRecords]
 }
 
 export function resolveProviderEndpoint(
@@ -559,9 +626,12 @@ function normalizeModel(
     artifactSupport: provider.features.artifactSupport,
     metadata: {
       task: tasks[0] ?? null,
+      routeType: firstString(record.routeType, record.route_type),
       providerAvailable: availability(record) === 'unavailable' ? false : availability(record) === 'available' ? true : 'unknown',
       license: firstString(record.license, nestedString(record.cardData, 'license')),
+      safetyPolicy: firstString(record.safetyPolicy, record.safety_policy),
       safetyNotes: firstString(record.safety, record.safetyNotes, record.safety_notes),
+      adultGate: record.adult === true || firstString(record.safetyPolicy, record.safety_policy) === 'adult_gate_required',
       executable: capabilityEvidence === 'unknown' ? 'candidate' : true,
     },
     raw: record,

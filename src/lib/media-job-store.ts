@@ -154,6 +154,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
       provider: job.provider,
       model: job.model,
       traceId: `media-job-${job.id}`,
+      jobId: job.id,
       metadata: {
         ...job.metadata,
         capability: job.capability,

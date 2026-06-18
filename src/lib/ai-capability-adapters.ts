@@ -347,7 +347,9 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
   const provider = 'genx' as const
   const type = input.capability.group === 'video' || input.capability.id === 'avatar_video'
     ? 'video'
-    : input.capability.group === 'computer_vision' || input.capability.outputTypes.includes('image')
+    : input.capability.group === 'computer_vision'
+      || input.capability.outputTypes.includes('image')
+      || input.capability.outputTypes.includes('avatar')
       ? 'image'
       : 'audio'
   const model = input.model
@@ -377,6 +379,7 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
   return result(provider, generated.model, generated.jobId ? 'processing' : 'completed', {
     mediaUrl: generated.url,
     providerJobId: generated.jobId,
+    contentType: type === 'video' ? 'video/mp4' : type === 'image' ? 'image/png' : 'audio/mpeg',
   })
 }
 

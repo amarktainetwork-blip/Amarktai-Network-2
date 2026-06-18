@@ -532,12 +532,12 @@ export async function executeCapabilityOrchestration(
         capability: taxonomyId,
         latencyMs,
       })
-      const mediaType = capabilityArtifactType(capability)
-      const localJob = ['image', 'audio', 'music', 'video'].includes(mediaType)
+      const mediaType = localMediaTypeForCapability(capability)
+      const localJob = mediaType
         ? createLocalMediaJob({
             capability,
             appSlug: request.appId ?? request.workspaceId ?? '__system__',
-            type: mediaType as 'image' | 'audio' | 'music' | 'video',
+            type: mediaType,
             subType: capability,
             title: `${capability.replace(/_/g, ' ')} generation`,
             description: request.input,
@@ -857,12 +857,38 @@ function capabilityArtifactType(capability: CapabilityRouterCapability): Artifac
   if (capability === 'deploy_plan') return 'deployment_plan'
   if (capability === 'app_build') return 'app_blueprint'
   if (capability === 'repo_edit') return 'repo_patch'
-  if (capability === 'avatar_generation' || capability === 'adult_avatar') return 'avatar'
+  if (capability === 'avatar_generation' || capability === 'adult_avatar') return 'image'
   if (['tts', 'voice_response', 'adult_voice'].includes(capability)) return 'voice'
   const outputType = capabilityOutputType(capability)
   return ['code', 'audio', 'image', 'video'].includes(outputType)
     ? outputType as ArtifactType
     : 'text'
+}
+
+function localMediaTypeForCapability(capability: CapabilityRouterCapability): 'image' | 'audio' | 'music' | 'video' | null {
+  if (capability === 'music_generation') return 'music'
+  if (['tts', 'voice_response', 'adult_voice'].includes(capability)) return 'audio'
+  if (capability === 'avatar_generation' || capability === 'adult_avatar') return 'image'
+  const artifactType = capabilityArtifactType(capability)
+  return ['image', 'audio', 'music', 'video'].includes(artifactType)
+    ? artifactType as 'image' | 'audio' | 'music' | 'video'
+    : null
+}
+
+function shouldPersistCapabilityArtifact(input: {
+  request: CapabilityRequest
+  capability: CapabilityRouterCapability
+  definitionCreatesArtifact: boolean
+}): boolean {
+  if (input.request.saveArtifact === true) return true
+  if (input.request.saveArtifact === false) return false
+  if (!input.definitionCreatesArtifact) return false
+  if (localMediaTypeForCapability(input.capability)) return true
+  const durableByJob = typeof input.request.metadata?.executionId === 'string'
+    || typeof input.request.metadata?.jobId === 'string'
+    || input.request.metadata?.durableOutput === true
+  if (durableByJob) return true
+  return false
 }
 
 async function completeCapabilityResult(input: {
@@ -906,7 +932,11 @@ async function completeCapabilityResult(input: {
     providerAttempts: input.attempts,
   }
   const appSlug = input.request.appId ?? input.request.workspaceId ?? '__system__'
-  if (!input.request.saveArtifact && !input.definitionCreatesArtifact) {
+  if (!shouldPersistCapabilityArtifact({
+    request: input.request,
+    capability: input.capability,
+    definitionCreatesArtifact: input.definitionCreatesArtifact,
+  })) {
     await recordCapabilityTraceSafe({
       traceId: input.request.traceId,
       appSlug,

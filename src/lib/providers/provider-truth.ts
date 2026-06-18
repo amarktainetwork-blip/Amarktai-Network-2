@@ -27,6 +27,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     capabilities: [
       'chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'image_edit', 'video', 'music',
       'tts', 'stt', 'embeddings', 'rerank', 'documents', 'translation', 'avatar',
+      'adult_image', 'adult_video',
     ],
     features: {
       streaming: true,
@@ -55,7 +56,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       dedicatedEndpointsEnv: 'TOGETHER_DEDICATED_ENDPOINTS_JSON',
       cacheTtlMs: CACHE_TTL_MS,
     },
-    capabilities: ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'tts', 'stt', 'vision', 'embeddings', 'rerank', 'agents'],
+    capabilities: ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'tts', 'stt', 'vision', 'embeddings', 'rerank', 'agents', 'adult_image', 'adult_video'],
     features: {
       streaming: true,
       asyncJobs: true,

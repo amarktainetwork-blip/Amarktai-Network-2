@@ -175,6 +175,12 @@ function modelMatchesCapability(
   provider: ApprovedDirectProviderId,
   modelId: string,
 ): boolean {
+  if (capabilityId === 'rerank' || capabilityId === 'text_ranking') {
+    return /rerank|ranking|cross-encoder|ms-marco/i.test(modelId)
+  }
+  if (capabilityId === 'embeddings' || capabilityId === 'feature_extraction') {
+    return !/rerank|ranking|cross-encoder|ms-marco/i.test(modelId)
+  }
   if (capabilityId === 'text_to_video') {
     return getVideoModelContract(provider, modelId)?.mode === 'text_to_video'
   }
@@ -273,9 +279,9 @@ export const AI_CAPABILITY_TAXONOMY: readonly AiCapabilityDefinition[] = [
     requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false,
   })),
 
-  capability({ id: 'text_ranking', label: 'Text Ranking', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rank documents against a query.', providers: ['huggingface'], executableProviders: ['huggingface'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'text_ranking', label: 'Text Ranking', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rank documents against a query.', providers: ['huggingface', 'together'], executableProviders: ['huggingface', 'together'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:text:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
   capability({ id: 'embeddings', label: 'Embeddings', group: 'text', inputTypes: ['text', 'text_array'], outputTypes: ['vector', 'vector_array'], description: 'Create text embeddings for retrieval and similarity.', providers: ['qwen', 'genx', 'huggingface', 'together'], executableProviders: ['qwen'], executableEndpoint: '/api/brain/embeddings', status: 'working', blocker: null, requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
-  capability({ id: 'rerank', label: 'Rerank', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rerank candidate documents with a specialist model.', providers: ['huggingface', 'together'], executableProviders: ['huggingface'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
+  capability({ id: 'rerank', label: 'Rerank', group: 'text', inputTypes: ['query', 'documents'], outputTypes: ['ranked_documents'], description: 'Rerank candidate documents with a specialist model.', providers: ['huggingface', 'together'], executableProviders: ['huggingface', 'together'], executableEndpoint: '/api/brain/rerank', status: 'working', blocker: null, requiredScope: 'ai:data:execute', exposeToConnectedAppsV1: true, createsArtifact: false, longRunning: false }),
 
   ...([
     ['document_question_answering', 'Document Question Answering', ['document', 'text'], ['text']],
@@ -290,8 +296,8 @@ export const AI_CAPABILITY_TAXONOMY: readonly AiCapabilityDefinition[] = [
     requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: false,
   })),
 
-  capability({ id: 'image_text_to_image', label: 'Image and Text to Image', group: 'multimodal', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Edit or transform a source image from instructions.', providers: imageProviders, executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'The honest endpoint exists, but no approved source-image provider adapter is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
-  capability({ id: 'image_to_image', label: 'Image to Image', group: 'computer_vision', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Transform a source image.', providers: imageProviders, executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'The honest endpoint exists, but no approved source-image provider adapter is wired.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+  capability({ id: 'image_text_to_image', label: 'Image and Text to Image', group: 'multimodal', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Edit or transform a source image from instructions.', providers: imageProviders, executableProviders: ['genx', 'qwen', 'together', 'huggingface'], executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'Source-image transform requires a public image reference or uploaded image bytes.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
+  capability({ id: 'image_to_image', label: 'Image to Image', group: 'computer_vision', inputTypes: ['image', 'text'], outputTypes: ['image'], description: 'Transform a source image.', providers: imageProviders, executableProviders: ['genx', 'qwen', 'together', 'huggingface'], executableEndpoint: '/api/brain/image-edit', status: 'partially_wired', blocker: 'Source-image transform requires a public image reference or uploaded image bytes.', requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: false }),
   capability({ id: 'text_to_image', label: 'Text to Image', group: 'computer_vision', inputTypes: ['text'], outputTypes: ['image'], description: 'Generate an image from a text prompt.', providers: imageProviders, executableProviders: ['genx', 'qwen', 'together', 'huggingface'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/image', status: 'working', blocker: null, requiredScope: 'ai:image:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: false }),
 
   ...([

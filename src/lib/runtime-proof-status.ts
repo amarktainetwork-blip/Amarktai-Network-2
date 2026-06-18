@@ -70,13 +70,35 @@ export function normalizeRuntimeProofStatus(status: CapabilityProofRecord['statu
 }
 
 export function loadCapabilityProofReport(cwd = process.cwd()): CapabilityProofReport | null {
-  const proofPath = path.join(cwd, 'V1_25_CAPABILITY_PROOF.json')
-  try {
-    const parsed = JSON.parse(fs.readFileSync(proofPath, 'utf8')) as CapabilityProofReport
-    return parsed && typeof parsed === 'object' ? parsed : null
-  } catch {
-    return null
+  for (const proofPath of proofPathCandidates(cwd)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(proofPath, 'utf8')) as CapabilityProofReport
+      return parsed && typeof parsed === 'object' ? parsed : null
+    } catch {
+      // Try the next likely runtime root.
+    }
   }
+  return null
+}
+
+function proofPathCandidates(cwd: string): string[] {
+  const roots = [
+    cwd,
+    process.env.INIT_CWD,
+    process.env.NEXT_RUNTIME_ROOT,
+    process.env.AMARKTAI_PROOF_ROOT,
+  ].filter((value): value is string => Boolean(value?.trim()))
+  const candidates = new Set<string>()
+  for (const root of roots) {
+    let current = path.resolve(root)
+    for (let depth = 0; depth < 6; depth += 1) {
+      candidates.add(path.join(current, 'V1_25_CAPABILITY_PROOF.json'))
+      const parent = path.dirname(current)
+      if (parent === current) break
+      current = parent
+    }
+  }
+  return [...candidates]
 }
 
 export function buildCapabilityProofIndex(report: CapabilityProofReport | null) {

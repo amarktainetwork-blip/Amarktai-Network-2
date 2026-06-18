@@ -144,7 +144,7 @@ describe('production capability and dashboard contract', () => {
     expect(capabilityTest).toContain('needs_specialist_route')
     expect(hfSpecialist).toContain('runHuggingFaceInference')
     expect(matrix).toContain('is available through Hugging Face task models but is not wired into the capability gateway.')
-    expect(matrix).toContain('The honest endpoint exists, but no approved source-image provider adapter is wired.')
+    expect(matrix).toContain('Source-image transform requires a public image reference or uploaded image bytes.')
   })
 
   it('does not treat the Groq model-catalog check as full capability execution proof', () => {
@@ -174,7 +174,7 @@ describe('production capability and dashboard contract', () => {
     const matrix = source('src/lib/brain/v1-capability-matrix.ts')
 
     expect(studio).toContain("fetch('/api/admin/system/v1-brain-route-matrix'")
-    expect(matrix).toContain('The honest endpoint exists, but no approved source-image provider adapter is wired.')
+    expect(matrix).toContain('Source-image transform requires a public image reference or uploaded image bytes.')
     expect(matrix).toContain('Text to Image')
   })
 

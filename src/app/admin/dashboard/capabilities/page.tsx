@@ -59,6 +59,13 @@ type CapabilityTruthResponse = {
     blocked?: number
     notWired?: number
   }
+  catalogProofSummary?: {
+    liveProven?: number
+    sourceWired?: number
+    providerAvailable?: number
+    blocked?: number
+    notWired?: number
+  }
   proofGeneratedAt?: string | null
   error?: string
 }
@@ -89,6 +96,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 export default function CapabilitiesPage() {
   const [capabilities, setCapabilities] = useState<CapabilityEntry[]>([])
   const [proofSummary, setProofSummary] = useState<CapabilityTruthResponse['proofSummary'] | null>(null)
+  const [catalogProofSummary, setCatalogProofSummary] = useState<CapabilityTruthResponse['catalogProofSummary'] | null>(null)
   const [proofGeneratedAt, setProofGeneratedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -100,12 +108,14 @@ export default function CapabilitiesPage() {
         if (data?.error) throw new Error(data.error)
         setCapabilities(Array.isArray(data.capabilities) ? data.capabilities : [])
         setProofSummary(data.proofSummary ?? null)
+        setCatalogProofSummary(data.catalogProofSummary ?? null)
         setProofGeneratedAt(data.proofGeneratedAt ?? null)
         setError('')
       })
       .catch((loadError) => {
         setCapabilities([])
         setProofSummary(null)
+        setCatalogProofSummary(null)
         setProofGeneratedAt(null)
         setError(loadError instanceof Error ? loadError.message : 'Capability runtime truth is unavailable.')
       })
@@ -129,13 +139,14 @@ export default function CapabilitiesPage() {
   const totalBlocked = proofSummary?.blocked ?? capabilities.filter((c) => proofStatus(c) === 'BLOCKED').length
   const totalNotWired = proofSummary?.notWired ?? capabilities.filter((c) => proofStatus(c) === 'NOT_WIRED').length
   const totalCapabilities = capabilities.length
+  const catalogLiveProven = catalogProofSummary?.liveProven ?? capabilities.filter((c) => proofStatus(c) === 'LIVE_PROVEN').length
 
   return (
     <div className="space-y-8">
       <DashboardPageHeader
         eyebrow="Capabilities"
         title="Runtime capability browser"
-        description="Brain runtime truth grouped by capability family. Live proof, source wiring, provider availability, blockers, and missing routes stay separate so the dashboard never overclaims execution readiness."
+        description="Brain runtime truth grouped by capability family. The top counters are the V1 proof run; the catalog cards below show the broader capability browser without overclaiming live execution."
         actions={
           <Link
             href="/admin/dashboard/studio"
@@ -147,14 +158,16 @@ export default function CapabilitiesPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <DashboardMetricCard label="LIVE_PROVEN" value={totalLiveProven} tone="emerald" detail="A generated proof executed the real route successfully." />
-        <DashboardMetricCard label="SOURCE_WIRED" value={totalSourceWired} tone="cyan" detail="Route and adapter source exist, but live execution proof is absent." />
-        <DashboardMetricCard label="PROVIDER_AVAILABLE" value={totalProviderAvailable} tone="slate" detail="Provider/catalog evidence exists, but the product route is not wired." />
-        <DashboardMetricCard label="BLOCKED" value={totalBlocked} tone="amber" detail="Blocked by configuration, policy, input, or runtime dependency." />
-        <DashboardMetricCard label="NOT_WIRED" value={totalNotWired} tone="slate" detail="No executable route mapping or adapter contract is present." />
+        <DashboardMetricCard label="V1 LIVE_PROVEN" value={totalLiveProven} tone="emerald" detail="Count from V1_25_CAPABILITY_PROOF.json, not the larger catalog browser." />
+        <DashboardMetricCard label="V1 SOURCE_WIRED" value={totalSourceWired} tone="cyan" detail="Route and adapter source exist, but live execution proof is absent." />
+        <DashboardMetricCard label="V1 PROVIDER_AVAILABLE" value={totalProviderAvailable} tone="slate" detail="Provider/catalog evidence exists, but the product route is not wired." />
+        <DashboardMetricCard label="V1 BLOCKED" value={totalBlocked} tone="amber" detail="Blocked by configuration, policy, input, or runtime dependency." />
+        <DashboardMetricCard label="V1 NOT_WIRED" value={totalNotWired} tone="slate" detail="No executable route mapping or adapter contract is present." />
       </div>
       {proofGeneratedAt ? (
-        <p className="-mt-4 text-xs font-semibold text-slate-500">Proof file read: {new Date(proofGeneratedAt).toLocaleString()}</p>
+        <p className="-mt-4 text-xs font-semibold text-slate-500">
+          Proof file read: {new Date(proofGeneratedAt).toLocaleString()} · Catalog browser: {catalogLiveProven} of {totalCapabilities} taxonomy capabilities live-proven.
+        </p>
       ) : null}
 
       {loading ? (
