@@ -149,6 +149,10 @@ type ProofReport = {
   proofState?: {
     partial: boolean
     activePhase: string
+    activeCapability: string | null
+    lastCompletedCapability: string | null
+    capabilityStartedAt: string | null
+    capabilityTimeoutMs: number | null
     completedPhases: string[]
     failure: string | null
     activeHandleTypes: string[]
@@ -161,7 +165,8 @@ const OUTPUT_MD = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.md')
 const APP_SLUG = process.env.AMARKTAI_PROOF_APP_SLUG?.trim() || 'amarktai-network'
 const CONNECTED_APP_SECRET = process.env.AMARKTAI_CONNECTED_APP_SECRET?.trim() || process.env.AMARKTAI_APP_SECRET_AMARKTAI_NETWORK?.trim() || ''
 const PROVIDER_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_PROVIDER_TIMEOUT_MS ?? 15_000)
-const CAPABILITY_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_CAPABILITY_TIMEOUT_MS ?? 90_000)
+const CAPABILITY_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_CAPABILITY_TIMEOUT_MS ?? 30_000)
+const MEDIA_CAPABILITY_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_MEDIA_CAPABILITY_TIMEOUT_MS ?? 60_000)
 const QUICK_PROOF_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_QUICK_TIMEOUT_MS ?? 10_000)
 const DB_TIMEOUT_MS = Number(process.env.AMARKTAI_PROOF_DB_TIMEOUT_MS ?? 10_000)
 const CLI_WATCHDOG_MS = Number(process.env.AMARKTAI_PROOF_CLI_WATCHDOG_MS ?? 300_000)
@@ -177,6 +182,10 @@ let providerKeyResults: ProviderKeyResult[] = []
 let providerDiscoveryResults: ProviderDiscoveryResult[] = []
 let modelSmokeProofs: ModelSmokeProof[] = []
 let capabilityResults: CapabilityProof[] = []
+let activeCapability: string | null = null
+let lastCompletedCapability: string | null = null
+let capabilityStartedAt: string | null = null
+let capabilityTimeoutMs: number | null = null
 
 async function main() {
   startWatchdog()
@@ -202,7 +211,7 @@ async function main() {
   await writePartialProof(null)
 
   setPhase('CAPABILITY_PROOF_START')
-  capabilityResults = enrichCapabilityProofs(await collectCapabilityProofs())
+  capabilityResults = await collectCapabilityProofs()
   setPhase('CAPABILITY_PROOF_DONE')
 
   const report = buildReport(false, null)
@@ -291,6 +300,10 @@ function buildReport(partial: boolean, failure: string | null): ProofReport {
     proofState: {
       partial,
       activePhase,
+      activeCapability,
+      lastCompletedCapability,
+      capabilityStartedAt,
+      capabilityTimeoutMs,
       completedPhases: [...completedPhases],
       failure,
       activeHandleTypes: activeHandleTypes(),
@@ -678,34 +691,101 @@ function providerExecutableBlocker(snapshot: Awaited<ReturnType<typeof discoverP
   return snapshot.error ?? 'No catalog models were returned.'
 }
 
+type CapabilityProofStep = {
+  capabilityId: string
+  timeoutMs: number
+  run: () => Promise<CapabilityProof>
+}
+
 async function collectCapabilityProofs(): Promise<CapabilityProof[]> {
-  const results: CapabilityProof[] = []
-  results.push(await proveStep('chat_text_generation', () => proveExecuteCapability('chat/text generation', 'chat_text_generation', { input: 'Reply with OK.', capability: 'chat' })))
-  results.push(await proveStep('reasoning', () => proveExecuteCapability('reasoning', 'reasoning', { input: 'Explain in two steps why the sky is blue.', capability: 'reasoning' })))
-  results.push(await proveStep('coding_assistant', () => proveExecuteCapability('coding assistant', 'coding_assistant', { input: 'Write a hello world function in TypeScript.', capability: 'code' })))
-  results.push(await proveStep('web_research', () => proveResearch()))
-  results.push(await proveStep('summarization', () => proveAdminTextCapability('summarization', 'summarization'), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('translation', () => proveAdminTextCapability('translation', 'translation'), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' })))
-  results.push(await proveStep('rerank_search_relevance', () => proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> })))
-  results.push(await proveStep('text_to_image', () => proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true })))
-  results.push(await proveStep('image_editing_source_transform', () => proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })))
-  results.push(await proveStep('text_to_video_short_clip', () => proveExecuteCapability('text-to-video short clip', 'text_to_video_short_clip', { input: 'A four second cinematic sunrise.', capability: 'video_generation', saveArtifact: true })))
-  results.push(await proveStep('text_to_speech', () => proveExecuteCapability('text-to-speech', 'text_to_speech', { input: 'AmarktAI proof speech.', capability: 'tts', saveArtifact: true })))
-  results.push(await proveStep('speech_to_text', () => proveExecuteCapability('speech-to-text', 'speech_to_text', { input: 'Transcribe the supplied audio accurately.', capability: 'stt', files: ['inline:audio'], metadata: { referenceData: Buffer.from('proof-audio'), referenceMimeType: 'audio/webm' } as Record<string, unknown>, saveArtifact: true })))
-  results.push(await proveStep('agent_request_execution', () => proveAgentRequest()))
-  results.push(await proveStep('connected_app_capability_execution', () => proveConnectedAppExecution(), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('image_to_video', () => proveExecuteCapability('image-to-video', 'image_to_video', { input: 'Animate the image.', capability: 'image_to_video', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })))
-  results.push(await proveStep('long_form_multi_scene_video_assembly', () => proveLongFormVideo()))
-  results.push(await proveStep('avatar_library_avatar_image_generation', () => proveExecuteCapability('avatar library/avatar image generation', 'avatar_library_avatar_image_generation', { input: 'Create a professional avatar portrait.', capability: 'avatar_generation', saveArtifact: true })))
-  results.push(await proveStep('talking_avatar_video', () => classifyBlocked('talking-avatar video', 'talking_avatar_video', 'src/lib/orchestrator.ts', 'src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run.'), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('adult_media_policy_gated_generation', () => proveAdultMedia()))
-  results.push(await proveStep('provider_auto_selection', () => proveAutoSelection()))
-  results.push(await proveStep('provider_fallback', () => proveFallback(), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('strict_provider_proof_mode', () => proveStrictProviderProofMode(), QUICK_PROOF_TIMEOUT_MS))
-  results.push(await proveStep('route_outcome_logging', () => proveRouteOutcomeLogging()))
-  results.push(await proveStep('worker_job_retry_and_polling_completion', () => proveWorkerRetryAndPolling(), QUICK_PROOF_TIMEOUT_MS))
-  return results
+  capabilityResults = []
+  for (const step of capabilityProofSteps()) {
+    const result = enrichCapabilityProofs([await runCapabilityProofStep(step)])[0]
+    capabilityResults.push(result)
+    await writePartialProof(null)
+  }
+  activeCapability = null
+  capabilityStartedAt = null
+  capabilityTimeoutMs = null
+  return capabilityResults
+}
+
+function capabilityProofSteps(): CapabilityProofStep[] {
+  return [
+    capabilityStep('chat_text_generation', () => proveExecuteCapability('chat/text generation', 'chat_text_generation', { input: 'Reply with OK.', capability: 'chat' })),
+    capabilityStep('reasoning', () => proveExecuteCapability('reasoning', 'reasoning', { input: 'Explain in two steps why the sky is blue.', capability: 'reasoning' })),
+    capabilityStep('coding_assistant', () => proveExecuteCapability('coding assistant', 'coding_assistant', { input: 'Write a hello world function in TypeScript.', capability: 'code' })),
+    capabilityStep('web_research', () => proveResearch()),
+    capabilityStep('summarization', () => proveAdminTextCapability('summarization', 'summarization'), QUICK_PROOF_TIMEOUT_MS),
+    capabilityStep('translation', () => proveAdminTextCapability('translation', 'translation'), QUICK_PROOF_TIMEOUT_MS),
+    capabilityStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' })),
+    capabilityStep('rerank_search_relevance', () => proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> })),
+    mediaCapabilityStep('text_to_image', () => proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true })),
+    mediaCapabilityStep('image_editing_source_transform', () => proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })),
+    mediaCapabilityStep('text_to_video_short_clip', () => proveExecuteCapability('text-to-video short clip', 'text_to_video_short_clip', { input: 'A four second cinematic sunrise.', capability: 'video_generation', saveArtifact: true })),
+    mediaCapabilityStep('text_to_speech', () => proveExecuteCapability('text-to-speech', 'text_to_speech', { input: 'AmarktAI proof speech.', capability: 'tts', saveArtifact: true })),
+    mediaCapabilityStep('speech_to_text', () => proveExecuteCapability('speech-to-text', 'speech_to_text', { input: 'Transcribe the supplied audio accurately.', capability: 'stt', files: ['inline:audio'], metadata: { referenceData: Buffer.from('proof-audio'), referenceMimeType: 'audio/webm' } as Record<string, unknown>, saveArtifact: true })),
+    capabilityStep('agent_request_execution', () => proveAgentRequest()),
+    capabilityStep('connected_app_capability_execution', () => proveConnectedAppExecution(), QUICK_PROOF_TIMEOUT_MS),
+    mediaCapabilityStep('image_to_video', () => proveExecuteCapability('image-to-video', 'image_to_video', { input: 'Animate the image.', capability: 'image_to_video', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })),
+    mediaCapabilityStep('long_form_multi_scene_video_assembly', () => proveLongFormVideo()),
+    mediaCapabilityStep('avatar_library_avatar_image_generation', () => proveExecuteCapability('avatar library/avatar image generation', 'avatar_library_avatar_image_generation', { input: 'Create a professional avatar portrait.', capability: 'avatar_generation', saveArtifact: true })),
+    mediaCapabilityStep('talking_avatar_video', () => classifyBlocked('talking-avatar video', 'talking_avatar_video', 'src/lib/orchestrator.ts', 'src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run.'), QUICK_PROOF_TIMEOUT_MS),
+    mediaCapabilityStep('adult_media_policy_gated_generation', () => proveAdultMedia()),
+    capabilityStep('provider_auto_selection', () => proveAutoSelection()),
+    capabilityStep('provider_fallback', () => proveFallback(), QUICK_PROOF_TIMEOUT_MS),
+    capabilityStep('strict_provider_proof_mode', () => proveStrictProviderProofMode(), QUICK_PROOF_TIMEOUT_MS),
+    capabilityStep('route_outcome_logging', () => proveRouteOutcomeLogging()),
+    mediaCapabilityStep('worker_job_retry_and_polling_completion', () => proveWorkerRetryAndPolling(), QUICK_PROOF_TIMEOUT_MS),
+  ]
+}
+
+function capabilityStep(
+  capabilityId: string,
+  run: () => Promise<CapabilityProof>,
+  timeoutMs = CAPABILITY_TIMEOUT_MS,
+): CapabilityProofStep {
+  return { capabilityId, run, timeoutMs }
+}
+
+function mediaCapabilityStep(
+  capabilityId: string,
+  run: () => Promise<CapabilityProof>,
+  timeoutMs = MEDIA_CAPABILITY_TIMEOUT_MS,
+): CapabilityProofStep {
+  return { capabilityId, run, timeoutMs }
+}
+
+async function runCapabilityProofStep(step: CapabilityProofStep): Promise<CapabilityProof> {
+  activeCapability = step.capabilityId
+  capabilityStartedAt = new Date().toISOString()
+  capabilityTimeoutMs = step.timeoutMs
+  console.log(`CAPABILITY_START ${step.capabilityId}`)
+  await writePartialProof(null)
+  let timedOut = false
+  let failed = false
+  const result = await withTimeout(
+    async () => {
+      try {
+        return await step.run()
+      } catch (error) {
+        failed = true
+        return capabilityErrorProof(step.capabilityId, error)
+      }
+    },
+    step.timeoutMs,
+    capabilityTimeoutProof(step.capabilityId, step.timeoutMs),
+    () => {
+      timedOut = true
+      console.log(`CAPABILITY_TIMEOUT ${step.capabilityId}`)
+    },
+  )
+  if (!timedOut) console.log(`${failed ? 'CAPABILITY_ERROR' : 'CAPABILITY_DONE'} ${step.capabilityId}`)
+  lastCompletedCapability = step.capabilityId
+  activeCapability = null
+  capabilityStartedAt = null
+  capabilityTimeoutMs = null
+  return result
 }
 
 function timedOutProviderDiscovery(provider: keyof typeof PROVIDER_KEY_ENVS): ProviderDiscoveryResult {
@@ -752,7 +832,31 @@ function proveStep(
   step: () => Promise<CapabilityProof>,
   timeoutMs = CAPABILITY_TIMEOUT_MS,
 ): Promise<CapabilityProof> {
-  return withTimeout(step, timeoutMs, {
+  return withTimeout(step, timeoutMs, capabilityTimeoutProof(capabilityId, timeoutMs))
+}
+
+function withTimeout<T>(
+  work: () => Promise<T>,
+  timeoutMs: number,
+  fallback: T,
+  onTimeout?: () => void,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+  return Promise.race([
+    work().finally(() => {
+      if (timeout) clearTimeout(timeout)
+    }),
+    new Promise<T>((resolve) => {
+      timeout = setTimeout(() => {
+        onTimeout?.()
+        resolve(fallback)
+      }, timeoutMs)
+    }),
+  ])
+}
+
+function capabilityTimeoutProof(capabilityId: string, timeoutMs: number): CapabilityProof {
+  return {
     capabilityId,
     providerSelected: null,
     modelSelected: null,
@@ -761,21 +865,24 @@ function proveStep(
     artifactId: null,
     jobId: null,
     pollUrl: null,
-    exactError: `Capability proof timed out after ${timeoutMs}ms.`,
+    exactError: `CAPABILITY_PROOF_TIMEOUT after ${timeoutMs} ms`,
     sourceFileResponsible: 'scripts/v1-25-capability-proof.ts',
-  })
+  }
 }
 
-function withTimeout<T>(work: () => Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | null = null
-  return Promise.race([
-    work().finally(() => {
-      if (timeout) clearTimeout(timeout)
-    }),
-    new Promise<T>((resolve) => {
-      timeout = setTimeout(() => resolve(fallback), timeoutMs)
-    }),
-  ])
+function capabilityErrorProof(capabilityId: string, error: unknown): CapabilityProof {
+  return {
+    capabilityId,
+    providerSelected: null,
+    modelSelected: null,
+    routeOrAdapter: 'v1-25-capability-proof error guard',
+    status: 'BLOCKED',
+    artifactId: null,
+    jobId: null,
+    pollUrl: null,
+    exactError: sanitizeProofError(error),
+    sourceFileResponsible: 'scripts/v1-25-capability-proof.ts',
+  }
 }
 
 async function proveExecuteCapability(label: string, capabilityId: string, request: Parameters<typeof executeCapability>[0]): Promise<CapabilityProof> {
@@ -1144,6 +1251,10 @@ function renderMarkdown(report: ProofReport) {
     `Generated: ${report.generatedAt}`,
     `Partial proof: ${report.proofState?.partial ? 'yes' : 'no'}`,
     `Active phase: ${report.proofState?.activePhase ?? 'unknown'}`,
+    `Active capability: ${report.proofState?.activeCapability ?? 'none'}`,
+    `Last completed capability: ${report.proofState?.lastCompletedCapability ?? 'none'}`,
+    `Capability started at: ${report.proofState?.capabilityStartedAt ?? 'none'}`,
+    `Capability timeout ms: ${report.proofState?.capabilityTimeoutMs ?? 'none'}`,
     `Watchdog/failure: ${report.proofState?.failure ?? 'none'}`,
     `Active handle types: ${(report.proofState?.activeHandleTypes ?? []).join(', ') || 'none'}`,
     '',

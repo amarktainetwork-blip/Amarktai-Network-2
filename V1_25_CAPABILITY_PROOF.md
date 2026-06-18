@@ -1,8 +1,12 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T17:54:21.987Z
+Generated: 2026-06-18T18:13:13.492Z
 Partial proof: no
 Active phase: CAPABILITY_PROOF_DONE
+Active capability: none
+Last completed capability: worker_job_retry_and_polling_completion
+Capability started at: none
+Capability timeout ms: none
 Watchdog/failure: none
 Active handle types: Socket
 
