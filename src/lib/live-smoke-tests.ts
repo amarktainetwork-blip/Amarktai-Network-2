@@ -230,9 +230,7 @@ async function runProviderSmokeTest(
 export async function runAllProviderSmokeTests(): Promise<ProviderSmokeResult[]> {
   return Promise.all(LIVE_SMOKE_PROVIDER_IDS.map(async (id): Promise<ProviderSmokeResult> => {
     const node = getProviderMeshNode(id)!
-    const envKey = node.envAliases.find((alias) => isUsableServiceKey(process.env[alias]))
-    const vaultKey = await getMeshCredential(id).catch(() => null)
-    const apiKey = (envKey ? process.env[envKey] : vaultKey) ?? null
+    const apiKey = await getMeshCredential(id).catch(() => null)
     const configured = isUsableServiceKey(apiKey)
 
     if (!configured) {

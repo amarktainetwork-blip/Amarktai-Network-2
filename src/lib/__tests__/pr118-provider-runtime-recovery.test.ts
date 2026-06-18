@@ -9,8 +9,8 @@ describe('PR118 provider runtime and dashboard recovery', () => {
   it('uses the canonical discovery evidence ladder', () => {
     const discovery = source('src/lib/providers/model-discovery.ts')
     const scoring = source('src/lib/providers/provider-scoring.ts')
-    expect(discovery).toContain("capabilityEvidence: 'provider_contract'")
-    expect(discovery).toContain('model.capabilities.includes(capability)')
+    expect(discovery).toContain("capabilityEvidence: 'provider_contract' as const")
+    expect(discovery).toContain('model.capabilities.includes(normalizedCapability)')
     expect(scoring).toContain("model.capabilityEvidence === 'model_metadata'")
   })
 

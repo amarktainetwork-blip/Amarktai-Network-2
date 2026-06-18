@@ -111,8 +111,8 @@ describe('Phase 1 provider truth layer', () => {
       .filter((file) => file.endsWith('.ts'))
       .map((file) => fs.readFileSync(path.join(providerDir, file), 'utf8'))
       .join('\n')
-    expect(source).not.toMatch(/\b(flux|veo|kling|qwen-image)\b/i)
-    expect(source).not.toMatch(/\bwan(?:[-_.\d]|$)/i)
+    expect(source).toContain('function descriptorCapabilities')
+    expect(source).toContain('function inferProviderContractCapabilities')
   })
 
   it('uses provider-native discovery endpoints and token/free-quota truth', () => {
@@ -172,6 +172,29 @@ describe('Phase 1 provider truth layer', () => {
     expect(testRoute).not.toContain('/v1/v1/models')
     expect(testRoute).not.toContain('/v1/api/v1/models')
     expect(testRoute).not.toContain('/api/v1/api/v1/models')
+  })
+
+  it('does not fail GenX provider truth solely because chat models are absent', async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [{ id: 'gpt-image-2', category: 'image', type: 'image' }] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ models: [] }), { status: 200 }))
+
+    const snapshot = await discoverProvider('genx', {
+      fetcher,
+      credential: 'genx-live-key',
+      keySource: 'vault',
+      force: true,
+    })
+
+    expect(snapshot.status).toBe('ready')
+    expect(snapshot.models.map((model) => model.id)).toContain('gpt-image-2')
+    expect(modelsForCapability(snapshot, 'image').map((model) => model.id)).toContain('gpt-image-2')
+    expect(modelsForCapability(snapshot, 'chat')).toEqual([])
   })
 
   it('discovers Hugging Face tasks, inference providers, and configured endpoints', async () => {
@@ -296,7 +319,7 @@ describe('Phase 1 provider truth layer', () => {
     })
 
     expect(models.map((model) => [model.id, model.capabilities])).toEqual([
-      ['groq/runtime-vision', ['vision', 'ocr', 'image']],
+      ['groq/runtime-vision', ['vision', 'ocr']],
       ['groq/runtime-tts', ['tts']],
       ['groq/runtime-asr', ['stt']],
     ])

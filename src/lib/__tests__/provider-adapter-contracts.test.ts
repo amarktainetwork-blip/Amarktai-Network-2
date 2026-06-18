@@ -45,6 +45,8 @@ import {
   providerHasCanonicalPollingContract,
 } from '@/lib/ai-capability-adapters'
 import { getEnvKeyForProvider, getIntegrationKey, getProviderKey } from '@/lib/provider-config'
+import { normalizeProviderCatalog } from '@/lib/providers/provider-discovery'
+import { modelsForCapability } from '@/lib/providers/model-discovery'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
@@ -277,6 +279,28 @@ describe('provider adapter contracts', () => {
     expect(source('src/app/api/admin/settings/test-provider/route.ts')).not.toContain("id === 'minimax'")
   })
 
+  it('allows minimax/* model IDs only under provider=together', () => {
+    const togetherVideo = normalizeProviderCatalog('together', {
+      data: [{ id: 'minimax/video-01', type: 'video-generation', available: true }],
+    })
+    const snapshot = {
+      provider: 'together' as const,
+      status: 'ready' as const,
+      endpoint: 'https://api.together.ai/v1/models',
+      keySource: 'vault',
+      models: togetherVideo,
+      tasks: ['video-generation'],
+      inferenceProviders: [],
+      privateEndpoints: [],
+      dedicatedEndpoints: [],
+      discoveredAt: '2026-06-18T00:00:00.000Z',
+      expiresAt: '2026-06-18T00:05:00.000Z',
+      error: null,
+    }
+    expect(modelsForCapability(snapshot, 'video').map((model) => model.id)).toContain('minimax/video-01')
+    expect(PROVIDER_TRUTH.map((provider) => provider.id)).not.toContain('minimax')
+  })
+
   it('reads a dashboard-saved GenX key through the same provider-key path Brain uses', async () => {
     process.env.GENX_API_KEY = ''
 
@@ -364,6 +388,80 @@ describe('provider adapter contracts', () => {
     expect(fetchMock.mock.calls[0][1]).toMatchObject({
       headers: expect.objectContaining({ Authorization: 'Bearer hf-canonical-saved-key' }),
     })
+  })
+
+  it('classifies Hugging Face FLUX task models as image generation only', () => {
+    const models = normalizeProviderCatalog('huggingface', [
+      { id: 'black-forest-labs/FLUX.1-schnell', pipeline_tag: 'text-to-image', available: true },
+      { id: 'sentence-transformers/all-MiniLM-L6-v2', pipeline_tag: 'feature-extraction', available: true },
+    ])
+
+    expect(models.find((model) => model.id.includes('FLUX'))).toMatchObject({
+      capabilities: ['image'],
+      capabilityEvidence: 'model_metadata',
+    })
+    expect(models.find((model) => model.id.includes('MiniLM'))).toMatchObject({
+      capabilities: ['embeddings'],
+    })
+  })
+
+  it('classifies Qwen image and Wan video families correctly', () => {
+    const models = normalizeProviderCatalog('qwen', {
+      data: [
+        { id: 'qwen-image-2.0', available: true },
+        { id: 'wan2.1-t2v-turbo', available: true },
+        { id: 'wan2.1-i2v-turbo', available: true },
+        { id: 'qwen3-tts', available: true },
+        { id: 'qwen3-asr', available: true },
+      ],
+    })
+
+    expect(models.find((model) => model.id === 'qwen-image-2.0')?.capabilities).toContain('image')
+    expect(models.find((model) => model.id === 'wan2.1-t2v-turbo')?.capabilities).toContain('video')
+    expect(models.find((model) => model.id === 'wan2.1-i2v-turbo')?.capabilities).toContain('image_to_video')
+    expect(models.find((model) => model.id === 'qwen3-tts')?.capabilities).toEqual(['tts'])
+    expect(models.find((model) => model.id === 'qwen3-asr')?.capabilities).toEqual(['stt'])
+  })
+
+  it('classifies Together image and video families correctly', () => {
+    const models = normalizeProviderCatalog('together', {
+      data: [
+        { id: 'black-forest-labs/FLUX.1-schnell', available: true },
+        { id: 'Wan-AI/Wan2.1-T2V-14B', available: true },
+        { id: 'whisper-large-v3', available: true },
+      ],
+    })
+
+    expect(models.find((model) => model.id.includes('FLUX'))?.capabilities).toContain('image')
+    expect(models.find((model) => model.id.includes('T2V'))?.capabilities).toContain('video')
+    expect(models.find((model) => model.id === 'whisper-large-v3')?.capabilities).toEqual(['stt'])
+  })
+
+  it('does not classify Groq text models as TTS while keeping whisper as STT', () => {
+    const models = normalizeProviderCatalog('groq', {
+      data: [
+        { id: 'llama-3.3-70b-versatile', available: true },
+        { id: 'whisper-large-v3-turbo', available: true },
+      ],
+    })
+
+    expect(models.find((model) => model.id === 'llama-3.3-70b-versatile')?.capabilities).not.toContain('tts')
+    expect(models.find((model) => model.id === 'llama-3.3-70b-versatile')?.capabilities).toContain('chat')
+    expect(models.find((model) => model.id === 'whisper-large-v3-turbo')?.capabilities).toEqual(['stt'])
+  })
+
+  it('classifies MiMo TTS and ASR families conservatively', () => {
+    const models = normalizeProviderCatalog('mimo', {
+      data: [
+        { id: 'mimo-v2.5', available: true },
+        { id: 'mimo-tts-1', available: true },
+        { id: 'mimo-asr-1', available: true },
+      ],
+    })
+
+    expect(models.find((model) => model.id === 'mimo-v2.5')?.capabilities).toContain('chat')
+    expect(models.find((model) => model.id === 'mimo-tts-1')?.capabilities).toEqual(['tts'])
+    expect(models.find((model) => model.id === 'mimo-asr-1')?.capabilities).toEqual(['stt'])
   })
 
   it('normalizes the GenX asynchronous job and polling flow', async () => {

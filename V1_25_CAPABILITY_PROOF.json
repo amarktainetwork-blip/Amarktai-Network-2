@@ -1,0 +1,440 @@
+{
+  "generatedAt": "2026-06-18T07:36:51.201Z",
+  "environment": {
+    "hasDatabaseUrl": false,
+    "appSlug": "amarktai-network",
+    "connectedAppSecretPresent": false
+  },
+  "providerKeyPath": [
+    {
+      "provider": "genx",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    },
+    {
+      "provider": "huggingface",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    },
+    {
+      "provider": "qwen",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    },
+    {
+      "provider": "mimo",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    },
+    {
+      "provider": "groq",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    },
+    {
+      "provider": "together",
+      "configured": false,
+      "masked": null,
+      "error": "No credential resolved from integrationConfig/aiProvider/env path."
+    }
+  ],
+  "providerDiscovery": [
+    {
+      "provider": "mimo",
+      "status": "not_configured",
+      "modelCount": 0,
+      "imageModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://token-plan-sgp.xiaomimimo.com/v1/models"
+    },
+    {
+      "provider": "genx",
+      "status": "not_configured",
+      "modelCount": 0,
+      "imageModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://query.genx.sh/api/v1/models"
+    },
+    {
+      "provider": "huggingface",
+      "status": "ready",
+      "modelCount": 100,
+      "imageModels": 50,
+      "videoModels": 9,
+      "imageToVideoModels": 4,
+      "ttsModels": 5,
+      "sttModels": 2,
+      "embeddingsModels": 6,
+      "rerankModels": 0,
+      "error": null,
+      "endpoint": "https://huggingface.co/api/models?limit=100&full=true"
+    },
+    {
+      "provider": "qwen",
+      "status": "not_configured",
+      "modelCount": 0,
+      "imageModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models"
+    },
+    {
+      "provider": "together",
+      "status": "not_configured",
+      "modelCount": 0,
+      "imageModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://api.together.ai/v1/models"
+    },
+    {
+      "provider": "groq",
+      "status": "not_configured",
+      "modelCount": 0,
+      "imageModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://api.groq.com/openai/v1/models"
+    }
+  ],
+  "capabilities": [
+    {
+      "capabilityId": "chat_text_generation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:chat",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "reasoning",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:reasoning",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "coding_assistant",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:code",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "web_research",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "researchRuntime.execute",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "summarization",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "translation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "embeddings",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:embeddings",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "rerank_search_relevance",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:rerank",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "text_to_image",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:image_generation",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "image_editing_source_transform",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:image_edit",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "text_to_video_short_clip",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:video_generation",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "text_to_speech",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:tts",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "speech_to_text",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:stt",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "agent_request_execution",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/brain/agent-request",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Execution failed.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "connected_app_capability_execution",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeConnectedAppCapability",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "image_to_video",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:image_to_video",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "long_form_multi_scene_video_assembly",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/video-projects",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "\nInvalid `prisma.controlPlaneJob.findMany()` invocation in\nC:\\Users\\digit\\Code\\Amarktai-Network-2\\src\\lib\\control-plane-jobs.ts:234:33\n\n  231 }\n  232 \n  233 export async function listControlPlaneJobs(limit = 100) {\n→ 234   return prisma.controlPlaneJob.findMany(\nerror: Environment variable not found: DATABASE_URL.\n  -->  schema.prisma:7\n   | \n 6 |   provider = \"mysql\"\n 7 |   url      = env(\"DATABASE_URL\")\n   | \n\nValidation Error Count: 1",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "avatar_library_avatar_image_generation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:avatar_generation",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "talking_avatar_video",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "talking-avatar video",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "avatar_video hard-stops with NEEDS_CONFIGURATION; no approved lip-sync adapter is wired.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "adult_media_policy_gated_generation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:adult_image",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "\nInvalid `prisma.appAiProfile.findUnique()` invocation in\nC:\\Users\\digit\\Code\\Amarktai-Network-2\\src\\lib\\adult-app-capabilities.ts:46:41\n\n  43 \n  44 export async function getAdultAppCapabilityProfile(appSlug: string): Promise<AdultAppCapabilityProfile> {\n  45   await loadGlobalAdultModeFromDB()\n→ 46   const row = await prisma.appAiProfile.findUnique(\nerror: Environment variable not found: DATABASE_URL.\n  -->  schema.prisma:7\n   | \n 6 |   provider = \"mysql\"\n 7 |   url      = env(\"DATABASE_URL\")\n   | \n\nValidation Error Count: 1",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "provider_auto_selection",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:chat",
+      "status": "NOT_WIRED_WITH_EXACT_FILE_AND_FIX",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts"
+    },
+    {
+      "capabilityId": "provider_fallback",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapabilityOrchestration fallback loop",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "strict_provider_proof_mode",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "route_outcome_logging",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "logRouteOutcome/capability-tracing",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment.",
+      "sourceFileResponsible": null
+    },
+    {
+      "capabilityId": "worker_job_retry_and_polling_completion",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/brain/media-jobs/[jobId] + control-plane-jobs",
+      "status": "BLOCKED_WITH_EXACT_PROVIDER_ERROR",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Polling and retry code is wired, but live proof requires an actual queued async provider job plus Redis/BullMQ and media job persistence in the target environment.",
+      "sourceFileResponsible": null
+    }
+  ],
+  "summary": {
+    "liveProven": 0,
+    "blocked": 10,
+    "notWired": 15
+  },
+  "nextVpsCommand": "DATABASE_URL=\"<production mysql url>\" npx tsx scripts/v1-25-capability-proof.ts"
+}

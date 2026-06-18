@@ -161,6 +161,13 @@ export interface GenXStatus {
   modelCount?: number
 }
 
+export interface GenXCatalogDiagnostics {
+  endpoint: string | null
+  attempted: string[]
+  lastStatus: number | null
+  lastBody: string | null
+}
+
 // ── Known GenX model catalog (static fallback when live catalog unavailable) ──
 
 /** Known GenX text / code / reasoning models (static fallback — 21 models aligned with 58-model catalog) */
@@ -485,6 +492,12 @@ export async function getGenXStatusAsync(): Promise<GenXStatus> {
 let _modelCache: GenXModel[] | null = null
 let _modelCacheAge = 0
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000
+let _catalogDiagnostics: GenXCatalogDiagnostics = {
+  endpoint: null,
+  attempted: [],
+  lastStatus: null,
+  lastBody: null,
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -592,21 +605,47 @@ export async function listGenXModels(): Promise<GenXModel[]> {
   if (_modelCache && now - _modelCacheAge < MODEL_CACHE_TTL_MS) return _modelCache
 
   try {
-    const res = await fetch(`${profile.baseUrl}${profile.catalogPath}`, {
-      headers: await buildHeaders(),
-      signal: AbortSignal.timeout(GENX_TIMEOUT),
-    })
-    if (!res.ok) return _modelCache ?? []
-    const data = await res.json() as unknown
-    const models = extractModelList(data)
-      .map(normaliseModel)
-      .filter((model): model is GenXModel => model !== null)
+    const headers = await buildHeaders()
+    const attempts = [
+      `${profile.baseUrl}${profile.catalogPath}`,
+      ...['text', 'image', 'video', 'voice', 'audio', 'transcription'].map(
+        (category) => `${profile.baseUrl}${profile.catalogPath}?category=${encodeURIComponent(category)}`,
+      ),
+    ]
+    const combined = new Map<string, GenXModel>()
+    _catalogDiagnostics = {
+      endpoint: `${profile.baseUrl}${profile.catalogPath}`,
+      attempted: attempts,
+      lastStatus: null,
+      lastBody: null,
+    }
+    for (const url of attempts) {
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(GENX_TIMEOUT),
+      })
+      const bodyText = await res.text().catch(() => '')
+      _catalogDiagnostics.lastStatus = res.status
+      _catalogDiagnostics.lastBody = bodyText.slice(0, 1000) || null
+      if (!res.ok) continue
+      const data = JSON.parse(bodyText) as unknown
+      for (const model of extractModelList(data)
+        .map(normaliseModel)
+        .filter((entry): entry is GenXModel => entry !== null)) {
+        combined.set(model.id, model)
+      }
+    }
+    const models = [...combined.values()]
     _modelCache = models
     _modelCacheAge = now
     return models
   } catch {
     return _modelCache ?? []
   }
+}
+
+export function getGenXCatalogDiagnostics(): GenXCatalogDiagnostics {
+  return _catalogDiagnostics
 }
 
 // ── Policy-Driven Model Selection ─────────────────────────────────────────────

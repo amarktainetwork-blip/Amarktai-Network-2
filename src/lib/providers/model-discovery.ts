@@ -1,4 +1,5 @@
 import { discoverProvider, type ProviderDiscoveryOptions } from './provider-discovery'
+import { resolveCanonicalCapability } from './capability-registry'
 import { PROVIDER_TRUTH } from './provider-truth'
 import type {
   CapabilityId,
@@ -36,26 +37,42 @@ export function modelsForCapability(
   snapshot: ProviderDiscoverySnapshot,
   capability: CapabilityId,
 ): DiscoveredModel[] {
+  const normalizedCapability = resolveCanonicalCapability(capability) ?? capability
   const available = snapshot.models.filter((model) => model.status !== 'unavailable')
-  const modelEvidence = available.filter((model) => model.capabilities.includes(capability))
+  const modelEvidence = available.filter((model) =>
+    model.capabilities.includes(capability) || model.capabilities.includes(normalizedCapability),
+  )
   if (modelEvidence.length > 0) return modelEvidence
 
   const provider = PROVIDER_TRUTH.find((entry) => entry.id === snapshot.provider)
   if (
     snapshot.status !== 'ready'
-    || !provider?.capabilities.includes(capability)
+    || !provider?.capabilities.includes(normalizedCapability)
   ) return []
 
-  return available
-    .filter((model) => model.capabilities.length === 0)
-    .map((model) => ({
-      ...model,
-      capabilities: [capability],
-      capabilityEvidence: 'provider_contract' as const,
-      raw: {
-        ...model.raw,
-        capability_evidence: 'provider_contract',
-        capability_contract: capability,
-      },
-    }))
+  const contractEligible = available.filter((model) =>
+    model.capabilities.length === 0
+    && providerContractEligible(snapshot.provider, normalizedCapability),
+  )
+
+  return contractEligible.map((model) => ({
+    ...model,
+    capabilities: [normalizedCapability],
+    capabilityEvidence: 'provider_contract' as const,
+    raw: {
+      ...model.raw,
+      capability_evidence: 'provider_contract',
+      capability_contract: normalizedCapability,
+    },
+  }))
+}
+
+function providerContractEligible(provider: ProviderId, capability: CapabilityId) {
+  if (provider === 'huggingface') return false
+  if (provider === 'groq') return ['chat', 'reasoning', 'coding'].includes(capability)
+  if (provider === 'mimo') return ['chat', 'reasoning', 'coding', 'tts'].includes(capability)
+  if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings'].includes(capability)
+  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'embeddings', 'rerank', 'agents'].includes(capability)
+  if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'music', 'tts'].includes(capability)
+  return false
 }

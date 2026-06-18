@@ -1,7 +1,10 @@
 import {
   GENX_AUDIO_MODELS,
+  GENX_I2V_MODELS,
   GENX_IMAGE_MODELS,
+  GENX_STT_MODELS,
   GENX_TTS_MODELS,
+  GENX_VIDEO_MODELS,
   normalizeGenXBaseUrl,
 } from '@/lib/genx-client'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
@@ -72,15 +75,29 @@ const TASK_CAPABILITY_MAP: Readonly<Record<string, CapabilityId[]>> = {
   'visual-question-answering': ['vision'],
   'document-question-answering': ['documents', 'ocr'],
   'text-to-image': ['image'],
+  'text_to_image': ['image'],
+  image_generation: ['image'],
   'image-to-image': ['image_edit'],
+  'image_to_image': ['image_edit'],
+  image_text_to_image: ['image_edit'],
   'text-to-video': ['video'],
+  'text_to_video': ['video'],
+  video_generation: ['video'],
   'image-to-video': ['image_to_video'],
+  image_text_to_video: ['image_to_video'],
   'text-to-audio': ['music'],
   'text-to-speech': ['tts'],
+  text_to_speech: ['tts'],
   'automatic-speech-recognition': ['stt'],
+  speech_to_text: ['stt'],
+  'speech-to-text': ['stt'],
+  stt: ['stt'],
+  tts: ['tts'],
   'feature-extraction': ['embeddings'],
+  feature_extraction: ['embeddings'],
   'sentence-similarity': ['embeddings'],
   'text-ranking': ['rerank'],
+  text_ranking: ['rerank'],
   translation: ['translation'],
   'tool-calling': ['agents'],
   'chat-completion': ['chat'],
@@ -173,20 +190,15 @@ export async function discoverProvider(
   }
 
   try {
-    const response = await (options.fetcher ?? fetch)(endpoint, {
-      headers: credentialResult.key
-        ? {
-            [provider.auth.header]: `${provider.auth.prefix}${credentialResult.key}`,
-            Accept: 'application/json',
-          }
-        : { Accept: 'application/json' },
-      signal: AbortSignal.timeout(10_000),
-    })
-    if (!response.ok) {
-      throw new Error(`Discovery returned HTTP ${response.status}.`)
-    }
-    const payload = await response.json() as unknown
-    const records = modelRecords(payload)
+    const headers = credentialResult.key
+      ? {
+          [provider.auth.header]: `${provider.auth.prefix}${credentialResult.key}`,
+          Accept: 'application/json',
+        }
+      : { Accept: 'application/json' }
+    const records = providerId === 'genx'
+      ? await fetchGenxCategoryRecords(endpoint, headers, options.fetcher ?? fetch)
+      : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
     const models = records
       .map((record) => normalizeModel(provider, record, discoveredAt))
       .filter((model): model is DiscoveredModel => Boolean(model))
@@ -401,16 +413,21 @@ function normalizeModel(
     ...tasks,
     firstString(record.display_name, record.displayName, record.description) ?? '',
   ].join(' ').toLowerCase()
+  const taskCapabilities = tasks.flatMap((task) => TASK_CAPABILITY_MAP[task.toLowerCase()] ?? [])
+  const inferredContractCapabilities = inferProviderContractCapabilities(provider.id, id, descriptor, record)
   const capabilities = [...new Set([
-    ...tasks.flatMap((task) => TASK_CAPABILITY_MAP[task.toLowerCase()] ?? []),
-    ...descriptorCapabilities(descriptor),
+    ...taskCapabilities,
+    ...descriptorCapabilities(provider.id, id, descriptor),
+    ...(taskCapabilities.length === 0 ? inferredContractCapabilities : []),
   ])]
   const pricing = isRecord(record.pricing) ? Object.values(record.pricing) : []
   return {
     provider: provider.id,
     id,
     capabilities,
-    capabilityEvidence: capabilities.length > 0 ? 'model_metadata' : 'unknown',
+    capabilityEvidence: taskCapabilities.length > 0 || descriptorCapabilities(provider.id, id, descriptor).length > 0
+      ? 'model_metadata'
+      : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown',
     status: availability(record),
     speed: metric(record.speed, record.latency_score),
     quality: metric(record.quality, record.quality_score),
@@ -427,29 +444,249 @@ function normalizeModel(
   }
 }
 
-function descriptorCapabilities(descriptor: string): CapabilityId[] {
+async function fetchDiscoveryRecords(
+  endpoint: string,
+  headers: Record<string, string>,
+  fetcher: FetchLike,
+) {
+  const response = await fetcher(endpoint, {
+    headers,
+    signal: AbortSignal.timeout(10_000),
+  })
+  if (!response.ok) throw new Error(`Discovery returned HTTP ${response.status}.`)
+  return modelRecords(await response.json() as unknown)
+}
+
+async function fetchGenxCategoryRecords(
+  endpoint: string,
+  headers: Record<string, string>,
+  fetcher: FetchLike,
+) {
+  const urls = [
+    endpoint,
+    `${endpoint}?category=text`,
+    `${endpoint}?category=image`,
+    `${endpoint}?category=video`,
+    `${endpoint}?category=voice`,
+    `${endpoint}?category=audio`,
+    `${endpoint}?category=transcription`,
+  ]
+  const records = new Map<string, Record<string, unknown>>()
+  let lastError: Error | null = null
+  for (const url of urls) {
+    try {
+      for (const record of await fetchDiscoveryRecords(url, headers, fetcher)) {
+        const id = firstString(record.id, record.model, record.modelId, record.name)
+        if (id) records.set(id, record)
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('GenX discovery failed.')
+    }
+  }
+  if (records.size === 0 && lastError) throw lastError
+  return [...records.values()]
+}
+
+function descriptorCapabilities(providerId: ProviderId, modelId: string, descriptor: string): CapabilityId[] {
+  const lowerModelId = modelId.toLowerCase()
   const capabilities = new Set<CapabilityId>()
   const add = (capability: CapabilityId, pattern: RegExp) => {
-    if (pattern.test(descriptor)) capabilities.add(capability)
+    if (pattern.test(descriptor) || pattern.test(lowerModelId)) capabilities.add(capability)
   }
-  add('stt', /\b(stt|asr|whisper|transcri(?:be|ption)|speech[-_\s]?to[-_\s]?text)\b/i)
-  add('tts', /\b(tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]?(?:generation|synthesis))\b/i)
-  add('embeddings', /\b(embed(?:ding|dings)?|feature[-_\s]?extraction)\b/i)
-  add('rerank', /\b(re[-_\s]?rank(?:er|ing)?|text[-_\s]?ranking)\b/i)
-  add('image_edit', /\b(image[-_\s]?(?:edit|editing|inpaint)|inpainting)\b/i)
-  add('image_to_video', /\b(image[-_\s]?to[-_\s]?video|i2v)\b/i)
-  add('video', /\b(video|text[-_\s]?to[-_\s]?video|t2v)\b/i)
-  add('image', /\b(image|text[-_\s]?to[-_\s]?image|diffusion)\b/i)
-  add('vision', /\b(vision|visual|multimodal|image[-_\s]?text|(?:^|[-_/])vl(?:[-_/]|$))\b/i)
-  add('ocr', /\bocr\b/i)
-  add('music', /\b(music|text[-_\s]?to[-_\s]?audio)\b/i)
-  add('translation', /\btranslat(?:e|ion)\b/i)
-  add('coding', /\b(code|coder|coding)\b/i)
-  add('reasoning', /\b(reason(?:ing)?|think(?:ing)?)\b/i)
-  add('agents', /\b(agent|tool[-_\s]?calling|compound)\b/i)
-  add('chat', /\b(chat|instruct|language|llm|text[-_\s]?generation|completion)\b/i)
+  if (providerId === 'huggingface') {
+    add('image', /\b(text[-_\s]?to[-_\s]?image|diffusion|sdxl|stable[-_\s]?diffusion|flux|pixart|kolors|recraft)\b/i)
+    add('image_edit', /\b(image[-_\s]?to[-_\s]?image|image[-_\s]?(?:edit|editing)|inpaint(?:ing)?)\b/i)
+    add('image_to_video', /\b(image[-_\s]?to[-_\s]?video|i2v)\b/i)
+    add('video', /\b(text[-_\s]?to[-_\s]?video|video|wan|cogvideo|mochi|ltx[-_\s]?video|hunyuanvideo)\b/i)
+    add('tts', /\b(text[-_\s]?to[-_\s]?speech|tts|mms[-_]?tts|bark|speech[-_\s]synthesis)\b/i)
+    add('stt', /\b(automatic[-_\s]?speech[-_\s]?recognition|asr|whisper|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
+    add('embeddings', /\b(feature[-_\s]?extraction|embedding|sentence[-_\s]?transformers|mini?lm|bge|gte|e5)\b/i)
+    add('rerank', /\b(text[-_\s]?ranking|rerank(?:er|ing)?|bge[-_\s]?reranker)\b/i)
+  } else if (providerId === 'qwen') {
+    add('image', /\b(qwen-image|wanx.*(?:t2i|image)|text2image|image[-_\s]synthesis)\b/i)
+    add('video', /\b(wan.*t2v|video[-_\s]synthesis|text[-_\s]?to[-_\s]?video)\b/i)
+    add('image_to_video', /\b(wan.*i2v|image[-_\s]?to[-_\s]?video|i2v)\b/i)
+    add('tts', /\bqwen3-tts\b/i)
+    add('stt', /\bqwen3-asr\b/i)
+    add('embeddings', /\b(embed(?:ding)?|text[-_\s]?embedding)\b/i)
+  } else if (providerId === 'together') {
+    add('image', /\b(flux|recraft|stable[-_\s]?diffusion|playground|image)\b/i)
+    add('video', /\b(video|kling|wan|seedance|mochi|hunyuanvideo|luma|minimax\/)\b/i)
+    add('image_to_video', /\b(i2v|image[-_\s]?to[-_\s]?video)\b/i)
+    add('tts', /\b(orpheus|tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]synthesis)\b/i)
+    add('stt', /\b(whisper|asr|transcri(?:be|ption))\b/i)
+    add('embeddings', /\b(embedding|jina-embeddings|bge|e5)\b/i)
+    add('rerank', /\b(rerank(?:er|ing)?|text[-_\s]?ranking)\b/i)
+  } else if (providerId === 'groq') {
+    add('tts', /\b(orpheus|tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]synthesis)\b/i)
+    add('stt', /\b(whisper|asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
+  } else if (providerId === 'mimo') {
+    add('tts', /\b(tts|speech[-_\s]generation|text[-_\s]?to[-_\s]?speech|voice)\b/i)
+    add('stt', /\b(asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption)|whisper)\b/i)
+  } else if (providerId === 'genx') {
+    add('image', /\b(image|recraft|banana|grok[-_]?imagine)\b/i)
+    add('video', /\b(video|veo|kling|seedance|pixverse)\b/i)
+    add('image_to_video', /\b(i2v|image[-_\s]?to[-_\s]?video)\b/i)
+    add('tts', /\b(tts|aura|voice)\b/i)
+    add('stt', /\b(stt|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
+    add('music', /\b(music|audio|lyria)\b/i)
+  }
+
+  if (!capabilities.has('tts') && !capabilities.has('stt')) {
+    add('translation', /\btranslat(?:e|ion)\b/i)
+    add('coding', /\b(code|coder|coding)\b/i)
+    add('reasoning', /\b(reason(?:ing)?|think(?:ing)?|r1)\b/i)
+    add('agents', /\b(agent|tool[-_\s]?calling|compound)\b/i)
+    if (!isAudioModel(providerId, lowerModelId) && !isMediaModel(providerId, lowerModelId)) {
+      add('chat', /\b(chat|instruct|language|llm|text[-_\s]?generation|completion|assistant)\b/i)
+    }
+  }
+
+  if (providerId !== 'groq' || capabilities.has('stt') || capabilities.has('tts') || capabilities.has('vision')) {
+    add('vision', /\b(vision|visual|multimodal|image[-_\s]?text|(?:^|[-_/])vl(?:[-_/]|$))\b/i)
+    add('ocr', /\bocr\b/i)
+    if ((providerId === 'huggingface' || providerId === 'groq') && /\b(image[-_\s]?text[-_\s]?to[-_\s]?text|image[-_\s]?to[-_\s]?text|visual)\b/i.test(descriptor)) {
+      capabilities.add('image')
+    }
+  }
   return [...capabilities]
 }
+
+function inferProviderContractCapabilities(
+  providerId: ProviderId,
+  modelId: string,
+  descriptor: string,
+  record: Record<string, unknown>,
+): CapabilityId[] {
+  const lowerModelId = modelId.toLowerCase()
+  const category = firstString(record.category, record.type)?.toLowerCase() ?? ''
+
+  if (providerId === 'genx') {
+    const capabilities = new Set<CapabilityId>()
+    if (GENX_IMAGE_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'image') capabilities.add('image')
+    if (GENX_VIDEO_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'video') capabilities.add('video')
+    if (GENX_I2V_MODELS.some((entry) => entry.toLowerCase() === lowerModelId)) capabilities.add('image_to_video')
+    if (GENX_AUDIO_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'audio') capabilities.add('music')
+    if (GENX_TTS_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'voice') capabilities.add('tts')
+    if (GENX_STT_MODELS.some((entry) => entry.toLowerCase() === lowerModelId) || category === 'transcription') capabilities.add('stt')
+    if (category === 'text' || (!capabilities.size && GENX_TEXT_HINT.test(descriptor))) {
+      capabilities.add('chat')
+      if (/code|coder|codex/.test(descriptor)) capabilities.add('coding')
+      if (/reason|think/.test(descriptor)) capabilities.add('reasoning')
+    }
+    return [...capabilities]
+  }
+
+  if (providerId === 'qwen') return providerContractFromPatterns(lowerModelId, descriptor, {
+    image: [/qwen-image/, /wanx.*(?:t2i|image)/],
+    video: [/wan.*t2v/, /video[-_\s]?synthesis/],
+    image_to_video: [/wan.*i2v/, /image[-_\s]?to[-_\s]?video/, /\bi2v\b/],
+    tts: [/qwen3-tts/],
+    stt: [/qwen3-asr/],
+    embeddings: [/embed(?:ding)?/, /text[-_\s]?embedding/],
+    translation: [/translat/],
+    chat: [/qwen[-_].*(turbo|plus|max|chat|instruct)/, /deepseek/],
+    reasoning: [/qwen[-_].*(plus|max|reason)/, /deepseek[-_/].*r1/],
+    coding: [/coder/, /code/],
+  })
+
+  if (providerId === 'together') return providerContractFromPatterns(lowerModelId, descriptor, {
+    image: [/flux/, /recraft/, /stable[-_]?diffusion/, /playground/, /seedream/, /image/],
+    video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /luma/, /minimax\//],
+    image_to_video: [/\bi2v\b/, /image[-_\s]?to[-_\s]?video/],
+    tts: [/orpheus/, /\btts\b/, /speech/],
+    stt: [/whisper/, /\basr\b/, /transcri/],
+    embeddings: [/embedding/, /jina-embeddings/, /bge/, /\be5\b/],
+    rerank: [/rerank/, /text[-_\s]?ranking/],
+    chat: [/llama/, /mistral/, /qwen/, /gemma/, /chat/, /instruct/],
+    reasoning: [/reason/, /deepseek.*r1/],
+    coding: [/coder/, /code/],
+  })
+
+  if (providerId === 'groq') return providerContractFromPatterns(lowerModelId, descriptor, {
+    tts: [/orpheus/, /\btts\b/, /speech/],
+    stt: [/whisper/, /\basr\b/, /transcri/],
+    chat: [/llama/, /gemma/, /qwen/, /chat/, /instruct/, /versatile/],
+    reasoning: [/reason/, /deepseek.*r1/],
+    coding: [/coder/, /code/],
+  }, { excludeTextIfMatched: ['tts', 'stt'] })
+
+  if (providerId === 'mimo') return providerContractFromPatterns(lowerModelId, descriptor, {
+    tts: [/\btts\b/, /speech/, /voice/],
+    stt: [/\basr\b/, /transcri/, /speech[-_\s]?to[-_\s]?text/, /whisper/],
+    chat: [/mimo-v/, /chat/, /instruct/],
+    reasoning: [/reason/],
+    coding: [/coder/, /code/],
+  }, { excludeTextIfMatched: ['tts', 'stt'] })
+
+  if (providerId === 'huggingface') return providerContractFromPatterns(lowerModelId, descriptor, {
+    image: [/flux/, /stable[-_]?diffusion/, /sdxl/, /pixart/, /kolors/, /recraft/],
+    image_edit: [/inpaint/, /image[-_]?edit/],
+    video: [/wan/, /cogvideo/, /mochi/, /ltx[-_]?video/, /hunyuanvideo/, /text[-_\s]?to[-_\s]?video/],
+    image_to_video: [/\bi2v\b/, /image[-_\s]?to[-_\s]?video/],
+    tts: [/mms-tts/, /\btts\b/, /bark/],
+    stt: [/whisper/, /\basr\b/, /transcri/],
+    embeddings: [/sentence-transformers/, /embedding/, /mini?lm/, /bge/, /gte/, /\be5\b/],
+    rerank: [/rerank/, /text[-_\s]?ranking/, /bge[-_]?reranker/],
+    documents: [/document[-_]?question[-_]?answering/],
+    translation: [/translat/],
+    vision: [/vision/, /visual/, /image[-_\s]?text/, /(?:^|[-_/])vl(?:[-_/]|$)/],
+    ocr: [/ocr/],
+    chat: [/llama/, /mistral/, /gemma/, /chat/, /instruct/],
+    reasoning: [/reason/, /deepseek.*r1/],
+    coding: [/coder/, /code/],
+  }, { excludeTextIfMatched: ['image', 'image_edit', 'video', 'image_to_video', 'tts', 'stt', 'embeddings', 'rerank', 'documents', 'translation', 'vision', 'ocr'] })
+
+  return []
+}
+
+function providerContractFromPatterns(
+  modelId: string,
+  descriptor: string,
+  patterns: Partial<Record<CapabilityId, RegExp[]>>,
+  options: { excludeTextIfMatched?: CapabilityId[] } = {},
+): CapabilityId[] {
+  const matched = new Set<CapabilityId>()
+  for (const [capability, matchers] of Object.entries(patterns) as Array<[CapabilityId, RegExp[] | undefined]>) {
+    if (matchers?.some((pattern) => pattern.test(modelId) || pattern.test(descriptor))) {
+      matched.add(capability)
+    }
+  }
+  if (options.excludeTextIfMatched?.some((capability) => matched.has(capability))) {
+    matched.delete('chat')
+    matched.delete('reasoning')
+    matched.delete('coding')
+  }
+  return [...matched]
+}
+
+function isAudioModel(providerId: ProviderId, modelId: string) {
+  return providerContractFromPatterns(modelId, modelId, providerId === 'groq'
+    ? { tts: [/orpheus/, /tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]synthesis/], stt: [/whisper/, /asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/] }
+    : providerId === 'mimo'
+      ? { tts: [/tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]generation/, /voice/], stt: [/asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/, /whisper/] }
+      : providerId === 'qwen'
+        ? { tts: [/qwen3-tts/], stt: [/qwen3-asr/] }
+        : providerId === 'together'
+          ? { tts: [/orpheus/, /tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]synthesis/], stt: [/whisper/, /asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/] }
+          : providerId === 'huggingface'
+            ? { tts: [/mms-tts/, /tts/, /bark/, /text[-_\s]?to[-_\s]?speech/], stt: [/whisper/, /asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/] }
+            : { tts: [/tts/, /voice/], stt: [/stt/, /transcri/] }).length > 0
+}
+
+function isMediaModel(providerId: ProviderId, modelId: string) {
+  return providerContractFromPatterns(modelId, modelId, providerId === 'qwen'
+    ? { image: [/qwen-image/, /wanx.*(?:t2i|image)/], video: [/wan.*t2v/], image_to_video: [/wan.*i2v/] }
+    : providerId === 'together'
+      ? { image: [/flux/, /recraft/, /stable[-_]?diffusion/, /image/], video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /minimax\//], image_to_video: [/i2v/] }
+      : providerId === 'huggingface'
+        ? { image: [/flux/, /stable[-_]?diffusion/, /sdxl/, /pixart/, /kolors/, /recraft/], video: [/wan/, /cogvideo/, /mochi/, /ltx[-_]?video/, /hunyuanvideo/], image_to_video: [/i2v/] }
+        : providerId === 'genx'
+          ? { image: [/image/, /recraft/, /banana/, /imagine/], video: [/video/, /veo/, /kling/, /seedance/, /pixverse/], image_to_video: [/i2v/] }
+          : {}).length > 0
+}
+
+const GENX_TEXT_HINT = /\b(gpt|claude|gemini|grok|chat|text|language|codex|coder|reason)\b/i
 
 function readEndpointEnv(envName: string | null): string[] {
   if (!envName) return []
