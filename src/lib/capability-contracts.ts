@@ -91,6 +91,8 @@ export interface CapabilityResponse {
   outputType: string
   output: string | null
   artifactUrl?: string | null
+  previewUrl?: string | null
+  downloadUrl?: string | null
   providerJobId?: string | null
   jobId?: string
   pollUrl?: string | null

@@ -266,6 +266,10 @@ export function localMediaJobResponse(job: LocalMediaJob) {
   const completed = job.status === 'completed' && Boolean(job.artifactId && (job.storageUrl || job.mediaUrl))
   const trackable = job.status === 'queued' || job.status === 'processing'
   const pollUrl = `/api/brain/media-jobs/${job.id}`
+  const artifactUrl = job.artifactId ? `/api/admin/artifacts/${encodeURIComponent(job.artifactId)}/download` : null
+  const previewUrl = completed ? artifactUrl : null
+  const downloadUrl = completed ? artifactUrl : null
+  const playableUrl = completed ? (artifactUrl ?? job.mediaUrl ?? job.storageUrl) : null
   return {
     success: completed || trackable,
     executed: completed || trackable,
@@ -278,12 +282,15 @@ export function localMediaJobResponse(job: LocalMediaJob) {
     providerJobId: job.providerJobId,
     pollUrl,
     artifactId: job.artifactId,
+    artifactUrl,
+    previewUrl,
+    downloadUrl,
     storageUrl: job.storageUrl,
-    mediaUrl: job.mediaUrl,
-    imageUrl: job.type === 'image' ? job.mediaUrl : null,
-    audioUrl: job.type === 'audio' || job.type === 'music' ? job.mediaUrl : null,
-    musicUrl: job.type === 'music' ? job.mediaUrl : null,
-    videoUrl: job.type === 'video' ? job.mediaUrl : null,
+    mediaUrl: playableUrl,
+    imageUrl: job.type === 'image' ? playableUrl : null,
+    audioUrl: job.type === 'audio' || job.type === 'music' ? playableUrl : null,
+    musicUrl: job.type === 'music' ? playableUrl : null,
+    videoUrl: job.type === 'video' ? playableUrl : null,
     error: job.error,
     blocker: job.error,
     createdAt: job.createdAt,

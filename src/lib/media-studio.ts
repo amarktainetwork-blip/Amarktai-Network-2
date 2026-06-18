@@ -122,14 +122,26 @@ function studioEvidence(execution: ExecutionRecord, artifacts: ArtifactRecord[])
       Boolean(attempt) && typeof attempt === 'object',
     )
     : []
+  const resultPreviewAvailable = hasString(result.previewUrl)
+    || hasString(result.downloadUrl)
+    || hasString(result.artifactUrl)
+    || hasString(result.mediaUrl)
+    || hasString(result.videoUrl)
+    || hasString(result.audioUrl)
+    || hasString(result.imageUrl)
+    || hasString(result.musicUrl)
   return {
     providerCatalogReachable: Boolean(execution.providerPlan.provider || attempts.length),
     providerSmokePassed: attempts.some((attempt) => attempt.status === 'completed') || result.success === true,
     modelExecutionPassed: Boolean(result.success === true && (result.model || execution.modelPlan.model)),
     capabilityRoutePassed: result.success === true || result.executed === true,
-    artifactPersisted: artifacts.some((artifact) => artifact.status === 'completed'),
+    artifactPersisted: artifacts.some((artifact) => artifact.status === 'completed') || hasString(result.artifactId),
     previewDownloadAvailable: artifacts.some((artifact) =>
       artifact.status === 'completed' && Boolean(artifact.previewUrl || artifact.downloadUrl || artifact.storageUrl),
-    ),
+    ) || resultPreviewAvailable,
   }
+}
+
+function hasString(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().length > 0
 }

@@ -222,8 +222,11 @@ async function dispatchStudio(
     ...result,
     executed: result.success,
     jobStatus: result.status ?? (result.success ? 'completed' : 'failed'),
-    storageUrl: result.artifactUrl,
-    mediaUrl: result.output?.startsWith('https://') ? result.output : undefined,
+    artifactUrl: result.artifactUrl,
+    previewUrl: result.previewUrl ?? result.artifactUrl,
+    downloadUrl: result.downloadUrl ?? result.artifactUrl,
+    storageUrl: result.storageUrl ?? result.artifactUrl,
+    mediaUrl: result.mediaUrl ?? (typeof result.output === 'string' && /^https?:\/\//i.test(result.output) ? result.output : undefined),
     providerAttempts: result.providerAttempts ?? [],
   }, {
     status: result.status === 'processing'

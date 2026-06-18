@@ -1,3 +1,4 @@
+import './load-repo-env'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { getMeshCredential } from '@/lib/provider-mesh-status'
@@ -52,6 +53,10 @@ type ProviderDiscoveryResult = {
   rawCatalogCount: number
   modelCount: number
   executableCandidateCount: number
+  executableModels: number
+  catalogOnlyModels: number
+  requiresDedicatedEndpointModels: number
+  adultGatedModels: number
   chatModels: number
   reasoningModels: number
   codingModels: number
@@ -113,6 +118,8 @@ async function main() {
       hasDatabaseUrl: Boolean(process.env.DATABASE_URL?.trim()),
       appSlug: APP_SLUG,
       connectedAppSecretPresent: Boolean(CONNECTED_APP_SECRET),
+      envLoader: 'scripts/load-repo-env.ts',
+      envFilesLoaded: globalThis.__AMARKTAI_LOADED_ENV_FILES__ ?? [],
     },
     providerKeyPath: providerKeyResults,
     providerDiscovery: providerDiscoveryResults,
@@ -261,6 +268,10 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
         rawCatalogCount: snapshot.rawCatalogCount ?? snapshot.models.length,
         modelCount: snapshot.models.length,
         executableCandidateCount: executableCandidateCount(snapshot),
+        executableModels: snapshot.models.filter((model) => model.metadata?.executable === true || model.metadata?.executable === 'candidate').length,
+        catalogOnlyModels: snapshot.models.filter((model) => model.metadata?.executable === 'CATALOG_ONLY').length,
+        requiresDedicatedEndpointModels: snapshot.models.filter((model) => model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT').length,
+        adultGatedModels: snapshot.models.filter((model) => model.metadata?.adultGate === true).length,
         chatModels: modelsForCapability(snapshot, 'chat').length,
         reasoningModels: modelsForCapability(snapshot, 'reasoning').length,
         codingModels: modelsForCapability(snapshot, 'coding').length,
@@ -293,6 +304,10 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
         rawCatalogCount: 0,
         modelCount: 0,
         executableCandidateCount: 0,
+        executableModels: 0,
+        catalogOnlyModels: 0,
+        requiresDedicatedEndpointModels: 0,
+        adultGatedModels: 0,
         chatModels: 0,
         reasoningModels: 0,
         codingModels: 0,
@@ -473,6 +488,10 @@ function timedOutProviderDiscovery(provider: keyof typeof PROVIDER_KEY_ENVS): Pr
     rawCatalogCount: 0,
     modelCount: 0,
     executableCandidateCount: 0,
+    executableModels: 0,
+    catalogOnlyModels: 0,
+    requiresDedicatedEndpointModels: 0,
+    adultGatedModels: 0,
     chatModels: 0,
     reasoningModels: 0,
     codingModels: 0,
@@ -889,7 +908,13 @@ function mdCell(value: unknown): string {
 
 function renderMarkdown(report: {
   generatedAt: string
-  environment: { hasDatabaseUrl: boolean; appSlug: string; connectedAppSecretPresent: boolean }
+  environment: {
+    hasDatabaseUrl: boolean
+    appSlug: string
+    connectedAppSecretPresent: boolean
+    envLoader?: string
+    envFilesLoaded?: string[]
+  }
   providerKeyPath: ProviderKeyResult[]
   providerDiscovery: ProviderDiscoveryResult[]
   modelSmokeProofs: ModelSmokeProof[]
@@ -903,6 +928,8 @@ function renderMarkdown(report: {
     `Generated: ${report.generatedAt}`,
     '',
     `Database available locally: ${report.environment.hasDatabaseUrl ? 'yes' : 'no'}`,
+    `Env loader: ${report.environment.envLoader ?? 'none'}`,
+    `Env files loaded: ${(report.environment.envFilesLoaded ?? []).join(', ') || 'none'}`,
     `Proof app slug: ${report.environment.appSlug}`,
     `Connected-app secret present locally: ${report.environment.connectedAppSecretPresent ? 'yes' : 'no'}`,
     '',
@@ -922,9 +949,9 @@ function renderMarkdown(report: {
     '',
     '## Provider Discovery',
     '',
-    '| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |',
-    '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
-    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${mdCell(entry.credentialEnvNames.join('<br>'))} | ${mdCell(entry.catalogEndpoint)} | ${entry.status} | ${entry.discoverySource} | ${entry.rawCatalogCount} | ${entry.modelCount} | ${entry.executableCandidateCount} | ${entry.chatModels} | ${entry.reasoningModels} | ${entry.codingModels} | ${entry.imageModels} | ${entry.imageEditModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.musicModels} | ${entry.avatarModels} | ${entry.adultImageModels} | ${mdCell(entry.executableBlocker ?? entry.error)} |`),
+    '| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Executable models | Catalog-only | Dedicated endpoint | Adult-gated | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |',
+    '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+    ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${mdCell(entry.credentialEnvNames.join('<br>'))} | ${mdCell(entry.catalogEndpoint)} | ${entry.status} | ${entry.discoverySource} | ${entry.rawCatalogCount} | ${entry.modelCount} | ${entry.executableCandidateCount} | ${entry.executableModels} | ${entry.catalogOnlyModels} | ${entry.requiresDedicatedEndpointModels} | ${entry.adultGatedModels} | ${entry.chatModels} | ${entry.reasoningModels} | ${entry.codingModels} | ${entry.imageModels} | ${entry.imageEditModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.musicModels} | ${entry.avatarModels} | ${entry.adultImageModels} | ${mdCell(entry.executableBlocker ?? entry.error)} |`),
     '',
     '## Model-Level Smoke Proof',
     '',
@@ -957,4 +984,5 @@ void main()
   })
   .finally(async () => {
     await prisma.$disconnect().catch(() => undefined)
+    process.exit(process.exitCode ?? 0)
   })

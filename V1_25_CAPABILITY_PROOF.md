@@ -1,8 +1,10 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T14:48:10.952Z
+Generated: 2026-06-18T15:43:22.712Z
 
 Database available locally: no
+Env loader: scripts/load-repo-env.ts
+Env files loaded: none
 Proof app slug: amarktai-network
 Connected-app secret present locally: no
 
@@ -27,14 +29,14 @@ Connected-app secret present locally: no
 
 ## Provider Discovery
 
-| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |
-|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| mimo | MIMO_API_KEY<br>XIAOMI_API_KEY | https://token-plan-sgp.xiaomimimo.com/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| genx | GENX_API_KEY | https://query.genx.sh/api/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| huggingface | HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN | https://huggingface.co/api/models?limit=100&full=true | ready | public_catalog | 100 | 15 | 13 | 2 | 1 | 1 | 4 | 1 | 3 | 1 | 1 | 1 | 2 | 1 | 1 | 4 | 1 |  |
-| qwen | QWEN_API_KEY<br>DASHSCOPE_API_KEY | https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| together | TOGETHER_API_KEY | https://api.together.ai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
-| groq | GROQ_API_KEY | https://api.groq.com/openai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Executable models | Catalog-only | Dedicated endpoint | Adult-gated | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |
+|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| mimo | MIMO_API_KEY<br>XIAOMI_API_KEY | https://token-plan-sgp.xiaomimimo.com/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| genx | GENX_API_KEY | https://query.genx.sh/api/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| huggingface | HUGGINGFACE_API_KEY<br>HUGGINGFACEHUB_API_TOKEN<br>HF_TOKEN | https://huggingface.co/api/models?limit=100&full=true | ready | public_catalog | 100 | 15 | 13 | 10 | 2 | 3 | 2 | 2 | 1 | 1 | 4 | 1 | 3 | 1 | 1 | 1 | 2 | 1 | 1 | 4 | 1 |  |
+| qwen | QWEN_API_KEY<br>DASHSCOPE_API_KEY | https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| together | TOGETHER_API_KEY | https://api.together.ai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
+| groq | GROQ_API_KEY | https://api.groq.com/openai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
 
 ## Model-Level Smoke Proof
 

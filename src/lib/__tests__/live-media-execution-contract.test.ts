@@ -152,7 +152,10 @@ describe('local media job lifecycle', () => {
       traceId: 'media-job-local-media-job-1',
     }))
     expect(localMediaJobResponse(completed!)).toMatchObject({
-      imageUrl: '/api/admin/artifacts/artifact-1/content',
+      artifactUrl: '/api/admin/artifacts/artifact-1/download',
+      previewUrl: '/api/admin/artifacts/artifact-1/download',
+      downloadUrl: '/api/admin/artifacts/artifact-1/download',
+      imageUrl: '/api/admin/artifacts/artifact-1/download',
       providerJobId: 'provider-job-2',
       pollUrl: '/api/brain/media-jobs/local-media-job-1',
     })
@@ -205,7 +208,10 @@ describe('local media job lifecycle', () => {
     expect(localMediaJobResponse(completed!)).toMatchObject({
       pollUrl: '/api/brain/media-jobs/local-media-job-1',
       providerJobId: 'together-job-2',
-      videoUrl: '/api/admin/artifacts/artifact-together-1/content',
+      artifactUrl: '/api/admin/artifacts/artifact-together-1/download',
+      previewUrl: '/api/admin/artifacts/artifact-together-1/download',
+      downloadUrl: '/api/admin/artifacts/artifact-together-1/download',
+      videoUrl: '/api/admin/artifacts/artifact-together-1/download',
     })
   })
 
@@ -252,6 +258,12 @@ describe('local media job lifecycle', () => {
       status: 'completed',
       artifactId: 'artifact-qwen-1',
       mediaUrl: '/api/admin/artifacts/artifact-qwen-1/content',
+    })
+    expect(localMediaJobResponse(completed!)).toMatchObject({
+      artifactUrl: '/api/admin/artifacts/artifact-qwen-1/download',
+      previewUrl: '/api/admin/artifacts/artifact-qwen-1/download',
+      downloadUrl: '/api/admin/artifacts/artifact-qwen-1/download',
+      videoUrl: '/api/admin/artifacts/artifact-qwen-1/download',
     })
   })
 

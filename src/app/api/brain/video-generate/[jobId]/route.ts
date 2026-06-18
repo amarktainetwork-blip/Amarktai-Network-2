@@ -82,14 +82,14 @@ async function ensureVideoArtifact(job: {
   resultUrl: string | null
   resultMeta: string | null
 }) {
-  if (!job.resultUrl) return { artifactId: null, storageUrl: null, artifactError: null }
+  if (!job.resultUrl) return { artifactId: null, storageUrl: null, artifactUrl: null, previewUrl: null, downloadUrl: null, artifactError: null }
   const traceId = `video-job-${job.id}`
   try {
     const existing = await prisma.artifact.findFirst({
       where: { traceId, type: 'video' },
       select: { id: true, storageUrl: true },
     })
-    if (existing) return { artifactId: existing.id, storageUrl: existing.storageUrl, artifactError: null }
+    if (existing) return artifactReference(existing.id, existing.storageUrl, null)
     const artifact = await createArtifact({
       appSlug: job.appSlug ?? 'amarktai-network',
       executionId: executionIdFor(job.resultMeta),
@@ -107,13 +107,28 @@ async function ensureVideoArtifact(job: {
       allowRemoteReference: true,
       metadata: { capability: capabilityFor(job.resultMeta), jobId: job.id },
     })
-    return { artifactId: artifact.id, storageUrl: artifact.storageUrl, artifactError: null }
+    return artifactReference(artifact.id, artifact.storageUrl, null)
   } catch (error) {
     return {
       artifactId: null,
       storageUrl: null,
+      artifactUrl: null,
+      previewUrl: null,
+      downloadUrl: null,
       artifactError: error instanceof Error ? error.message : 'Video artifact persistence failed.',
     }
+  }
+}
+
+function artifactReference(artifactId: string, storageUrl: string | null, artifactError: string | null) {
+  const downloadUrl = `/api/admin/artifacts/${encodeURIComponent(artifactId)}/download`
+  return {
+    artifactId,
+    storageUrl,
+    artifactUrl: downloadUrl,
+    previewUrl: downloadUrl,
+    downloadUrl,
+    artifactError,
   }
 }
 
@@ -176,9 +191,17 @@ function responsePayload(
     createdAt: Date
     updatedAt: Date
   },
-  artifact = { artifactId: null as string | null, storageUrl: null as string | null, artifactError: null as string | null },
+  artifact = {
+    artifactId: null as string | null,
+    storageUrl: null as string | null,
+    artifactUrl: null as string | null,
+    previewUrl: null as string | null,
+    downloadUrl: null as string | null,
+    artifactError: null as string | null,
+  },
 ) {
   const error = job.errorMessage ?? artifact.artifactError
+  const mediaUrl = artifact.previewUrl ?? artifact.storageUrl ?? job.resultUrl
   return {
     success: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
     executed: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
@@ -187,7 +210,12 @@ function responsePayload(
     model: job.modelId,
     jobStatus: job.status,
     artifactId: artifact.artifactId,
+    artifactUrl: artifact.artifactUrl,
+    previewUrl: artifact.previewUrl,
+    downloadUrl: artifact.downloadUrl,
     storageUrl: artifact.storageUrl ?? job.resultUrl,
+    mediaUrl,
+    videoUrl: mediaUrl,
     error: error ?? null,
     blocker: error ?? null,
     jobId: job.id,

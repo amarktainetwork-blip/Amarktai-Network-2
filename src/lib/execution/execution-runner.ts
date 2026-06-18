@@ -221,12 +221,13 @@ export function recordExecutionResponse(
       artifact: artifactId
         ? {
             artifactId,
-            url:
-              typeof response.storageUrl === 'string'
-                ? response.storageUrl
-                : typeof response.mediaUrl === 'string'
-                  ? response.mediaUrl
-                  : null,
+            url: firstString(
+              response.downloadUrl,
+              response.previewUrl,
+              response.artifactUrl,
+              response.storageUrl,
+              response.mediaUrl,
+            ),
           }
         : undefined,
     })
@@ -237,6 +238,10 @@ export function recordExecutionResponse(
   )
 }
 
+function firstString(...values: unknown[]): string | null {
+  return values.find((value): value is string => typeof value === 'string' && value.trim().length > 0) ?? null
+}
+
 function executionCompletionEvidence(
   execution: ExecutionRecord | null,
   response: Record<string, unknown>,
@@ -245,6 +250,8 @@ function executionCompletionEvidence(
   const artifactId = typeof response.artifactId === 'string' && response.artifactId.trim()
   const storageUrl = typeof response.storageUrl === 'string' && response.storageUrl.trim()
   const artifactUrl = typeof response.artifactUrl === 'string' && response.artifactUrl.trim()
+  const previewUrl = typeof response.previewUrl === 'string' && response.previewUrl.trim()
+  const downloadUrl = typeof response.downloadUrl === 'string' && response.downloadUrl.trim()
   const mediaUrl = typeof response.mediaUrl === 'string' && response.mediaUrl.trim()
   const output = typeof response.output === 'string' && response.output.trim()
   const jobId = typeof response.jobId === 'string' && response.jobId.trim()
@@ -272,7 +279,7 @@ function executionCompletionEvidence(
       error: 'Completed text/chat execution did not include a final response.',
     }
   }
-  if (artifactId && (storageUrl || artifactUrl || mediaUrl || output)) {
+  if (artifactId && (storageUrl || artifactUrl || previewUrl || downloadUrl || mediaUrl || output)) {
     return { complete: true, warning: false, error: '' }
   }
   if (artifactId) {
