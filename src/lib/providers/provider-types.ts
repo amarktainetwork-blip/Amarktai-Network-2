@@ -133,7 +133,7 @@ export interface DiscoveredModel {
     safetyPolicy?: string | null
     safetyNotes?: string | null
     adultGate?: boolean
-    executable?: boolean | 'candidate'
+    executable?: boolean | 'candidate' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT'
   }
   raw: Record<string, unknown>
   discoveredAt: string

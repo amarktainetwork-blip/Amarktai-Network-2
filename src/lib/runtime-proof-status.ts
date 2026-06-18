@@ -19,6 +19,9 @@ export interface CapabilityProofRecord {
   exactError?: string | null
   routeFile?: string | null
   sourceFileResponsible?: string | null
+  artifactId?: string | null
+  jobId?: string | null
+  pollUrl?: string | null
 }
 
 export interface CapabilityProofReport {

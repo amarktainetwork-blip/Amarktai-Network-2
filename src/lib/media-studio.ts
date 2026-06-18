@@ -36,6 +36,14 @@ export interface MediaStudioRunResponse {
   jobs: ExecutionRecord['jobs']
   artifacts: ArtifactRecord[]
   result: unknown | null
+  evidence: {
+    providerCatalogReachable: boolean
+    providerSmokePassed: boolean
+    modelExecutionPassed: boolean
+    capabilityRoutePassed: boolean
+    artifactPersisted: boolean
+    previewDownloadAvailable: boolean
+  }
   error: string | null
   execution: ExecutionRecord
 }
@@ -64,6 +72,7 @@ export async function mediaStudioResponse(
     jobs: execution.jobs,
     artifacts,
     result: execution.result,
+    evidence: studioEvidence(execution, artifacts),
     error: execution.error,
     execution,
   }
@@ -102,4 +111,25 @@ function executionReadiness(execution: ExecutionRecord) {
     if (result.success === true || result.executed === true) return 'READY'
   }
   return execution.status === 'blocked' ? 'BLOCKED' : null
+}
+
+function studioEvidence(execution: ExecutionRecord, artifacts: ArtifactRecord[]) {
+  const result = execution.result && typeof execution.result === 'object'
+    ? execution.result as Record<string, unknown>
+    : {}
+  const attempts = Array.isArray(result.providerAttempts)
+    ? result.providerAttempts.filter((attempt): attempt is Record<string, unknown> =>
+      Boolean(attempt) && typeof attempt === 'object',
+    )
+    : []
+  return {
+    providerCatalogReachable: Boolean(execution.providerPlan.provider || attempts.length),
+    providerSmokePassed: attempts.some((attempt) => attempt.status === 'completed') || result.success === true,
+    modelExecutionPassed: Boolean(result.success === true && (result.model || execution.modelPlan.model)),
+    capabilityRoutePassed: result.success === true || result.executed === true,
+    artifactPersisted: artifacts.some((artifact) => artifact.status === 'completed'),
+    previewDownloadAvailable: artifacts.some((artifact) =>
+      artifact.status === 'completed' && Boolean(artifact.previewUrl || artifact.downloadUrl || artifact.storageUrl),
+    ),
+  }
 }

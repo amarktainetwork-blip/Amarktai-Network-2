@@ -11,7 +11,7 @@ import { executeConnectedAppCapability } from '@/lib/connected-app-capability-en
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 import { getLocalMediaJob } from '@/lib/media-job-store'
-import { listArtifacts } from '@/lib/artifact-store'
+import { getArtifact, listArtifacts } from '@/lib/artifact-store'
 import { prisma } from '@/lib/prisma'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
@@ -75,6 +75,22 @@ type ProviderDiscoveryResult = {
   endpoint: string | null
 }
 
+type ModelSmokeProof = {
+  provider: string
+  capability: string
+  credentialPresent: boolean
+  catalogReachable: boolean
+  providerSmokePassed: boolean
+  modelExecutionPassed: boolean
+  capabilityRoutePassed: boolean
+  artifactPersisted: boolean
+  previewReachable: boolean
+  providerSelected: string | null
+  modelSelected: string | null
+  artifactId: string | null
+  error: string | null
+}
+
 const OUTPUT_JSON = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.json')
 const OUTPUT_MD = path.join(process.cwd(), 'V1_25_CAPABILITY_PROOF.md')
 const APP_SLUG = process.env.AMARKTAI_PROOF_APP_SLUG?.trim() || 'amarktai-network'
@@ -89,6 +105,7 @@ async function main() {
   const providerKeyResults = await collectProviderKeys()
   const providerDiscoveryResults = await collectProviderDiscovery()
   const capabilityResults = enrichCapabilityProofs(await collectCapabilityProofs())
+  const modelSmokeProofs = await collectModelSmokeProofs(providerKeyResults, providerDiscoveryResults)
 
   const report = {
     generatedAt: new Date().toISOString(),
@@ -99,6 +116,7 @@ async function main() {
     },
     providerKeyPath: providerKeyResults,
     providerDiscovery: providerDiscoveryResults,
+    modelSmokeProofs,
     capabilities: capabilityResults,
     summary: summarize(capabilityResults),
     nextVpsCommand: process.env.DATABASE_URL?.trim()
@@ -299,6 +317,78 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
       }
     }
   }, PROVIDER_TIMEOUT_MS, timedOutProviderDiscovery(provider))))
+}
+
+async function collectModelSmokeProofs(
+  providerKeys: ProviderKeyResult[],
+  discoveries: ProviderDiscoveryResult[],
+): Promise<ModelSmokeProof[]> {
+  const providerProofs = await Promise.all(providerKeys.map((entry) =>
+    withTimeout(async () => {
+      const discovery = discoveries.find((item) => item.provider === entry.provider)
+      if (!entry.configured) return modelSmokeBlocked(entry.provider, 'chat', entry.configured, Boolean(discovery?.status === 'ready'), 'Provider credential is not configured.')
+      if (discovery?.status !== 'ready') return modelSmokeBlocked(entry.provider, 'chat', entry.configured, false, discovery?.error ?? 'Provider catalog is not reachable.')
+      const result = await executeCapability({
+        input: 'Reply with OK.',
+        capability: 'chat',
+        providerOverride: entry.provider,
+        appId: APP_SLUG,
+        saveArtifact: false,
+      })
+      return modelSmokeFromResult(entry.provider, 'chat', entry.configured, true, result)
+    }, CAPABILITY_TIMEOUT_MS, modelSmokeBlocked(entry.provider, 'chat', entry.configured, false, `Model smoke timed out after ${CAPABILITY_TIMEOUT_MS}ms.`)),
+  ))
+  return providerProofs
+}
+
+function modelSmokeBlocked(
+  provider: string,
+  capability: string,
+  credentialPresent: boolean,
+  catalogReachable: boolean,
+  error: string,
+): ModelSmokeProof {
+  return {
+    provider,
+    capability,
+    credentialPresent,
+    catalogReachable,
+    providerSmokePassed: false,
+    modelExecutionPassed: false,
+    capabilityRoutePassed: false,
+    artifactPersisted: false,
+    previewReachable: false,
+    providerSelected: null,
+    modelSelected: null,
+    artifactId: null,
+    error,
+  }
+}
+
+async function modelSmokeFromResult(
+  provider: string,
+  capability: string,
+  credentialPresent: boolean,
+  catalogReachable: boolean,
+  result: Awaited<ReturnType<typeof executeCapability>>,
+): Promise<ModelSmokeProof> {
+  const artifactId = result.artifactId ?? null
+  const artifact = artifactId ? await getArtifact(artifactId).catch(() => null) : null
+  return {
+    provider,
+    capability,
+    credentialPresent,
+    catalogReachable,
+    providerSmokePassed: result.provider === provider,
+    modelExecutionPassed: result.success === true && Boolean(result.model),
+    capabilityRoutePassed: result.success === true,
+    artifactPersisted: Boolean(artifactId && artifact),
+    previewReachable: Boolean(artifact?.previewUrl || artifact?.downloadUrl || result.mediaUrl || result.artifactUrl),
+    providerSelected: result.provider ?? null,
+    modelSelected: result.model ?? null,
+    artifactId,
+    error: result.success ? null : result.error ?? result.code ?? result.readiness,
+  }
 }
 
 const AUDIT_CAPABILITIES = [
@@ -562,6 +652,9 @@ async function proveConnectedAppExecution(): Promise<CapabilityProof> {
 }
 
 async function proveLongFormVideo(): Promise<CapabilityProof> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return blocked('long_form_multi_scene_video_assembly', '/api/admin/video-projects', 'DATABASE_URL is required to inspect/create control-plane video project jobs for live proof.')
+  }
   try {
     const jobs = await listControlPlaneJobs(5)
     return {
@@ -582,6 +675,9 @@ async function proveLongFormVideo(): Promise<CapabilityProof> {
 }
 
 async function proveAdultMedia(): Promise<CapabilityProof> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return blocked('adult_media_policy_gated_generation', 'executeCapability:adult_image', 'DATABASE_URL is required to load adult policy gates before adult media live proof; capability remains blocked.')
+  }
   try {
     const result = await executeCapability({
       input: 'Create a tasteful fictional consenting adult portrait scene.',
@@ -749,7 +845,7 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
     artifactId: null,
     jobId: null,
     pollUrl: null,
-    exactError: error instanceof Error ? error.message : 'Execution failed.',
+    exactError: error instanceof Error ? error.message : String(error || 'Execution failed.'),
     sourceFileResponsible: null,
   }
 }
@@ -796,6 +892,7 @@ function renderMarkdown(report: {
   environment: { hasDatabaseUrl: boolean; appSlug: string; connectedAppSecretPresent: boolean }
   providerKeyPath: ProviderKeyResult[]
   providerDiscovery: ProviderDiscoveryResult[]
+  modelSmokeProofs: ModelSmokeProof[]
   capabilities: CapabilityProof[]
   summary: { liveProven: number; sourceWired: number; providerAvailable: number; blocked: number; notWired: number }
   nextVpsCommand: string | null
@@ -828,6 +925,12 @@ function renderMarkdown(report: {
     '| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |',
     '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${mdCell(entry.credentialEnvNames.join('<br>'))} | ${mdCell(entry.catalogEndpoint)} | ${entry.status} | ${entry.discoverySource} | ${entry.rawCatalogCount} | ${entry.modelCount} | ${entry.executableCandidateCount} | ${entry.chatModels} | ${entry.reasoningModels} | ${entry.codingModels} | ${entry.imageModels} | ${entry.imageEditModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.musicModels} | ${entry.avatarModels} | ${entry.adultImageModels} | ${mdCell(entry.executableBlocker ?? entry.error)} |`),
+    '',
+    '## Model-Level Smoke Proof',
+    '',
+    '| Provider | Capability | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |',
+    '|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|',
+    ...report.modelSmokeProofs.map((entry) => `| ${entry.provider} | ${entry.capability} | ${entry.credentialPresent ? 'yes' : 'no'} | ${entry.catalogReachable ? 'yes' : 'no'} | ${entry.providerSmokePassed ? 'yes' : 'no'} | ${entry.modelExecutionPassed ? 'yes' : 'no'} | ${entry.capabilityRoutePassed ? 'yes' : 'no'} | ${entry.artifactPersisted ? 'yes' : 'no'} | ${entry.previewReachable ? 'yes' : 'no'} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.error)} |`),
     '',
     '## Capabilities',
     '',

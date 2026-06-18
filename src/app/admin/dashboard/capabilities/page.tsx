@@ -45,6 +45,11 @@ type CapabilityEntry = {
   providerAvailable?: boolean
   providerCatalogWorks?: boolean
   providerLiveTestPassed?: boolean
+  providerSmokePassed?: boolean
+  modelExecutionPassed?: boolean
+  capabilityRoutePassed?: boolean
+  artifactPersisted?: boolean
+  previewDownloadAvailable?: boolean
   capabilityLiveProven?: boolean
   exactProofError?: string | null
   providerRoutes?: Array<{ provider: string; executable: boolean }>
@@ -217,8 +222,13 @@ export default function CapabilitiesPage() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         <EvidenceChip label="Key/catalog" active={cap.providerCatalogWorks === true} />
                         <EvidenceChip label="Provider live test" active={cap.providerLiveTestPassed === true} />
+                        <EvidenceChip label="Provider smoke" active={cap.providerSmokePassed === true} />
+                        <EvidenceChip label="Model execution" active={cap.modelExecutionPassed === true} />
                         <EvidenceChip label="Route/adapter" active={cap.routeAdapterExists === true} />
+                        <EvidenceChip label="Capability route" active={cap.capabilityRoutePassed === true} />
                         <EvidenceChip label="Capability live proof" active={cap.capabilityLiveProven === true} />
+                        <EvidenceChip label="Artifact persisted" active={cap.artifactPersisted === true} applicable={cap.createsArtifact} />
+                        <EvidenceChip label="Preview/download" active={cap.previewDownloadAvailable === true} applicable={cap.createsArtifact} />
                         {cap.outputTypes.slice(0, 4).map((type) => (
                           <span key={type} className="rounded-full border border-slate-700/60 bg-slate-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">
                             {type}
@@ -245,7 +255,14 @@ export default function CapabilitiesPage() {
   )
 }
 
-function EvidenceChip({ label, active }: { label: string; active: boolean }) {
+function EvidenceChip({ label, active, applicable = true }: { label: string; active: boolean; applicable?: boolean }) {
+  if (!applicable) {
+    return (
+      <span className="rounded-full border border-slate-700/60 bg-slate-900/70 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-500">
+        {label}: n/a
+      </span>
+    )
+  }
   return (
     <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
       active

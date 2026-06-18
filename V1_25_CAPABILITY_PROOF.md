@@ -1,6 +1,6 @@
 # V1 25 Capability Proof
 
-Generated: 2026-06-18T13:51:03.357Z
+Generated: 2026-06-18T14:48:10.952Z
 
 Database available locally: no
 Proof app slug: amarktai-network
@@ -36,6 +36,17 @@ Connected-app secret present locally: no
 | together | TOGETHER_API_KEY | https://api.together.ai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
 | groq | GROQ_API_KEY | https://api.groq.com/openai/v1/models | not_configured | none | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | Provider credential is not configured. |
 
+## Model-Level Smoke Proof
+
+| Provider | Capability | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|
+| genx | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| huggingface | chat | no | yes | no | no | no | no | no |  | Provider credential is not configured. |
+| qwen | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| mimo | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| groq | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+| together | chat | no | no | no | no | no | no | no |  | Provider credential is not configured. |
+
 ## Capabilities
 
 | Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Source File |
@@ -53,13 +64,13 @@ Connected-app secret present locally: no
 | text_to_video_short_clip | BLOCKED |  |  | executeCapability:video_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
 | text_to_speech | BLOCKED |  |  | executeCapability:tts |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
 | speech_to_text | BLOCKED |  |  | executeCapability:stt |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| agent_request_execution | BLOCKED |  |  | /api/brain/agent-request |  |  |  | Execution failed. | src/app/api/brain/agent-request/route.ts |
+| agent_request_execution | BLOCKED |  |  | /api/brain/agent-request |  |  |  | AMARKTAI_CONNECTED_APP_SECRET or AMARKTAI_APP_SECRET_AMARKTAI_NETWORK is required for local proof. | src/app/api/brain/agent-request/route.ts |
 | connected_app_capability_execution | BLOCKED |  |  | executeConnectedAppCapability |  |  |  | Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity. | src/lib/connected-app-capability-engine.ts |
 | image_to_video | BLOCKED |  |  | executeCapability:image_to_video |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
-| long_form_multi_scene_video_assembly | BLOCKED |  |  | /api/admin/video-projects |  |  |  | <br>Invalid `prisma.controlPlaneJob.findMany()` invocation in<br>C:\Users\digit\Code\Amarktai-Network-2\src\lib\control-plane-jobs.ts:234:33<br><br>  231 }<br>  232 <br>  233 export async function listControlPlaneJobs(limit = 100) {<br>→ 234   return prisma.controlPlaneJob.findMany(<br>error: Environment variable not found: DATABASE_URL.<br>  -->  schema.prisma:7<br>   \| <br> 6 \|   provider = "mysql"<br> 7 \|   url      = env("DATABASE_URL")<br>   \| <br><br>Validation Error Count: 1 | src/app/api/admin/video-projects/route.ts |
+| long_form_multi_scene_video_assembly | BLOCKED |  |  | /api/admin/video-projects |  |  |  | DATABASE_URL is required to inspect/create control-plane video project jobs for live proof. | src/app/api/admin/video-projects/route.ts |
 | avatar_library_avatar_image_generation | BLOCKED |  |  | executeCapability:avatar_generation |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
 | talking_avatar_video | BLOCKED |  |  | talking-avatar video |  |  |  | src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run. | src/lib/orchestrator.ts |
-| adult_media_policy_gated_generation | BLOCKED |  |  | executeCapability:adult_image |  |  |  | <br>Invalid `prisma.appAiProfile.findUnique()` invocation in<br>C:\Users\digit\Code\Amarktai-Network-2\src\lib\adult-app-capabilities.ts:46:41<br><br>  43 <br>  44 export async function getAdultAppCapabilityProfile(appSlug: string): Promise<AdultAppCapabilityProfile> {<br>  45   await loadGlobalAdultModeFromDB()<br>→ 46   const row = await prisma.appAiProfile.findUnique(<br>error: Environment variable not found: DATABASE_URL.<br>  -->  schema.prisma:7<br>   \| <br> 6 \|   provider = "mysql"<br> 7 \|   url      = env("DATABASE_URL")<br>   \| <br><br>Validation Error Count: 1 | src/lib/orchestrator.ts |
+| adult_media_policy_gated_generation | BLOCKED |  |  | executeCapability:adult_image |  |  |  | DATABASE_URL is required to load adult policy gates before adult media live proof; capability remains blocked. | src/lib/orchestrator.ts |
 | provider_auto_selection | BLOCKED |  |  | executeCapability:chat |  |  |  | NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. | src/lib/providers/provider-scoring.ts |
 | provider_fallback | SOURCE_WIRED |  |  | executeCapabilityOrchestration fallback loop |  |  |  | Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers. | src/lib/orchestrator.ts |
 | strict_provider_proof_mode | SOURCE_WIRED |  |  | /api/admin/provider-capability-test |  |  |  | Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment. | src/app/api/admin/provider-capability-test/route.ts |

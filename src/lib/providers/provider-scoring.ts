@@ -21,6 +21,9 @@ export function scoreProviderModel(input: {
   const allowLiveAuthenticatedDegraded = model.discoverySource === 'live_authenticated'
   if (model.status === 'unavailable') return null
   if (!model.capabilities.includes(capability.id)) return null
+  if (model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT') return null
+  if (model.metadata?.executable === 'CATALOG_ONLY') return null
+  if (model.metadata?.adultGate === true && profile.preferences.adult !== true) return null
   if (!health.configured) return null
   if (health.state === 'degraded' && !allowDegradedFallback && !allowLiveAuthenticatedDegraded) return null
   if (capability.requiresAdultPermission && profile.preferences.adult !== true) return null

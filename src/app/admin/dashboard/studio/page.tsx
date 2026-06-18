@@ -69,6 +69,14 @@ type StudioRun = {
   jobs: Array<{ jobId: string; status?: string; pollUrl?: string | null }>
   artifacts: Artifact[]
   result: unknown
+  evidence: {
+    providerCatalogReachable: boolean
+    providerSmokePassed: boolean
+    modelExecutionPassed: boolean
+    capabilityRoutePassed: boolean
+    artifactPersisted: boolean
+    previewDownloadAvailable: boolean
+  }
   error: string | null
   execution: {
     input: { prompt: string; files: string[]; metadata: Record<string, unknown> }
@@ -456,6 +464,16 @@ export default function StudioPage() {
               <Panel title="Capability route"><Fact label="Capability" value={friendly(active.capability)} /><Fact label="Quality policy" value={friendly(active.modelPlan.costMode)} /><p className="text-xs leading-5 text-slate-400">AmarktAI selected an available route for this capability and policy.</p></Panel>
               <Panel title="Readiness"><Fact label="Execution status" value={friendly(active.status)} /><Fact label="Capability readiness" value={friendly(active.readiness ?? 'Pending route result')} /><p className="text-xs text-slate-400">Infrastructure selection remains internal and can fall back when a configured route fails.</p></Panel>
             </section>
+            <Panel title="Runtime evidence">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <EvidenceFact label="Provider catalog" active={active.evidence.providerCatalogReachable} />
+                <EvidenceFact label="Provider smoke" active={active.evidence.providerSmokePassed} />
+                <EvidenceFact label="Model execution" active={active.evidence.modelExecutionPassed} />
+                <EvidenceFact label="Capability route" active={active.evidence.capabilityRoutePassed} />
+                <EvidenceFact label="Artifact persisted" active={active.evidence.artifactPersisted} />
+                <EvidenceFact label="Preview/download" active={active.evidence.previewDownloadAvailable} />
+              </div>
+            </Panel>
             <Panel title="Approval">
               {!active.approval.required && <StatusLine kind="ok" title="No approval required" detail="This media action may run automatically." />}
               {active.approval.status === 'pending' && <><StatusLine kind="wait" title="Approval required" detail={active.approval.reason ?? 'Review before execution.'} /><div className="flex gap-2"><button onClick={() => decideApproval('approve')} className="rounded-lg bg-emerald-300 px-3 py-2 text-xs font-black text-slate-950">Approve and run</button><button onClick={() => decideApproval('reject')} className="rounded-lg border border-red-400/30 px-3 py-2 text-xs font-black text-red-200">Reject</button></div></>}
@@ -482,6 +500,7 @@ export default function StudioPage() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="space-y-3 rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4"><h2 className="font-black text-white">{title}</h2>{children}</section> }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span><span className="[&_.control]:w-full [&_.control]:rounded-xl [&_.control]:border [&_.control]:border-slate-700 [&_.control]:bg-slate-950 [&_.control]:px-3 [&_.control]:py-2.5 [&_.control]:text-sm [&_.control]:text-slate-200 [&_.control]:outline-none">{children}</span></label> }
 function Fact({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 text-xs font-semibold text-slate-300">{value}</p></div> }
+function EvidenceFact({ label, active }: { label: string; active: boolean }) { return <div className={`rounded-xl border p-3 ${active ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-slate-700/40 bg-slate-950/40'}`}><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${active ? 'text-emerald-200' : 'text-slate-500'}`}>{active ? 'passed' : 'not proven'}</p></div> }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-300"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="accent-fuchsia-300" /></label> }
 function ErrorPanel({ message }: { message: string }) { return <div className="flex gap-2 rounded-xl border border-red-400/25 bg-red-400/8 p-3 text-sm text-red-200"><AlertTriangle className="h-4 w-4 shrink-0" />{message}</div> }
 function StatusLine({ kind, title, detail }: { kind: 'ok' | 'wait' | 'error'; title: string; detail: string }) { const Icon = kind === 'ok' ? CheckCircle2 : kind === 'wait' ? Clock3 : XCircle; return <div className="flex gap-3"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${kind === 'ok' ? 'text-fuchsia-300' : kind === 'wait' ? 'text-amber-300' : 'text-red-300'}`} /><div><p className="text-sm font-bold text-slate-200">{title}</p><p className="mt-0.5 text-xs leading-5 text-slate-400">{detail}</p></div></div> }

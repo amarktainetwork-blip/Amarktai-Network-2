@@ -161,6 +161,7 @@ export function recordExecutionResponse(
   executionId: string,
   response: Record<string, unknown>,
 ): ExecutionRecord | null {
+  const execution = getExecution(executionId)
   const jobId = typeof response.jobId === 'string' ? response.jobId : null
   const providerJobId =
     typeof response.providerJobId === 'string' ? response.providerJobId : null
@@ -186,6 +187,33 @@ export function recordExecutionResponse(
       error: null,
     })
   }
+  const completion = executionCompletionEvidence(execution, response)
+  if (success && !completion.complete) {
+    const message = completion.error
+    appendExecutionEvent(executionId, {
+      type: completion.warning ? 'preview_unavailable' : 'artifact_persistence_failed',
+      message,
+      level: completion.warning ? 'warning' : 'error',
+      metadata: {
+        artifactId,
+        jobId,
+        providerJobId,
+      },
+    })
+    return updateExecution(executionId, {
+      status: completion.warning ? 'completed' : 'failed',
+      result: {
+        ...response,
+        success: completion.warning,
+        executed: completion.warning,
+        warning: completion.warning ? message : response.warning,
+        error: completion.warning ? response.error : message,
+        completionEvidence: completion,
+      },
+      error: completion.warning ? null : message,
+      completedAt: new Date().toISOString(),
+    })
+  }
   if (success) {
     return completeExecution({
       executionId,
@@ -207,6 +235,84 @@ export function recordExecutionResponse(
     executionId,
     String(response.error ?? response.blocker ?? 'Execution failed.'),
   )
+}
+
+function executionCompletionEvidence(
+  execution: ExecutionRecord | null,
+  response: Record<string, unknown>,
+): { complete: boolean; warning: boolean; error: string } {
+  const capability = String(response.capability ?? execution?.detectedCapability ?? '')
+  const artifactId = typeof response.artifactId === 'string' && response.artifactId.trim()
+  const storageUrl = typeof response.storageUrl === 'string' && response.storageUrl.trim()
+  const artifactUrl = typeof response.artifactUrl === 'string' && response.artifactUrl.trim()
+  const mediaUrl = typeof response.mediaUrl === 'string' && response.mediaUrl.trim()
+  const output = typeof response.output === 'string' && response.output.trim()
+  const jobId = typeof response.jobId === 'string' && response.jobId.trim()
+  const status = String(response.jobStatus ?? response.status ?? '')
+  const artifactError = response.error_category === 'artifact_error'
+    || /artifact persistence failed|artifact storage is not ready/i.test(String(response.warning ?? response.error ?? ''))
+  if (artifactError) {
+    return {
+      complete: false,
+      warning: false,
+      error: String(response.warning ?? response.error ?? 'Provider execution succeeded but artifact persistence failed.'),
+    }
+  }
+  if (['pending', 'processing', 'queued'].includes(status)) {
+    return {
+      complete: false,
+      warning: false,
+      error: 'Provider returned a job ID only; Studio must keep polling until a completed artifact or media URL exists.',
+    }
+  }
+  if (!requiresDurableOutput(capability)) {
+    return {
+      complete: Boolean(output || artifactId || mediaUrl || storageUrl || artifactUrl || response.success === true),
+      warning: false,
+      error: 'Completed text/chat execution did not include a final response.',
+    }
+  }
+  if (artifactId && (storageUrl || artifactUrl || mediaUrl || output)) {
+    return { complete: true, warning: false, error: '' }
+  }
+  if (artifactId) {
+    return {
+      complete: true,
+      warning: true,
+      error: `Generated artifact ${artifactId} exists, but no preview/download URL was returned by the execution response.`,
+    }
+  }
+  if (jobId) {
+    return {
+      complete: false,
+      warning: false,
+      error: `Generated job ${jobId} did not finish with a persisted artifact or preview/download URL.`,
+    }
+  }
+  return {
+    complete: false,
+    warning: false,
+    error: `${capability || 'Durable output'} completed without a persisted artifact, media preview, or download URL.`,
+  }
+}
+
+function requiresDurableOutput(capability: string): boolean {
+  return [
+    'image_generation',
+    'image_edit',
+    'suggestive_image',
+    'video_generation',
+    'image_to_video',
+    'music_generation',
+    'tts',
+    'voice_response',
+    'adult_voice',
+    'adult_image',
+    'adult_video',
+    'adult_avatar',
+    'avatar_generation',
+    'avatar_video',
+  ].includes(capability)
 }
 
 function recordCanonicalRoute(

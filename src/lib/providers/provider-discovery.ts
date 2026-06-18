@@ -607,6 +607,12 @@ function normalizeModel(
   const capabilityEvidence: DiscoveredModel['capabilityEvidence'] = taskCapabilities.length > 0 || descriptorCapabilityMatches.length > 0
     ? 'model_metadata'
     : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown'
+  const routeType = firstString(record.routeType, record.route_type)
+  const executableState = routeType === 'hf_specialist_endpoint'
+    ? 'REQUIRES_DEDICATED_ENDPOINT'
+    : routeType === 'policy_gated_candidate'
+      ? 'CATALOG_ONLY'
+      : capabilityEvidence === 'unknown' ? 'candidate' : true
   return {
     provider: provider.id,
     id,
@@ -626,13 +632,13 @@ function normalizeModel(
     artifactSupport: provider.features.artifactSupport,
     metadata: {
       task: tasks[0] ?? null,
-      routeType: firstString(record.routeType, record.route_type),
+      routeType,
       providerAvailable: availability(record) === 'unavailable' ? false : availability(record) === 'available' ? true : 'unknown',
       license: firstString(record.license, nestedString(record.cardData, 'license')),
       safetyPolicy: firstString(record.safetyPolicy, record.safety_policy),
       safetyNotes: firstString(record.safety, record.safetyNotes, record.safety_notes),
       adultGate: record.adult === true || firstString(record.safetyPolicy, record.safety_policy) === 'adult_gate_required',
-      executable: capabilityEvidence === 'unknown' ? 'candidate' : true,
+      executable: executableState,
     },
     raw: record,
     discoveredAt,

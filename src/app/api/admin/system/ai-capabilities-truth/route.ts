@@ -38,6 +38,10 @@ export async function GET() {
       route?.selectedRoute?.liveTestStatus === 'passed'
       || route?.fallbackRoutes.some((entry) => entry.liveTestStatus === 'passed'),
     )
+    const capabilityRoutePassed = proofStatus === 'LIVE_PROVEN'
+    const modelExecutionPassed = capabilityRoutePassed && Boolean(proof?.modelSelected)
+    const artifactPersisted = Boolean(proof?.artifactId)
+    const previewDownloadAvailable = artifactPersisted || Boolean(proof?.pollUrl)
     return {
       ...capability,
       backendStatus: capability.status,
@@ -50,6 +54,11 @@ export async function GET() {
       providerCatalogWorks,
       providerLiveTestPassed,
       capabilityLiveProven: proofStatus === 'LIVE_PROVEN',
+      providerSmokePassed: providerLiveTestPassed || capabilityRoutePassed,
+      modelExecutionPassed,
+      capabilityRoutePassed,
+      artifactPersisted,
+      previewDownloadAvailable,
       proofGeneratedAt: proofReport?.generatedAt ?? null,
       routeFile: proof?.routeFile ?? proof?.sourceFileResponsible ?? route?.selectedRoute?.adapter ?? null,
       exactProofError: proof?.exactError ?? null,
