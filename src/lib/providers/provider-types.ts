@@ -134,7 +134,7 @@ export interface DiscoveredModel {
     safetyPolicy?: string | null
     safetyNotes?: string | null
     adultGate?: boolean
-    executable?: boolean | 'candidate' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT'
+    executable?: boolean | 'candidate' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT' | 'ADAPTER_MISSING'
   }
   raw: Record<string, unknown>
   discoveredAt: string
@@ -216,6 +216,7 @@ export interface ProviderRouteRejection {
     | 'CAPABILITY_UNSUPPORTED'
     | 'DEDICATED_ENDPOINT_REQUIRED'
     | 'CATALOG_ONLY'
+    | 'ADAPTER_MISSING'
     | 'ADULT_GATE_REQUIRED'
     | 'PROVIDER_NOT_CONFIGURED'
     | 'PROVIDER_DEGRADED'

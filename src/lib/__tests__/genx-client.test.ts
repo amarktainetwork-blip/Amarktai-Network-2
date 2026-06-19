@@ -110,6 +110,117 @@ describe('genx-client', () => {
     expect(status?.result?.url).toBe('https://cdn.example/video.mp4')
   })
 
+  it('normalizes nested GenX music audio URL responses', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/v1/models')) {
+        return new Response(JSON.stringify({ models: [] }), { status: 200 })
+      }
+      if (url.endsWith('/api/v1/generate')) {
+        const body = JSON.parse(String(init?.body ?? '{}'))
+        if (body.model === '__probe__') {
+          return new Response(JSON.stringify({ error: 'probe model' }), { status: 400 })
+        }
+        return new Response(JSON.stringify({
+          status: 'completed',
+          model: 'lyria-3-clip-preview',
+          output: { audioUrl: 'https://cdn.example/music.mp3' },
+        }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }))
+
+    const { callGenXMedia, invalidateEndpointProfile } = await import('@/lib/genx-client')
+    invalidateEndpointProfile()
+    const result = await callGenXMedia({
+      model: 'lyria-3-clip-preview',
+      prompt: 'cinematic launch music',
+      type: 'audio',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.url).toBe('https://cdn.example/music.mp3')
+    expect(result.bytes).toBeNull()
+  })
+
+  it('normalizes GenX Gemini inline audio base64 responses', async () => {
+    const audioBase64 = Buffer.from('fake-audio-bytes').toString('base64')
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/v1/models')) {
+        return new Response(JSON.stringify({ models: [] }), { status: 200 })
+      }
+      if (url.endsWith('/api/v1/generate')) {
+        const body = JSON.parse(String(init?.body ?? '{}'))
+        if (body.model === '__probe__') {
+          return new Response(JSON.stringify({ error: 'probe model' }), { status: 400 })
+        }
+        return new Response(JSON.stringify({
+          status: 'completed',
+          model: 'lyria-3-clip-preview',
+          candidates: [{
+            content: {
+              parts: [{
+                inlineData: {
+                  mimeType: 'audio/wav',
+                  data: audioBase64,
+                },
+              }],
+            },
+          }],
+        }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }))
+
+    const { callGenXMedia, invalidateEndpointProfile } = await import('@/lib/genx-client')
+    invalidateEndpointProfile()
+    const result = await callGenXMedia({
+      model: 'lyria-3-clip-preview',
+      prompt: 'cinematic launch music',
+      type: 'audio',
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.url).toBeNull()
+    expect(result.contentType).toBe('audio/wav')
+    expect(result.bytes?.toString('utf8')).toBe('fake-audio-bytes')
+  })
+
+  it('fails GenX music responses that contain no audio output', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/v1/models')) {
+        return new Response(JSON.stringify({ models: [] }), { status: 200 })
+      }
+      if (url.endsWith('/api/v1/generate')) {
+        const body = JSON.parse(String(init?.body ?? '{}'))
+        if (body.model === '__probe__') {
+          return new Response(JSON.stringify({ error: 'probe model' }), { status: 400 })
+        }
+        return new Response(JSON.stringify({
+          status: 'completed',
+          model: 'lyria-3-clip-preview',
+          text: 'Gemini returned no audio data',
+        }), { status: 200 })
+      }
+      return new Response('{}', { status: 404 })
+    }))
+
+    const { callGenXMedia, invalidateEndpointProfile } = await import('@/lib/genx-client')
+    invalidateEndpointProfile()
+    const result = await callGenXMedia({
+      model: 'lyria-3-clip-preview',
+      prompt: 'cinematic launch music',
+      type: 'audio',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('no audio bytes')
+    expect(result.url).toBeNull()
+    expect(result.bytes).toBeNull()
+  })
+
   it('streams GenX chat chunks from the OpenAI-compatible SSE endpoint', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input)

@@ -242,16 +242,16 @@ describe('provider adapter contracts', () => {
       'chat',
       'reasoning',
       'coding',
+      'vision',
+      'image',
       'tts',
+      'stt',
+      'agents',
     ]))
     expect(mimo.capabilities).not.toEqual(expect.arrayContaining([
-      'vision',
-      'stt',
       'voice_clone',
-      'image',
       'video',
       'music',
-      'agents',
     ]))
     expect(mimo.features).toMatchObject({
       streaming: true,
@@ -391,6 +391,32 @@ describe('provider adapter contracts', () => {
     })
   })
 
+  it('keeps Hugging Face music visible but requires a specialist endpoint before execution', async () => {
+    delete process.env.HF_ENDPOINT_MUSIC_GENERATION
+    delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
+    mocks.getVaultApiKey.mockResolvedValue('hf-canonical-saved-key')
+
+    const music = getCapabilityDefinition('music_generation')!
+    expect(music.providerRoutes.find((route) => route.provider === 'huggingface')).toMatchObject({
+      executable: false,
+      status: 'requires_endpoint',
+    })
+
+    const result = await getProviderCapabilityAdapter('huggingface')!.execute(
+      adapterInput('music_generation', 'huggingface', 'facebook/musicgen-small'),
+    )
+
+    expect(result).toMatchObject({
+      status: 'needs_configuration',
+      provider: 'huggingface',
+      model: 'facebook/musicgen-small',
+      errorCategory: 'provider_misconfigured',
+    })
+    expect(result.error).toContain('HF_ENDPOINT_MUSIC_GENERATION')
+    expect(result.error).toContain('HF_SPECIALIST_ENDPOINTS_JSON')
+    expect(result.error).not.toContain('[redacted]')
+  })
+
   it('classifies Hugging Face FLUX task models as image generation only', () => {
     const models = normalizeProviderCatalog('huggingface', [
       { id: 'black-forest-labs/FLUX.1-schnell', pipeline_tag: 'text-to-image', available: true },
@@ -458,12 +484,19 @@ describe('provider adapter contracts', () => {
         { id: 'mimo-v2.5', available: true },
         { id: 'mimo-tts-1', available: true },
         { id: 'mimo-asr-1', available: true },
+        { id: 'mimo-vision-1', type: 'image-text-to-text', available: true },
+        { id: 'mimo-agent-1', type: 'tool-calling', available: true },
       ],
     })
 
     expect(models.find((model) => model.id === 'mimo-v2.5')?.capabilities).toContain('chat')
     expect(models.find((model) => model.id === 'mimo-tts-1')?.capabilities).toEqual(['tts'])
     expect(models.find((model) => model.id === 'mimo-asr-1')?.capabilities).toEqual(['stt'])
+    expect(models.find((model) => model.id === 'mimo-asr-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo-vision-1')?.capabilities).toEqual(['vision', 'ocr', 'image'])
+    expect(models.find((model) => model.id === 'mimo-vision-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo-agent-1')?.capabilities).toEqual(['agents'])
+    expect(models.find((model) => model.id === 'mimo-agent-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
   })
 
   it('normalizes the GenX asynchronous job and polling flow', async () => {

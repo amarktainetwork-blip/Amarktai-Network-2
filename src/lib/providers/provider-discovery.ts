@@ -613,7 +613,11 @@ function normalizeModel(
       provider.id === 'together'
       && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video' || capability === 'adult_video')
     )
-  const executableState = routeType === 'hf_specialist_endpoint'
+  const adapterMissing = provider.id === 'mimo'
+    && capabilities.some((capability) => ['image', 'vision', 'stt', 'agents'].includes(capability))
+  const executableState = adapterMissing
+    ? 'ADAPTER_MISSING'
+    : routeType === 'hf_specialist_endpoint'
     ? 'REQUIRES_DEDICATED_ENDPOINT'
     : routeType === 'policy_gated_candidate'
       ? 'CATALOG_ONLY'
@@ -729,8 +733,11 @@ function descriptorCapabilities(providerId: ProviderId, modelId: string, descrip
     add('tts', /\b(orpheus|tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]synthesis)\b/i)
     add('stt', /\b(whisper|asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
   } else if (providerId === 'mimo') {
+    add('image', /\b(image|vision[-_\s]?generation|text[-_\s]?to[-_\s]?image|multimodal[-_\s]?image)\b/i)
+    add('vision', /\b(vision|visual|multimodal|image[-_\s]?text|(?:^|[-_/])vl(?:[-_/]|$))\b/i)
     add('tts', /\b(tts|speech[-_\s]generation|text[-_\s]?to[-_\s]?speech|voice)\b/i)
     add('stt', /\b(asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption)|whisper)\b/i)
+    add('agents', /\b(agent|tool[-_\s]?calling|function[-_\s]?calling)\b/i)
   } else if (providerId === 'genx') {
     add('image', /\b(image|recraft|banana|grok[-_]?imagine)\b/i)
     add('video', /\b(video|veo|kling|seedance|pixverse)\b/i)
@@ -823,12 +830,15 @@ function inferProviderContractCapabilities(
   }, { excludeTextIfMatched: ['tts', 'stt'] })
 
   if (providerId === 'mimo') return providerContractFromPatterns(lowerModelId, descriptor, {
+    image: [/image/, /text[-_\s]?to[-_\s]?image/, /vision[-_\s]?generation/],
+    vision: [/vision/, /visual/, /multimodal/, /image[-_\s]?text/, /(?:^|[-_/])vl(?:[-_/]|$)/],
     tts: [/\btts\b/, /speech/, /voice/],
     stt: [/\basr\b/, /transcri/, /speech[-_\s]?to[-_\s]?text/, /whisper/],
+    agents: [/agent/, /tool[-_\s]?calling/, /function[-_\s]?calling/],
     chat: [/mimo-v/, /chat/, /instruct/],
     reasoning: [/reason/],
     coding: [/coder/, /code/],
-  }, { excludeTextIfMatched: ['tts', 'stt'] })
+  }, { excludeTextIfMatched: ['image', 'vision', 'tts', 'stt', 'agents'] })
 
   if (providerId === 'huggingface') return providerContractFromPatterns(lowerModelId, descriptor, {
     image: [/flux/, /stable[-_]?diffusion/, /sdxl/, /pixart/, /kolors/, /recraft/],
@@ -892,6 +902,8 @@ function isMediaModel(providerId: ProviderId, modelId: string) {
       ? { image: [/flux/, /recraft/, /stable[-_]?diffusion/, /image/], video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /minimax\//], image_to_video: [/i2v/] }
       : providerId === 'huggingface'
         ? { image: [/flux/, /stable[-_]?diffusion/, /sdxl/, /pixart/, /kolors/, /recraft/], video: [/wan/, /cogvideo/, /mochi/, /ltx[-_]?video/, /hunyuanvideo/], image_to_video: [/i2v/] }
+      : providerId === 'mimo'
+        ? { image: [/image/, /text[-_\s]?to[-_\s]?image/], vision: [/vision/, /visual/, /multimodal/, /(?:^|[-_/])vl(?:[-_/]|$)/] }
         : providerId === 'genx'
           ? { image: [/image/, /recraft/, /banana/, /imagine/], video: [/video/, /veo/, /kling/, /seedance/, /pixverse/], image_to_video: [/i2v/] }
           : {}).length > 0

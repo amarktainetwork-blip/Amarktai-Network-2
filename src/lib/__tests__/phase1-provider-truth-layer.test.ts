@@ -27,7 +27,7 @@ import {
 } from '@/lib/providers/provider-discovery'
 import { modelsForCapability } from '@/lib/providers/model-discovery'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
-import { scoreProviderModel } from '@/lib/providers/provider-scoring'
+import { rejectionForProviderModel, scoreProviderModel } from '@/lib/providers/provider-scoring'
 import {
   getProviderTruth,
   planDynamicCapabilityRoute,
@@ -94,10 +94,10 @@ describe('Phase 1 provider truth layer', () => {
       'chat', 'vision', 'image', 'video', 'image_to_video',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'reasoning', 'coding', 'tts',
+      'chat', 'reasoning', 'coding', 'vision', 'image', 'tts', 'stt', 'agents',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).not.toEqual(expect.arrayContaining([
-      'vision', 'stt', 'voice_clone', 'image', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
+      'voice_clone', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'adult_text', 'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('genx')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'image', 'video', 'music', 'tts',
@@ -334,14 +334,22 @@ describe('Phase 1 provider truth layer', () => {
     const models = normalizeProviderCatalog('mimo', {
       data: [
         { id: 'mimo/runtime-tts', type: 'speech-generation', available: true },
+        { id: 'mimo/runtime-asr', type: 'speech-to-text', available: true },
+        { id: 'mimo/runtime-vision', type: 'image-text-to-text', available: true },
+        { id: 'mimo/runtime-agent', type: 'tool-calling', available: true },
         { id: 'mimo/runtime-code', type: 'code', available: true },
       ],
     })
 
     expect(models.map((model) => [model.id, model.capabilities])).toEqual([
       ['mimo/runtime-tts', ['tts']],
+      ['mimo/runtime-asr', ['stt']],
+      ['mimo/runtime-vision', ['vision', 'ocr', 'image']],
+      ['mimo/runtime-agent', ['agents']],
       ['mimo/runtime-code', ['coding']],
     ])
+    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo/runtime-vision')?.metadata?.executable).toBe('ADAPTER_MISSING')
   })
 
   it('does not fabricate MiMo unsupported routes from empty catalogs', async () => {
@@ -368,7 +376,41 @@ describe('Phase 1 provider truth layer', () => {
     })
     expect(modelsForCapability(snapshot, 'stt')).toEqual([])
     expect(modelsForCapability(snapshot, 'vision')).toEqual([])
+    expect(modelsForCapability(snapshot, 'image')).toEqual([])
+    expect(modelsForCapability(snapshot, 'agents')).toEqual([])
     expect(modelsForCapability(snapshot, 'voice_clone')).toEqual([])
+  })
+
+  it('rejects MiMo catalog-exposed media and STT models until adapters exist', () => {
+    const imageCapability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'image')!
+    const provider = getProviderTruth('mimo')!
+    const health: ProviderHealthSnapshot = {
+      provider: 'mimo',
+      state: 'healthy',
+      configured: true,
+      tested: true,
+      healthy: true,
+      checkedAt: '2026-06-15T00:00:00.000Z',
+      detail: 'Healthy',
+    }
+    const imageModel = normalizeProviderCatalog('mimo', {
+      data: [{ id: 'mimo-image-runtime', type: 'text-to-image', available: true }],
+    })[0]
+
+    expect(imageModel).toMatchObject({
+      capabilities: ['image'],
+      metadata: { executable: 'ADAPTER_MISSING' },
+    })
+    expect(rejectionForProviderModel({
+      provider,
+      model: imageModel,
+      capability: imageCapability,
+      health,
+      profile: getRoutingProfile('balanced'),
+    })).toMatchObject({
+      code: 'ADAPTER_MISSING',
+      reason: expect.stringContaining('no canonical adapter is wired'),
+    })
   })
 
   it('does not fabricate Groq agent/tool-calling routes from empty catalogs', async () => {

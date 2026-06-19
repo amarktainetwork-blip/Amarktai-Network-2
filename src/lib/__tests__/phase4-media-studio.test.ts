@@ -189,6 +189,15 @@ describe('Phase 4 Media Studio product coverage', () => {
     expect(read('app/api/brain/stt/route.ts')).toContain('executionId')
   })
 
+  it('does not allow Studio Music to complete without a downloadable artifact', () => {
+    const route = read('app/api/admin/music-studio/route.ts')
+    expect(route).toContain('requiresMusicArtifact')
+    expect(route).toContain('hasMusicArtifact')
+    expect(route).toContain('missingMusicArtifact')
+    expect(route).toContain('Music generation completed without a downloadable audio artifact.')
+    expect(route).toContain("jobStatus: processing ? 'processing' : completed ? 'completed' : 'failed'")
+  })
+
   it('reconciles completed provider jobs into executions', () => {
     expect(read('lib/media-job-store.ts')).toContain('recordExecutionResponse')
     expect(read('app/api/brain/video-generate/[jobId]/route.ts')).toContain('recordExecutionResponse')

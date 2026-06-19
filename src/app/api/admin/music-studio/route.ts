@@ -111,17 +111,25 @@ export async function POST(request: NextRequest) {
   })
 
   const processing = result.status === 'processing' || Boolean(result.providerJobId)
-  const completed = result.success && !processing
+  const requiresMusicArtifact = capability === 'music_generation'
+  const hasMusicArtifact = Boolean(result.artifactId && result.artifactUrl)
+  const missingMusicArtifact = requiresMusicArtifact && result.success && !processing && !hasMusicArtifact
+  const completed = result.success && !processing && (!requiresMusicArtifact || hasMusicArtifact)
   const status = completed ? 201 : processing ? 202 : readinessStatus(result.readiness)
+  const artifactError = missingMusicArtifact
+    ? 'Music generation completed without a downloadable audio artifact.'
+    : null
   return NextResponse.json({
     ...result,
-    executed: result.success,
+    success: missingMusicArtifact ? false : result.success,
+    executed: result.success && !missingMusicArtifact,
     jobStatus: processing ? 'processing' : completed ? 'completed' : 'failed',
     storageUrl: result.artifactUrl ?? null,
-    audioUrl: capability === 'music_generation' ? result.artifactUrl ?? null : null,
-    musicUrl: capability === 'music_generation' ? result.artifactUrl ?? null : null,
-    blocker: result.error ?? null,
-  }, { status })
+    audioUrl: completed && capability === 'music_generation' ? result.artifactUrl ?? null : null,
+    musicUrl: completed && capability === 'music_generation' ? result.artifactUrl ?? null : null,
+    error: artifactError ?? result.error ?? null,
+    blocker: artifactError ?? result.error ?? null,
+  }, { status: missingMusicArtifact ? 502 : status })
 }
 
 function normalizeMusicRequest(

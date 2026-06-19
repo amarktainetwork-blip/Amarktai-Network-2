@@ -345,7 +345,7 @@ export function sanitizeProviderError(error: unknown): string {
   const raw = error instanceof Error ? error.message : String(error || 'Connection failed')
   return raw
     .replace(/(Bearer|Token|Key)\s+[A-Za-z0-9._~+/=-]+/gi, '$1 [redacted]')
-    .replace(/\b(sk|hf|r8|ghp|tp)-?[A-Za-z0-9_-]{8,}\b/gi, '[redacted]')
+    .replace(/\b(sk|hf|r8|ghp|tp)[-_][A-Za-z0-9_-]{8,}\b/g, '[redacted]')
     .replace(/redis(s)?:\/\/[^@\s]+@/gi, 'redis$1://[redacted]@')
     .slice(0, 280)
 }

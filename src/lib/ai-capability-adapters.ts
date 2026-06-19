@@ -266,7 +266,15 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
       : null
   if (!endpoint) {
     return result(provider, model, 'needs_configuration', {
-      error: `${input.capability.id} requires ${specialist.requiredEnv.join(' or ')}.`,
+      error: `${input.capability.id} requires a Hugging Face specialist endpoint. Set ${specialist.requiredEnv.join(' or ')}; optional model override HF_MODEL_${input.capability.id.toUpperCase().replace(/[^A-Z0-9]+/g, '_')} or HF_SPECIALIST_MODELS_JSON.`,
+      errorCategory: 'provider_misconfigured',
+      retryable: true,
+      diagnostics: {
+        endpointRequired: specialist.endpointRequired,
+        requiredEnv: specialist.requiredEnv,
+        modelSource: specialist.modelSource,
+        endpointSource: specialist.endpointSource,
+      },
     })
   }
 
@@ -376,10 +384,20 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
   if (!generated.success) {
     return failedResult(provider, generated.model, generated.error)
   }
+  if (type === 'audio' && !generated.url && !generated.bytes && !generated.jobId) {
+    return failedResult(
+      provider,
+      generated.model,
+      generated.error ?? 'GenX music returned no audio bytes, audio URL, or pollable job ID.',
+    )
+  }
   return result(provider, generated.model, generated.jobId ? 'processing' : 'completed', {
     mediaUrl: generated.url,
+    bytes: generated.bytes,
     providerJobId: generated.jobId,
-    contentType: type === 'video' ? 'video/mp4' : type === 'image' ? 'image/png' : 'audio/mpeg',
+    contentType: generated.contentType ?? (
+      type === 'video' ? 'video/mp4' : type === 'image' ? 'image/png' : 'audio/mpeg'
+    ),
   })
 }
 
@@ -894,7 +912,20 @@ async function pollProvider(
     if (!polled) return result(provider, model, 'processing', { providerJobId })
     if (polled.status === 'failed') return result(provider, model, 'failed', { providerJobId, error: polled.error ?? 'GenX job failed.' })
     if (!['completed', 'succeeded'].includes(polled.status)) return result(provider, model, 'processing', { providerJobId })
-    return result(provider, model, 'completed', { providerJobId, mediaUrl: polled.resultUrl })
+    if (input.capability.group === 'music' && !polled.resultUrl && !polled.bytes) {
+      return result(provider, model, 'failed', {
+        providerJobId,
+        error: polled.error ?? 'GenX music job completed without audio bytes or audio URL.',
+        errorCategory: 'malformed_response',
+        retryable: true,
+      })
+    }
+    return result(provider, model, 'completed', {
+      providerJobId,
+      mediaUrl: polled.resultUrl ?? null,
+      bytes: polled.bytes ?? null,
+      contentType: polled.contentType ?? null,
+    })
   }
   if (provider === 'qwen') {
     const polled = await pollQwenWanxTask({ taskId: providerJobId, model })

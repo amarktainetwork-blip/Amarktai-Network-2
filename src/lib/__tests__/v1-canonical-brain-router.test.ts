@@ -86,12 +86,19 @@ describe('canonical V1 brain capability router', () => {
   })
 
   it('routes music to real audio adapters without a completed blueprint fallback', () => {
-    expect(getCapabilityDefinition('music_generation')).toMatchObject({
+    const music = getCapabilityDefinition('music_generation')!
+    expect(music).toMatchObject({
       status: 'working',
-      readiness: 'ready_with_fallback',
+      readiness: 'ready',
       adapterImplemented: true,
       executableEndpoint: '/api/admin/music-studio',
       createsArtifact: true,
+    })
+    expect(music.providerRoutes.filter((route) => route.executable).map((route) => route.provider))
+      .toEqual(['genx'])
+    expect(music.providerRoutes.find((route) => route.provider === 'huggingface')).toMatchObject({
+      executable: false,
+      status: 'requires_endpoint',
     })
     expect(fs.readFileSync(path.join(process.cwd(), 'src/lib/orchestrator.ts'), 'utf8'))
       .not.toContain('createPlanningFallback')

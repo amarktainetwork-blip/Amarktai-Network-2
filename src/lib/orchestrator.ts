@@ -644,7 +644,9 @@ export async function executeCapabilityOrchestration(
   return capabilityFailure(
     capability,
     onlyConfigurationFailures ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
-    attempts.length
+    capability === 'music_generation' && attempts.length
+      ? 'No configured music provider returned audio bytes or audio URL.'
+      : attempts.length
       ? 'All eligible provider/model attempts failed.'
       : routePlan.reason,
     (lastAttempt?.errorCategory as CapabilityResponse['error_category']) ?? 'unknown',

@@ -121,12 +121,15 @@ export interface GenXMediaResponse {
   jobId?: string    // present when generation is async
   status: 'completed' | 'pending' | 'processing' | 'queued' | 'failed'
   error?: string
+  mimeType?: string
 }
 
 export interface GenXJobStatus {
   id: string
   status: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'
   resultUrl?: string | null
+  bytes?: Buffer | null
+  contentType?: string | null
   result?: GenXMediaResponse
   error?: string
   createdAt: string
@@ -151,6 +154,8 @@ export interface GenXMediaResult {
   model: string
   latencyMs: number
   error: string | null
+  bytes: Buffer | null
+  contentType: string | null
 }
 
 export interface GenXStatus {
@@ -518,6 +523,87 @@ function normaliseStatus(status: unknown): GenXMediaResult['status'] {
   if (raw === 'failed' || raw === 'error' || raw === 'cancelled' || raw === 'canceled') return 'failed'
   if (raw === 'processing' || raw === 'running' || raw === 'in_progress') return 'processing'
   return 'pending'
+}
+
+const MEDIA_URL_KEYS = [
+  'result_url',
+  'resultUrl',
+  'url',
+  'output_url',
+  'outputUrl',
+  'file_url',
+  'fileUrl',
+  'audio_url',
+  'audioUrl',
+  'music_url',
+  'musicUrl',
+  'mediaUrl',
+  'downloadUrl',
+  'download_url',
+  'previewUrl',
+  'preview_url',
+  'playbackUrl',
+  'playback_url',
+]
+
+const MEDIA_BASE64_KEYS = [
+  'audioBase64',
+  'audio_base64',
+  'base64',
+  'b64_json',
+  'bytesBase64Encoded',
+  'data',
+]
+
+function collectRecords(value: unknown, depth = 0): Record<string, unknown>[] {
+  if (depth > 8) return []
+  if (Array.isArray(value)) return value.flatMap((item) => collectRecords(item, depth + 1))
+  if (!isRecord(value)) return []
+  return [
+    value,
+    ...Object.values(value).flatMap((item) => collectRecords(item, depth + 1)),
+  ]
+}
+
+function firstNestedString(value: unknown, keys: readonly string[]): string | null {
+  for (const record of collectRecords(value)) {
+    for (const key of keys) {
+      const found = asString(record[key])
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function normalizeBase64(value: string | null): string | null {
+  if (!value) return null
+  const dataUri = value.match(/^data:([^;]+);base64,([\s\S]+)$/)
+  const candidate = (dataUri?.[2] ?? value).replace(/\s/g, '')
+  if (/^[A-Za-z0-9+/=]+$/.test(candidate) && candidate.length >= 16) return candidate
+  return null
+}
+
+function mediaContentType(value: unknown, base64Source?: string | null): string | null {
+  const dataUriType = base64Source?.match(/^data:([^;]+);base64,/)?.[1] ?? null
+  return firstNestedString(value, ['mimeType', 'mime_type', 'contentType', 'content_type', 'mediaType'])
+    ?? dataUriType
+}
+
+function mediaBytes(value: unknown): { bytes: Buffer | null; contentType: string | null } {
+  const rawBase64 = firstNestedString(value, MEDIA_BASE64_KEYS)
+  const normalized = normalizeBase64(rawBase64)
+  return {
+    bytes: normalized ? Buffer.from(normalized, 'base64') : null,
+    contentType: mediaContentType(value, rawBase64),
+  }
+}
+
+function mediaUrl(value: unknown): string | null {
+  return firstNestedString(value, MEDIA_URL_KEYS)
+}
+
+function providerMessage(value: unknown): string | null {
+  return firstNestedString(value, ['error', 'message', 'detail', 'reason'])
 }
 
 function inferCapabilities(raw: Record<string, unknown>, id: string): GenXCapability[] {
@@ -938,6 +1024,8 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       success: false, url: null, jobId: null, status: 'failed',
       model: resolvedRequest.model, latencyMs: 0,
       error: 'GenX API key is not configured',
+      bytes: null,
+      contentType: null,
     }
   }
 
@@ -983,7 +1071,17 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       const error = typeof errBody.error === 'string'
         ? errBody.error
         : errBody.error?.message ?? errBody.message ?? `GenX HTTP ${res.status}`
-      return { success: false, url: null, jobId: null, status: 'failed' as const, model: resolvedRequest.model, latencyMs, error }
+      return {
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed' as const,
+        model: resolvedRequest.model,
+        latencyMs,
+        error,
+        bytes: null,
+        contentType: null,
+      }
     }
 
     const data = await res.json() as Record<string, unknown>
@@ -991,13 +1089,28 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
     const jobId = asString(data.job_id) ?? asString(data.jobId) ?? (
       status === 'pending' || status === 'processing' ? asString(data.id) : undefined
     )
-    const url = asString(data.result_url)
-      ?? asString(data.resultUrl)
-      ?? asString(data.url)
-      ?? asString(data.output_url)
-      ?? asString(data.file_url)
+    const url = mediaUrl(data)
+    const audio = mediaBytes(data)
     const model = asString(data.model) ?? resolvedRequest.model
-    const error = asString(data.error) ?? (isRecord(data.error) ? asString(data.error.message) : undefined)
+    const error = providerMessage(data)
+    const missingAudioOutput = resolvedRequest.type === 'audio'
+      && status !== 'failed'
+      && !url
+      && !audio.bytes
+      && !jobId
+    if (missingAudioOutput) {
+      return {
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed',
+        model,
+        latencyMs,
+        error: error ?? 'GenX music returned no audio bytes, audio URL, or pollable job ID.',
+        bytes: null,
+        contentType: null,
+      }
+    }
 
     return {
       success: status !== 'failed',
@@ -1007,12 +1120,16 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       model,
       latencyMs,
       error: error ?? null,
+      bytes: audio.bytes,
+      contentType: audio.contentType,
     }
   } catch (err) {
     return {
       success: false, url: null, jobId: null, status: 'failed',
       model: resolvedRequest.model, latencyMs: Date.now() - start,
       error: `GenX media request failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+      bytes: null,
+      contentType: null,
     }
   }
 }
@@ -1035,26 +1152,38 @@ export async function getGenXJobStatus(jobId: string): Promise<GenXJobStatus | n
     const data = await res.json() as Record<string, unknown>
     const status = normaliseStatus(data.status)
     const id = asString(data.id) ?? asString(data.job_id) ?? jobId
-    const resultUrl = asString(data.result_url)
-      ?? asString(data.resultUrl)
-      ?? asString(data.url)
-      ?? asString(data.output_url)
-      ?? null
-    const error = asString(data.error) ?? (isRecord(data.error) ? asString(data.error.message) : undefined)
+    const resultUrl = mediaUrl(data)
+    const audio = mediaBytes(data)
+    const error = providerMessage(data)
     const model = asString(data.model) ?? 'unknown'
+    const type = asString(data.type) === 'audio'
+      ? 'audio'
+      : asString(data.type) === 'video'
+        ? 'video'
+        : 'image'
     return {
       id,
       status: status === 'completed' ? 'completed' : status,
       resultUrl,
+      bytes: audio.bytes,
+      contentType: audio.contentType,
       result: resultUrl ? {
         id,
         model,
-        type: 'image',
+        type,
         url: resultUrl,
         result_url: resultUrl,
         status: 'completed',
+        mimeType: audio.contentType ?? undefined,
+      } : audio.bytes ? {
+        id,
+        model,
+        type,
+        base64: audio.bytes.toString('base64'),
+        mimeType: audio.contentType ?? undefined,
+        status: 'completed',
       } : undefined,
-      error,
+      error: error ?? undefined,
       createdAt: asString(data.created_at) ?? asString(data.createdAt) ?? '',
       updatedAt: asString(data.updated_at) ?? asString(data.updatedAt) ?? '',
     }

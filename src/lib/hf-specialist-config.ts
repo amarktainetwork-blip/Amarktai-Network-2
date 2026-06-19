@@ -36,6 +36,7 @@ export const HF_SPECIALIST_DEFAULT_MODELS: Readonly<Record<string, string>> = {
   keypoint_detection: 'facebook/detr-resnet-50',
   image_feature_extraction: 'google/vit-base-patch16-224',
   video_classification: 'MCG-NJU/videomae-base-finetuned-kinetics',
+  music_generation: 'facebook/musicgen-small',
   text_to_speech: 'facebook/mms-tts-eng',
   automatic_speech_recognition: 'openai/whisper-large-v3',
   audio_classification: 'MIT/ast-finetuned-audioset-10-10-0.4593',

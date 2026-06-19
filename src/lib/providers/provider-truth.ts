@@ -180,7 +180,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       dedicatedEndpointsEnv: null,
       cacheTtlMs: CACHE_TTL_MS,
     },
-    capabilities: ['chat', 'reasoning', 'coding', 'tts'],
+    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'image', 'tts', 'stt', 'agents'],
     features: {
       streaming: true,
       asyncJobs: false,

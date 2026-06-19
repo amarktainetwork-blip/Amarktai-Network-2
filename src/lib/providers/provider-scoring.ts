@@ -80,6 +80,7 @@ export function rejectionForProviderModel(input: {
   if (!model.capabilities.includes(capability.id)) return { ...base, code: 'CAPABILITY_UNSUPPORTED', reason: 'Model does not advertise or inherit the requested capability.' }
   if (model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT') return { ...base, code: 'DEDICATED_ENDPOINT_REQUIRED', reason: 'Model requires a dedicated provider endpoint before execution.' }
   if (model.metadata?.executable === 'CATALOG_ONLY') return { ...base, code: 'CATALOG_ONLY', reason: 'Model is catalog-only and must not be routed for live execution.' }
+  if (model.metadata?.executable === 'ADAPTER_MISSING') return { ...base, code: 'ADAPTER_MISSING', reason: 'Model is visible in the provider catalog, but no canonical adapter is wired for this capability.' }
   if (model.metadata?.adultGate === true && profile.preferences.adult !== true) return { ...base, code: 'ADULT_GATE_REQUIRED', reason: 'Model requires an explicit adult policy/app gate.' }
   if (!health.configured) return { ...base, code: 'PROVIDER_NOT_CONFIGURED', reason: 'Provider credential is not configured or not visible to runtime.' }
   if (health.state === 'degraded' && !allowDegradedFallback && !allowLiveAuthenticatedDegraded) return { ...base, code: 'PROVIDER_DEGRADED', reason: 'Provider health is degraded and this model lacks live-authenticated fallback evidence.' }

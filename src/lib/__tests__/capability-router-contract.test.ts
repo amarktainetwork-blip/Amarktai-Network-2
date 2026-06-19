@@ -594,6 +594,180 @@ describe('capability router contract', () => {
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
 
+  it('persists immediate GenX music audio URLs as local artifacts', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'genx-music',
+        capabilities: ['music'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: 'https://media.example/music.mp3',
+      bytes: null,
+      contentType: 'audio/mpeg',
+      jobId: null,
+      status: 'completed',
+      model: 'genx-music',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      artifactId: 'artifact-1',
+      provider: 'genx',
+      model: 'genx-music',
+    })
+    expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'music',
+      contentUrl: 'https://media.example/music.mp3',
+      mimeType: 'audio/mpeg',
+    }))
+  })
+
+  it('persists immediate GenX music base64 bytes as local artifacts', async () => {
+    const audioBytes = Buffer.from('fake-audio-bytes')
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'genx-music',
+        capabilities: ['music'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: null,
+      bytes: audioBytes,
+      contentType: 'audio/wav',
+      jobId: null,
+      status: 'completed',
+      model: 'genx-music',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      artifactId: 'artifact-1',
+    })
+    expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'music',
+      content: audioBytes,
+      mimeType: 'audio/wav',
+    }))
+  })
+
+  it('fails GenX music without audio and does not create an artifact', async () => {
+    const selected = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'genx-music',
+        capabilities: ['music'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'ready',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: null,
+      bytes: null,
+      contentType: null,
+      jobId: null,
+      status: 'completed',
+      model: 'genx-music',
+      error: 'Gemini returned no audio data',
+    })
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      providerOverride: 'genx',
+      saveArtifact: true,
+    })
+
+    expect(result).toMatchObject({
+      success: false,
+      readiness: 'UNAVAILABLE',
+      error: 'No configured music provider returned audio bytes or audio URL.',
+    })
+    expect(result.providerAttempts?.[0]).toMatchObject({
+      provider: 'genx',
+      error: 'Gemini returned no audio data',
+    })
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
+  })
+
   it('keeps a forced GenX image route routable when static discovery fallback candidates exist', async () => {
     const selected = {
       provider: 'genx',

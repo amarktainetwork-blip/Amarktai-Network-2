@@ -317,11 +317,15 @@ describe('Studio E2E — capability taxonomy proof', () => {
     const music = AI_CAPABILITY_TAXONOMY.find((c) => c.id === 'music_generation')
     expect(music).toBeDefined()
     expect(music!.status).toBe('working')
-    expect(music!.readiness).toBe('ready_with_fallback')
+    expect(music!.readiness).toBe('ready')
     expect(music!.adapterImplemented).toBe(true)
     expect(music!.executableEndpoint).toBe('/api/admin/music-studio')
     expect(music!.providerRoutes.filter((route) => route.executable).map((route) => route.provider))
-      .toEqual(expect.arrayContaining(['genx', 'huggingface']))
+      .toEqual(['genx'])
+    expect(music!.providerRoutes.find((route) => route.provider === 'huggingface')).toMatchObject({
+      executable: false,
+      status: 'requires_endpoint',
+    })
     expect(music!.createsArtifact).toBe(true)
   })
 
