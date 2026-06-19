@@ -43,6 +43,16 @@ export interface MediaStudioRunResponse {
     capabilityRoutePassed: boolean
     artifactPersisted: boolean
     previewDownloadAvailable: boolean
+    requestedDurationSeconds: number | null
+    actualDurationSeconds: number | null
+    selectedProvider: string | null
+    selectedModel: string | null
+    providerAttempts: Array<Record<string, unknown>>
+    rejectionReasons: Array<{ provider: string; model: string; reason: string }>
+    providerDurationCapSeconds: number | null
+    artifactId: string | null
+    finalLocalUrl: string | null
+    toolReadiness: Record<string, unknown> | null
   }
   error: string | null
   execution: ExecutionRecord
@@ -122,6 +132,9 @@ function studioEvidence(execution: ExecutionRecord, artifacts: ArtifactRecord[])
       Boolean(attempt) && typeof attempt === 'object',
     )
     : []
+  const inputParameters = isRecord(execution.input.metadata.parameters)
+    ? execution.input.metadata.parameters
+    : {}
   const resultPreviewAvailable = hasString(result.previewUrl)
     || hasString(result.downloadUrl)
     || hasString(result.artifactUrl)
@@ -139,9 +152,52 @@ function studioEvidence(execution: ExecutionRecord, artifacts: ArtifactRecord[])
     previewDownloadAvailable: artifacts.some((artifact) =>
       artifact.status === 'completed' && Boolean(artifact.previewUrl || artifact.downloadUrl || artifact.storageUrl),
     ) || resultPreviewAvailable,
+    requestedDurationSeconds: numberValue(
+      result.requestedDurationSeconds
+      ?? inputParameters.duration
+      ?? execution.input.metadata.duration
+      ?? attempts.find((attempt) => numberValue(attempt.requestedDurationSeconds) !== null)?.requestedDurationSeconds,
+    ),
+    actualDurationSeconds: numberValue(
+      result.actualDurationSeconds
+      ?? attempts.find((attempt) => numberValue(attempt.actualDurationSeconds) !== null)?.actualDurationSeconds,
+    ),
+    selectedProvider: stringValue(result.provider) ?? execution.providerPlan.provider,
+    selectedModel: stringValue(result.model) ?? execution.modelPlan.model,
+    providerAttempts: attempts,
+    rejectionReasons: attempts
+      .filter((attempt) => hasString(attempt.error))
+      .map((attempt) => ({
+        provider: stringValue(attempt.provider) ?? 'unknown',
+        model: stringValue(attempt.model) ?? 'unknown',
+        reason: stringValue(attempt.error) ?? 'unknown',
+      })),
+    providerDurationCapSeconds: numberValue(
+      result.providerLimitSeconds
+      ?? attempts.find((attempt) => numberValue(attempt.providerLimitSeconds) !== null)?.providerLimitSeconds,
+    ),
+    artifactId: stringValue(result.artifactId) ?? artifacts.at(-1)?.id ?? null,
+    finalLocalUrl: stringValue(result.storageUrl)
+      ?? stringValue(result.artifactUrl)
+      ?? artifacts.at(-1)?.storageUrl
+      ?? artifacts.at(-1)?.downloadUrl
+      ?? null,
+    toolReadiness: isRecord(result.toolReadiness) ? result.toolReadiness : null,
   }
 }
 
 function hasString(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0
+}
+
+function stringValue(value: unknown): string | null {
+  return hasString(value) ? String(value) : null
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
 }

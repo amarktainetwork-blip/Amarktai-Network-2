@@ -134,7 +134,19 @@ export interface DiscoveredModel {
     safetyPolicy?: string | null
     safetyNotes?: string | null
     adultGate?: boolean
-    executable?: boolean | 'candidate' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT' | 'ADAPTER_MISSING'
+    executable?: boolean | 'candidate' | 'CATALOG_ONLY' | 'REQUIRES_DEDICATED_ENDPOINT' | 'ADAPTER_MISSING' | 'DURATION_LIMITED'
+    executionClassification?:
+      | 'executable'
+      | 'needs_configuration'
+      | 'endpoint_required'
+      | 'adapter_missing'
+      | 'provider_error'
+      | 'unsupported_by_contract'
+      | 'blocked_by_policy'
+      | 'rate_limited'
+      | 'duration_limited'
+    providerLimitSeconds?: number | null
+    endpointEnv?: string | null
   }
   raw: Record<string, unknown>
   discoveredAt: string
@@ -177,6 +189,7 @@ export interface RoutingPreferences {
   artifactSupport?: boolean
   providerPreference?: ProviderId[]
   modelPreference?: string[]
+  durationSeconds?: number
 }
 
 export interface RoutingProfile {
@@ -217,6 +230,7 @@ export interface ProviderRouteRejection {
     | 'DEDICATED_ENDPOINT_REQUIRED'
     | 'CATALOG_ONLY'
     | 'ADAPTER_MISSING'
+    | 'DURATION_LIMITED'
     | 'ADULT_GATE_REQUIRED'
     | 'PROVIDER_NOT_CONFIGURED'
     | 'PROVIDER_DEGRADED'

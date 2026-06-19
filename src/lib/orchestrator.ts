@@ -393,6 +393,7 @@ export async function executeCapabilityOrchestration(
         ? [requestedProvider as ApprovedDirectProviderId]
         : undefined,
       modelPreference: requestedModel ? [requestedModel] : undefined,
+      durationSeconds: requestedDurationSeconds(request) ?? undefined,
     },
   })
   const candidates = routePlan.candidates
@@ -430,9 +431,12 @@ export async function executeCapabilityOrchestration(
         adapter: candidate.adapter,
         outputType: route?.outputType ?? definition.outputType,
         status: 'failed',
+        classification: route ? 'adapter_missing' : 'unsupported_by_contract',
         errorCategory: 'unsupported_endpoint',
         retryable: true,
         error: `No canonical adapter contract is registered for ${candidate.provider}/${taxonomyId}.`,
+        requestedDurationSeconds: requestedDurationSeconds(request),
+        providerLimitSeconds: providerLimitSeconds(candidate.model.metadata),
       })
       continue
     }
@@ -491,10 +495,21 @@ export async function executeCapabilityOrchestration(
       adapter: candidate.adapter,
       outputType: route.outputType,
       status: adapterResult.status,
+      classification: attemptClassification(adapterResult.status, adapterResult.errorCategory),
       latencyMs,
       errorCategory: adapterResult.errorCategory ?? undefined,
       retryable: adapterResult.retryable,
       error: adapterResult.error ?? undefined,
+      requestedDurationSeconds: requestedDurationSeconds(request),
+      providerLimitSeconds: providerLimitSeconds(candidate.model.metadata),
+      actualDurationSeconds: numericMetadata(adapterResult.diagnostics?.actualDurationSeconds),
+      artifactPersisted: false,
+      previewDownloadAvailable: false,
+      diagnostics: {
+        ...(adapterResult.diagnostics ?? {}),
+        modelExecutionClassification: candidate.model.metadata?.executionClassification ?? null,
+        endpointEnv: candidate.model.metadata?.endpointEnv ?? null,
+      },
     })
     await recordCapabilityTraceSafe({
       traceId: request.traceId,
@@ -531,6 +546,7 @@ export async function executeCapabilityOrchestration(
         definitionCreatesArtifact: definition.createsArtifact,
         adapterResult,
         attempts,
+        selectedAttemptIndex: attempts.length - 1,
         fallbackUsed: index > 0,
       })
     }
@@ -555,10 +571,12 @@ export async function executeCapabilityOrchestration(
             provider: adapterResult.provider,
             model: adapterResult.model,
             providerJobId: adapterResult.providerJobId,
-            metadata: {
-              ...(request.metadata ?? {}),
-              providerAttempts: attempts,
-            },
+          metadata: {
+            ...(request.metadata ?? {}),
+            providerAttempts: attempts,
+            requestedDurationSeconds: requestedDurationSeconds(request),
+            providerLimitSeconds: providerLimitSeconds(candidate.model.metadata),
+          },
           })
         : null
       const durableJob = await createControlPlaneJob({
@@ -620,6 +638,8 @@ export async function executeCapabilityOrchestration(
           controlPlaneJobId: durableJob.id,
           controlPlaneAttemptId: durableAttempt.id,
           queueStatus: durableJob.status,
+          requestedDurationSeconds: requestedDurationSeconds(request),
+          providerLimitSeconds: providerLimitSeconds(candidate.model.metadata),
         },
       }
     }
@@ -706,12 +726,42 @@ function resolveExecutableRoute(input: {
         status: 'needs_configuration',
         errorCategory: 'provider_misconfigured',
         retryable: true,
+        classification: 'endpoint_required',
         error: `${input.taxonomyId} requires a Hugging Face specialist endpoint. Set ${specialist.requiredEnv.join(' or ')}.`,
       },
     }
   }
 
   return { route: null }
+}
+
+function requestedDurationSeconds(request: CapabilityRequest): number | null {
+  const value = request.metadata?.durationSeconds ?? request.metadata?.duration
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function providerLimitSeconds(metadata: unknown): number | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const value = (metadata as Record<string, unknown>).providerLimitSeconds
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function numericMetadata(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
+}
+
+function attemptClassification(
+  status: string,
+  errorCategory: string | null,
+): NonNullable<ProviderAttempt['classification']> {
+  if (status === 'completed' || status === 'processing') return 'executable'
+  if (status === 'needs_configuration') return 'needs_configuration'
+  if (status === 'blocked') return 'blocked_by_policy'
+  if (errorCategory === 'rate_limited') return 'rate_limited'
+  if (errorCategory === 'provider_misconfigured') return 'needs_configuration'
+  if (errorCategory === 'unsupported_endpoint') return 'unsupported_by_contract'
+  if (errorCategory === 'model_not_supported') return 'unsupported_by_contract'
+  return 'provider_error'
 }
 
 function hasRequiredSource(
@@ -957,6 +1007,7 @@ async function completeCapabilityResult(input: {
   definitionCreatesArtifact: boolean
   adapterResult: Awaited<ReturnType<NonNullable<ReturnType<typeof getProviderCapabilityAdapter>>['execute']>>
   attempts: ProviderAttempt[]
+  selectedAttemptIndex?: number
   fallbackUsed: boolean
 }): Promise<CapabilityResponse> {
   const output = input.adapterResult.mediaUrl
@@ -1046,6 +1097,13 @@ async function completeCapabilityResult(input: {
         providerAttempts: input.attempts,
       },
     })
+    const selectedAttempt = input.selectedAttemptIndex === undefined
+      ? null
+      : input.attempts[input.selectedAttemptIndex] ?? null
+    if (selectedAttempt) {
+      selectedAttempt.artifactPersisted = true
+      selectedAttempt.previewDownloadAvailable = Boolean(artifact.downloadUrl || artifact.storageUrl)
+    }
     await recordCapabilityTraceSafe({
       traceId: input.request.traceId,
       appSlug,

@@ -1,12 +1,12 @@
 export interface VideoModelContract {
-  provider: 'genx' | 'qwen'
+  provider: 'genx' | 'qwen' | 'together'
   model: string
   mode: 'text_to_video' | 'image_to_video'
   requiresSourceImage: boolean
   supportedAspectRatios: string[]
   maxClipDurationSeconds: number
   supportsDurationCustomization: boolean
-  pollingMethod: 'genx_job' | 'dashscope_task'
+  pollingMethod: 'genx_job' | 'dashscope_task' | 'together_video_job'
 }
 
 export const VIDEO_MODEL_CONTRACTS: readonly VideoModelContract[] = [
@@ -15,6 +15,8 @@ export const VIDEO_MODEL_CONTRACTS: readonly VideoModelContract[] = [
   contract('genx', 'grok-imagine-video', 'text_to_video', false, 6, false, 'genx_job'),
   contract('qwen', 'wan2.1-t2v-turbo', 'text_to_video', false, 5, false, 'dashscope_task'),
   contract('qwen', 'wan2.1-i2v-turbo', 'image_to_video', true, 5, false, 'dashscope_task'),
+  contract('together', 'Wan-AI/Wan2.1-T2V-14B', 'text_to_video', false, 5, true, 'together_video_job'),
+  contract('together', 'minimax/video-01', 'text_to_video', false, 6, true, 'together_video_job'),
 ] as const
 
 export function getVideoModelContract(provider: string, model: string) {

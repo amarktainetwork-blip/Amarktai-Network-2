@@ -128,6 +128,10 @@ const GENX_FALLBACK_MODEL_CAPABILITIES: Partial<Record<CapabilityId, readonly st
   tts: GENX_TTS_MODELS,
 }
 
+const MUSIC_DURATION_LIMITS: Partial<Record<ProviderId, number>> = {
+  genx: 30,
+}
+
 const HF_CURATED_MODELS: Array<{
   id: string
   task: string
@@ -608,13 +612,15 @@ function normalizeModel(
     ? 'model_metadata'
     : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown'
   const routeType = firstString(record.routeType, record.route_type)
+  const durationLimit = MUSIC_DURATION_LIMITS[provider.id] && capabilities.includes('music')
+    ? MUSIC_DURATION_LIMITS[provider.id]!
+    : null
   const requiresDedicatedEndpoint = routeType === 'hf_specialist_endpoint'
-    || (
-      provider.id === 'together'
-      && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video' || capability === 'adult_video')
-    )
+    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'adult_video')
   const adapterMissing = provider.id === 'mimo'
-    && capabilities.some((capability) => ['image', 'vision', 'stt', 'agents'].includes(capability))
+    && capabilities.some((capability) => ['image', 'agents'].includes(capability))
+    || provider.id === 'qwen'
+    && capabilities.some((capability) => ['tts', 'stt'].includes(capability))
   const executableState = adapterMissing
     ? 'ADAPTER_MISSING'
     : routeType === 'hf_specialist_endpoint'
@@ -624,6 +630,11 @@ function normalizeModel(
       : requiresDedicatedEndpoint
         ? 'REQUIRES_DEDICATED_ENDPOINT'
       : capabilityEvidence === 'unknown' ? 'candidate' : true
+  const executionClassification = executionClassificationFor(executableState, {
+    routeType,
+    provider: provider.id,
+    capabilities,
+  })
   return {
     provider: provider.id,
     id,
@@ -650,10 +661,39 @@ function normalizeModel(
       safetyNotes: firstString(record.safety, record.safetyNotes, record.safety_notes),
       adultGate: record.adult === true || firstString(record.safetyPolicy, record.safety_policy) === 'adult_gate_required',
       executable: executableState,
+      executionClassification,
+      providerLimitSeconds: durationLimit,
+      endpointEnv: endpointEnvFor(provider.id, capabilities),
     },
     raw: record,
     discoveredAt,
   }
+}
+
+function executionClassificationFor(
+  executable: NonNullable<DiscoveredModel['metadata']>['executable'],
+  input: { routeType?: string | null; provider: ProviderId; capabilities: CapabilityId[] },
+): NonNullable<DiscoveredModel['metadata']>['executionClassification'] {
+  if (executable === true || executable === 'candidate') return 'executable'
+  if (executable === 'REQUIRES_DEDICATED_ENDPOINT') return 'endpoint_required'
+  if (executable === 'ADAPTER_MISSING') return 'adapter_missing'
+  if (executable === 'CATALOG_ONLY') return input.routeType === 'policy_gated_candidate'
+    ? 'blocked_by_policy'
+    : 'unsupported_by_contract'
+  if (executable === 'DURATION_LIMITED') return 'duration_limited'
+  return 'unsupported_by_contract'
+}
+
+function endpointEnvFor(provider: ProviderId, capabilities: CapabilityId[]): string | null {
+  if (provider === 'huggingface') {
+    if (capabilities.includes('music')) return 'HF_ENDPOINT_MUSIC_GENERATION'
+    if (capabilities.includes('video') || capabilities.includes('adult_video')) return 'HF_ENDPOINT_TEXT_TO_VIDEO'
+    if (capabilities.includes('image_to_video')) return 'HF_ENDPOINT_IMAGE_TO_VIDEO'
+  }
+  if (provider === 'together' && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video')) {
+    return 'TOGETHER_VIDEO_BASE_URL'
+  }
+  return null
 }
 
 async function fetchDiscoveryRecords(
@@ -733,7 +773,7 @@ function descriptorCapabilities(providerId: ProviderId, modelId: string, descrip
     add('tts', /\b(orpheus|tts|text[-_\s]?to[-_\s]?speech|speech[-_\s]synthesis)\b/i)
     add('stt', /\b(whisper|asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
   } else if (providerId === 'mimo') {
-    add('image', /\b(image|vision[-_\s]?generation|text[-_\s]?to[-_\s]?image|multimodal[-_\s]?image)\b/i)
+    add('image', /\b(text[-_\s]?to[-_\s]?image|image[-_\s]?generation)\b/i)
     add('vision', /\b(vision|visual|multimodal|image[-_\s]?text|(?:^|[-_/])vl(?:[-_/]|$))\b/i)
     add('tts', /\b(tts|speech[-_\s]generation|text[-_\s]?to[-_\s]?speech|voice)\b/i)
     add('stt', /\b(asr|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption)|whisper)\b/i)

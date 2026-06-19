@@ -59,7 +59,7 @@ function source(file: string) {
 
 function adapterInput(
   capabilityId: string,
-  provider: 'qwen' | 'together' | 'huggingface' | 'genx',
+  provider: 'qwen' | 'together' | 'huggingface' | 'genx' | 'mimo',
   model: string,
 ) {
   const capability = getCapabilityDefinition(capabilityId)!
@@ -132,7 +132,7 @@ describe('provider adapter contracts', () => {
     expect(source('src/app/api/admin/settings/test-groq/route.ts')).toContain('capabilityExecutionProven: false')
   })
 
-  it('represents Qwen chat and reasoning while leaving unsupported families out of provider truth', () => {
+  it('represents Qwen chat, media, and audio catalog truth while leaving unsupported families out', () => {
     const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
 
     expect(qwen.capabilities).toEqual(expect.arrayContaining([
@@ -144,13 +144,13 @@ describe('provider adapter contracts', () => {
       'image',
       'video',
       'image_to_video',
+      'tts',
+      'stt',
       'embeddings',
       'translation',
     ]))
     expect(qwen.capabilities).not.toEqual(expect.arrayContaining([
       'music',
-      'tts',
-      'stt',
       'voice_clone',
       'adult_text',
       'adult_image',
@@ -192,19 +192,19 @@ describe('provider adapter contracts', () => {
       'embeddings',
       'rerank',
       'agents',
+      'adult_image',
+      'adult_video',
     ]))
     expect(together.capabilities).not.toEqual(expect.arrayContaining([
       'music',
       'translation',
       'documents',
       'adult_text',
-      'adult_image',
-      'adult_video',
       'voice_clone',
       'ocr',
     ]))
     expect(together.features).toMatchObject({
-      asyncJobs: false,
+      asyncJobs: true,
       artifactSupport: true,
       streaming: true,
     })
@@ -243,7 +243,6 @@ describe('provider adapter contracts', () => {
       'reasoning',
       'coding',
       'vision',
-      'image',
       'tts',
       'stt',
       'agents',
@@ -258,7 +257,7 @@ describe('provider adapter contracts', () => {
       asyncJobs: false,
       webhooks: false,
       toolCalling: false,
-      artifactSupport: false,
+      artifactSupport: true,
     })
     expect(source('src/lib/universal-provider-call.ts')).toContain("envVars: ['MIMO_API_KEY', 'XIAOMI_API_KEY']")
     expect(source('src/lib/universal-provider-call.ts')).not.toContain('MINIMAX_API_KEY')
@@ -298,7 +297,7 @@ describe('provider adapter contracts', () => {
       error: null,
     }
     expect(modelsForCapability(snapshot, 'video').map((model) => model.id)).toContain('minimax/video-01')
-    expect(modelsForCapability(snapshot, 'video')[0]?.metadata?.executable).toBe('REQUIRES_DEDICATED_ENDPOINT')
+    expect(modelsForCapability(snapshot, 'video')[0]?.metadata?.executionClassification).toBe('executable')
     expect(PROVIDER_TRUTH.map((provider) => provider.id)).not.toContain('minimax')
   })
 
@@ -447,7 +446,9 @@ describe('provider adapter contracts', () => {
     expect(models.find((model) => model.id === 'wan2.1-t2v-turbo')?.capabilities).toContain('video')
     expect(models.find((model) => model.id === 'wan2.1-i2v-turbo')?.capabilities).toContain('image_to_video')
     expect(models.find((model) => model.id === 'qwen3-tts')?.capabilities).toEqual(['tts'])
+    expect(models.find((model) => model.id === 'qwen3-tts')?.metadata?.executionClassification).toBe('adapter_missing')
     expect(models.find((model) => model.id === 'qwen3-asr')?.capabilities).toEqual(['stt'])
+    expect(models.find((model) => model.id === 'qwen3-asr')?.metadata?.executionClassification).toBe('adapter_missing')
   })
 
   it('classifies Together image and video families correctly', () => {
@@ -461,7 +462,7 @@ describe('provider adapter contracts', () => {
 
     expect(models.find((model) => model.id.includes('FLUX'))?.capabilities).toContain('image')
     expect(models.find((model) => model.id.includes('T2V'))?.capabilities).toContain('video')
-    expect(models.find((model) => model.id.includes('T2V'))?.metadata?.executable).toBe('REQUIRES_DEDICATED_ENDPOINT')
+    expect(models.find((model) => model.id.includes('T2V'))?.metadata?.executionClassification).toBe('executable')
     expect(models.find((model) => model.id === 'whisper-large-v3')?.capabilities).toEqual(['stt'])
   })
 
@@ -483,7 +484,7 @@ describe('provider adapter contracts', () => {
       data: [
         { id: 'mimo-v2.5', available: true },
         { id: 'mimo-tts-1', available: true },
-        { id: 'mimo-asr-1', available: true },
+        { id: 'mimo-v2.5-asr', available: true },
         { id: 'mimo-vision-1', type: 'image-text-to-text', available: true },
         { id: 'mimo-agent-1', type: 'tool-calling', available: true },
       ],
@@ -491,12 +492,52 @@ describe('provider adapter contracts', () => {
 
     expect(models.find((model) => model.id === 'mimo-v2.5')?.capabilities).toContain('chat')
     expect(models.find((model) => model.id === 'mimo-tts-1')?.capabilities).toEqual(['tts'])
-    expect(models.find((model) => model.id === 'mimo-asr-1')?.capabilities).toEqual(['stt'])
-    expect(models.find((model) => model.id === 'mimo-asr-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
-    expect(models.find((model) => model.id === 'mimo-vision-1')?.capabilities).toEqual(['vision', 'ocr', 'image'])
-    expect(models.find((model) => model.id === 'mimo-vision-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo-v2.5-asr')?.capabilities).toEqual(['stt'])
+    expect(models.find((model) => model.id === 'mimo-v2.5-asr')?.metadata?.executionClassification).toBe('executable')
+    expect(models.find((model) => model.id === 'mimo-vision-1')?.capabilities).toEqual(['vision', 'ocr'])
+    expect(models.find((model) => model.id === 'mimo-vision-1')?.metadata?.executionClassification).toBe('executable')
     expect(models.find((model) => model.id === 'mimo-agent-1')?.capabilities).toEqual(['agents'])
-    expect(models.find((model) => model.id === 'mimo-agent-1')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo-agent-1')?.metadata?.executionClassification).toBe('adapter_missing')
+  })
+
+  it('uses MiMo ASR through the documented chat input_audio contract', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      choices: [{ message: { content: 'hello world' } }],
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('mimo')!.execute({
+      ...adapterInput('automatic_speech_recognition', 'mimo', 'mimo-v2.5-asr'),
+      references: [{ kind: 'audio', data: Buffer.from('audio'), mimeType: 'audio/wav' }],
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      provider: 'mimo',
+      model: 'mimo-v2.5-asr',
+      output: { text: 'hello world' },
+    })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/chat/completions')
+    expect(init.headers).toMatchObject({
+      Authorization: 'Bearer provider-secret',
+      'api-key': 'provider-secret',
+    })
+    const body = JSON.parse(String(init.body))
+    expect(body).toMatchObject({
+      model: 'mimo-v2.5-asr',
+      messages: [{
+        role: 'user',
+        content: [{
+          type: 'input_audio',
+          input_audio: { data: expect.stringContaining('data:audio/wav;base64,') },
+        }],
+      }],
+      asr_options: { language: 'auto' },
+    })
   })
 
   it('normalizes the GenX asynchronous job and polling flow', async () => {
@@ -525,6 +566,27 @@ describe('provider adapter contracts', () => {
       status: 'completed',
       mediaUrl: 'https://cdn.example/video.mp4',
     })
+  })
+
+  it('does not shorten over-limit GenX music requests into fake success', async () => {
+    const adapter = getProviderCapabilityAdapter('genx')!
+
+    const result = await adapter.execute({
+      ...adapterInput('music_generation', 'genx', 'lyria-3-clip-preview'),
+      inputs: { durationSeconds: 90 },
+    })
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      provider: 'genx',
+      model: 'lyria-3-clip-preview',
+      errorCategory: 'duration_limited',
+      diagnostics: {
+        requestedDurationSeconds: 90,
+        providerLimitSeconds: 30,
+      },
+    })
+    expect(mocks.callGenXMedia).not.toHaveBeenCalled()
   })
 
   it('keeps the GenX settings test scoped to catalog/chat probing rather than full capability proof', () => {
@@ -569,24 +631,44 @@ describe('provider adapter contracts', () => {
     })
   })
 
-  it('does not execute Together video through the stale /videos endpoint', async () => {
+  it('creates and polls Together video through the official async video endpoint', async () => {
+    const fetchMock = vi.fn(async (input: string | URL) => {
+      const url = String(input)
+      if (url.endsWith('/videos')) {
+        return new Response(JSON.stringify({ id: 'together-job-1', status: 'queued' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url.endsWith('/videos/together-job-1')) {
+        return new Response(JSON.stringify({
+          id: 'together-job-1',
+          status: 'completed',
+          outputs: { video_url: 'https://cdn.example/together-video.mp4' },
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response('{}', { status: 404, headers: { 'Content-Type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
     const adapter = getProviderCapabilityAdapter('together')!
-    const input = adapterInput('text_to_video', 'together', 'together-video-1')
+    const input = adapterInput('text_to_video', 'together', 'Wan-AI/Wan2.1-T2V-14B')
 
     const started = await adapter.execute(input)
-    const polled = await adapter.poll!('together-job-1', input)
+    const polled = await adapter.poll!(started.providerJobId!, input)
 
     expect(started).toMatchObject({
-      status: 'failed',
+      status: 'processing',
       provider: 'together',
-      model: 'together-video-1',
-      errorCategory: 'unsupported_endpoint',
-    })
-    expect(started.error).toContain('/videos endpoint returns 404')
-    expect(polled).toMatchObject({
-      status: 'failed',
+      model: 'Wan-AI/Wan2.1-T2V-14B',
       providerJobId: 'together-job-1',
-      errorCategory: 'unsupported_endpoint',
+    })
+    expect(polled).toMatchObject({
+      status: 'completed',
+      providerJobId: 'together-job-1',
+      mediaUrl: 'https://cdn.example/together-video.mp4',
     })
   })
 
@@ -595,11 +677,11 @@ describe('provider adapter contracts', () => {
       .filter((provider) => provider.features.asyncJobs)
       .map((provider) => provider.id)
 
-    expect(asyncProviders).toEqual(['genx', 'qwen'])
+    expect(asyncProviders).toEqual(['together', 'genx', 'qwen'])
     for (const provider of asyncProviders) {
       expect(providerHasCanonicalPollingContract(provider)).toBe(true)
     }
-    expect(providerHasCanonicalPollingContract('together')).toBe(false)
+    expect(providerHasCanonicalPollingContract('together')).toBe(true)
     expect(providerHasCanonicalPollingContract('huggingface')).toBe(false)
   })
 
@@ -615,11 +697,11 @@ describe('provider adapter contracts', () => {
       'video',
       'music',
       'tts',
-    ]))
-    expect(genx.capabilities).not.toEqual(expect.arrayContaining([
       'image_to_video',
       'stt',
       'avatar',
+    ]))
+    expect(genx.capabilities).not.toEqual(expect.arrayContaining([
       'vision',
       'documents',
       'agents',
@@ -660,11 +742,11 @@ describe('provider adapter contracts', () => {
       'documents',
       'translation',
       'avatar',
+      'adult_image',
+      'adult_video',
     ]))
     expect(huggingface.capabilities).not.toEqual(expect.arrayContaining([
       'adult_text',
-      'adult_image',
-      'adult_video',
       'agents',
       'voice_clone',
     ]))

@@ -76,10 +76,26 @@ export interface ProviderAttempt {
   adapter?: string
   outputType?: string
   status: string
+  classification?:
+    | 'executable'
+    | 'needs_configuration'
+    | 'endpoint_required'
+    | 'adapter_missing'
+    | 'provider_error'
+    | 'unsupported_by_contract'
+    | 'blocked_by_policy'
+    | 'rate_limited'
+    | 'duration_limited'
   latencyMs?: number
   errorCategory?: string
   retryable?: boolean
   error?: string
+  requestedDurationSeconds?: number | null
+  providerLimitSeconds?: number | null
+  actualDurationSeconds?: number | null
+  artifactPersisted?: boolean
+  previewDownloadAvailable?: boolean
+  diagnostics?: Record<string, unknown>
 }
 
 export interface CapabilityResponse {
@@ -118,6 +134,7 @@ export interface CapabilityResponse {
     | 'endpoint_error'
     | 'malformed_response'
     | 'unsupported_endpoint'
+    | 'duration_limited'
     | 'artifact_error'
     | 'guardrail_block'
     | 'no_route_found'

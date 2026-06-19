@@ -44,8 +44,8 @@ describe('PR118 provider runtime and dashboard recovery', () => {
   it('wires current provider-native runtime endpoints without model defaults', () => {
     const adapters = source('src/lib/ai-capability-adapters.ts')
     expect(adapters).toContain("/hf-inference/models/${model}")
-    expect(adapters).toContain('Together video execution is catalog-only')
-    expect(adapters).toContain('/videos endpoint returns 404')
+    expect(adapters).toContain("fetch(`${baseUrl}/videos`,")
+    expect(adapters).toContain("fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'video')}/videos/${encodeURIComponent(providerJobId)}`")
     expect(adapters).toContain("}/audio/transcriptions")
     expect(adapters).toContain("'rerank' : 'embeddings'")
     expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain('chatModel.id')

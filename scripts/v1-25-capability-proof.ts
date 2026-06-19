@@ -14,6 +14,9 @@ import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 import { getLocalMediaJob } from '@/lib/media-job-store'
 import { getArtifact, listArtifacts } from '@/lib/artifact-store'
 import { prisma } from '@/lib/prisma'
+import { testLocalTool } from '@/lib/local-tools'
+import { isRedisHealthy } from '@/lib/redis'
+import { isQdrantHealthy } from '@/lib/vector-store'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
@@ -97,6 +100,16 @@ type ModelSmokeProof = {
   error: string | null
 }
 
+type ToolReadinessProof = {
+  id: string
+  installed: boolean
+  wired: boolean
+  usedBy: string[]
+  setupCommand: string
+  blocker: string | null
+  detail: string
+}
+
 type PhaseName =
   | 'BOOT'
   | 'ENV_LOAD_START'
@@ -144,6 +157,7 @@ type ProofReport = {
   providerKeyPath: ProviderKeyResult[]
   providerDiscovery: ProviderDiscoveryResult[]
   modelSmokeProofs: ModelSmokeProof[]
+  toolReadiness: ToolReadinessProof[]
   capabilities: CapabilityProof[]
   summary: { liveProven: number; sourceWired: number; providerAvailable: number; blocked: number; notWired: number }
   proofState?: {
@@ -181,6 +195,7 @@ let dbCheckResult: DbCheckResult = { attempted: false, available: false, error: 
 let providerKeyResults: ProviderKeyResult[] = []
 let providerDiscoveryResults: ProviderDiscoveryResult[] = []
 let modelSmokeProofs: ModelSmokeProof[] = []
+let toolReadinessProofs: ToolReadinessProof[] = []
 let capabilityResults: CapabilityProof[] = []
 let activeCapability: string | null = null
 let lastCompletedCapability: string | null = null
@@ -208,6 +223,9 @@ async function main() {
   setPhase('MODEL_SMOKE_START')
   modelSmokeProofs = await collectModelSmokeProofs(providerKeyResults, providerDiscoveryResults)
   setPhase('MODEL_SMOKE_DONE')
+  await writePartialProof(null)
+
+  toolReadinessProofs = await collectToolReadinessProofs()
   await writePartialProof(null)
 
   setPhase('CAPABILITY_PROOF_START')
@@ -295,6 +313,7 @@ function buildReport(partial: boolean, failure: string | null): ProofReport {
     providerKeyPath: providerKeyResults,
     providerDiscovery: providerDiscoveryResults,
     modelSmokeProofs,
+    toolReadiness: toolReadinessProofs,
     capabilities: capabilityResults,
     summary: summarize(capabilityResults),
     proofState: {
@@ -567,6 +586,79 @@ async function collectModelSmokeProofs(
     }, CAPABILITY_TIMEOUT_MS, modelSmokeBlocked(entry.provider, 'chat', entry.configured, false, `Model smoke timed out after ${CAPABILITY_TIMEOUT_MS}ms.`)),
   ))
   return providerProofs
+}
+
+async function collectToolReadinessProofs(): Promise<ToolReadinessProof[]> {
+  const localToolIds = ['playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'ffprobe', 'rhubarb', 'storage'] as const
+  const localTools = await Promise.all(localToolIds.map((id) => withTimeout(
+    () => testLocalTool(id),
+    QUICK_PROOF_TIMEOUT_MS,
+    {
+      id,
+      connected: false,
+      capabilities: [],
+      detail: `Tool check timed out after ${QUICK_PROOF_TIMEOUT_MS}ms.`,
+    },
+  )))
+  const redis = await withTimeout(
+    () => isRedisHealthy(),
+    QUICK_PROOF_TIMEOUT_MS,
+    false,
+  )
+  const qdrant = await withTimeout(
+    () => isQdrantHealthy(),
+    QUICK_PROOF_TIMEOUT_MS,
+    false,
+  )
+  return [
+    toolProof('redis_bullmq', redis, Boolean(process.env.REDIS_URL?.trim()), ['worker_job_retry_and_polling_completion', 'async media jobs'], 'sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; set REDIS_URL=redis://127.0.0.1:6379', redis ? 'Redis ping passed.' : 'Redis/BullMQ is not reachable or REDIS_URL is absent.'),
+    toolProof('qdrant', qdrant, Boolean(process.env.QDRANT_URL?.trim()), ['research', 'memory', 'RAG'], 'docker run -d --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant; set QDRANT_URL=http://127.0.0.1:6333', qdrant ? 'Qdrant health passed.' : 'Qdrant is not reachable or QDRANT_URL is absent.'),
+    ...localTools.map((tool) => toolProof(
+      tool.id,
+      tool.connected,
+      true,
+      toolUsage(tool.id),
+      setupCommandForTool(tool.id),
+      tool.detail,
+    )),
+  ]
+}
+
+function toolProof(
+  id: string,
+  installed: boolean,
+  wired: boolean,
+  usedBy: string[],
+  setupCommand: string,
+  detail: string,
+): ToolReadinessProof {
+  return {
+    id,
+    installed,
+    wired,
+    usedBy,
+    setupCommand,
+    blocker: installed && wired ? null : detail,
+    detail,
+  }
+}
+
+function toolUsage(id: string): string[] {
+  if (id === 'playwright' || id === 'scrapy' || id === 'trafilatura') return ['web_research', 'scrape_website']
+  if (id === 'ffmpeg' || id === 'ffprobe') return ['long_form_multi_scene_video_assembly', 'video_generation', 'music_duration_probe']
+  if (id === 'rhubarb') return ['talking_avatar_video']
+  if (id === 'storage') return ['artifact persistence', 'preview/download']
+  return []
+}
+
+function setupCommandForTool(id: string): string {
+  if (id === 'playwright') return 'npx playwright install --with-deps chromium'
+  if (id === 'scrapy') return 'python -m pip install scrapy'
+  if (id === 'trafilatura') return 'python -m pip install trafilatura'
+  if (id === 'ffmpeg' || id === 'ffprobe') return 'sudo apt-get install -y ffmpeg'
+  if (id === 'rhubarb') return 'Install Rhubarb Lip Sync and set RHUBARB_PATH=/absolute/path/to/rhubarb'
+  if (id === 'storage') return 'Ensure local artifact storage directories are writable by the app user.'
+  return 'See ACTIVE_OPEN_SOURCE_STACK.md.'
 }
 
 function modelSmokeBlocked(
@@ -1296,6 +1388,12 @@ function renderMarkdown(report: ProofReport) {
     '| Provider | Capability | Model status | Credential | Catalog | Provider smoke | Model execution | Capability route | Artifact | Preview/download | Model | Error |',
     '|---|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|',
     ...report.modelSmokeProofs.map((entry) => `| ${entry.provider} | ${entry.capability} | ${entry.modelStatus} | ${entry.credentialPresent ? 'yes' : 'no'} | ${entry.catalogReachable ? 'yes' : 'no'} | ${entry.providerSmokePassed ? 'yes' : 'no'} | ${entry.modelExecutionPassed ? 'yes' : 'no'} | ${entry.capabilityRoutePassed ? 'yes' : 'no'} | ${entry.artifactPersisted ? 'yes' : 'no'} | ${entry.previewReachable ? 'yes' : 'no'} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.error)} |`),
+    '',
+    '## Open-Source Tool Readiness',
+    '',
+    '| Tool | Installed/Reachable | Wired | Used by | Setup command | Blocker | Detail |',
+    '|---|---:|---:|---|---|---|---|',
+    ...report.toolReadiness.map((entry) => `| ${entry.id} | ${entry.installed ? 'yes' : 'no'} | ${entry.wired ? 'yes' : 'no'} | ${mdCell(entry.usedBy.join('<br>'))} | ${mdCell(entry.setupCommand)} | ${mdCell(entry.blocker)} | ${mdCell(entry.detail)} |`),
     '',
     '## Capabilities',
     '',

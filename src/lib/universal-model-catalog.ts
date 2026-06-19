@@ -149,6 +149,8 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
 
   route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'premium', contextWindow: 128_000 }),
+  route('mimo', 'mimo-tts-1', 'Xiaomi MiMo TTS', 'Xiaomi MiMo Audio', ['voice/TTS'], ['tts', 'audio'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
+  route('mimo', 'mimo-v2.5-asr', 'Xiaomi MiMo V2.5 ASR', 'Xiaomi MiMo Audio', ['STT'], ['stt', 'audio'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
 
   route('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B on Groq', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'low', latencyTier: 'ultra_low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('groq', 'whisper-large-v3-turbo', 'Whisper Large v3 Turbo on Groq', 'Whisper', ['STT'], ['stt', 'audio'], { costTier: 'low', latencyTier: 'ultra_low' }),
@@ -157,6 +159,7 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo', 'Llama 3.3 70B on Together', 'Llama 3.3', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('together', 'black-forest-labs/FLUX.1-schnell', 'FLUX.1 Schnell on Together', 'FLUX', ['image'], ['image'], { costTier: 'medium', supportsAdult: true, recommendedFor: ['media_studio'] }),
   route('together', 'black-forest-labs/FLUX.1.1-pro', 'FLUX 1.1 Pro on Together', 'FLUX', ['image'], ['image'], { costTier: 'high', supportsAdult: true, recommendedFor: ['media_studio'] }),
+  route('together', 'Wan-AI/Wan2.1-T2V-14B', 'Wan 2.1 Text to Video on Together', 'Wan', ['video'], ['video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
 ] as const
 
 export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog> {

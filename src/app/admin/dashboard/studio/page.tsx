@@ -76,6 +76,16 @@ type StudioRun = {
     capabilityRoutePassed: boolean
     artifactPersisted: boolean
     previewDownloadAvailable: boolean
+    requestedDurationSeconds: number | null
+    actualDurationSeconds: number | null
+    selectedProvider: string | null
+    selectedModel: string | null
+    providerAttempts: Array<Record<string, unknown>>
+    rejectionReasons: Array<{ provider: string; model: string; reason: string }>
+    providerDurationCapSeconds: number | null
+    artifactId: string | null
+    finalLocalUrl: string | null
+    toolReadiness: Record<string, unknown> | null
   }
   error: string | null
   execution: {
@@ -473,6 +483,16 @@ export default function StudioPage() {
                 <EvidenceFact label="Artifact persisted" active={active.evidence.artifactPersisted} />
                 <EvidenceFact label="Preview/download" active={active.evidence.previewDownloadAvailable} />
               </div>
+              <div className="mt-4 grid gap-2 text-xs text-slate-400 md:grid-cols-2">
+                <EvidenceText label="Requested duration" value={durationLabel(active.evidence.requestedDurationSeconds)} />
+                <EvidenceText label="Actual duration" value={durationLabel(active.evidence.actualDurationSeconds)} />
+                <EvidenceText label="Selected provider" value={active.evidence.selectedProvider ?? 'None'} />
+                <EvidenceText label="Selected model" value={active.evidence.selectedModel ?? 'None'} />
+                <EvidenceText label="Provider duration cap" value={durationLabel(active.evidence.providerDurationCapSeconds)} />
+                <EvidenceText label="Artifact ID" value={active.evidence.artifactId ?? 'None'} />
+                <EvidenceText label="Final local URL" value={active.evidence.finalLocalUrl ?? 'None'} />
+                <EvidenceText label="Provider attempts" value={String(active.evidence.providerAttempts.length)} />
+              </div>
             </Panel>
             <Panel title="Approval">
               {!active.approval.required && <StatusLine kind="ok" title="No approval required" detail="This media action may run automatically." />}
@@ -501,6 +521,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span><span className="[&_.control]:w-full [&_.control]:rounded-xl [&_.control]:border [&_.control]:border-slate-700 [&_.control]:bg-slate-950 [&_.control]:px-3 [&_.control]:py-2.5 [&_.control]:text-sm [&_.control]:text-slate-200 [&_.control]:outline-none">{children}</span></label> }
 function Fact({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-slate-700/40 bg-slate-950/40 p-3"><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 text-xs font-semibold text-slate-300">{value}</p></div> }
 function EvidenceFact({ label, active }: { label: string; active: boolean }) { return <div className={`rounded-xl border p-3 ${active ? 'border-emerald-500/25 bg-emerald-500/10' : 'border-slate-700/40 bg-slate-950/40'}`}><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className={`mt-1 text-xs font-semibold ${active ? 'text-emerald-200' : 'text-slate-500'}`}>{active ? 'passed' : 'not proven'}</p></div> }
+function EvidenceText({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><span className="text-slate-500">{label}: </span><span className="break-words text-slate-300">{value}</span></div> }
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="flex items-center justify-between rounded-xl border border-slate-700/50 bg-slate-950/40 px-3 py-2 text-xs font-semibold text-slate-300"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="accent-fuchsia-300" /></label> }
 function ErrorPanel({ message }: { message: string }) { return <div className="flex gap-2 rounded-xl border border-red-400/25 bg-red-400/8 p-3 text-sm text-red-200"><AlertTriangle className="h-4 w-4 shrink-0" />{message}</div> }
 function StatusLine({ kind, title, detail }: { kind: 'ok' | 'wait' | 'error'; title: string; detail: string }) { const Icon = kind === 'ok' ? CheckCircle2 : kind === 'wait' ? Clock3 : XCircle; return <div className="flex gap-3"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${kind === 'ok' ? 'text-fuchsia-300' : kind === 'wait' ? 'text-amber-300' : 'text-red-300'}`} /><div><p className="text-sm font-bold text-slate-200">{title}</p><p className="mt-0.5 text-xs leading-5 text-slate-400">{detail}</p></div></div> }
@@ -615,3 +636,4 @@ function adultCapabilityKey(capability: string) {
 }
 
 function friendly(value: string) { return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) }
+function durationLabel(value: number | null) { return typeof value === 'number' ? `${value}s` : 'Unknown' }

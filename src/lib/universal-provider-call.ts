@@ -32,9 +32,9 @@ const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
   },
   together: {
     providerKey: 'together',
-    baseUrl: 'https://api.together.xyz/v1',
+    baseUrl: 'https://api.together.ai/v1',
     envVars: ['TOGETHER_API_KEY'],
-    defaultModel: 'meta-llama/Llama-3-70b-chat-hf',
+    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     timeoutMs: 30_000,
     supportsStreaming: true,
   },

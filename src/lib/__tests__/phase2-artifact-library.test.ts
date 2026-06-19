@@ -221,15 +221,15 @@ describe('Phase 2 producer and policy coverage', () => {
     expect(source('src/lib/media-capability-registry.ts')).not.toContain("return capability !== 'adult_video'")
   })
 
-  it('keeps non-executable video providers classified instead of hidden', () => {
+  it('keeps video providers classified instead of hidden', () => {
     const textToVideo = getCapabilityDefinition('text_to_video')
     expect(textToVideo?.providerRoutes.find((route) => route.provider === 'huggingface')).toMatchObject({
       executable: false,
       status: 'requires_endpoint',
     })
     expect(textToVideo?.providerRoutes.find((route) => route.provider === 'together')).toMatchObject({
-      executable: false,
-      status: 'discovered',
+      executable: true,
+      status: 'executable',
     })
   })
 })

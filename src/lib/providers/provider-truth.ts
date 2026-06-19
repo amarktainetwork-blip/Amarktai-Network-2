@@ -47,6 +47,10 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       family: 'openai_compatible',
       baseUrl: 'https://api.together.ai/v1',
       baseUrlEnv: 'TOGETHER_BASE_URL',
+    }, {
+      family: 'video',
+      baseUrl: 'https://api.together.ai/v1',
+      baseUrlEnv: 'TOGETHER_VIDEO_BASE_URL',
     }],
     discovery: {
       models: '/models',
@@ -59,7 +63,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     capabilities: ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'tts', 'stt', 'vision', 'embeddings', 'rerank', 'agents', 'adult_image', 'adult_video'],
     features: {
       streaming: true,
-      asyncJobs: false,
+      asyncJobs: true,
       webhooks: false,
       toolCalling: true,
       artifactSupport: true,
@@ -146,7 +150,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       dedicatedEndpointsEnv: null,
       cacheTtlMs: CACHE_TTL_MS,
     },
-    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'embeddings', 'translation'],
+    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'embeddings', 'translation', 'tts', 'stt'],
     features: {
       streaming: true,
       asyncJobs: true,
@@ -169,7 +173,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     auth: { header: 'api-key', prefix: '' },
     endpoints: [{
       family: 'token_plan',
-      baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
+      baseUrl: 'https://api.xiaomimimo.com/v1',
       baseUrlEnv: 'MIMO_BASE_URL',
     }],
     discovery: {
@@ -180,13 +184,13 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
       dedicatedEndpointsEnv: null,
       cacheTtlMs: CACHE_TTL_MS,
     },
-    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'image', 'tts', 'stt', 'agents'],
+    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'tts', 'stt', 'agents'],
     features: {
       streaming: true,
       asyncJobs: false,
       webhooks: false,
       toolCalling: false,
-      artifactSupport: false,
+      artifactSupport: true,
     },
     billing: { plan: 'token_plan', freeQuotaEligible: false, pricingSource: 'provider_catalog', staticPrices: false },
   },

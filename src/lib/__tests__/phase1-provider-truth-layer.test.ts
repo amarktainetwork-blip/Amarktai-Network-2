@@ -77,12 +77,14 @@ describe('Phase 1 provider truth layer', () => {
     expect(getProviderTruth('huggingface')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'video', 'music',
       'tts', 'stt', 'embeddings', 'rerank', 'documents', 'translation', 'avatar',
+      'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('huggingface')?.capabilities).not.toEqual(expect.arrayContaining([
-      'adult_text', 'adult_image', 'adult_video', 'agents',
+      'adult_text', 'agents',
     ]))
     expect(getProviderTruth('together')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'image', 'video', 'tts', 'stt', 'embeddings', 'rerank',
+      'chat', 'image', 'video', 'image_to_video', 'tts', 'stt', 'embeddings', 'rerank',
+      'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('groq')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'vision', 'tts', 'stt',
@@ -91,19 +93,19 @@ describe('Phase 1 provider truth layer', () => {
       'image', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('qwen')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'vision', 'image', 'video', 'image_to_video',
+      'chat', 'vision', 'image', 'video', 'image_to_video', 'tts', 'stt',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'reasoning', 'coding', 'vision', 'image', 'tts', 'stt', 'agents',
+      'chat', 'reasoning', 'coding', 'vision', 'tts', 'stt', 'agents',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).not.toEqual(expect.arrayContaining([
-      'voice_clone', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'adult_text', 'adult_image', 'adult_video',
+      'image', 'voice_clone', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'adult_text', 'adult_image', 'adult_video',
     ]))
     expect(getProviderTruth('genx')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'reasoning', 'coding', 'image', 'video', 'music', 'tts',
+      'chat', 'reasoning', 'coding', 'image', 'video', 'image_to_video', 'music', 'tts', 'stt', 'avatar',
     ]))
     expect(getProviderTruth('genx')?.capabilities).not.toEqual(expect.arrayContaining([
-      'image_to_video', 'stt', 'avatar', 'vision', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
+      'vision', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
     ]))
 
     const providerDir = path.join(ROOT, 'src/lib/providers')
@@ -130,7 +132,7 @@ describe('Phase 1 provider truth layer', () => {
       paidEnabledEnv: 'QWEN_PAID_ENABLED',
     })
     expect(resolveProviderEndpoint(mimo, 'token_plan'))
-      .toBe('https://token-plan-sgp.xiaomimimo.com/v1')
+      .toBe('https://api.xiaomimimo.com/v1')
     expect(resolveProviderEndpoint(genx, 'async_generation'))
       .toBe('https://query.genx.sh/api/v1')
     expect(resolveProviderEndpoint(genx, 'streaming_text'))
@@ -154,7 +156,7 @@ describe('Phase 1 provider truth layer', () => {
       asyncJobs: false,
       webhooks: false,
       toolCalling: false,
-      artifactSupport: false,
+      artifactSupport: true,
     })
     expect(genx.features).toMatchObject({
       streaming: true,
@@ -344,12 +346,12 @@ describe('Phase 1 provider truth layer', () => {
     expect(models.map((model) => [model.id, model.capabilities])).toEqual([
       ['mimo/runtime-tts', ['tts']],
       ['mimo/runtime-asr', ['stt']],
-      ['mimo/runtime-vision', ['vision', 'ocr', 'image']],
+      ['mimo/runtime-vision', ['vision', 'ocr']],
       ['mimo/runtime-agent', ['agents']],
       ['mimo/runtime-code', ['coding']],
     ])
-    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executable).toBe('ADAPTER_MISSING')
-    expect(models.find((model) => model.id === 'mimo/runtime-vision')?.metadata?.executable).toBe('ADAPTER_MISSING')
+    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executionClassification).toBe('executable')
+    expect(models.find((model) => model.id === 'mimo/runtime-vision')?.metadata?.executionClassification).toBe('executable')
   })
 
   it('does not fabricate MiMo unsupported routes from empty catalogs', async () => {
@@ -551,6 +553,49 @@ describe('Phase 1 provider truth layer', () => {
       health: { ...health, provider: 'huggingface' },
       profile: getRoutingProfile('balanced'),
     })).toBeNull()
+  })
+
+  it('rejects duration-capped music candidates for longer requested songs', () => {
+    const provider = getProviderTruth('genx')!
+    const capability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'music')!
+    const health: ProviderHealthSnapshot = {
+      provider: 'genx',
+      state: 'healthy',
+      configured: true,
+      tested: true,
+      healthy: true,
+      checkedAt: '2026-06-15T00:00:00.000Z',
+      detail: 'Healthy',
+    }
+    const model: DiscoveredModel = {
+      provider: 'genx',
+      id: 'lyria-3-clip-preview',
+      capabilities: ['music'],
+      capabilityEvidence: 'provider_contract',
+      status: 'available',
+      speed: 0.8,
+      quality: 0.9,
+      cost: 0.4,
+      context: null,
+      adult: 'unknown',
+      streaming: false,
+      research: false,
+      artifactSupport: true,
+      metadata: {
+        executable: true,
+        executionClassification: 'executable',
+        providerLimitSeconds: 30,
+      },
+      raw: {},
+      discoveredAt: '2026-06-15T00:00:00.000Z',
+    }
+    const profile = getRoutingProfile('balanced', { durationSeconds: 90, artifactSupport: true })
+
+    expect(scoreProviderModel({ provider, model, capability, health, profile })).toBeNull()
+    expect(rejectionForProviderModel({ provider, model, capability, health, profile })).toMatchObject({
+      code: 'DURATION_LIMITED',
+      reason: 'Requested duration 90s exceeds provider/model limit 30s.',
+    })
   })
 
   it('plans from discovery evidence and never selects an undiscovered model', async () => {

@@ -81,6 +81,7 @@ export type ProviderErrorCategory =
   | 'server_error'
   | 'malformed_response'
   | 'unsupported_endpoint'
+  | 'duration_limited'
   | 'artifact_error'
   | 'unknown'
 
@@ -98,8 +99,10 @@ const PROVIDER_CATEGORIES: Record<ApprovedDirectProviderId, readonly string[]> =
   qwen: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
   mimo: ['text', 'multimodal', 'video', 'audio', 'agents_or_planning'],
   groq: ['text', 'multimodal', 'audio', 'agents_or_planning'],
-  together: ['text', 'multimodal', 'computer_vision', 'audio', 'agents_or_planning'],
+  together: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
 }
+
+const GENX_MUSIC_DURATION_LIMIT_SECONDS = 30
 
 function result(
   provider: ApprovedDirectProviderId,
@@ -158,6 +161,9 @@ export function classifyProviderError(input: {
   }
   if (/timeout|timed out|aborted/.test(normalized)) {
     return { category: 'timeout', retryable: true, message }
+  }
+  if (/duration|seconds?.*exceeds|exceeds.*seconds?|too long/.test(normalized)) {
+    return { category: 'duration_limited', retryable: true, message }
   }
   if (/endpoint|not implemented|unsupported route/.test(normalized)) {
     return { category: 'unsupported_endpoint', retryable: true, message }
@@ -380,6 +386,20 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
       : 'audio'
   const model = input.model
   if (!model) return failedResult(provider, '', 'Discovery did not select a GenX media model.')
+  const requestedMusicDuration = input.capability.id === 'music_generation'
+    ? numericInput(input.inputs?.durationSeconds ?? input.inputs?.duration)
+    : null
+  if (requestedMusicDuration && requestedMusicDuration > GENX_MUSIC_DURATION_LIMIT_SECONDS) {
+    return result(provider, model, 'failed', {
+      error: `Requested music duration ${requestedMusicDuration}s exceeds ${provider}/${model} limit ${GENX_MUSIC_DURATION_LIMIT_SECONDS}s.`,
+      errorCategory: 'duration_limited',
+      retryable: true,
+      diagnostics: {
+        requestedDurationSeconds: requestedMusicDuration,
+        providerLimitSeconds: GENX_MUSIC_DURATION_LIMIT_SECONDS,
+      },
+    })
+  }
   const videoContract = type === 'video' ? getVideoModelContract(provider, model) : null
   if (type === 'video' && !videoContract) {
     return result(provider, model, 'failed', {
@@ -392,6 +412,7 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     model,
     prompt: structuredPrompt(input),
     type,
+    duration: requestedMusicDuration ?? numericInput(input.inputs?.duration) ?? undefined,
     params: {
       references: input.references,
       capability: input.capability.id,
@@ -417,7 +438,17 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     contentType: generated.contentType ?? (
       type === 'video' ? 'video/mp4' : type === 'image' ? 'image/png' : 'audio/mpeg'
     ),
+    diagnostics: {
+      requestedDurationSeconds: requestedMusicDuration,
+      providerLimitSeconds: type === 'audio' ? GENX_MUSIC_DURATION_LIMIT_SECONDS : null,
+    },
   })
+}
+
+function numericInput(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value)
+  return null
 }
 
 async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -654,6 +685,8 @@ function mediaFromJsonOutput(value: unknown): {
     ['audio', 'url'],
     ['music', 'url'],
     ['output', 'url'],
+    ['output', 'video_url'],
+    ['outputs', 'video_url'],
     ['result', 'url'],
     ['data', '0', 'url'],
   ].map((path) => nestedString(value, path)).find((candidate) => publicHttpsUrl(candidate ?? undefined))
@@ -747,6 +780,19 @@ function referenceBytes(value: unknown): Buffer {
   if (value instanceof ArrayBuffer) return Buffer.from(value)
   if (typeof value === 'string') return Buffer.from(value, 'base64')
   throw new Error('Unsupported inline reference data.')
+}
+
+async function referenceAudioDataUri(reference: CapabilityReference): Promise<string | null> {
+  const mimeType = reference.mimeType ?? 'audio/wav'
+  if (reference.data !== undefined) {
+    return `data:${mimeType};base64,${referenceBytes(reference.data).toString('base64')}`
+  }
+  const url = publicHttpsUrl(reference.url)
+  if (!url) return null
+  const response = await fetch(url, { signal: AbortSignal.timeout(30_000) })
+  if (!response.ok) return null
+  const bytes = Buffer.from(await response.arrayBuffer())
+  return `data:${response.headers.get('content-type') ?? mimeType};base64,${bytes.toString('base64')}`
 }
 
 async function executeQwenEmbeddings(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -881,13 +927,56 @@ async function executeTogetherData(input: CapabilityAdapterInput): Promise<Capab
 
 async function executeTogetherVideo(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'together' as const
+  const key = await getVaultApiKey(provider)
   const model = input.model
   if (!model) return failedResult(provider, '', 'Discovery did not select a Together video model.')
-  return result(provider, model, 'failed', {
-    error: 'Together video execution is catalog-only: the previously assumed /videos endpoint returns 404 and no approved dedicated video endpoint is wired.',
-    errorCategory: 'unsupported_endpoint',
-    retryable: false,
-  })
+  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+  const baseUrl = resolveProviderEndpoint(getProviderTruth(provider)!, 'video')
+  const requestedSeconds = numericInput(input.inputs?.durationSeconds ?? input.inputs?.duration)
+  const body = {
+    model,
+    prompt: input.prompt,
+    ...(input.inputs?.aspectRatio ? { ratio: input.inputs.aspectRatio } : {}),
+    ...(input.inputs?.resolution ? { resolution: input.inputs.resolution } : {}),
+    ...(requestedSeconds ? { seconds: String(requestedSeconds) } : {}),
+  }
+  try {
+    const response = await fetch(`${baseUrl}/videos`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(45_000),
+    })
+    const json = await response.json().catch(() => null)
+    if (!response.ok) {
+      return failedResult(provider, model, `Together video HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    }
+    const media = mediaFromJsonOutput(json)
+    const jobId = nestedString(json, ['id'])
+      ?? nestedString(json, ['job_id'])
+      ?? nestedString(json, ['data', 'id'])
+      ?? nestedString(json, ['video', 'id'])
+    if (media) {
+      return result(provider, model, 'completed', {
+        output: json,
+        mediaUrl: media.url,
+        bytes: media.bytes,
+        contentType: media.contentType ?? 'video/mp4',
+        diagnostics: { requestedDurationSeconds: requestedSeconds },
+      })
+    }
+    if (!jobId) {
+      return failedResult(provider, model, 'Together video response did not include a job ID or media URL.', response.status)
+    }
+    return result(provider, model, 'processing', {
+      output: json,
+      providerJobId: jobId,
+      contentType: 'application/json',
+      diagnostics: { requestedDurationSeconds: requestedSeconds },
+    })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'Together video execution failed.')
+  }
 }
 
 async function executeMimoTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -930,6 +1019,55 @@ async function executeMimoTts(input: CapabilityAdapterInput): Promise<Capability
   }
 }
 
+async function executeMimoAsr(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
+  const provider = 'mimo' as const
+  const key = await getVaultApiKey(provider)
+  const model = input.model
+  if (!model) return failedResult(provider, '', 'Discovery did not select an ASR model.')
+  if (!key) return failedResult(provider, model, 'MiMo key not configured.')
+  const audio = firstReference(input, ['audio'])
+  if (!audio) return result(provider, model, 'blocked', { error: 'MiMo ASR requires audio input.' })
+  const truth = getProviderTruth(provider)!
+  try {
+    const audioData = await referenceAudioDataUri(audio)
+    if (!audioData) return result(provider, model, 'blocked', { error: 'MiMo ASR requires inline audio bytes or a fetchable public HTTPS audio URL.' })
+    const body = {
+      model,
+      messages: [{
+        role: 'user',
+        content: [{
+          type: 'input_audio',
+          input_audio: { data: audioData },
+        }],
+      }],
+      asr_options: {
+        language: input.inputs?.language ?? 'auto',
+      },
+    }
+    const response = await fetch(`${resolveProviderEndpoint(truth, 'token_plan')}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'api-key': key,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(60_000),
+    })
+    const json = await response.json().catch(() => null)
+    if (!response.ok) return failedResult(provider, model, `MiMo ASR HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+    const transcript = nestedString(json, ['choices', '0', 'message', 'content'])
+      ?? nestedString(json, ['text'])
+    if (!transcript) return failedResult(provider, model, 'MiMo ASR completed without transcript text.', response.status)
+    return result(provider, model, 'completed', {
+      output: { text: transcript, raw: json },
+      contentType: 'application/json',
+    })
+  } catch (error) {
+    return failedResult(provider, model, error instanceof Error ? error.message : 'MiMo ASR failed.')
+  }
+}
+
 async function adapterExecute(provider: ApprovedDirectProviderId, input: CapabilityAdapterInput) {
   const startedAt = Date.now()
   let execution: Promise<CapabilityAdapterResult>
@@ -957,6 +1095,9 @@ async function adapterExecute(provider: ApprovedDirectProviderId, input: Capabil
   }
   else if (provider === 'mimo' && input.capability.id === 'text_to_speech') {
     execution = executeMimoTts(input)
+  }
+  else if (provider === 'mimo' && input.capability.id === 'automatic_speech_recognition') {
+    execution = executeMimoAsr(input)
   }
   else if (provider === 'together' && input.capability.outputTypes.includes('image')) {
     execution = executeTogetherImage(input)
@@ -1007,12 +1148,53 @@ async function pollProvider(
     return result(provider, model, 'completed', { providerJobId, mediaUrl, output: json })
   }
   if (provider === 'together') {
-    return result(provider, model, 'failed', {
-      providerJobId,
-      error: 'Together video polling is not wired: the previously assumed /videos/{id} endpoint returns 404.',
-      errorCategory: 'unsupported_endpoint',
-      retryable: false,
-    })
+    const key = await getVaultApiKey(provider)
+    if (!key) return failedResult(provider, model, 'Together AI key not configured.')
+    try {
+      const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'video')}/videos/${encodeURIComponent(providerJobId)}`, {
+        headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' },
+        signal: AbortSignal.timeout(45_000),
+      })
+      const json = await response.json().catch(() => null)
+      if (!response.ok) {
+        return failedResult(provider, model, `Together video poll HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
+      }
+      const rawStatus = (
+        nestedString(json, ['status'])
+        ?? nestedString(json, ['state'])
+        ?? nestedString(json, ['data', 'status'])
+        ?? ''
+      ).toLowerCase()
+      if (['queued', 'pending', 'running', 'processing', 'in_progress'].includes(rawStatus)) {
+        return result(provider, model, 'processing', { providerJobId, output: json })
+      }
+      if (['failed', 'error', 'cancelled', 'canceled'].includes(rawStatus)) {
+        return result(provider, model, 'failed', {
+          providerJobId,
+          output: json,
+          error: nestedString(json, ['error']) ?? nestedString(json, ['message']) ?? 'Together video job failed.',
+        })
+      }
+      const media = mediaFromJsonOutput(json)
+      if (!media) {
+        return result(provider, model, 'failed', {
+          providerJobId,
+          output: json,
+          error: 'Together video job completed without a media URL or bytes.',
+          errorCategory: 'malformed_response',
+          retryable: true,
+        })
+      }
+      return result(provider, model, 'completed', {
+        providerJobId,
+        output: json,
+        mediaUrl: media.url,
+        bytes: media.bytes,
+        contentType: media.contentType ?? 'video/mp4',
+      })
+    } catch (error) {
+      return failedResult(provider, model, error instanceof Error ? error.message : 'Together video polling failed.')
+    }
   }
   return result(provider, model, 'failed', {
     providerJobId,
@@ -1021,7 +1203,7 @@ async function pollProvider(
 }
 
 export function providerHasCanonicalPollingContract(provider: ApprovedDirectProviderId) {
-  return ['genx', 'qwen'].includes(provider)
+  return ['genx', 'qwen', 'together'].includes(provider)
 }
 
 export const PROVIDER_CAPABILITY_ADAPTERS: readonly ProviderCapabilityAdapter[] =
