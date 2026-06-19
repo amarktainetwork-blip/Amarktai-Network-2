@@ -24,12 +24,22 @@ export interface CapabilityRouteCandidate {
   rank: number
 }
 
+export interface CapabilityRouteRejection {
+  provider: ApprovedDirectProviderId
+  model: string
+  configured: boolean
+  rank: number
+  code: 'PROVIDER_NOT_CONFIGURED' | 'RUNTIME_FALLBACK_SELECTED'
+  reason: string
+}
+
 export interface CapabilityRoutePlan {
   capability: string
   qualityTier: StoredRoutingQualityTier
   selected: CapabilityRouteCandidate | null
   candidates: CapabilityRouteCandidate[]
   fallback: CapabilityRouteCandidate[]
+  rejectedCandidates: CapabilityRouteRejection[]
   setupRequired: boolean
   reason: string
 }
@@ -146,6 +156,7 @@ export async function selectCapabilityRoutePlan(input: {
       selected: null,
       candidates: [],
       fallback: [],
+      rejectedCandidates: [],
       setupRequired: false,
       reason: 'Capability is not present in the canonical taxonomy.',
     }
@@ -154,7 +165,7 @@ export async function selectCapabilityRoutePlan(input: {
   const configured = input.configuredProviderIds
     ? new Set(input.configuredProviderIds)
     : new Set(await configuredProviders(capability))
-  let candidates = capability.providerRoutes
+  const policyRankedCandidates = capability.providerRoutes
     .filter((route) => route.executable)
     .filter((route) => !input.allowedProviderIds || input.allowedProviderIds.includes(route.provider))
     .map((route) => {
@@ -173,25 +184,65 @@ export async function selectCapabilityRoutePlan(input: {
       }
     })
     .sort((left, right) => left.rank - right.rank)
-  candidates = await rankProvidersForCapability(capability.id, candidates)
+  const candidates = await rankProvidersForCapability(capability.id, policyRankedCandidates)
 
   const selected = candidates.find((candidate) => candidate.configured) ?? null
   const fallback = selected
     ? candidates.filter((candidate) => candidate.configured && candidate !== selected).slice(0, 4)
     : []
+  const policyPreferred = policyRankedCandidates.find((candidate) => candidate.configured) ?? null
+  const rejectedCandidates = buildRejectedCandidates({
+    capabilityId: capability.id,
+    candidates,
+    selected,
+  })
   return {
     capability: capability.id,
     qualityTier,
     selected,
     candidates,
     fallback,
+    rejectedCandidates,
     setupRequired: candidates.length > 0 && !selected,
     reason: selected
-      ? `${qualityTier} policy selected an available ${capability.group} route.`
+      ? policyPreferred && policyPreferred !== selected
+        ? `${qualityTier} policy considered ${policyPreferred.route.provider} first for ${capability.id}; runtime proof/performance selected ${selected.route.provider} as the executable fallback.`
+        : `${qualityTier} policy selected an available ${capability.group} route.`
       : candidates.length > 0
         ? `No configured provider credential can execute ${capability.id}.`
         : `No executable approved provider route exists for ${capability.id}.`,
   }
+}
+
+function buildRejectedCandidates(input: {
+  capabilityId: string
+  candidates: CapabilityRouteCandidate[]
+  selected: CapabilityRouteCandidate | null
+}): CapabilityRouteRejection[] {
+  return input.candidates
+    .filter((candidate) => candidate !== input.selected)
+    .map((candidate) => {
+      if (!candidate.configured) {
+        return {
+          provider: candidate.route.provider,
+          model: candidate.model,
+          configured: candidate.configured,
+          rank: candidate.rank,
+          code: 'PROVIDER_NOT_CONFIGURED',
+          reason: `${candidate.route.provider} has an executable ${input.capabilityId} route, but no configured credential is available.`,
+        }
+      }
+      return {
+        provider: candidate.route.provider,
+        model: candidate.model,
+        configured: candidate.configured,
+        rank: candidate.rank,
+        code: 'RUNTIME_FALLBACK_SELECTED',
+        reason: input.selected
+          ? `${candidate.route.provider} was considered for ${input.capabilityId}, but runtime proof/performance selected ${input.selected.route.provider}.`
+          : `${candidate.route.provider} was considered for ${input.capabilityId}, but no configured executable provider was selected.`,
+      }
+    })
 }
 
 async function configuredProviders(

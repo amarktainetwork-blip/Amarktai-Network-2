@@ -73,7 +73,23 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(cheapText.selected?.route.provider).toBe('groq')
     expect(autoImage.selected?.route.provider).toBe('qwen')
     expect(balancedVideo.selected?.route.provider).toBe('qwen')
-    expect(premiumText.selected?.route.provider).toBe('genx')
+    expect(premiumText.selected?.configured).toBe(true)
+    expect(premiumText.selected?.route.executable).toBe(true)
+    const genxPremiumCandidate = premiumText.candidates.find((candidate) => candidate.route.provider === 'genx')
+    const selectedPremiumCandidate = premiumText.selected
+    expect(genxPremiumCandidate).toBeDefined()
+    expect(genxPremiumCandidate?.configured).toBe(true)
+    expect(genxPremiumCandidate?.route.executable).toBe(true)
+    expect(genxPremiumCandidate?.rank).toBeLessThanOrEqual(selectedPremiumCandidate?.rank ?? Infinity)
+    if (selectedPremiumCandidate?.route.provider !== 'genx') {
+      expect(premiumText.reason).toContain('runtime proof/performance selected')
+      expect(premiumText.rejectedCandidates).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'genx',
+          code: 'RUNTIME_FALLBACK_SELECTED',
+        }),
+      ]))
+    }
     expect(new Set([
       cheapText.selected?.route.provider,
       autoImage.selected?.route.provider,
