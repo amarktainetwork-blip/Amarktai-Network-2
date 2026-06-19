@@ -204,7 +204,7 @@ describe('provider adapter contracts', () => {
       'ocr',
     ]))
     expect(together.features).toMatchObject({
-      asyncJobs: true,
+      asyncJobs: false,
       artifactSupport: true,
       streaming: true,
     })
@@ -298,6 +298,7 @@ describe('provider adapter contracts', () => {
       error: null,
     }
     expect(modelsForCapability(snapshot, 'video').map((model) => model.id)).toContain('minimax/video-01')
+    expect(modelsForCapability(snapshot, 'video')[0]?.metadata?.executable).toBe('REQUIRES_DEDICATED_ENDPOINT')
     expect(PROVIDER_TRUTH.map((provider) => provider.id)).not.toContain('minimax')
   })
 
@@ -434,6 +435,7 @@ describe('provider adapter contracts', () => {
 
     expect(models.find((model) => model.id.includes('FLUX'))?.capabilities).toContain('image')
     expect(models.find((model) => model.id.includes('T2V'))?.capabilities).toContain('video')
+    expect(models.find((model) => model.id.includes('T2V'))?.metadata?.executable).toBe('REQUIRES_DEDICATED_ENDPOINT')
     expect(models.find((model) => model.id === 'whisper-large-v3')?.capabilities).toEqual(['stt'])
   })
 
@@ -534,24 +536,25 @@ describe('provider adapter contracts', () => {
     })
   })
 
-  it('polls Together video jobs through the canonical adapter contract', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      status: 'completed',
-      outputs: { video_url: 'https://cdn.example/together.mp4' },
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    vi.stubGlobal('fetch', fetchMock)
-
+  it('does not execute Together video through the stale /videos endpoint', async () => {
     const adapter = getProviderCapabilityAdapter('together')!
     const input = adapterInput('text_to_video', 'together', 'together-video-1')
 
-    const completed = await adapter.poll!('together-job-1', input)
+    const started = await adapter.execute(input)
+    const polled = await adapter.poll!('together-job-1', input)
 
-    expect(completed).toMatchObject({
-      status: 'completed',
-      providerJobId: 'together-job-1',
-      mediaUrl: 'https://cdn.example/together.mp4',
+    expect(started).toMatchObject({
+      status: 'failed',
+      provider: 'together',
+      model: 'together-video-1',
+      errorCategory: 'unsupported_endpoint',
     })
-    expect(String(fetchMock.mock.calls[0][0])).toBe('https://api.together.ai/v1/videos/together-job-1')
+    expect(started.error).toContain('/videos endpoint returns 404')
+    expect(polled).toMatchObject({
+      status: 'failed',
+      providerJobId: 'together-job-1',
+      errorCategory: 'unsupported_endpoint',
+    })
   })
 
   it('keeps provider async flags aligned with canonical polling support', () => {
@@ -559,10 +562,11 @@ describe('provider adapter contracts', () => {
       .filter((provider) => provider.features.asyncJobs)
       .map((provider) => provider.id)
 
-    expect(asyncProviders).toEqual(['together', 'genx', 'qwen'])
+    expect(asyncProviders).toEqual(['genx', 'qwen'])
     for (const provider of asyncProviders) {
       expect(providerHasCanonicalPollingContract(provider)).toBe(true)
     }
+    expect(providerHasCanonicalPollingContract('together')).toBe(false)
     expect(providerHasCanonicalPollingContract('huggingface')).toBe(false)
   })
 

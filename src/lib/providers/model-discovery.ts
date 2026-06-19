@@ -88,7 +88,7 @@ function providerContractEligible(provider: ProviderId, capability: CapabilityId
   if (provider === 'groq') return ['chat', 'reasoning', 'coding', 'tts', 'stt'].includes(capability)
   if (provider === 'mimo') return ['chat', 'reasoning', 'coding', 'tts'].includes(capability)
   if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings', 'image', 'image_edit', 'video'].includes(capability)
-  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'tts', 'stt', 'embeddings', 'rerank', 'agents'].includes(capability)
+  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'tts', 'stt', 'embeddings', 'rerank', 'agents'].includes(capability)
   if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'avatar', 'music', 'tts', 'stt'].includes(capability)
   return false
 }

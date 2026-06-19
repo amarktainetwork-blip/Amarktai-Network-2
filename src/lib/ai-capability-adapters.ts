@@ -98,7 +98,7 @@ const PROVIDER_CATEGORIES: Record<ApprovedDirectProviderId, readonly string[]> =
   qwen: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
   mimo: ['text', 'multimodal', 'video', 'audio', 'agents_or_planning'],
   groq: ['text', 'multimodal', 'audio', 'agents_or_planning'],
-  together: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
+  together: ['text', 'multimodal', 'computer_vision', 'audio', 'agents_or_planning'],
 }
 
 function result(
@@ -797,43 +797,13 @@ async function executeTogetherData(input: CapabilityAdapterInput): Promise<Capab
 
 async function executeTogetherVideo(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'together' as const
-  const key = await getVaultApiKey(provider)
   const model = input.model
   if (!model) return failedResult(provider, '', 'Discovery did not select a Together video model.')
-  if (!key) return failedResult(provider, model, 'Together AI key not configured.')
-  const image = firstReference(input, ['image'])
-  const body: Record<string, unknown> = {
-    model,
-    prompt: input.prompt,
-    ...(input.inputs ?? {}),
-  }
-  if (image?.url) {
-    const url = publicHttpsUrl(image.url)
-    if (!url) return result(provider, model, 'blocked', { error: 'Image reference must be a public HTTPS URL.' })
-    body.media = { reference_images: [url] }
-  }
-  try {
-    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/videos`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(90_000),
-    })
-    const json = await response.json().catch(() => null) as Record<string, unknown> | null
-    if (!response.ok) {
-      return failedResult(provider, model, `Together video HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
-    }
-    const jobId = nestedString(json, ['id'])
-    const status = nestedString(json, ['status'])?.toLowerCase()
-    const mediaUrl = nestedString(json, ['outputs', 'video_url'])
-    if (status === 'completed' && mediaUrl) {
-      return result(provider, model, 'completed', { output: json, mediaUrl, contentType: 'video/mp4' })
-    }
-    if (!jobId) return failedResult(provider, model, 'Together video response did not include a job ID.')
-    return result(provider, model, 'processing', { output: json, providerJobId: jobId })
-  } catch (error) {
-    return failedResult(provider, model, error instanceof Error ? error.message : 'Together video generation failed.')
-  }
+  return result(provider, model, 'failed', {
+    error: 'Together video execution is catalog-only: the previously assumed /videos endpoint returns 404 and no approved dedicated video endpoint is wired.',
+    errorCategory: 'unsupported_endpoint',
+    retryable: false,
+  })
 }
 
 async function executeMimoTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -940,41 +910,12 @@ async function pollProvider(
     return result(provider, model, 'completed', { providerJobId, mediaUrl, output: json })
   }
   if (provider === 'together') {
-    const key = await getVaultApiKey(provider)
-    if (!key) return failedResult(provider, model, 'Together AI key not configured.')
-    try {
-      const response = await fetch(
-        `${resolveProviderEndpoint(getProviderTruth(provider)!, 'openai_compatible')}/videos/${encodeURIComponent(providerJobId)}`,
-        {
-          headers: { Authorization: `Bearer ${key}` },
-          signal: AbortSignal.timeout(45_000),
-        },
-      )
-      const json = await response.json().catch(() => null) as Record<string, unknown> | null
-      if (!response.ok) {
-        return failedResult(provider, model, `Together video status HTTP ${response.status}.`, response.status)
-      }
-      const status = nestedString(json, ['status'])?.toLowerCase()
-      if (status === 'failed') {
-        return result(provider, model, 'failed', {
-          providerJobId,
-          output: json,
-          error: nestedString(json, ['error', 'message']) ?? 'Together video job failed.',
-        })
-      }
-      const mediaUrl = nestedString(json, ['outputs', 'video_url'])
-      if (status !== 'completed' || !mediaUrl) {
-        return result(provider, model, 'processing', { providerJobId, output: json })
-      }
-      return result(provider, model, 'completed', {
-        providerJobId,
-        output: json,
-        mediaUrl,
-        contentType: 'video/mp4',
-      })
-    } catch (error) {
-      return failedResult(provider, model, error instanceof Error ? error.message : 'Together video polling failed.')
-    }
+    return result(provider, model, 'failed', {
+      providerJobId,
+      error: 'Together video polling is not wired: the previously assumed /videos/{id} endpoint returns 404.',
+      errorCategory: 'unsupported_endpoint',
+      retryable: false,
+    })
   }
   return result(provider, model, 'failed', {
     providerJobId,
@@ -983,7 +924,7 @@ async function pollProvider(
 }
 
 export function providerHasCanonicalPollingContract(provider: ApprovedDirectProviderId) {
-  return ['genx', 'qwen', 'together'].includes(provider)
+  return ['genx', 'qwen'].includes(provider)
 }
 
 export const PROVIDER_CAPABILITY_ADAPTERS: readonly ProviderCapabilityAdapter[] =

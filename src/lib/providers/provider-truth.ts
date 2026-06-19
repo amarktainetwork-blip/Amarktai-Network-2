@@ -59,7 +59,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     capabilities: ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'tts', 'stt', 'vision', 'embeddings', 'rerank', 'agents', 'adult_image', 'adult_video'],
     features: {
       streaming: true,
-      asyncJobs: true,
+      asyncJobs: false,
       webhooks: false,
       toolCalling: true,
       artifactSupport: true,

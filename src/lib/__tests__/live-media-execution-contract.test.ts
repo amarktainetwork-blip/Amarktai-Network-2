@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => {
     records,
     getGenXJobStatus: vi.fn(),
     persistCanonicalMediaResult: vi.fn(),
-    togetherPoll: vi.fn(),
     pollQwenWanxTask: vi.fn(),
   }
 })
@@ -50,16 +49,6 @@ vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/ai-capability-adapters')>()
   return {
     ...actual,
-    providerHasCanonicalPollingContract: (provider: string) => ['genx', 'qwen', 'together'].includes(provider),
-    getProviderCapabilityAdapter: (provider: string) => provider === 'together'
-      ? {
-          provider: 'together',
-          id: 'together_capability_adapter',
-          categories: ['video'],
-          execute: vi.fn(),
-          poll: mocks.togetherPoll,
-        }
-      : actual.getProviderCapabilityAdapter(provider as never),
   }
 })
 
@@ -161,7 +150,60 @@ describe('local media job lifecycle', () => {
     })
   })
 
-  it('polls Together async video jobs through the canonical Brain local job surface', async () => {
+  it('persists completed GenX video jobs as canonical playable artifacts', async () => {
+    createLocalMediaJob({
+      capability: 'video_generation',
+      appSlug: 'amarktai-network',
+      type: 'video',
+      subType: 'video_generation',
+      title: 'Video',
+      prompt: 'Cinematic product reveal',
+      provider: 'genx',
+      model: 'veo-3.1',
+      providerJobId: 'provider-video-job-1',
+    })
+    mocks.getGenXJobStatus.mockResolvedValue({
+      id: 'provider-video-job-1',
+      status: 'completed',
+      resultUrl: 'https://cdn.example/video.mp4',
+    })
+    mocks.persistCanonicalMediaResult.mockResolvedValue({
+      artifactId: 'artifact-video-1',
+      storageUrl: '/api/admin/artifacts/artifact-video-1/content',
+      mediaUrl: '/api/admin/artifacts/artifact-video-1/content',
+    })
+
+    const completed = await pollLocalMediaJob('local-media-job-1')
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      artifactId: 'artifact-video-1',
+      storageUrl: '/api/admin/artifacts/artifact-video-1/content',
+      mediaUrl: '/api/admin/artifacts/artifact-video-1/content',
+      error: null,
+    })
+    expect(mocks.persistCanonicalMediaResult).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'video',
+      subType: 'video_generation',
+      provider: 'genx',
+      model: 'veo-3.1',
+      traceId: 'media-job-local-media-job-1',
+      metadata: expect.objectContaining({
+        capability: 'video_generation',
+        localJobId: 'local-media-job-1',
+      }),
+    }))
+    expect(localMediaJobResponse(completed!)).toMatchObject({
+      artifactUrl: '/api/admin/artifacts/artifact-video-1/download',
+      previewUrl: '/api/admin/artifacts/artifact-video-1/download',
+      downloadUrl: '/api/admin/artifacts/artifact-video-1/download',
+      videoUrl: '/api/admin/artifacts/artifact-video-1/download',
+      providerJobId: 'provider-video-job-1',
+      pollUrl: '/api/brain/media-jobs/local-media-job-1',
+    })
+  })
+
+  it('fails Together video jobs without claiming a completed preview artifact', async () => {
     createLocalMediaJob({
       capability: 'video_generation',
       appSlug: 'amarktai-network',
@@ -173,45 +215,25 @@ describe('local media job lifecycle', () => {
       model: 'together-video-1',
       providerJobId: 'together-job-2',
     })
-    mocks.togetherPoll.mockResolvedValue({
-      status: 'completed',
-      provider: 'together',
-      model: 'together-video-1',
-      output: { status: 'completed' },
-      mediaUrl: 'https://cdn.example/together-video.mp4',
-      bytes: null,
-      contentType: 'video/mp4',
-      providerJobId: 'together-job-2',
-      latencyMs: 12,
-      rawStatus: 200,
-      error: null,
-      errorCategory: null,
-      retryable: false,
-      diagnostics: null,
-    })
-    mocks.persistCanonicalMediaResult.mockResolvedValue({
-      artifactId: 'artifact-together-1',
-      storageUrl: '/api/admin/artifacts/artifact-together-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-together-1/content',
-    })
 
-    const completed = await pollLocalMediaJob('local-media-job-1')
+    const failed = await pollLocalMediaJob('local-media-job-1')
 
-    expect(mocks.togetherPoll).toHaveBeenCalledWith('together-job-2', expect.objectContaining({
-      model: 'together-video-1',
-    }))
-    expect(completed).toMatchObject({
-      status: 'completed',
-      artifactId: 'artifact-together-1',
-      mediaUrl: '/api/admin/artifacts/artifact-together-1/content',
+    expect(mocks.persistCanonicalMediaResult).not.toHaveBeenCalled()
+    expect(failed).toMatchObject({
+      status: 'failed',
+      artifactId: null,
+      mediaUrl: null,
     })
-    expect(localMediaJobResponse(completed!)).toMatchObject({
+    expect(failed?.error).toContain('does not have a local media polling contract')
+    expect(localMediaJobResponse(failed!)).toMatchObject({
       pollUrl: '/api/brain/media-jobs/local-media-job-1',
       providerJobId: 'together-job-2',
-      artifactUrl: '/api/admin/artifacts/artifact-together-1/download',
-      previewUrl: '/api/admin/artifacts/artifact-together-1/download',
-      downloadUrl: '/api/admin/artifacts/artifact-together-1/download',
-      videoUrl: '/api/admin/artifacts/artifact-together-1/download',
+      success: false,
+      executed: false,
+      artifactUrl: null,
+      previewUrl: null,
+      downloadUrl: null,
+      videoUrl: null,
     })
   })
 

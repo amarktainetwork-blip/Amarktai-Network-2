@@ -12,6 +12,30 @@ vi.mock('@/lib/prisma', () => ({
         createdAt: new Date('2026-01-01T00:00:00.000Z'),
         updatedAt: new Date('2026-01-01T00:00:00.000Z'),
       })),
+      update: vi.fn(async ({ data }) => ({
+        id: 'artifact_test',
+        appSlug: 'test-app',
+        type: 'document',
+        subType: '',
+        title: '',
+        description: '',
+        provider: '',
+        model: '',
+        traceId: '',
+        storageDriver: 'local_vps',
+        storagePath: '',
+        storageUrl: '',
+        mimeType: 'text/plain',
+        fileSizeBytes: 0,
+        previewable: true,
+        downloadable: true,
+        status: data.status ?? 'completed',
+        errorMessage: data.errorMessage ?? '',
+        costUsdCents: 0,
+        metadata: data.metadata ?? '{}',
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      })),
     },
   },
 }))
@@ -159,5 +183,78 @@ describe('VPS storage persistence policy', () => {
     expect(artifact.storagePath).toMatch(/^artifacts\/test-app\/document\//)
     expect(artifact.storageUrl).toContain('/api/artifacts/file/artifacts/test-app/document/')
     expect(artifact.fileSizeBytes).toBe(Buffer.byteLength('saved for restart'))
+  })
+
+  it('bounds long artifact descriptions and keeps full prompts out of DB description', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    vi.resetModules()
+
+    const longPrompt = `Generate a video. ${'cinematic '.repeat(600)}`
+    const { createArtifact, ARTIFACT_PERSISTENCE_FIELD_LIMITS } = await import('@/lib/artifact-store')
+    const { prisma } = await import('@/lib/prisma')
+
+    await createArtifact({
+      appSlug: 'test-app',
+      type: 'video',
+      subType: 'video_generation',
+      title: longPrompt,
+      description: longPrompt,
+      provider: 'genx',
+      model: 'veo-3.1',
+      content: Buffer.from('video bytes'),
+      mimeType: 'video/mp4',
+      metadata: {
+        prompt: longPrompt,
+        providerResponse: { body: 'ok' },
+      },
+    })
+
+    const call = vi.mocked(prisma.artifact.create).mock.calls.at(-1)![0]
+    const title = String(call.data.title)
+    const description = String(call.data.description)
+    expect(title.length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.title)
+    expect(description.length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.description)
+    expect(description).not.toBe(longPrompt)
+    expect(description).toContain('[truncated]')
+    const metadata = JSON.parse(String(call.data.metadata))
+    expect(metadata.prompt).not.toBe(longPrompt)
+    expect(metadata.metadataTruncated).toBe(true)
+  })
+
+  it('bounds provider/model/error fields and sanitizes large provider metadata', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    vi.resetModules()
+
+    const { createArtifact, ARTIFACT_PERSISTENCE_FIELD_LIMITS } = await import('@/lib/artifact-store')
+    const { prisma } = await import('@/lib/prisma')
+    const longValue = 'x'.repeat(5_000)
+
+    await createArtifact({
+      appSlug: 'test-app',
+      type: 'document',
+      status: 'failed',
+      provider: `provider-${longValue}`,
+      model: `model-${longValue}`,
+      traceId: `trace-${longValue}`,
+      errorMessage: `Provider returned ${longValue}`,
+      metadata: {
+        apiKey: 'sk-testsecret1234567890',
+        providerResponse: { rawJson: longValue },
+        videoBase64: 'a'.repeat(9_000),
+      },
+    })
+
+    const call = vi.mocked(prisma.artifact.create).mock.calls.at(-1)![0]
+    expect(String(call.data.provider).length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.provider)
+    expect(String(call.data.model).length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.model)
+    expect(String(call.data.traceId).length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.traceId)
+    expect(String(call.data.errorMessage).length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.errorMessage)
+    const metadata = JSON.parse(String(call.data.metadata))
+    expect(metadata.apiKey).toBe('[redacted]')
+    expect(metadata.providerResponse.rawJson.length).toBeLessThanOrEqual(ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataLargeValue)
+    expect(metadata.videoBase64).toBe('[omitted: large media payload]')
+    expect(metadata.metadataTruncated).toBe(true)
   })
 })

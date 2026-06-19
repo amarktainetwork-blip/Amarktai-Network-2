@@ -77,9 +77,27 @@ export interface CreateArtifactInput {
 
 const SECRET_KEY_PATTERN = /(api[-_]?key|authorization|bearer|token|secret|password|credential|cookie)/i
 const SECRET_VALUE_PATTERN = /\b(sk|hf|ghp|gnxk|gsk|tg)[-_A-Za-z0-9]{8,}\b|Bearer\s+\S+/i
+const LARGE_MEDIA_KEY_PATTERN = /(b64|base64|bytes|binary|imageBase64|audioBase64|videoBase64|b64_json|dataUri|rawMedia)/i
+const LARGE_RESPONSE_KEY_PATTERN = /(rawResponse|providerResponse|fullResponse|responseBody|prompt|fullPrompt|negativePrompt|warning|error)/i
+
+export const ARTIFACT_PERSISTENCE_FIELD_LIMITS = {
+  title: 180,
+  description: 180,
+  provider: 180,
+  model: 180,
+  traceId: 180,
+  errorMessage: 180,
+  metadataString: 64_000,
+  metadataValue: 4_000,
+  metadataLargeValue: 2_000,
+} as const
+
+type ArtifactNormalizationState = {
+  truncatedFields: string[]
+}
 
 export function sanitizeArtifactMetadata(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sanitizeArtifactMetadata)
+  if (Array.isArray(value)) return value.map((item) => sanitizeArtifactMetadata(item))
   if (!value || typeof value !== 'object') {
     if (typeof value === 'string' && SECRET_VALUE_PATTERN.test(value)) return '[redacted]'
     return value
@@ -90,6 +108,125 @@ export function sanitizeArtifactMetadata(value: unknown): unknown {
       SECRET_KEY_PATTERN.test(key) ? '[redacted]' : sanitizeArtifactMetadata(item),
     ]),
   )
+}
+
+export function normalizeArtifactForPersistence(input: CreateArtifactInput): CreateArtifactInput & { metadataJson: string } {
+  const state: ArtifactNormalizationState = { truncatedFields: [] }
+  const metadata = {
+    ...(input.metadata ?? {}),
+    executionId: input.executionId ?? input.metadata?.executionId ?? null,
+    jobId: input.jobId ?? input.metadata?.jobId ?? null,
+    appId: input.appId ?? input.metadata?.appId ?? null,
+    workspaceId: input.workspaceId ?? input.metadata?.workspaceId ?? input.metadata?.repoWorkspaceId ?? null,
+    capability: input.capability ?? input.metadata?.capability ?? input.subType ?? input.type,
+  }
+  const metadataJson = stringifyBoundedMetadata(metadata, state)
+  return {
+    ...input,
+    title: boundedText(input.title, ARTIFACT_PERSISTENCE_FIELD_LIMITS.title, 'title', state),
+    description: boundedDescription(input.description, state),
+    provider: boundedText(input.provider, ARTIFACT_PERSISTENCE_FIELD_LIMITS.provider, 'provider', state),
+    model: boundedText(input.model, ARTIFACT_PERSISTENCE_FIELD_LIMITS.model, 'model', state),
+    traceId: boundedText(input.traceId, ARTIFACT_PERSISTENCE_FIELD_LIMITS.traceId, 'traceId', state),
+    errorMessage: boundedText(input.errorMessage, ARTIFACT_PERSISTENCE_FIELD_LIMITS.errorMessage, 'errorMessage', state),
+    metadataJson,
+  }
+}
+
+function boundedDescription(value: string | undefined, state: ArtifactNormalizationState): string {
+  if (!value) return ''
+  const trimmed = value.trim()
+  const looksLikeBlob = trimmed.length > ARTIFACT_PERSISTENCE_FIELD_LIMITS.description
+    && (/^[\[{]/.test(trimmed) || /^data:[^;]+;base64,/i.test(trimmed) || /^[A-Za-z0-9+/=\r\n]{512,}$/.test(trimmed))
+  if (looksLikeBlob) {
+    state.truncatedFields.push('description')
+    return 'Generated artifact metadata is stored in bounded metadata.'
+  }
+  return boundedText(trimmed, ARTIFACT_PERSISTENCE_FIELD_LIMITS.description, 'description', state)
+}
+
+function boundedText(
+  value: string | undefined,
+  maxLength: number,
+  field: string,
+  state: ArtifactNormalizationState,
+): string {
+  if (!value) return ''
+  const redacted = SECRET_VALUE_PATTERN.test(value) ? '[redacted]' : value
+  if (redacted.length <= maxLength) return redacted
+  state.truncatedFields.push(field)
+  const suffix = '...[truncated]'
+  return `${redacted.slice(0, Math.max(0, maxLength - suffix.length))}${suffix}`
+}
+
+function stringifyBoundedMetadata(
+  metadata: Record<string, unknown>,
+  state: ArtifactNormalizationState,
+): string {
+  const normalized = normalizeMetadataValue(metadata, state, 'metadata', 0)
+  const withMarker = {
+    ...(isPlainRecord(normalized) ? normalized : { value: normalized }),
+    metadataTruncated: state.truncatedFields.length > 0,
+    ...(state.truncatedFields.length > 0 ? { metadataTruncatedFields: [...new Set(state.truncatedFields)] } : {}),
+  }
+  let json = JSON.stringify(withMarker)
+  if (json.length <= ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataString) return json
+
+  state.truncatedFields.push('metadata')
+  const preview = boundedText(json, 4_000, 'metadataPreview', state)
+  json = JSON.stringify({
+    metadataTruncated: true,
+    metadataTruncatedFields: [...new Set(state.truncatedFields)],
+    truncationReason: `metadata JSON exceeded ${ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataString} characters`,
+    preview,
+  })
+  return json.length <= ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataString
+    ? json
+    : JSON.stringify({ metadataTruncated: true, truncationReason: 'metadata JSON exceeded persistence limit' })
+}
+
+function normalizeMetadataValue(
+  value: unknown,
+  state: ArtifactNormalizationState,
+  path: string,
+  depth: number,
+): unknown {
+  if (depth > 8) {
+    state.truncatedFields.push(path)
+    return '[truncated: max depth]'
+  }
+  if (typeof value === 'string') {
+    if (SECRET_VALUE_PATTERN.test(value)) return '[redacted]'
+    const max = LARGE_RESPONSE_KEY_PATTERN.test(path)
+      ? ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataLargeValue
+      : ARTIFACT_PERSISTENCE_FIELD_LIMITS.metadataValue
+    if (LARGE_MEDIA_KEY_PATTERN.test(path) || /^data:[^;]+;base64,/i.test(value) || /^[A-Za-z0-9+/=\r\n]{8192,}$/.test(value)) {
+      state.truncatedFields.push(path)
+      return '[omitted: large media payload]'
+    }
+    return boundedText(value, max, path, state)
+  }
+  if (Array.isArray(value)) {
+    const maxItems = 100
+    if (value.length > maxItems) state.truncatedFields.push(path)
+    return value.slice(0, maxItems).map((item, index) => normalizeMetadataValue(item, state, `${path}.${index}`, depth + 1))
+  }
+  if (!isPlainRecord(value)) return value
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => {
+      const nextPath = `${path}.${key}`
+      return [
+        key,
+        SECRET_KEY_PATTERN.test(key)
+          ? '[redacted]'
+          : normalizeMetadataValue(item, state, nextPath, depth + 1),
+      ]
+    }),
+  )
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value) && !Buffer.isBuffer(value)
 }
 
 export interface ArtifactRecord {
@@ -318,27 +455,28 @@ async function fetchExternalArtifact(url: string): Promise<{ content: Buffer; mi
  * Create a new artifact with optional content upload.
  */
 export async function createArtifact(input: CreateArtifactInput): Promise<ArtifactRecord> {
+  const normalized = normalizeArtifactForPersistence(input)
   const driver: StorageDriver = getStorageDriver()
   const storageHealth = await verifyStorage()
   if (!storageHealth.configured) {
     throw new Error(`Artifact storage is not ready: ${storageHealth.error ?? storageHealth.note}`)
   }
-  let content = input.content
-  let contentUrl = input.contentUrl ?? ''
-  let mimeType = input.mimeType ?? inferMimeType(input.type, input.subType)
+  let content = normalized.content
+  let contentUrl = normalized.contentUrl ?? ''
+  let mimeType = normalized.mimeType ?? inferMimeType(normalized.type, normalized.subType)
 
   if (!content && contentUrl.startsWith('http')) {
     try {
       const fetched = await fetchExternalArtifact(contentUrl)
       content = fetched.content
-      mimeType = input.mimeType ?? fetched.mimeType ?? mimeType
+      mimeType = normalized.mimeType ?? fetched.mimeType ?? mimeType
       contentUrl = ''
     } catch (error) {
-      if (!input.allowRemoteReference) throw error
+      if (!normalized.allowRemoteReference) throw error
     }
   }
 
-  if ((input.status ?? 'completed') === 'completed' && !content && !contentUrl) {
+  if ((normalized.status ?? 'completed') === 'completed' && !content && !contentUrl) {
     throw new Error('Completed artifacts require persisted content or a real content URL.')
   }
 
@@ -356,7 +494,7 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
     mimeType = detected.mimeType
     fileSizeBytes = buf.length
     const ext = detected.extension
-    const key = `artifacts/${input.appSlug}/${input.type}/${Date.now()}.${ext}`
+    const key = `artifacts/${normalized.appSlug}/${normalized.type}/${Date.now()}.${ext}`
     const result = await driver.put(key, buf, mimeType)
     const exists = await driver.exists(result.path)
     if (!exists) throw new Error(`Artifact storage verification failed for ${result.path}`)
@@ -366,32 +504,25 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
 
   const row = await prisma.artifact.create({
     data: {
-      appSlug: input.appSlug,
-      type: input.type,
-      subType: input.subType ?? '',
-      title: input.title ?? '',
-      description: input.description ?? '',
-      provider: input.provider ?? '',
-      model: input.model ?? '',
-      traceId: input.traceId ?? '',
+      appSlug: normalized.appSlug,
+      type: normalized.type,
+      subType: normalized.subType ?? '',
+      title: normalized.title ?? '',
+      description: normalized.description ?? '',
+      provider: normalized.provider ?? '',
+      model: normalized.model ?? '',
+      traceId: normalized.traceId ?? '',
       storageDriver: driver.name,
       storagePath,
       storageUrl,
       mimeType,
       fileSizeBytes,
-      previewable: isPreviewable(input.type),
+      previewable: isPreviewable(normalized.type),
       downloadable: true,
-      status: input.status ?? 'completed',
-      errorMessage: input.errorMessage ?? '',
-      costUsdCents: input.costUsdCents ?? 0,
-      metadata: JSON.stringify(sanitizeArtifactMetadata({
-        ...(input.metadata ?? {}),
-        executionId: input.executionId ?? input.metadata?.executionId ?? null,
-        jobId: input.jobId ?? input.metadata?.jobId ?? null,
-        appId: input.appId ?? input.metadata?.appId ?? null,
-        workspaceId: input.workspaceId ?? input.metadata?.workspaceId ?? input.metadata?.repoWorkspaceId ?? null,
-        capability: input.capability ?? input.metadata?.capability ?? input.subType ?? input.type,
-      })),
+      status: normalized.status ?? 'completed',
+      errorMessage: normalized.errorMessage ?? '',
+      costUsdCents: normalized.costUsdCents ?? 0,
+      metadata: normalized.metadataJson,
     },
   })
 
@@ -509,10 +640,17 @@ export async function updateArtifactStatus(
   extra?: { storageUrl?: string; errorMessage?: string; metadata?: Record<string, unknown> },
 ): Promise<ArtifactRecord | null> {
   try {
+    const normalized = normalizeArtifactForPersistence({
+      appSlug: '__status_update__',
+      type: 'document',
+      status,
+      errorMessage: extra?.errorMessage,
+      metadata: extra?.metadata,
+    })
     const data: Record<string, unknown> = { status }
     if (extra?.storageUrl) data.storageUrl = extra.storageUrl
-    if (extra?.errorMessage) data.errorMessage = extra.errorMessage
-    if (extra?.metadata) data.metadata = JSON.stringify(extra.metadata)
+    if (extra?.errorMessage) data.errorMessage = normalized.errorMessage
+    if (extra?.metadata) data.metadata = normalized.metadataJson
     const row = await prisma.artifact.update({ where: { id }, data })
     return toArtifactRecord(row)
   } catch {

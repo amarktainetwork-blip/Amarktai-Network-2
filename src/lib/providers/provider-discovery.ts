@@ -608,10 +608,17 @@ function normalizeModel(
     ? 'model_metadata'
     : inferredContractCapabilities.length > 0 ? 'provider_contract' : 'unknown'
   const routeType = firstString(record.routeType, record.route_type)
+  const requiresDedicatedEndpoint = routeType === 'hf_specialist_endpoint'
+    || (
+      provider.id === 'together'
+      && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video' || capability === 'adult_video')
+    )
   const executableState = routeType === 'hf_specialist_endpoint'
     ? 'REQUIRES_DEDICATED_ENDPOINT'
     : routeType === 'policy_gated_candidate'
       ? 'CATALOG_ONLY'
+      : requiresDedicatedEndpoint
+        ? 'REQUIRES_DEDICATED_ENDPOINT'
       : capabilityEvidence === 'unknown' ? 'candidate' : true
   return {
     provider: provider.id,
