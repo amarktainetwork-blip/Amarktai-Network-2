@@ -148,7 +148,12 @@ const REQUIRED_CAPABILITIES: CapabilityRouterCapability[] = [
 ]
 
 beforeEach(() => {
+  vi.unstubAllGlobals()
   vi.clearAllMocks()
+  delete process.env.HF_ENDPOINT_MUSIC_GENERATION
+  delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
+  delete process.env.HF_MODEL_MUSIC_GENERATION
+  delete process.env.HF_SPECIALIST_MODELS_JSON
   mocks.localRecords.clear()
   mocks.createArtifact.mockResolvedValue({ id: 'artifact-1' })
   mocks.getVaultApiKey.mockResolvedValue(null)
@@ -711,6 +716,147 @@ describe('capability router contract', () => {
     }))
   })
 
+  it('persists Hugging Face music endpoint audio bytes as local artifacts', async () => {
+    process.env.HF_ENDPOINT_MUSIC_GENERATION = 'https://hf.example/music'
+    const audioBytes = Buffer.from('hf-audio-bytes')
+    const selected = {
+      provider: 'huggingface',
+      model: {
+        provider: 'huggingface',
+        id: 'facebook/musicgen-small',
+        capabilities: ['music'],
+        capabilityEvidence: 'model_metadata',
+        status: 'available',
+        artifactSupport: true,
+        metadata: { executable: 'REQUIRES_DEDICATED_ENDPOINT' },
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'huggingface', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'huggingface_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'HF specialist endpoint configured.',
+      selected,
+      candidates: [selected],
+    })
+    mocks.getVaultApiKey.mockImplementation(async (provider: string) =>
+      provider === 'huggingface' ? 'configured' : null,
+    )
+    vi.stubGlobal('fetch', vi.fn(async () =>
+      new Response(Uint8Array.from(audioBytes), {
+        status: 200,
+        headers: { 'content-type': 'audio/wav' },
+      }),
+    ))
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      providerOverride: 'huggingface',
+      saveArtifact: true,
+    })
+
+    expect(result, JSON.stringify(result)).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      artifactId: 'artifact-1',
+      provider: 'huggingface',
+      model: 'facebook/musicgen-small',
+    })
+    expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'music',
+      content: audioBytes,
+      mimeType: 'audio/wav',
+    }))
+  })
+
+  it('skips Hugging Face music candidates that require an endpoint and falls back truthfully', async () => {
+    const hfCandidate = {
+      provider: 'huggingface',
+      model: {
+        provider: 'huggingface',
+        id: 'facebook/musicgen-small',
+        capabilities: ['music'],
+        capabilityEvidence: 'model_metadata',
+        status: 'available',
+        artifactSupport: true,
+        metadata: { executable: 'REQUIRES_DEDICATED_ENDPOINT' },
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 100,
+      scoreBreakdown: {},
+      health: { provider: 'huggingface', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'huggingface_capability_adapter',
+    }
+    const genxCandidate = {
+      provider: 'genx',
+      model: {
+        provider: 'genx',
+        id: 'genx-music',
+        capabilities: ['music'],
+        capabilityEvidence: 'provider_contract',
+        status: 'available',
+        artifactSupport: true,
+        raw: {},
+        discoveredAt: '2026-06-15T00:00:00.000Z',
+      },
+      score: 90,
+      scoreBreakdown: {},
+      health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+      adapter: 'genx_capability_adapter',
+    }
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'music',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'HF visible, GenX executable.',
+      selected: hfCandidate,
+      candidates: [hfCandidate, genxCandidate],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: 'https://media.example/music.mp3',
+      bytes: null,
+      contentType: 'audio/mpeg',
+      jobId: null,
+      status: 'completed',
+      model: 'genx-music',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'Compose an uplifting launch anthem',
+      capability: 'music_generation',
+      saveArtifact: true,
+    })
+
+    expect(result, JSON.stringify(result)).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      provider: 'genx',
+      fallbackUsed: true,
+    })
+    expect(result.providerAttempts?.[0]).toMatchObject({
+      provider: 'huggingface',
+      status: 'needs_configuration',
+      errorCategory: 'provider_misconfigured',
+    })
+    expect(result.providerAttempts?.[0].error).toContain('HF_ENDPOINT_MUSIC_GENERATION')
+    expect(result.providerAttempts?.[0].error).not.toContain('No canonical adapter contract')
+    expect(result.providerAttempts?.[1]).toMatchObject({
+      provider: 'genx',
+      status: 'completed',
+    })
+  })
+
   it('fails GenX music without audio and does not create an artifact', async () => {
     const selected = {
       provider: 'genx',
@@ -759,11 +905,11 @@ describe('capability router contract', () => {
     expect(result).toMatchObject({
       success: false,
       readiness: 'UNAVAILABLE',
-      error: 'No configured music provider returned audio bytes or audio URL.',
+      error: 'No configured music provider has a working music_generation adapter that returned audio.',
     })
     expect(result.providerAttempts?.[0]).toMatchObject({
       provider: 'genx',
-      error: 'Gemini returned no audio data',
+      error: 'Provider returned no audio bytes, audio URL, or pollable audio job. Provider message: Gemini returned no audio data',
     })
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })

@@ -315,8 +315,26 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
       )
     }
     if (responseType.includes('application/json')) {
+      const json = await response.json().catch(() => null)
+      const media = mediaFromJsonOutput(json)
+      if (media) {
+        return result(provider, model, 'completed', {
+          output: json,
+          mediaUrl: media.url,
+          bytes: media.bytes,
+          contentType: media.contentType ?? responseType,
+        })
+      }
+      if (input.capability.id === 'music_generation') {
+        return failedResult(
+          provider,
+          model,
+          'Hugging Face music endpoint completed without audio bytes or audio URL.',
+          response.status,
+        )
+      }
       return result(provider, model, 'completed', {
-        output: await response.json().catch(() => null),
+        output: json,
         contentType: responseType,
       })
     }
@@ -385,10 +403,11 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
     return failedResult(provider, generated.model, generated.error)
   }
   if (type === 'audio' && !generated.url && !generated.bytes && !generated.jobId) {
+    const noAudioError = 'Provider returned no audio bytes, audio URL, or pollable audio job.'
     return failedResult(
       provider,
       generated.model,
-      generated.error ?? 'GenX music returned no audio bytes, audio URL, or pollable job ID.',
+      generated.error ? `${noAudioError} Provider message: ${generated.error}` : noAudioError,
     )
   }
   return result(provider, generated.model, generated.jobId ? 'processing' : 'completed', {
@@ -617,6 +636,53 @@ function nestedString(value: unknown, path: string[]): string | null {
     else return null
   }
   return typeof cursor === 'string' && cursor.trim() ? cursor.trim() : null
+}
+
+function mediaFromJsonOutput(value: unknown): {
+  url: string | null
+  bytes: Buffer | null
+  contentType: string | null
+} | null {
+  const url = [
+    ['audioUrl'],
+    ['audio_url'],
+    ['musicUrl'],
+    ['music_url'],
+    ['downloadUrl'],
+    ['download_url'],
+    ['url'],
+    ['audio', 'url'],
+    ['music', 'url'],
+    ['output', 'url'],
+    ['result', 'url'],
+    ['data', '0', 'url'],
+  ].map((path) => nestedString(value, path)).find((candidate) => publicHttpsUrl(candidate ?? undefined))
+  if (url) return { url, bytes: null, contentType: null }
+
+  const encoded = [
+    ['audioBase64'],
+    ['audio_base64'],
+    ['audio', 'base64'],
+    ['music', 'base64'],
+    ['base64'],
+    ['b64_json'],
+    ['data', '0', 'b64_json'],
+    ['data'],
+  ].map((path) => nestedString(value, path)).find(Boolean)
+  if (!encoded) return null
+  const dataUri = encoded.match(/^data:([^;,]+);base64,(.+)$/i)
+  if (dataUri) {
+    return {
+      url: null,
+      bytes: Buffer.from(dataUri[2], 'base64'),
+      contentType: dataUri[1],
+    }
+  }
+  return {
+    url: null,
+    bytes: Buffer.from(encoded, 'base64'),
+    contentType: nestedString(value, ['contentType']) ?? nestedString(value, ['mimeType']) ?? null,
+  }
 }
 
 async function executeGroqAudio(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {

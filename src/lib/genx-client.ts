@@ -243,6 +243,7 @@ const GENX_DEFAULT_MODELS: Record<GenXOperationType, string> = {
 
 const GENX_TIMEOUT  = 60_000 // 60 s
 const PROBE_TIMEOUT = 10_000 // 10 s — fast probe only
+const NO_AUDIO_RESULT_ERROR = 'Provider returned no audio bytes, audio URL, or pollable audio job.'
 const ENDPOINT_PROFILE_TTL_MS = 5 * 60 * 1000 // 5 min
 
 /**
@@ -1106,7 +1107,7 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
         status: 'failed',
         model,
         latencyMs,
-        error: error ?? 'GenX music returned no audio bytes, audio URL, or pollable job ID.',
+        error: error ? `${NO_AUDIO_RESULT_ERROR} Provider message: ${error}` : NO_AUDIO_RESULT_ERROR,
         bytes: null,
         contentType: null,
       }

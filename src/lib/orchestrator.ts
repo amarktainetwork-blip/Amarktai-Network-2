@@ -19,6 +19,8 @@ import {
   getProviderCapabilityAdapter,
   type CapabilityReference,
 } from '@/lib/ai-capability-adapters'
+import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
+import type { AiCapabilityDefinition, AiCapabilityProviderRoute } from '@/lib/ai-capability-taxonomy'
 import { productCapabilityToTaxonomyId } from '@/lib/capability-routing-policy'
 import {
   isApprovedDirectProvider,
@@ -409,9 +411,17 @@ export async function executeCapabilityOrchestration(
 
   const attempts: ProviderAttempt[] = []
   for (const [index, candidate] of candidates.entries()) {
-    const route = definition.providerRoutes.find((entry) =>
-      entry.provider === candidate.provider && entry.executable
-    )
+    const routeResolution = resolveExecutableRoute({
+      definition,
+      provider: candidate.provider,
+      adapter: candidate.adapter,
+      taxonomyId,
+    })
+    if (routeResolution.skippedAttempt) {
+      attempts.push(routeResolution.skippedAttempt)
+      continue
+    }
+    const route = routeResolution.route
     const adapter = getProviderCapabilityAdapter(candidate.provider)
     if (!route || !adapter || adapter.id !== candidate.adapter || route.adapter !== candidate.adapter) {
       attempts.push({
@@ -645,7 +655,7 @@ export async function executeCapabilityOrchestration(
     capability,
     onlyConfigurationFailures ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
     capability === 'music_generation' && attempts.length
-      ? 'No configured music provider returned audio bytes or audio URL.'
+      ? 'No configured music provider has a working music_generation adapter that returned audio.'
       : attempts.length
       ? 'All eligible provider/model attempts failed.'
       : routePlan.reason,
@@ -655,6 +665,53 @@ export async function executeCapabilityOrchestration(
     attempts,
     'NO_ROUTE_FOUND',
   )
+}
+
+function resolveExecutableRoute(input: {
+  definition: AiCapabilityDefinition
+  provider: string
+  adapter: string
+  taxonomyId: string
+}): { route: AiCapabilityProviderRoute | null; skippedAttempt?: ProviderAttempt } {
+  const executableRoute = input.definition.providerRoutes.find((entry) =>
+    entry.provider === input.provider && entry.executable
+  )
+  if (executableRoute) return { route: executableRoute }
+
+  const declaredRoute = input.definition.providerRoutes.find((entry) =>
+    entry.provider === input.provider
+  )
+  if (
+    input.provider === 'huggingface'
+    && declaredRoute?.status === 'requires_endpoint'
+  ) {
+    const specialist = resolveHfSpecialistConfig(input.taxonomyId, declaredRoute)
+    if (specialist.configured) {
+      return {
+        route: {
+          ...declaredRoute,
+          executable: true,
+          status: 'executable',
+          modelIds: specialist.model ? [specialist.model] : declaredRoute.modelIds,
+        },
+      }
+    }
+    return {
+      route: null,
+      skippedAttempt: {
+        provider: input.provider,
+        model: declaredRoute.modelIds[0] ?? specialist.model ?? 'unselected',
+        adapter: input.adapter,
+        outputType: declaredRoute.outputType,
+        status: 'needs_configuration',
+        errorCategory: 'provider_misconfigured',
+        retryable: true,
+        error: `${input.taxonomyId} requires a Hugging Face specialist endpoint. Set ${specialist.requiredEnv.join(' or ')}.`,
+      },
+    }
+  }
+
+  return { route: null }
 }
 
 function hasRequiredSource(

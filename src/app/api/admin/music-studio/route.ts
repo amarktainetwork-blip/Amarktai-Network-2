@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
   const completed = result.success && !processing && (!requiresMusicArtifact || hasMusicArtifact)
   const status = completed ? 201 : processing ? 202 : readinessStatus(result.readiness)
   const artifactError = missingMusicArtifact
-    ? 'Music generation completed without a downloadable audio artifact.'
+    ? 'Failed - no completed audio artifact.'
     : null
   return NextResponse.json({
     ...result,

@@ -194,7 +194,7 @@ describe('Phase 4 Media Studio product coverage', () => {
     expect(route).toContain('requiresMusicArtifact')
     expect(route).toContain('hasMusicArtifact')
     expect(route).toContain('missingMusicArtifact')
-    expect(route).toContain('Music generation completed without a downloadable audio artifact.')
+    expect(route).toContain('Failed - no completed audio artifact.')
     expect(route).toContain("jobStatus: processing ? 'processing' : completed ? 'completed' : 'failed'")
   })
 

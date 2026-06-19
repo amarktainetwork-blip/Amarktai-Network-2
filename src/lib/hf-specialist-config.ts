@@ -147,7 +147,7 @@ export function resolveHfSpecialistConfig(
     endpointRequired,
     configured: Boolean(model && endpoint),
     requiredEnv: endpointRequired
-      ? [endpointEnv, 'HF_SPECIALIST_ENDPOINTS_JSON']
+      ? [endpointEnv, 'HF_SPECIALIST_ENDPOINTS_JSON', modelEnv, 'HF_SPECIALIST_MODELS_JSON']
       : [modelEnv, endpointEnv, 'HF_SPECIALIST_MODELS_JSON', 'HF_SPECIALIST_ENDPOINTS_JSON'],
   }
 }
