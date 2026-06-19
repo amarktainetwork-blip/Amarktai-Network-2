@@ -50,7 +50,10 @@ describe('/api/brain/video-generate/[jobId] artifact linkage', () => {
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:05.000Z'),
     })
-    createArtifact.mockResolvedValue({ id: 'artifact_video_1' })
+    createArtifact.mockResolvedValue({
+      id: 'artifact_video_1',
+      storageUrl: '/api/artifacts/file/artifacts/demo-app/video/output.mp4',
+    })
 
     const response = await getVideoJob(new Request('http://test.local/api/brain/video-generate/video_job_1'), {
       params: Promise.resolve({ jobId: 'video_job_1' }),
@@ -67,5 +70,6 @@ describe('/api/brain/video-generate/[jobId] artifact linkage', () => {
       contentUrl: 'https://dashscope.example/output.mp4',
       metadata: expect.objectContaining({ jobId: 'video_job_1' }),
     }))
+    expect(createArtifact.mock.calls[0][0].allowRemoteReference).toBeUndefined()
   })
 })

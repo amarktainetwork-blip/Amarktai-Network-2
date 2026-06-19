@@ -982,7 +982,6 @@ async function completeCapabilityResult(input: {
       content: input.adapterResult.bytes
         ?? (output && !output.startsWith('http') ? Buffer.from(output, 'utf8') : undefined),
       contentUrl: input.adapterResult.mediaUrl ?? undefined,
-      allowRemoteReference: Boolean(input.adapterResult.mediaUrl),
       metadata: {
         ...(input.request.metadata ?? {}),
         providerAttempts: input.attempts,
@@ -1005,7 +1004,7 @@ async function completeCapabilityResult(input: {
       ...response,
       artifactId: artifact.id,
       artifactUrl: artifact.downloadUrl,
-      output: input.adapterResult.mediaUrl ?? artifact.storageUrl ?? output,
+      output: artifact.storageUrl ?? output,
     }
   } catch (error) {
     await recordCapabilityTraceSafe({

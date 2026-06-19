@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { canViewArtifactUnderAppPolicy } from '@/lib/artifact-policy'
-import { detectArtifactContent, getArtifact } from '@/lib/artifact-store'
+import {
+  detectArtifactContent,
+  getArtifact,
+  isInvalidCompletedMediaArtifact,
+  updateArtifactStatus,
+} from '@/lib/artifact-store'
 import { getSession } from '@/lib/session'
 import { getStorageDriver } from '@/lib/storage-driver'
 
@@ -19,14 +24,31 @@ export async function GET(
     return NextResponse.json({ error: `Artifact is ${artifact.status}, not downloadable` }, { status: 409 })
   }
 
-  let data: Buffer | null = null
-  if (artifact.storagePath) {
-    data = await getStorageDriver().get(artifact.storagePath)
-  } else if (artifact.storageUrl.startsWith('https://')) {
-    const response = await fetch(artifact.storageUrl, { signal: AbortSignal.timeout(30_000) })
-    if (response.ok) data = Buffer.from(await response.arrayBuffer())
+  if (isInvalidCompletedMediaArtifact(artifact)) {
+    await updateArtifactStatus(artifact.id, 'failed', {
+      errorMessage: 'Completed media artifact is invalid: durable local file is unavailable.',
+      metadata: {
+        ...artifact.metadata,
+        invalidatedAt: new Date().toISOString(),
+        invalidationReason: 'completed_media_missing_local_storage',
+      },
+    })
+    return NextResponse.json({ error: 'Artifact file is unavailable' }, { status: 404 })
   }
-  if (!data) return NextResponse.json({ error: 'Artifact file is unavailable' }, { status: 404 })
+  const data = artifact.storagePath ? await getStorageDriver().get(artifact.storagePath) : null
+  if (!data) {
+    if (['image', 'audio', 'music', 'video', 'voice', 'avatar'].includes(artifact.type)) {
+      await updateArtifactStatus(artifact.id, 'failed', {
+        errorMessage: 'Completed media artifact is invalid: local file is missing from storage.',
+        metadata: {
+          ...artifact.metadata,
+          invalidatedAt: new Date().toISOString(),
+          invalidationReason: 'completed_media_local_file_missing',
+        },
+      })
+    }
+    return NextResponse.json({ error: 'Artifact file is unavailable' }, { status: 404 })
+  }
 
   const detected = detectArtifactContent(data, artifact.mimeType)
   const disposition = request.nextUrl.searchParams.get('download') === '1' ? 'attachment' : 'inline'

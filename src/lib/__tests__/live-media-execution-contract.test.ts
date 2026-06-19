@@ -122,8 +122,8 @@ describe('local media job lifecycle', () => {
     })
     mocks.persistCanonicalMediaResult.mockResolvedValue({
       artifactId: 'artifact-1',
-      storageUrl: '/api/admin/artifacts/artifact-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-1/content',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/image/output.png',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/image/output.png',
     })
 
     const completed = await pollLocalMediaJob('local-media-job-1')
@@ -131,8 +131,8 @@ describe('local media job lifecycle', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       artifactId: 'artifact-1',
-      storageUrl: '/api/admin/artifacts/artifact-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-1/content',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/image/output.png',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/image/output.png',
       error: null,
     })
     expect(mocks.persistCanonicalMediaResult).toHaveBeenCalledWith(expect.objectContaining({
@@ -169,8 +169,8 @@ describe('local media job lifecycle', () => {
     })
     mocks.persistCanonicalMediaResult.mockResolvedValue({
       artifactId: 'artifact-video-1',
-      storageUrl: '/api/admin/artifacts/artifact-video-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-video-1/content',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/output.mp4',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/output.mp4',
     })
 
     const completed = await pollLocalMediaJob('local-media-job-1')
@@ -178,8 +178,8 @@ describe('local media job lifecycle', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       artifactId: 'artifact-video-1',
-      storageUrl: '/api/admin/artifacts/artifact-video-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-video-1/content',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/output.mp4',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/output.mp4',
       error: null,
     })
     expect(mocks.persistCanonicalMediaResult).toHaveBeenCalledWith(expect.objectContaining({
@@ -266,8 +266,8 @@ describe('local media job lifecycle', () => {
     })
     mocks.persistCanonicalMediaResult.mockResolvedValue({
       artifactId: 'artifact-qwen-1',
-      storageUrl: '/api/admin/artifacts/artifact-qwen-1/content',
-      mediaUrl: '/api/admin/artifacts/artifact-qwen-1/content',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
     })
 
     const completed = await pollLocalMediaJob('local-media-job-1')
@@ -279,7 +279,7 @@ describe('local media job lifecycle', () => {
     expect(completed).toMatchObject({
       status: 'completed',
       artifactId: 'artifact-qwen-1',
-      mediaUrl: '/api/admin/artifacts/artifact-qwen-1/content',
+      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
     })
     expect(localMediaJobResponse(completed!)).toMatchObject({
       artifactUrl: '/api/admin/artifacts/artifact-qwen-1/download',

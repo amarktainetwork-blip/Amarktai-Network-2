@@ -79,6 +79,7 @@ const SECRET_KEY_PATTERN = /(api[-_]?key|authorization|bearer|token|secret|passw
 const SECRET_VALUE_PATTERN = /\b(sk|hf|ghp|gnxk|gsk|tg)[-_A-Za-z0-9]{8,}\b|Bearer\s+\S+/i
 const LARGE_MEDIA_KEY_PATTERN = /(b64|base64|bytes|binary|imageBase64|audioBase64|videoBase64|b64_json|dataUri|rawMedia)/i
 const LARGE_RESPONSE_KEY_PATTERN = /(rawResponse|providerResponse|fullResponse|responseBody|prompt|fullPrompt|negativePrompt|warning|error)/i
+const DURABLE_MEDIA_TYPES = new Set<ArtifactType>(['image', 'audio', 'music', 'video', 'voice', 'avatar'])
 
 export const ARTIFACT_PERSISTENCE_FIELD_LIMITS = {
   title: 180,
@@ -434,11 +435,35 @@ function isPublicHttpsUrl(raw: string): boolean {
   }
 }
 
+function isDurableMediaType(type: ArtifactType): boolean {
+  return DURABLE_MEDIA_TYPES.has(type)
+}
+
+function localArtifactUrlForPath(storagePath: string): string {
+  return `/api/artifacts/file/${storagePath.split('/').map(encodeURIComponent).join('/')}`
+}
+
+export function isInvalidCompletedMediaArtifact(artifact: Pick<ArtifactRecord, 'type' | 'status' | 'storagePath' | 'storageUrl' | 'fileSizeBytes'>): boolean {
+  if (artifact.status !== 'completed' || !DURABLE_MEDIA_TYPES.has(artifact.type as ArtifactType)) return false
+  return !artifact.storagePath
+    || artifact.fileSizeBytes <= 0
+    || !artifact.storageUrl.startsWith('/api/artifacts/file/')
+}
+
+async function providerHeadersForArtifactUrl(url: string): Promise<Record<string, string>> {
+  const host = new URL(url).hostname.toLowerCase()
+  if (!host.endsWith('query.genx.sh')) return {}
+  const { getMeshCredential } = await import('@/lib/provider-mesh-status')
+  const credential = await getMeshCredential('genx').catch(() => null)
+  return credential ? { Authorization: `Bearer ${credential}` } : {}
+}
+
 async function fetchExternalArtifact(url: string): Promise<{ content: Buffer; mimeType?: string }> {
   if (!isPublicHttpsUrl(url)) {
     throw new Error('External artifact URLs must be public HTTPS URLs before they can be persisted.')
   }
-  const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
+  const headers = await providerHeadersForArtifactUrl(url)
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) })
   if (!res.ok) {
     throw new Error(`External artifact fetch failed with HTTP ${res.status}`)
   }
@@ -472,6 +497,7 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
       mimeType = normalized.mimeType ?? fetched.mimeType ?? mimeType
       contentUrl = ''
     } catch (error) {
+      if (isDurableMediaType(normalized.type) && (normalized.status ?? 'completed') === 'completed') throw error
       if (!normalized.allowRemoteReference) throw error
     }
   }
@@ -500,6 +526,16 @@ export async function createArtifact(input: CreateArtifactInput): Promise<Artifa
     if (!exists) throw new Error(`Artifact storage verification failed for ${result.path}`)
     storagePath = key
     storageUrl = result.url
+  }
+
+  if ((normalized.status ?? 'completed') === 'completed' && isDurableMediaType(normalized.type)) {
+    if (!storagePath || fileSizeBytes <= 0) {
+      throw new Error('Completed media artifacts require durable local storage with non-empty bytes.')
+    }
+    const exists = await driver.exists(storagePath)
+    if (!exists) throw new Error(`Completed media artifact storage verification failed for ${storagePath}`)
+    storageUrl = localArtifactUrlForPath(storagePath)
+    contentUrl = ''
   }
 
   const row = await prisma.artifact.create({
@@ -684,6 +720,17 @@ function toArtifactRecord(row: {
   const appId = stringMetadata(metadata, 'appId')
   const capability = stringMetadata(metadata, 'capability') ?? row.subType ?? row.type
   const downloadUrl = `/api/admin/artifacts/${encodeURIComponent(row.id)}/download`
+  const invalidCompletedMedia = isInvalidCompletedMediaArtifact({
+    type: row.type,
+    status: row.status,
+    storagePath: row.storagePath,
+    storageUrl: row.storageUrl,
+    fileSizeBytes: row.fileSizeBytes,
+  })
+  const status = invalidCompletedMedia ? 'failed' : row.status
+  const errorMessage = invalidCompletedMedia
+    ? 'Completed media artifact is invalid: durable local file is unavailable.'
+    : row.errorMessage
   return {
     ...row,
     executionId,
@@ -693,8 +740,10 @@ function toArtifactRecord(row: {
     summary: row.description,
     capability,
     downloadUrl,
-    previewUrl: row.previewable ? downloadUrl : '',
+    previewUrl: row.previewable && status === 'completed' ? downloadUrl : '',
     fileSize: row.fileSizeBytes,
+    status,
+    errorMessage,
     metadata,
   }
 }

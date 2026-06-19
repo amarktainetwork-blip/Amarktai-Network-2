@@ -59,12 +59,12 @@ function projectMediaRoute(
   definition: AiCapabilityDefinition,
 ): MediaCapabilityRoute {
   const providers = definition.providerRoutes
-    .filter((route) => route.executable)
+    .filter((route) => capability === 'adult_video' || route.executable)
     .filter((route) => {
       if (capability === 'adult_text' || capability === 'adult_image') {
         return route.provider === 'together' || route.provider === 'huggingface'
       }
-      return capability !== 'adult_video'
+      return true
     })
     .map((route) => ({
       provider: route.provider,

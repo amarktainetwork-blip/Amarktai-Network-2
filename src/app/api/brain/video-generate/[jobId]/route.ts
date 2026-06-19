@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { getVaultApiKey } from '@/lib/brain'
 import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
-import { createArtifact } from '@/lib/artifact-store'
+import { createArtifact, isInvalidCompletedMediaArtifact } from '@/lib/artifact-store'
 import { recordExecutionResponse } from '@/lib/execution'
 import { finishControlPlaneAttempt } from '@/lib/control-plane-jobs'
 import { recordCapabilityTrace } from '@/lib/capability-tracing'
@@ -87,9 +87,28 @@ async function ensureVideoArtifact(job: {
   try {
     const existing = await prisma.artifact.findFirst({
       where: { traceId, type: 'video' },
-      select: { id: true, storageUrl: true },
+      select: { id: true, type: true, status: true, storagePath: true, storageUrl: true, fileSizeBytes: true },
     })
-    if (existing) return artifactReference(existing.id, existing.storageUrl, null)
+    if (existing) {
+      if (isInvalidCompletedMediaArtifact(existing)) {
+        await prisma.artifact.update({
+          where: { id: existing.id },
+          data: {
+            status: 'failed',
+            errorMessage: 'Completed video artifact is invalid: durable local file is unavailable.',
+          },
+        }).catch(() => null)
+        return {
+          artifactId: null,
+          storageUrl: null,
+          artifactUrl: null,
+          previewUrl: null,
+          downloadUrl: null,
+          artifactError: 'Completed video artifact is invalid: durable local file is unavailable.',
+        }
+      }
+      return artifactReference(existing.id, existing.storageUrl, null)
+    }
     const artifact = await createArtifact({
       appSlug: job.appSlug ?? 'amarktai-network',
       executionId: executionIdFor(job.resultMeta),
@@ -104,8 +123,11 @@ async function ensureVideoArtifact(job: {
       traceId,
       mimeType: 'video/mp4',
       contentUrl: job.resultUrl,
-      allowRemoteReference: true,
-      metadata: { capability: capabilityFor(job.resultMeta), jobId: job.id },
+      metadata: {
+        capability: capabilityFor(job.resultMeta),
+        jobId: job.id,
+        remoteMediaUrl: job.resultUrl,
+      },
     })
     return artifactReference(artifact.id, artifact.storageUrl, null)
   } catch (error) {
@@ -201,10 +223,10 @@ function responsePayload(
   },
 ) {
   const error = job.errorMessage ?? artifact.artifactError
-  const mediaUrl = artifact.previewUrl ?? artifact.storageUrl ?? job.resultUrl
+  const mediaUrl = artifact.previewUrl ?? artifact.storageUrl
   return {
-    success: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
-    executed: job.status === 'succeeded' && Boolean(job.resultUrl) && !artifact.artifactError,
+    success: job.status === 'succeeded' && Boolean(artifact.artifactId && mediaUrl) && !artifact.artifactError,
+    executed: job.status === 'succeeded' && Boolean(artifact.artifactId && mediaUrl) && !artifact.artifactError,
     capability: capabilityFor(job.resultMeta),
     provider: job.provider,
     model: job.modelId,
@@ -213,7 +235,7 @@ function responsePayload(
     artifactUrl: artifact.artifactUrl,
     previewUrl: artifact.previewUrl,
     downloadUrl: artifact.downloadUrl,
-    storageUrl: artifact.storageUrl ?? job.resultUrl,
+    storageUrl: artifact.storageUrl,
     mediaUrl,
     videoUrl: mediaUrl,
     error: error ?? null,

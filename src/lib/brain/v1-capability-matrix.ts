@@ -38,6 +38,17 @@ export type V1CapabilityReadiness =
   | 'blocked'
   | 'post_launch'
 
+export type AiCapabilityProviderRouteStatus =
+  | 'discovered'
+  | 'catalog_available'
+  | 'requires_key'
+  | 'requires_endpoint'
+  | 'adapter_missing'
+  | 'configured'
+  | 'executable'
+  | 'execution_failed'
+  | 'live_proven'
+
 export const CONNECTED_APP_AI_SCOPES = [
   'ai:text:execute',
   'ai:image:execute',
@@ -56,6 +67,7 @@ export interface AiCapabilityProviderRoute {
   provider: ApprovedDirectProviderId
   modelIds: string[]
   executable: boolean
+  status: AiCapabilityProviderRouteStatus
   adapter: string
   source: 'provider_mesh' | 'universal_model_catalog' | 'media_capability_registry'
   route: string | null
@@ -133,6 +145,7 @@ function capability(input: CapabilityInput): AiCapabilityDefinition {
       )
       .filter((model) => modelMatchesCapability(input.id, provider, model.modelId))
       .map((model) => model.modelId)
+    const executable = executableProviders.has(provider)
     return {
       provider,
       modelIds: models.length > 0
@@ -140,14 +153,15 @@ function capability(input: CapabilityInput): AiCapabilityDefinition {
         : provider === 'huggingface'
           ? ['custom:huggingface-endpoint']
           : [],
-      executable: executableProviders.has(provider),
+      executable,
+      status: providerRouteStatus(provider, models, executable),
       adapter: providerAdapter(provider),
       source: input.providerRouteSource ?? (models.length ? 'universal_model_catalog' : 'provider_mesh'),
-      route: executableProviders.has(provider)
+      route: executable
         ? input.executableEndpoint ?? CONNECTED_APP_EXECUTION_ENDPOINT
         : null,
       outputType: input.outputTypes[0] ?? 'unknown',
-      adapterImplemented: executableProviders.has(provider),
+      adapterImplemented: executable,
     }
   })
   const requiredSourceInput = requiredSourceFor(input.inputTypes)
@@ -213,6 +227,17 @@ function capabilityReadiness(
 
 function providerAdapter(provider: ApprovedDirectProviderId): string {
   return `${provider}_capability_adapter`
+}
+
+function providerRouteStatus(
+  provider: ApprovedDirectProviderId,
+  models: readonly unknown[],
+  executable: boolean,
+): AiCapabilityProviderRouteStatus {
+  if (executable) return 'executable'
+  if (provider === 'huggingface') return 'requires_endpoint'
+  if (models.length > 0) return 'adapter_missing'
+  return 'discovered'
 }
 
 function modelGroupsFor(input: CapabilityInput): UniversalCapabilityGroup[] {
@@ -320,7 +345,7 @@ export const AI_CAPABILITY_TAXONOMY: readonly AiCapabilityDefinition[] = [
 
   capability({ id: 'image_to_video', label: 'Image to Video', group: 'video', inputTypes: ['image', 'text'], outputTypes: ['video'], description: 'Generate video from a required source image.', providers: ['qwen', 'genx', 'together'], executableProviders: ['qwen', 'genx'], executableEndpoint: '/api/brain/video-generate', status: 'partially_wired', blocker: 'A source image is required before an image-to-video route can run.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: true }),
   capability({ id: 'image_text_to_video', label: 'Image and Text to Video', group: 'video', inputTypes: ['image', 'text'], outputTypes: ['video'], description: 'Generate guided video from image and text.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No source-image video adapter is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
-  capability({ id: 'text_to_video', label: 'Text to Video', group: 'video', inputTypes: ['text'], outputTypes: ['video'], description: 'Start a real text-to-video provider job and persist completed output.', providers: ['genx', 'qwen', 'together'], executableProviders: ['genx', 'qwen'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/video-generate', status: 'working', blocker: null, requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: true }),
+  capability({ id: 'text_to_video', label: 'Text to Video', group: 'video', inputTypes: ['text'], outputTypes: ['video'], description: 'Start a real text-to-video provider job and persist completed output.', providers: ['genx', 'qwen', 'together', 'huggingface'], executableProviders: ['genx', 'qwen'], providerRouteSource: 'media_capability_registry', executableEndpoint: '/api/brain/video-generate', status: 'working', blocker: null, requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: true, createsArtifact: true, longRunning: true }),
   capability({ id: 'video_to_video', label: 'Video to Video', group: 'video', inputTypes: ['video', 'text'], outputTypes: ['video'], description: 'Transform an existing video.', providers: ['genx', 'qwen'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No source-video upload and transformation adapter is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: true, longRunning: true }),
   capability({ id: 'video_text_to_text', label: 'Video and Text to Text', group: 'multimodal', inputTypes: ['video', 'text'], outputTypes: ['text'], description: 'Analyze a video with a text instruction.', providers: ['genx', 'qwen', 'mimo', 'huggingface'], executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No video ingestion and analysis contract is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true }),
   capability({ id: 'video_classification', label: 'Video Classification', group: 'video', inputTypes: ['video'], outputTypes: ['labels'], description: 'Classify a video.', providers: hfOnly, executableEndpoint: null, status: 'provider_available_not_wired', blocker: 'No video upload adapter or Hugging Face task contract is wired.', requiredScope: 'ai:video:execute', exposeToConnectedAppsV1: false, createsArtifact: false, longRunning: true }),

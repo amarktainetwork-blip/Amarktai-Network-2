@@ -263,13 +263,14 @@ async function reconcileExecution(job: LocalMediaJob | null) {
 }
 
 export function localMediaJobResponse(job: LocalMediaJob) {
-  const completed = job.status === 'completed' && Boolean(job.artifactId && (job.storageUrl || job.mediaUrl))
+  const completed = job.status === 'completed'
+    && Boolean(job.artifactId && job.storageUrl?.startsWith('/api/artifacts/file/'))
   const trackable = job.status === 'queued' || job.status === 'processing'
   const pollUrl = `/api/brain/media-jobs/${job.id}`
   const artifactUrl = job.artifactId ? `/api/admin/artifacts/${encodeURIComponent(job.artifactId)}/download` : null
   const previewUrl = completed ? artifactUrl : null
   const downloadUrl = completed ? artifactUrl : null
-  const playableUrl = completed ? (artifactUrl ?? job.mediaUrl ?? job.storageUrl) : null
+  const playableUrl = completed ? artifactUrl : null
   return {
     success: completed || trackable,
     executed: completed || trackable,

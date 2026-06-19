@@ -404,7 +404,6 @@ async function applyAdapterResult(
           : undefined
       ),
       contentUrl: result.mediaUrl ?? undefined,
-      allowRemoteReference: Boolean(result.mediaUrl),
       metadata: {
         connectedAppId: job.appId,
         providerJobId: result.providerJobId,

@@ -7,7 +7,9 @@ import {
   type ArtifactRecord,
 } from '@/lib/artifact-store'
 import { isPolicyRestrictedArtifact } from '@/lib/artifact-policy'
+import { getCapabilityDefinition } from '@/lib/brain/v1-capability-matrix'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 import { APPROVED_DIRECT_PROVIDER_IDS } from '@/lib/provider-mesh'
 
 const ROOT = process.cwd()
@@ -130,6 +132,12 @@ describe('Phase 2 Artifact Library APIs and dashboard', () => {
     }
   })
 
+  it('serves artifact downloads from local storage only', () => {
+    const download = source('src/app/api/admin/artifacts/[id]/download/route.ts')
+    expect(download).toContain('getStorageDriver().get(artifact.storagePath)')
+    expect(download).not.toContain('fetch(artifact.storageUrl')
+  })
+
   it('does not manufacture metadata-only completed artifacts', () => {
     const store = source('src/lib/artifact-store.ts')
     const api = source('src/app/api/admin/artifacts/route.ts')
@@ -201,5 +209,27 @@ describe('Phase 2 producer and policy coverage', () => {
       ['ud', 'io'].join(''),
     ]
     for (const provider of prohibited) expect(APPROVED_DIRECT_PROVIDER_IDS).not.toContain(provider)
+  })
+
+  it('does not project adult video provider candidates out of media truth', () => {
+    const route = getMediaCapabilityRoute('adult_video')
+    expect(route?.providers.map((provider) => provider.provider)).toEqual(expect.arrayContaining([
+      'genx',
+      'qwen',
+      'huggingface',
+    ]))
+    expect(source('src/lib/media-capability-registry.ts')).not.toContain("return capability !== 'adult_video'")
+  })
+
+  it('keeps non-executable video providers classified instead of hidden', () => {
+    const textToVideo = getCapabilityDefinition('text_to_video')
+    expect(textToVideo?.providerRoutes.find((route) => route.provider === 'huggingface')).toMatchObject({
+      executable: false,
+      status: 'requires_endpoint',
+    })
+    expect(textToVideo?.providerRoutes.find((route) => route.provider === 'together')).toMatchObject({
+      executable: false,
+      status: 'discovered',
+    })
   })
 })

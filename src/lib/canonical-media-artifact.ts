@@ -151,7 +151,6 @@ export async function persistCanonicalMediaResult(input: PersistMediaResultInput
     traceId: input.traceId,
     content: normalized.base64 ?? undefined,
     contentUrl: normalized.mediaUrl ?? undefined,
-    allowRemoteReference: true,
     mimeType: normalized.mimeType ?? undefined,
     metadata: {
       ...(input.metadata ?? {}),

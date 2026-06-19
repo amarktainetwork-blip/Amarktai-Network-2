@@ -5,6 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
+    integrationConfig: {
+      findUnique: vi.fn(async () => null),
+    },
+    aiProvider: {
+      findUnique: vi.fn(async () => null),
+    },
     artifact: {
       create: vi.fn(async ({ data }) => ({
         id: 'artifact_test',
@@ -44,6 +50,10 @@ vi.mock('@/lib/event-bus', () => ({
   emitSystemEvent: vi.fn(),
 }))
 
+vi.mock('@/lib/provider-mesh-status', () => ({
+  getMeshCredential: vi.fn(async (id: string) => id === 'genx' ? 'genx-test-key' : null),
+}))
+
 const originalEnv = { ...process.env }
 
 async function makeTempStorageRoot(): Promise<string> {
@@ -52,6 +62,7 @@ async function makeTempStorageRoot(): Promise<string> {
 
 afterEach(async () => {
   process.env = { ...originalEnv }
+  vi.unstubAllGlobals()
   vi.resetModules()
   vi.restoreAllMocks()
 })
@@ -183,6 +194,98 @@ describe('VPS storage persistence policy', () => {
     expect(artifact.storagePath).toMatch(/^artifacts\/test-app\/document\//)
     expect(artifact.storageUrl).toContain('/api/artifacts/file/artifacts/test-app/document/')
     expect(artifact.fileSizeBytes).toBe(Buffer.byteLength('saved for restart'))
+  })
+
+  it('stores a GenX completed media URL locally with provider authentication', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    const mp4 = Buffer.concat([
+      Buffer.from([0, 0, 0, 24]),
+      Buffer.from('ftypmp42', 'ascii'),
+      Buffer.from('local-video-bytes'),
+    ])
+    const fetchMock = vi.fn(async () => new Response(new Uint8Array(mp4), {
+      status: 200,
+      headers: { 'content-type': 'video/mp4' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    vi.resetModules()
+
+    const { createArtifact } = await import('@/lib/artifact-store')
+    const artifact = await createArtifact({
+      appSlug: 'test-app',
+      type: 'video',
+      subType: 'video_generation',
+      provider: 'genx',
+      model: 'grok-imagine-video',
+      contentUrl: 'https://query.genx.sh/api/v1/jobs/job_123/file',
+      mimeType: 'video/mp4',
+      metadata: {
+        remoteMediaUrl: 'https://query.genx.sh/api/v1/jobs/job_123/file',
+      },
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://query.genx.sh/api/v1/jobs/job_123/file',
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer genx-test-key' },
+      }),
+    )
+    expect(artifact.status).toBe('completed')
+    expect(artifact.storageDriver).toBe('local_vps')
+    expect(artifact.storagePath).toMatch(/^artifacts\/test-app\/video\//)
+    expect(artifact.storageUrl).toMatch(/^\/api\/artifacts\/file\/artifacts\/test-app\/video\//)
+    expect(artifact.fileSizeBytes).toBe(mp4.length)
+  })
+
+  it('rejects completed media remote references when provider fetch fails', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('unauthorized', { status: 401 })))
+    vi.resetModules()
+
+    const { createArtifact } = await import('@/lib/artifact-store')
+    const { prisma } = await import('@/lib/prisma')
+    const createCallsBefore = vi.mocked(prisma.artifact.create).mock.calls.length
+
+    await expect(createArtifact({
+      appSlug: 'test-app',
+      type: 'video',
+      subType: 'video_generation',
+      provider: 'genx',
+      model: 'grok-imagine-video',
+      contentUrl: 'https://query.genx.sh/api/v1/jobs/job_401/file',
+      allowRemoteReference: true,
+      mimeType: 'video/mp4',
+    })).rejects.toThrow('External artifact fetch failed with HTTP 401')
+    expect(vi.mocked(prisma.artifact.create).mock.calls.slice(createCallsBefore).some((call) =>
+      call[0].data.type === 'video' && call[0].data.status === 'completed',
+    )).toBe(false)
+  })
+
+  it('requires completed image, audio, and video artifacts to have local bytes', async () => {
+    process.env.STORAGE_DRIVER = 'local_vps'
+    process.env.AMARKTAI_STORAGE_ROOT = await makeTempStorageRoot()
+    vi.resetModules()
+
+    const { createArtifact } = await import('@/lib/artifact-store')
+    for (const [type, mimeType, bytes] of [
+      ['image', 'image/png', Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 1])],
+      ['audio', 'audio/mpeg', Buffer.from('ID3audio-bytes')],
+      ['video', 'video/mp4', Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypmp42video')])],
+    ] as const) {
+      const artifact = await createArtifact({
+        appSlug: 'test-app',
+        type,
+        subType: `${type}_proof`,
+        content: bytes,
+        mimeType,
+      })
+      expect(artifact.status).toBe('completed')
+      expect(artifact.storagePath).toMatch(new RegExp(`^artifacts/test-app/${type}/`))
+      expect(artifact.storageUrl).toMatch(new RegExp(`^/api/artifacts/file/artifacts/test-app/${type}/`))
+      expect(artifact.fileSizeBytes).toBeGreaterThan(0)
+    }
   })
 
   it('bounds long artifact descriptions and keeps full prompts out of DB description', async () => {
