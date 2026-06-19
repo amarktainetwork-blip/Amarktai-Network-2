@@ -62,6 +62,7 @@ describe('Phase 1 provider truth layer', () => {
     delete process.env.HUGGINGFACEHUB_API_TOKEN
     delete process.env.HUGGINGFACE_API_KEY
     delete process.env.QWEN_PAID_ENABLED
+    delete process.env.MIMO_BASE_URL
   })
 
   it('publishes only the six canonical providers and 23 canonical capabilities', () => {
