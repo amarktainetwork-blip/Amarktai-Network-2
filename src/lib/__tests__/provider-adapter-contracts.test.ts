@@ -631,7 +631,37 @@ describe('provider adapter contracts', () => {
     })
   })
 
+  it('keeps Together video disabled by default until endpoint proof is complete', async () => {
+    const previousTogetherVideoRuntime = process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+    delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = getProviderCapabilityAdapter('together')!
+    const input = adapterInput('text_to_video', 'together', 'Wan-AI/Wan2.1-T2V-14B')
+
+    try {
+      const result = await adapter.execute(input)
+
+      expect(result).toMatchObject({
+        status: 'failed',
+        provider: 'together',
+        model: 'Wan-AI/Wan2.1-T2V-14B',
+        providerJobId: null,
+        errorCategory: 'unsupported_endpoint',
+      })
+      expect(result.error).toContain('Together video runtime is disabled')
+      expect(result.error).toContain('HTTP 404')
+      expect(result.error).toContain('TOGETHER_VIDEO_RUNTIME_ENABLED=true')
+      expect(fetchMock).not.toHaveBeenCalled()
+    } finally {
+      if (previousTogetherVideoRuntime === undefined) delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+      else process.env.TOGETHER_VIDEO_RUNTIME_ENABLED = previousTogetherVideoRuntime
+    }
+  })
+
   it('creates and polls Together video through the official async video endpoint', async () => {
+    const previousTogetherVideoRuntime = process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+    process.env.TOGETHER_VIDEO_RUNTIME_ENABLED = 'true'
     const fetchMock = vi.fn(async (input: string | URL) => {
       const url = String(input)
       if (url.endsWith('/videos')) {
@@ -656,20 +686,25 @@ describe('provider adapter contracts', () => {
     const adapter = getProviderCapabilityAdapter('together')!
     const input = adapterInput('text_to_video', 'together', 'Wan-AI/Wan2.1-T2V-14B')
 
-    const started = await adapter.execute(input)
-    const polled = await adapter.poll!(started.providerJobId!, input)
+    try {
+      const started = await adapter.execute(input)
+      const polled = await adapter.poll!(started.providerJobId!, input)
 
-    expect(started).toMatchObject({
-      status: 'processing',
-      provider: 'together',
-      model: 'Wan-AI/Wan2.1-T2V-14B',
-      providerJobId: 'together-job-1',
-    })
-    expect(polled).toMatchObject({
-      status: 'completed',
-      providerJobId: 'together-job-1',
-      mediaUrl: 'https://cdn.example/together-video.mp4',
-    })
+      expect(started).toMatchObject({
+        status: 'processing',
+        provider: 'together',
+        model: 'Wan-AI/Wan2.1-T2V-14B',
+        providerJobId: 'together-job-1',
+      })
+      expect(polled).toMatchObject({
+        status: 'completed',
+        providerJobId: 'together-job-1',
+        mediaUrl: 'https://cdn.example/together-video.mp4',
+      })
+    } finally {
+      if (previousTogetherVideoRuntime === undefined) delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+      else process.env.TOGETHER_VIDEO_RUNTIME_ENABLED = previousTogetherVideoRuntime
+    }
   })
 
   it('keeps provider async flags aligned with canonical polling support', () => {

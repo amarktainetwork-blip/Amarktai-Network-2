@@ -78,6 +78,13 @@ export function rejectionForProviderModel(input: {
   }
   if (model.status === 'unavailable') return { ...base, code: 'MODEL_UNAVAILABLE', reason: 'Model catalog marks this model unavailable.' }
   if (!model.capabilities.includes(capability.id)) return { ...base, code: 'CAPABILITY_UNSUPPORTED', reason: 'Model does not advertise or inherit the requested capability.' }
+  if (requiresTogetherVideoRuntimeProof(provider.id, capability.id)) {
+    return {
+      ...base,
+      code: 'DEDICATED_ENDPOINT_REQUIRED',
+      reason: 'Together video models are visible in catalog, but /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof.',
+    }
+  }
   if (model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT') return { ...base, code: 'DEDICATED_ENDPOINT_REQUIRED', reason: 'Model requires a dedicated provider endpoint before execution.' }
   if (model.metadata?.executable === 'CATALOG_ONLY') return { ...base, code: 'CATALOG_ONLY', reason: 'Model is catalog-only and must not be routed for live execution.' }
   if (model.metadata?.executable === 'ADAPTER_MISSING') return { ...base, code: 'ADAPTER_MISSING', reason: 'Model is visible in the provider catalog, but no canonical adapter is wired for this capability.' }
@@ -106,6 +113,12 @@ export function rejectionForProviderModel(input: {
     && process.env[provider.billing.paidEnabledEnv]?.trim().toLowerCase() !== 'true'
   ) return { ...base, code: 'BILLING_DISABLED', reason: `Provider paid model execution requires ${provider.billing.paidEnabledEnv}=true.` }
   return null
+}
+
+function requiresTogetherVideoRuntimeProof(provider: string, capability: string) {
+  return provider === 'together'
+    && ['video', 'image_to_video', 'adult_video'].includes(capability)
+    && process.env.TOGETHER_VIDEO_RUNTIME_ENABLED?.trim().toLowerCase() !== 'true'
 }
 
 function normalized(value: number | null): number {

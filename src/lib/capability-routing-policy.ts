@@ -53,7 +53,7 @@ const PROVIDER_ORDER: Record<StoredRoutingQualityTier, Record<string, ApprovedDi
   cheap: {
     text: ['groq', 'qwen', 'together', 'huggingface', 'mimo', 'genx'],
     image: ['huggingface', 'together', 'qwen', 'genx', 'mimo', 'groq'],
-    video: ['qwen', 'together', 'huggingface', 'genx', 'mimo', 'groq'],
+    video: ['qwen', 'genx', 'together', 'huggingface', 'mimo', 'groq'],
     audio: ['groq', 'huggingface', 'qwen', 'mimo', 'genx', 'together'],
     music: ['huggingface', 'genx', 'qwen', 'together', 'mimo', 'groq'],
     data: ['huggingface', 'qwen', 'together', 'genx', 'mimo', 'groq'],

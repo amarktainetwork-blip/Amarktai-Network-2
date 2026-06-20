@@ -103,6 +103,13 @@ const PROVIDER_CATEGORIES: Record<ApprovedDirectProviderId, readonly string[]> =
 }
 
 const GENX_MUSIC_DURATION_LIMIT_SECONDS = 30
+const TOGETHER_VIDEO_RUNTIME_FLAG = 'TOGETHER_VIDEO_RUNTIME_ENABLED'
+const TOGETHER_VIDEO_RUNTIME_DISABLED_ERROR =
+  'Together video runtime is disabled until the /videos endpoint is live-proven after the VPS HTTP 404 contract failure. Set TOGETHER_VIDEO_RUNTIME_ENABLED=true to enable manual execution.'
+
+function togetherVideoRuntimeEnabled() {
+  return process.env[TOGETHER_VIDEO_RUNTIME_FLAG]?.trim().toLowerCase() === 'true'
+}
 
 function result(
   provider: ApprovedDirectProviderId,
@@ -927,9 +934,16 @@ async function executeTogetherData(input: CapabilityAdapterInput): Promise<Capab
 
 async function executeTogetherVideo(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'together' as const
-  const key = await getVaultApiKey(provider)
   const model = input.model
   if (!model) return failedResult(provider, '', 'Discovery did not select a Together video model.')
+  if (!togetherVideoRuntimeEnabled()) {
+    return result(provider, model, 'failed', {
+      error: TOGETHER_VIDEO_RUNTIME_DISABLED_ERROR,
+      errorCategory: 'unsupported_endpoint',
+      retryable: true,
+    })
+  }
+  const key = await getVaultApiKey(provider)
   if (!key) return failedResult(provider, model, 'Together AI key not configured.')
   const baseUrl = resolveProviderEndpoint(getProviderTruth(provider)!, 'video')
   const requestedSeconds = numericInput(input.inputs?.durationSeconds ?? input.inputs?.duration)
