@@ -9,7 +9,7 @@
     "start": "next start",
     "worker": "tsx scripts/worker.mjs",
     "lint": "next lint",
-    "test": "vitest run",
+    "test": "node scripts/vitest-runner.mjs",
     "proof:v1-control-plane": "node scripts/v1-operational-proof.mjs",
     "proof:production-capabilities": "tsx scripts/production-capabilities-proof.ts",
     "test:watch": "vitest",

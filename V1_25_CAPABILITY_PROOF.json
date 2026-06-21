@@ -1,95 +1,89 @@
 {
-  "generatedAt": "2026-06-21T11:55:39.807Z",
+  "generatedAt": "2026-06-21T13:52:06.938Z",
   "environment": {
-    "hasDatabaseUrl": true,
+    "hasDatabaseUrl": false,
     "appSlug": "amarktai-network",
     "connectedAppSecretPresent": false,
     "envLoader": "scripts/load-repo-env.ts",
-    "envFilesLoaded": [
-      ".env"
-    ],
+    "envFilesLoaded": [],
     "envDiagnostics": {
-      "cwd": "/var/www/amarktai/platform",
-      "repoRoot": "/var/www/amarktai/platform",
+      "cwd": "C:\\Users\\digit\\Code\\Amarktai-Network-2",
+      "repoRoot": "C:\\Users\\digit\\Code\\Amarktai-Network-2",
       "searchedEnvPaths": [
-        "/var/www/amarktai/platform/.env.production.local",
-        "/var/www/amarktai/platform/.env.local",
-        "/var/www/amarktai/platform/.env.production",
-        "/var/www/amarktai/platform/.env",
-        "/var/www/amarktai/platform/prisma/.env.production.local",
-        "/var/www/amarktai/platform/prisma/.env.local",
-        "/var/www/amarktai/platform/prisma/.env.production",
-        "/var/www/amarktai/platform/prisma/.env",
-        "/var/www/amarktai/.env.production.local",
-        "/var/www/amarktai/.env.local",
-        "/var/www/amarktai/.env.production",
-        "/var/www/amarktai/.env",
-        "/var/www/.env.production.local",
-        "/var/www/.env.local",
-        "/var/www/.env.production",
-        "/var/www/.env",
-        "/var/.env.production.local",
-        "/var/.env.local",
-        "/var/.env.production",
-        "/var/.env"
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\.env.production.local",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\.env.local",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\.env.production",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\.env",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\prisma\\.env.production.local",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\prisma\\.env.local",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\prisma\\.env.production",
+        "C:\\Users\\digit\\Code\\Amarktai-Network-2\\prisma\\.env",
+        "C:\\Users\\digit\\Code\\.env.production.local",
+        "C:\\Users\\digit\\Code\\.env.local",
+        "C:\\Users\\digit\\Code\\.env.production",
+        "C:\\Users\\digit\\Code\\.env",
+        "C:\\Users\\digit\\.env.production.local",
+        "C:\\Users\\digit\\.env.local",
+        "C:\\Users\\digit\\.env.production",
+        "C:\\Users\\digit\\.env",
+        "C:\\Users\\.env.production.local",
+        "C:\\Users\\.env.local",
+        "C:\\Users\\.env.production",
+        "C:\\Users\\.env"
       ],
-      "foundEnvPaths": [
-        "/var/www/amarktai/platform/.env"
-      ],
-      "loadedEnvPaths": [
-        ".env"
-      ]
+      "foundEnvPaths": [],
+      "loadedEnvPaths": []
     },
     "providerKeyPresent": {
-      "genx": true,
-      "huggingface": true,
-      "qwen": true,
-      "mimo": true,
-      "groq": true,
-      "together": true
+      "genx": false,
+      "huggingface": false,
+      "qwen": false,
+      "mimo": false,
+      "groq": false,
+      "together": false
     },
     "dbCheck": {
-      "attempted": true,
-      "available": true,
-      "error": null
+      "attempted": false,
+      "available": false,
+      "error": "DATABASE_URL is not present after env loading."
     }
   },
   "providerKeyPath": [
     {
       "provider": "genx",
-      "configured": true,
-      "masked": "gnxk...5dea",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "huggingface",
-      "configured": true,
-      "masked": "hf_E...oTeP",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "qwen",
-      "configured": true,
-      "masked": "sk-w...sDBc",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "mimo",
-      "configured": true,
-      "masked": "tp-s...ync9",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "groq",
-      "configured": true,
-      "masked": "gsk_...xJ9r",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     },
     {
       "provider": "together",
-      "configured": true,
-      "masked": "tgp_...EPgU",
-      "error": null
+      "configured": false,
+      "masked": null,
+      "error": "DATABASE_URL not loaded; only environment fallback was checked. No credential resolved from integrationConfig/aiProvider/env path."
     }
   ],
   "providerConfigTruth": [
@@ -97,9 +91,9 @@
       "provider": "huggingface",
       "displayName": "Hugging Face",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "hf_E...oTeP",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "HUGGINGFACE_API_KEY",
           "HUGGINGFACEHUB_API_TOKEN",
@@ -109,17 +103,17 @@
       "baseUrls": [
         {
           "family": "hub",
-          "currentValue": "https://router.huggingface.co",
+          "currentValue": "https://huggingface.co",
           "defaultValue": "https://huggingface.co",
           "envName": null,
-          "source": "ai_provider"
+          "source": "default"
         },
         {
           "family": "inference_router",
           "currentValue": "https://router.huggingface.co",
           "defaultValue": "https://router.huggingface.co",
           "envName": "HUGGINGFACE_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [],
@@ -210,17 +204,18 @@
         }
       ],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Inference Provider and curated model API routes are distinct from specialist endpoints.",
-      "dashboardDisplayStatus": "blocked",
-      "runtimeExecutableStatus": "blocked",
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
       "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env.",
         "rerank requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON.",
         "image_edit requires HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON.",
         "video requires HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON.",
@@ -230,6 +225,7 @@
         "stt requires HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON."
       ],
       "nextActions": [
+        "Store Hugging Face credential in integrationConfig.huggingface or one of: HUGGINGFACE_API_KEY, HUGGINGFACEHUB_API_TOKEN, HF_TOKEN.",
         "Configure HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
         "Configure HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON for image_edit before routing this provider/model as executable.",
         "Configure HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable.",
@@ -243,9 +239,9 @@
       "provider": "together",
       "displayName": "Together AI",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "tgp_...EPgU",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "TOGETHER_API_KEY"
         ]
@@ -256,14 +252,14 @@
           "currentValue": "https://api.together.ai/v1",
           "defaultValue": "https://api.together.ai/v1",
           "envName": "TOGETHER_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         },
         {
           "family": "video",
           "currentValue": "https://api.together.ai/v1",
           "defaultValue": "https://api.together.ai/v1",
           "envName": "TOGETHER_VIDEO_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [
@@ -319,23 +315,25 @@
         }
       ],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Catalog models remain visible; video/rerank execution requires endpoint proof/config.",
-      "dashboardDisplayStatus": "blocked",
-      "runtimeExecutableStatus": "blocked",
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
       "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env.",
         "TOGETHER_VIDEO_RUNTIME_ENABLED=false; required true.",
         "rerank requires TOGETHER_DEDICATED_ENDPOINTS_JSON.",
         "video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL.",
         "image_to_video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL."
       ],
       "nextActions": [
+        "Store Together AI credential in integrationConfig.together or one of: TOGETHER_API_KEY.",
         "Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404.",
         "Configure TOGETHER_DEDICATED_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
         "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for video before routing this provider/model as executable.",
@@ -346,9 +344,9 @@
       "provider": "groq",
       "displayName": "Groq",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "gsk_...xJ9r",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "GROQ_API_KEY"
         ]
@@ -359,32 +357,36 @@
           "currentValue": "https://api.groq.com/openai/v1",
           "defaultValue": "https://api.groq.com/openai/v1",
           "envName": "GROQ_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [],
       "endpointRequirements": [],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Account policy is provider default.",
-      "dashboardDisplayStatus": "ready",
-      "runtimeExecutableStatus": "executable_possible",
-      "blockers": [],
-      "nextActions": []
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
+      "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env."
+      ],
+      "nextActions": [
+        "Store Groq credential in integrationConfig.groq or one of: GROQ_API_KEY."
+      ]
     },
     {
       "provider": "genx",
       "displayName": "GenX",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "gnxk...5dea",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "GENX_API_KEY"
         ]
@@ -395,39 +397,43 @@
           "currentValue": "https://query.genx.sh/api/v1",
           "defaultValue": "https://query.genx.sh/api/v1",
           "envName": "GENX_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         },
         {
           "family": "streaming_text",
-          "currentValue": "https://query.genx.sh/api/v1",
+          "currentValue": "https://query.genx.sh/v1",
           "defaultValue": "https://query.genx.sh/v1",
           "envName": "GENX_TEXT_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [],
       "endpointRequirements": [],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Account policy is provider default.",
-      "dashboardDisplayStatus": "ready",
-      "runtimeExecutableStatus": "executable_possible",
-      "blockers": [],
-      "nextActions": []
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
+      "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env."
+      ],
+      "nextActions": [
+        "Store GenX credential in integrationConfig.genx or one of: GENX_API_KEY."
+      ]
     },
     {
       "provider": "qwen",
       "displayName": "Qwen / DashScope",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "sk-w...sDBc",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "QWEN_API_KEY",
           "DASHSCOPE_API_KEY"
@@ -439,14 +445,14 @@
           "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
           "defaultValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
           "envName": "DASHSCOPE_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         },
         {
           "family": "aigc",
-          "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "currentValue": "https://dashscope-intl.aliyuncs.com/api/v1",
           "defaultValue": "https://dashscope-intl.aliyuncs.com/api/v1",
           "envName": "DASHSCOPE_AIGC_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [
@@ -491,26 +497,30 @@
         }
       ],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Free-token-only routing; paid/non-free-quota models are blocked until QWEN_PAID_ENABLED=true.",
-      "dashboardDisplayStatus": "ready",
-      "runtimeExecutableStatus": "executable_possible",
-      "blockers": [],
-      "nextActions": []
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
+      "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env."
+      ],
+      "nextActions": [
+        "Store Qwen / DashScope credential in integrationConfig.qwen or one of: QWEN_API_KEY, DASHSCOPE_API_KEY."
+      ]
     },
     {
       "provider": "mimo",
       "displayName": "Xiaomi MiMo",
       "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "tp-s...ync9",
+        "present": false,
+        "source": "missing",
+        "masked": null,
         "aliasesChecked": [
           "MIMO_API_KEY",
           "XIAOMI_API_KEY"
@@ -519,10 +529,10 @@
       "baseUrls": [
         {
           "family": "token_plan",
-          "currentValue": "https://token-plan-sgp.xiaomimimo.com/v1",
+          "currentValue": "https://api.xiaomimimo.com/v1",
           "defaultValue": "https://api.xiaomimimo.com/v1",
           "envName": "MIMO_BASE_URL",
-          "source": "ai_provider"
+          "source": "default"
         }
       ],
       "runtimeFlags": [
@@ -542,20 +552,22 @@
       ],
       "endpointRequirements": [],
       "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
+        "integrationConfigPresent": false,
+        "aiProviderPresent": false,
+        "integrationConfigEnabled": null,
+        "aiProviderEnabled": null,
+        "aiProviderHealth": null,
         "warnings": []
       },
       "accountPolicy": "Token-plan/catalog access only; backend runtime execution is blocked for non-proven specialist routes.",
-      "dashboardDisplayStatus": "blocked",
-      "runtimeExecutableStatus": "blocked",
+      "dashboardDisplayStatus": "not_configured",
+      "runtimeExecutableStatus": "not_configured",
       "blockers": [
+        "Provider credential is not configured in integrationConfig, aiProvider, or env.",
         "MIMO_RUNTIME_API_ENABLED=false; required true."
       ],
       "nextActions": [
+        "Store Xiaomi MiMo credential in integrationConfig.mimo or one of: MIMO_API_KEY, XIAOMI_API_KEY.",
         "Set MIMO_RUNTIME_API_ENABLED=true only when Xiaomi MiMo backend runtime API access is confirmed beyond token-plan catalog access."
       ]
     }
@@ -567,20 +579,20 @@
         "MIMO_API_KEY",
         "XIAOMI_API_KEY"
       ],
-      "catalogEndpoint": "https://token-plan-sgp.xiaomimimo.com/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 9,
-      "modelCount": 9,
-      "executableCandidateCount": 9,
-      "executableModels": 9,
+      "catalogEndpoint": "https://api.xiaomimimo.com/v1/models",
+      "status": "not_configured",
+      "discoverySource": "none",
+      "rawCatalogCount": 0,
+      "modelCount": 0,
+      "executableCandidateCount": 0,
+      "executableModels": 0,
       "catalogOnlyModels": 0,
       "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
-      "chatModels": 4,
-      "reasoningModels": 4,
-      "codingModels": 4,
-      "liveAuthenticatedModels": 9,
+      "chatModels": 0,
+      "reasoningModels": 0,
+      "codingModels": 0,
+      "liveAuthenticatedModels": 0,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
@@ -588,16 +600,16 @@
       "imageEditModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
-      "ttsModels": 4,
-      "sttModels": 1,
+      "ttsModels": 0,
+      "sttModels": 0,
       "embeddingsModels": 0,
       "rerankModels": 0,
       "musicModels": 0,
       "avatarModels": 0,
       "adultImageModels": 0,
-      "executableBlocker": null,
-      "error": null,
-      "endpoint": "https://token-plan-sgp.xiaomimimo.com/v1/models"
+      "executableBlocker": "Provider credential is not configured.",
+      "error": "Provider credential is not configured.",
+      "endpoint": "https://api.xiaomimimo.com/v1/models"
     },
     {
       "provider": "genx",
@@ -605,35 +617,35 @@
         "GENX_API_KEY"
       ],
       "catalogEndpoint": "https://query.genx.sh/api/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 60,
-      "modelCount": 60,
-      "executableCandidateCount": 59,
-      "executableModels": 60,
+      "status": "not_configured",
+      "discoverySource": "none",
+      "rawCatalogCount": 0,
+      "modelCount": 0,
+      "executableCandidateCount": 0,
+      "executableModels": 0,
       "catalogOnlyModels": 0,
       "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
-      "chatModels": 20,
-      "reasoningModels": 1,
-      "codingModels": 1,
-      "liveAuthenticatedModels": 60,
+      "chatModels": 0,
+      "reasoningModels": 0,
+      "codingModels": 0,
+      "liveAuthenticatedModels": 0,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
-      "imageModels": 15,
+      "imageModels": 0,
       "imageEditModels": 0,
-      "videoModels": 19,
-      "imageToVideoModels": 7,
-      "ttsModels": 3,
-      "sttModels": 1,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
       "embeddingsModels": 0,
       "rerankModels": 0,
-      "musicModels": 2,
-      "avatarModels": 6,
-      "adultImageModels": 15,
-      "executableBlocker": null,
-      "error": null,
+      "musicModels": 0,
+      "avatarModels": 0,
+      "adultImageModels": 0,
+      "executableBlocker": "Provider credential is not configured.",
+      "error": "Provider credential is not configured.",
       "endpoint": "https://query.genx.sh/api/v1/models"
     },
     {
@@ -645,7 +657,7 @@
       ],
       "catalogEndpoint": "https://huggingface.co/api/models?limit=100&full=true",
       "status": "ready",
-      "discoverySource": "live_authenticated",
+      "discoverySource": "public_catalog",
       "rawCatalogCount": 100,
       "modelCount": 15,
       "executableCandidateCount": 13,
@@ -656,8 +668,8 @@
       "chatModels": 2,
       "reasoningModels": 1,
       "codingModels": 1,
-      "liveAuthenticatedModels": 15,
-      "publicCatalogModels": 0,
+      "liveAuthenticatedModels": 0,
+      "publicCatalogModels": 15,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
       "imageModels": 4,
@@ -682,35 +694,35 @@
         "DASHSCOPE_API_KEY"
       ],
       "catalogEndpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 145,
-      "modelCount": 147,
-      "executableCandidateCount": 73,
-      "executableModels": 127,
+      "status": "not_configured",
+      "discoverySource": "none",
+      "rawCatalogCount": 0,
+      "modelCount": 0,
+      "executableCandidateCount": 0,
+      "executableModels": 0,
       "catalogOnlyModels": 0,
       "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
-      "chatModels": 34,
-      "reasoningModels": 26,
-      "codingModels": 7,
-      "liveAuthenticatedModels": 147,
+      "chatModels": 0,
+      "reasoningModels": 0,
+      "codingModels": 0,
+      "liveAuthenticatedModels": 0,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
-      "imageModels": 15,
-      "imageEditModels": 6,
-      "videoModels": 1,
-      "imageToVideoModels": 1,
-      "ttsModels": 16,
-      "sttModels": 4,
-      "embeddingsModels": 2,
+      "imageModels": 0,
+      "imageEditModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
       "rerankModels": 0,
       "musicModels": 0,
-      "avatarModels": 15,
-      "adultImageModels": 15,
-      "executableBlocker": null,
-      "error": null,
+      "avatarModels": 0,
+      "adultImageModels": 0,
+      "executableBlocker": "Provider credential is not configured.",
+      "error": "Provider credential is not configured.",
       "endpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models"
     },
     {
@@ -719,35 +731,35 @@
         "TOGETHER_API_KEY"
       ],
       "catalogEndpoint": "https://api.together.ai/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 265,
-      "modelCount": 267,
-      "executableCandidateCount": 255,
-      "executableModels": 265,
+      "status": "not_configured",
+      "discoverySource": "none",
+      "rawCatalogCount": 0,
+      "modelCount": 0,
+      "executableCandidateCount": 0,
+      "executableModels": 0,
       "catalogOnlyModels": 0,
-      "requiresDedicatedEndpointModels": 2,
+      "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
-      "chatModels": 177,
-      "reasoningModels": 7,
-      "codingModels": 7,
-      "liveAuthenticatedModels": 267,
+      "chatModels": 0,
+      "reasoningModels": 0,
+      "codingModels": 0,
+      "liveAuthenticatedModels": 0,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
-      "imageModels": 29,
+      "imageModels": 0,
       "imageEditModels": 0,
-      "videoModels": 39,
-      "imageToVideoModels": 3,
-      "ttsModels": 3,
-      "sttModels": 7,
-      "embeddingsModels": 2,
-      "rerankModels": 2,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 0,
+      "sttModels": 0,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
       "musicModels": 0,
-      "avatarModels": 29,
-      "adultImageModels": 29,
-      "executableBlocker": null,
-      "error": null,
+      "avatarModels": 0,
+      "adultImageModels": 0,
+      "executableBlocker": "Provider credential is not configured.",
+      "error": "Provider credential is not configured.",
       "endpoint": "https://api.together.ai/v1/models"
     },
     {
@@ -756,19 +768,19 @@
         "GROQ_API_KEY"
       ],
       "catalogEndpoint": "https://api.groq.com/openai/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 17,
-      "modelCount": 17,
-      "executableCandidateCount": 11,
-      "executableModels": 17,
+      "status": "not_configured",
+      "discoverySource": "none",
+      "rawCatalogCount": 0,
+      "modelCount": 0,
+      "executableCandidateCount": 0,
+      "executableModels": 0,
       "catalogOnlyModels": 0,
       "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
-      "chatModels": 7,
-      "reasoningModels": 7,
-      "codingModels": 7,
-      "liveAuthenticatedModels": 17,
+      "chatModels": 0,
+      "reasoningModels": 0,
+      "codingModels": 0,
+      "liveAuthenticatedModels": 0,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
@@ -776,46 +788,23 @@
       "imageEditModels": 0,
       "videoModels": 0,
       "imageToVideoModels": 0,
-      "ttsModels": 2,
-      "sttModels": 2,
+      "ttsModels": 0,
+      "sttModels": 0,
       "embeddingsModels": 0,
       "rerankModels": 0,
       "musicModels": 0,
       "avatarModels": 0,
       "adultImageModels": 0,
-      "executableBlocker": null,
-      "error": null,
+      "executableBlocker": "Provider credential is not configured.",
+      "error": "Provider credential is not configured.",
       "endpoint": "https://api.groq.com/openai/v1/models"
     }
   ],
   "providerContractSummary": [
     {
       "provider": "mimo",
-      "contracts": 63,
-      "executableNow": 4,
-      "liveProven": 0,
-      "endpointRequired": 0,
-      "specialistRequired": 0,
-      "adapterMissing": 0,
-      "runtimeFlagDisabled": 27,
-      "toolPlanOnly": 27,
-      "blockedByPolicy": 0,
-      "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract.",
-        "Select a provider/model that supports stt, or add a truthful contract.",
-        "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports agents, or add a truthful contract.",
-        "Select a provider/model that supports chat, or add a truthful contract.",
-        "Set MIMO_RUNTIME_API_ENABLED=true only after MiMo backend runtime API access is confirmed."
-      ]
-    },
-    {
-      "provider": "genx",
-      "contracts": 661,
-      "executableNow": 75,
+      "contracts": 0,
+      "executableNow": 0,
       "liveProven": 0,
       "endpointRequired": 0,
       "specialistRequired": 0,
@@ -824,21 +813,26 @@
       "toolPlanOnly": 0,
       "blockedByPolicy": 0,
       "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports chat, or add a truthful contract.",
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports image, or add a truthful contract.",
-        "Select a provider/model that supports image_edit, or add a truthful contract.",
-        "Select a provider/model that supports video, or add a truthful contract.",
-        "Select a provider/model that supports image_to_video, or add a truthful contract.",
-        "Select a provider/model that supports avatar, or add a truthful contract."
-      ]
+      "nextActions": []
+    },
+    {
+      "provider": "genx",
+      "contracts": 0,
+      "executableNow": 0,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": []
     },
     {
       "provider": "huggingface",
       "contracts": 271,
-      "executableNow": 18,
+      "executableNow": 0,
       "liveProven": 0,
       "endpointRequired": 73,
       "specialistRequired": 117,
@@ -846,7 +840,7 @@
       "runtimeFlagDisabled": 0,
       "toolPlanOnly": 0,
       "blockedByPolicy": 62,
-      "missingCredential": 0,
+      "missingCredential": 271,
       "nextActions": [
         "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
@@ -860,54 +854,22 @@
     },
     {
       "provider": "qwen",
-      "contracts": 2058,
-      "executableNow": 110,
+      "contracts": 0,
+      "executableNow": 0,
       "liveProven": 0,
       "endpointRequired": 0,
       "specialistRequired": 0,
-      "adapterMissing": 280,
+      "adapterMissing": 0,
       "runtimeFlagDisabled": 0,
       "toolPlanOnly": 0,
       "blockedByPolicy": 0,
       "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports chat, or add a truthful contract.",
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports image, or add a truthful contract.",
-        "Select a provider/model that supports image_edit, or add a truthful contract.",
-        "Select a provider/model that supports video, or add a truthful contract.",
-        "Select a provider/model that supports image_to_video, or add a truthful contract.",
-        "Select a provider/model that supports avatar, or add a truthful contract."
-      ]
+      "nextActions": []
     },
     {
       "provider": "together",
-      "contracts": 4274,
-      "executableNow": 239,
-      "liveProven": 0,
-      "endpointRequired": 297,
-      "specialistRequired": 0,
-      "adapterMissing": 0,
-      "runtimeFlagDisabled": 801,
-      "toolPlanOnly": 0,
-      "blockedByPolicy": 534,
-      "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports image, or add a truthful contract.",
-        "Select a provider/model that supports image_edit, or add a truthful contract.",
-        "Select a provider/model that supports video, or add a truthful contract.",
-        "Select a provider/model that supports image_to_video, or add a truthful contract.",
-        "Select a provider/model that supports avatar, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract."
-      ]
-    },
-    {
-      "provider": "groq",
-      "contracts": 104,
-      "executableNow": 11,
+      "contracts": 0,
+      "executableNow": 0,
       "liveProven": 0,
       "endpointRequired": 0,
       "specialistRequired": 0,
@@ -916,15 +878,21 @@
       "toolPlanOnly": 0,
       "blockedByPolicy": 0,
       "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports chat, or add a truthful contract.",
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract.",
-        "Select a provider/model that supports stt, or add a truthful contract.",
-        "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports agents, or add a truthful contract."
-      ]
+      "nextActions": []
+    },
+    {
+      "provider": "groq",
+      "contracts": 0,
+      "executableNow": 0,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": []
     }
   ],
   "modelSmokeProofs": [
@@ -932,111 +900,111 @@
       "provider": "genx",
       "capability": "chat",
       "modelStatus": "FAILED_PROVIDER",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
+      "credentialPresent": false,
+      "catalogReachable": false,
+      "providerSmokePassed": false,
       "modelExecutionPassed": false,
       "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "genx",
-      "modelSelected": "grok-4.3",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": "All eligible provider/model attempts failed."
+      "error": "Provider credential is not configured."
     },
     {
       "provider": "huggingface",
       "capability": "chat",
       "modelStatus": "FAILED_PROVIDER",
-      "credentialPresent": true,
+      "credentialPresent": false,
       "catalogReachable": true,
-      "providerSmokePassed": true,
+      "providerSmokePassed": false,
       "modelExecutionPassed": false,
       "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "huggingface",
-      "modelSelected": "mistralai/Mistral-7B-Instruct-v0.3",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": "All eligible provider/model attempts failed."
+      "error": "Provider credential is not configured."
     },
     {
       "provider": "qwen",
       "capability": "chat",
-      "modelStatus": "EXECUTABLE",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": false,
+      "catalogReachable": false,
+      "providerSmokePassed": false,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "qwen",
-      "modelSelected": "qwen-plus-character",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": null
+      "error": "Provider credential is not configured."
     },
     {
       "provider": "mimo",
       "capability": "chat",
-      "modelStatus": "EXECUTABLE",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": false,
+      "catalogReachable": false,
+      "providerSmokePassed": false,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "mimo",
-      "modelSelected": "mimo-v2-omni",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": null
+      "error": "Provider credential is not configured."
     },
     {
       "provider": "groq",
       "capability": "chat",
-      "modelStatus": "EXECUTABLE",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": false,
+      "catalogReachable": false,
+      "providerSmokePassed": false,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": null
+      "error": "Provider credential is not configured."
     },
     {
       "provider": "together",
       "capability": "chat",
-      "modelStatus": "EXECUTABLE",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": false,
+      "catalogReachable": false,
+      "providerSmokePassed": false,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": "together",
-      "modelSelected": "zai-org/GLM-5.2",
+      "providerSelected": null,
+      "modelSelected": null,
       "artifactId": null,
-      "error": null
+      "error": "Provider credential is not configured."
     }
   ],
   "toolReadiness": [
     {
       "id": "redis_bullmq",
-      "installed": true,
-      "wired": true,
+      "installed": false,
+      "wired": false,
       "usedBy": [
         "worker_job_retry_and_polling_completion",
         "async media jobs"
       ],
       "setupCommand": "sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379",
-      "blocker": null,
-      "detail": "Redis ping passed."
+      "blocker": "Redis/BullMQ is not reachable or REDIS_URL is absent.",
+      "detail": "Redis/BullMQ is not reachable or REDIS_URL is absent."
     },
     {
       "id": "qdrant",
@@ -1066,30 +1034,30 @@
     {
       "id": "scrapy",
       "installed": false,
-      "wired": true,
+      "wired": false,
       "usedBy": [
         "web_research",
         "scrape_website"
       ],
       "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
-      "blocker": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n",
-      "detail": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n"
+      "blocker": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\r\n  File \"<string>\", line 1, in <module>\r\n    import scrapy; print(\"Scrapy available\")\r\n    ^^^^^^^^^^^^^\r\nModuleNotFoundError: No module named 'scrapy'\r\n",
+      "detail": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\r\n  File \"<string>\", line 1, in <module>\r\n    import scrapy; print(\"Scrapy available\")\r\n    ^^^^^^^^^^^^^\r\nModuleNotFoundError: No module named 'scrapy'\r\n"
     },
     {
       "id": "trafilatura",
       "installed": false,
-      "wired": true,
+      "wired": false,
       "usedBy": [
         "web_research",
         "scrape_website"
       ],
       "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
-      "blocker": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n",
-      "detail": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n"
+      "blocker": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\r\n  File \"<string>\", line 1, in <module>\r\n    import trafilatura; print(\"Trafilatura available\")\r\n    ^^^^^^^^^^^^^^^^^^\r\nModuleNotFoundError: No module named 'trafilatura'\r\n",
+      "detail": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\r\n  File \"<string>\", line 1, in <module>\r\n    import trafilatura; print(\"Trafilatura available\")\r\n    ^^^^^^^^^^^^^^^^^^\r\nModuleNotFoundError: No module named 'trafilatura'\r\n"
     },
     {
       "id": "ffmpeg",
-      "installed": true,
+      "installed": false,
       "wired": true,
       "usedBy": [
         "long_form_multi_scene_video_assembly",
@@ -1097,12 +1065,12 @@
         "music_duration_probe"
       ],
       "setupCommand": "sudo apt-get install -y ffmpeg",
-      "blocker": null,
-      "detail": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+      "blocker": "FFMPEG_REQUIRED: install ffmpeg or set FFMPEG_PATH. Last error: spawn ffmpeg ENOENT",
+      "detail": "FFMPEG_REQUIRED: install ffmpeg or set FFMPEG_PATH. Last error: spawn ffmpeg ENOENT"
     },
     {
       "id": "ffprobe",
-      "installed": true,
+      "installed": false,
       "wired": true,
       "usedBy": [
         "long_form_multi_scene_video_assembly",
@@ -1110,13 +1078,13 @@
         "music_duration_probe"
       ],
       "setupCommand": "sudo apt-get install -y ffmpeg",
-      "blocker": null,
-      "detail": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers"
+      "blocker": "FFPROBE_REQUIRED: install ffmpeg or set FFPROBE_PATH. Last error: spawn ffprobe ENOENT",
+      "detail": "FFPROBE_REQUIRED: install ffmpeg or set FFPROBE_PATH. Last error: spawn ffprobe ENOENT"
     },
     {
       "id": "rhubarb",
       "installed": false,
-      "wired": true,
+      "wired": false,
       "usedBy": [
         "talking_avatar_video"
       ],
@@ -1126,31 +1094,31 @@
     },
     {
       "id": "storage",
-      "installed": false,
-      "wired": true,
+      "installed": true,
+      "wired": false,
       "usedBy": [
         "artifact persistence",
         "preview/download"
       ],
       "setupCommand": "Ensure AMARKTAI_STORAGE_ROOT exists and is writable by the app user.",
-      "blocker": "Artifact storage is not writable.",
-      "detail": "Artifact storage is not writable."
+      "blocker": "Artifact storage is writable at /var/www/amarktai/storage.",
+      "detail": "Artifact storage is writable at /var/www/amarktai/storage."
     }
   ],
   "capabilities": [
     {
       "capabilityId": "chat_text_generation",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:chat",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Chat",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "qwen:qwen-turbo,qwen-plus,qwen-max",
@@ -1177,17 +1145,17 @@
     },
     {
       "capabilityId": "reasoning",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:reasoning",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Reasoning",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "qwen:qwen-plus,qwen-max",
@@ -1210,17 +1178,17 @@
     },
     {
       "capabilityId": "coding_assistant",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:code",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Text Generation",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "qwen:qwen-turbo,qwen-plus,qwen-max",
@@ -1358,17 +1326,17 @@
     },
     {
       "capabilityId": "embeddings",
-      "providerSelected": "huggingface",
-      "modelSelected": "intfloat/multilingual-e5-large",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:embeddings",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/Qwen/",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Embeddings",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "qwen:provider-discovery"
       ],
@@ -1389,7 +1357,7 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: huggingface/cross-encoder/ms-marco-MiniLM-L6-v2 is catal",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/cross",
       "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Rerank",
       "routeFile": "src/lib/providers/provider-scoring.ts",
@@ -1409,17 +1377,17 @@
     },
     {
       "capabilityId": "text_to_image",
-      "providerSelected": "together",
-      "modelSelected": "black-forest-labs/FLUX.1-schnell",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_generation",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/ostri",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Text to Image",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
         "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
@@ -1441,17 +1409,17 @@
     },
     {
       "capabilityId": "image_editing_source_transform",
-      "providerSelected": "qwen",
-      "modelSelected": "qwen-image-edit",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_edit",
       "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed.",
-      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/black",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Image and Text to Image",
-      "routeFile": "src/lib/providers/execution.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
         "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
@@ -1475,15 +1443,15 @@
       "capabilityId": "text_to_video_short_clip",
       "providerSelected": null,
       "modelSelected": null,
-      "routeOrAdapter": "text-to-video short clip",
+      "routeOrAdapter": "executeCapability:video_generation",
       "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "Local media job storage is unavailable.",
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/Sulph",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Text to Video",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:veo-3.1",
         "qwen:wan2.1-t2v-turbo",
@@ -1503,17 +1471,17 @@
     },
     {
       "capabilityId": "text_to_speech",
-      "providerSelected": "groq",
-      "modelSelected": "canopylabs/orpheus-v1-english",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:tts",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Text to Speech",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "mimo:mimo-tts-1",
         "together:provider-discovery",
@@ -1537,17 +1505,17 @@
     },
     {
       "capabilityId": "speech_to_text",
-      "providerSelected": "genx",
-      "modelSelected": "genxlm-pro-v1-tr",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:stt",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
-      "jobId": "gnxsh_job_5befb86c706545089a4efbcc85a2180e",
+      "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Automatic Speech Recognition",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-4o-transcribe",
         "groq:whisper-large-v3-turbo",
@@ -1567,7 +1535,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_5befb86c706545089a4efbcc85a2180e."
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1645,17 +1613,17 @@
     },
     {
       "capabilityId": "image_to_video",
-      "providerSelected": "qwen",
-      "modelSelected": "wan2.1-i2v-turbo",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_to_video",
       "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed.",
-      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Image to Video",
-      "routeFile": "src/lib/providers/execution.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "qwen:wan2.1-i2v-turbo",
         "genx:provider-discovery"
@@ -1680,7 +1648,7 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "Long-form assembly is admin/project-pipeline based; live proof requires database-backed project creation plus at least one generated clip in the target environment.",
+      "exactError": "DATABASE_URL is required to inspect/create control-plane video project jobs for live proof.",
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
       "routeFile": "src/app/api/admin/video-projects/route.ts",
@@ -1705,15 +1673,15 @@
       "capabilityId": "avatar_library_avatar_image_generation",
       "providerSelected": null,
       "modelSelected": null,
-      "routeOrAdapter": "avatar library/avatar image generation",
+      "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "Local media job storage is unavailable.",
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured. huggingface/stabi",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Avatar Generation",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "huggingface:mistralai/Mistral-7B-Instruct-v0.3",
@@ -1764,7 +1732,7 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "No adult provider is approved for this app. Configure and test one in the app adult capability profile.",
+      "exactError": "DATABASE_URL is required to load adult policy gates before adult media live proof; capability remains blocked.",
       "sourceFileResponsible": null,
       "capabilityName": "Text to Image",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1789,17 +1757,17 @@
     },
     {
       "capabilityId": "provider_auto_selection",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:chat",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": null,
-      "sourceFileResponsible": null,
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider credential is not configured.",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Chat",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "qwen:qwen-turbo,qwen-plus,qwen-max",
@@ -1968,10 +1936,10 @@
     }
   ],
   "summary": {
-    "liveProven": 8,
+    "liveProven": 0,
     "sourceWired": 8,
     "providerAvailable": 0,
-    "blocked": 9,
+    "blocked": 17,
     "notWired": 0
   },
   "proofState": {
@@ -2109,9 +2077,8 @@
     ],
     "failure": null,
     "activeHandleTypes": [
-      "Socket",
-      "WriteStream"
+      "Socket"
     ]
   },
-  "nextVpsCommand": null
+  "nextVpsCommand": "DATABASE_URL=\"<production mysql url>\" npx tsx scripts/v1-25-capability-proof.ts"
 }
