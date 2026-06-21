@@ -87,16 +87,15 @@ function providerContractEligible(provider: ProviderId, capability: CapabilityId
   if (provider === 'huggingface') return false
   if (provider === 'groq') return ['chat', 'reasoning', 'coding', 'tts', 'stt'].includes(capability)
   if (provider === 'mimo') return ['chat', 'reasoning', 'coding', 'tts'].includes(capability)
-  if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings', 'image', 'image_edit', 'video'].includes(capability)
-  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'tts', 'stt', 'embeddings', 'rerank', 'agents'].includes(capability)
-  if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'image', 'image_edit', 'video', 'avatar', 'music', 'tts', 'stt'].includes(capability)
+  if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings', 'image', 'video'].includes(capability)
+  if (provider === 'together') return ['chat', 'reasoning', 'coding', 'image', 'tts', 'stt', 'embeddings', 'rerank', 'agents'].includes(capability)
+  if (provider === 'genx') return ['chat', 'reasoning', 'coding', 'image', 'video', 'avatar', 'music', 'tts', 'stt'].includes(capability)
   return false
 }
 
 function compatibleCapabilities(capability: CapabilityId): CapabilityId[] {
   if (capability === 'reasoning' || capability === 'coding' || capability === 'research' || capability === 'agents') return ['chat']
   if (capability === 'avatar' || capability === 'adult_image') return ['image']
-  if (capability === 'image_edit') return ['image']
   if (capability === 'adult_video') return ['video', 'image_to_video']
   return []
 }

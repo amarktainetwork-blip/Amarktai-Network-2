@@ -85,6 +85,15 @@ export function rejectionForProviderModel(input: {
       reason: 'Together video models are visible in catalog, but /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof.',
     }
   }
+  if (requiresRerankEndpoint(provider.id, capability.id)) {
+    return {
+      ...base,
+      code: 'DEDICATED_ENDPOINT_REQUIRED',
+      reason: provider.id === 'together'
+        ? 'Together rerank models are catalog-visible, but rerank execution requires a dedicated endpoint/account contract before routing.'
+        : 'Hugging Face rerank models are catalog-visible, but rerank execution requires a specialist endpoint before routing.',
+    }
+  }
   if (model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT') return { ...base, code: 'DEDICATED_ENDPOINT_REQUIRED', reason: 'Model requires a dedicated provider endpoint before execution.' }
   if (model.metadata?.executable === 'CATALOG_ONLY') return { ...base, code: 'CATALOG_ONLY', reason: 'Model is catalog-only and must not be routed for live execution.' }
   if (model.metadata?.executable === 'ADAPTER_MISSING') return { ...base, code: 'ADAPTER_MISSING', reason: 'Model is visible in the provider catalog, but no canonical adapter is wired for this capability.' }
@@ -119,6 +128,18 @@ function requiresTogetherVideoRuntimeProof(provider: string, capability: string)
   return provider === 'together'
     && ['video', 'image_to_video', 'adult_video'].includes(capability)
     && process.env.TOGETHER_VIDEO_RUNTIME_ENABLED?.trim().toLowerCase() !== 'true'
+}
+
+function requiresRerankEndpoint(provider: string, capability: string) {
+  if (capability !== 'rerank') return false
+  if (provider === 'together') {
+    return !process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON?.trim()
+  }
+  if (provider === 'huggingface') {
+    return !process.env.HF_ENDPOINT_RERANK?.trim()
+      && !process.env.HF_SPECIALIST_ENDPOINTS_JSON?.trim()
+  }
+  return false
 }
 
 function normalized(value: number | null): number {

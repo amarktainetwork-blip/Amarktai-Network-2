@@ -58,6 +58,10 @@ describe('Phase 1 provider truth layer', () => {
     })
     delete process.env.HF_PRIVATE_ENDPOINTS_JSON
     delete process.env.HF_DEDICATED_ENDPOINTS_JSON
+    delete process.env.HF_ENDPOINT_RERANK
+    delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
+    delete process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON
+    delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
     delete process.env.HF_TOKEN
     delete process.env.HUGGINGFACEHUB_API_TOKEN
     delete process.env.HUGGINGFACE_API_KEY
@@ -253,6 +257,11 @@ describe('Phase 1 provider truth layer', () => {
       ['org/runtime-docqa', ['documents', 'ocr']],
       ['org/runtime-vlm', ['vision', 'ocr', 'image']],
     ])
+    expect(models.find((model) => model.id === 'org/runtime-rerank')?.metadata).toMatchObject({
+      executable: 'REQUIRES_DEDICATED_ENDPOINT',
+      executionClassification: 'endpoint_required',
+      endpointEnv: 'HF_ENDPOINT_RERANK',
+    })
   })
 
   it('caches provider discovery and does not invent fallback models', async () => {
@@ -298,13 +307,34 @@ describe('Phase 1 provider truth layer', () => {
         { id: 'vendor/runtime-transcription', type: 'speech-to-text' },
         { id: 'vendor/runtime-picture', type: 'image-generation' },
         { id: 'vendor/runtime-ranker', type: 'reranking' },
+        { id: 'black-forest-labs/FLUX.1-schnell', type: 'image-generation' },
       ],
     })
     expect(models.map((model) => [model.id, model.capabilities])).toEqual([
       ['vendor/runtime-transcription', ['stt']],
       ['vendor/runtime-picture', ['image']],
       ['vendor/runtime-ranker', ['rerank']],
+      ['black-forest-labs/FLUX.1-schnell', ['image']],
     ])
+    expect(models.find((model) => model.id === 'vendor/runtime-ranker')?.metadata).toMatchObject({
+      executable: 'REQUIRES_DEDICATED_ENDPOINT',
+      executionClassification: 'endpoint_required',
+      endpointEnv: 'TOGETHER_DEDICATED_ENDPOINTS_JSON',
+    })
+    expect(modelsForCapability({
+      provider: 'together',
+      status: 'ready',
+      endpoint: 'https://api.together.ai/v1/models',
+      keySource: 'test',
+      models,
+      tasks: [],
+      inferenceProviders: [],
+      privateEndpoints: [],
+      dedicatedEndpoints: [],
+      discoveredAt: '2026-06-21T00:00:00.000Z',
+      expiresAt: '2026-06-21T00:05:00.000Z',
+      error: null,
+    }, 'image_edit')).toEqual([])
   })
 
   it('maps Groq auth aliases and discovery metadata conservatively', () => {
@@ -596,6 +626,123 @@ describe('Phase 1 provider truth layer', () => {
     expect(rejectionForProviderModel({ provider, model, capability, health, profile })).toMatchObject({
       code: 'DURATION_LIMITED',
       reason: 'Requested duration 90s exceeds provider/model limit 30s.',
+    })
+  })
+
+  it('rejects rerank models that require dedicated or specialist endpoints before execution', () => {
+    const capability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'rerank')!
+    const profile = getRoutingProfile('balanced')
+    const health: ProviderHealthSnapshot = {
+      provider: 'together',
+      state: 'healthy',
+      configured: true,
+      tested: true,
+      healthy: true,
+      checkedAt: '2026-06-21T00:00:00.000Z',
+      detail: 'Healthy',
+    }
+    const together = PROVIDER_TRUTH.find((entry) => entry.id === 'together')!
+    const huggingface = PROVIDER_TRUTH.find((entry) => entry.id === 'huggingface')!
+    const model = (provider: 'together' | 'huggingface'): DiscoveredModel => ({
+      provider,
+      id: provider === 'together' ? 'vendor/runtime-ranker' : 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+      capabilities: ['rerank'],
+      capabilityEvidence: 'model_metadata',
+      status: 'available',
+      speed: 0.5,
+      quality: 0.5,
+      cost: 0.5,
+      context: null,
+      adult: 'unknown',
+      streaming: false,
+      research: false,
+      artifactSupport: false,
+      raw: {},
+      discoveredAt: '2026-06-21T00:00:00.000Z',
+    })
+
+    expect(scoreProviderModel({ provider: together, model: model('together'), capability, health, profile })).toBeNull()
+    expect(rejectionForProviderModel({ provider: together, model: model('together'), capability, health, profile })).toMatchObject({
+      code: 'DEDICATED_ENDPOINT_REQUIRED',
+      reason: expect.stringContaining('dedicated endpoint'),
+    })
+    expect(scoreProviderModel({
+      provider: huggingface,
+      model: model('huggingface'),
+      capability,
+      health: { ...health, provider: 'huggingface' },
+      profile,
+    })).toBeNull()
+    expect(rejectionForProviderModel({
+      provider: huggingface,
+      model: model('huggingface'),
+      capability,
+      health: { ...health, provider: 'huggingface' },
+      profile,
+    })).toMatchObject({
+      code: 'DEDICATED_ENDPOINT_REQUIRED',
+      reason: expect.stringContaining('specialist endpoint'),
+    })
+  })
+
+  it('keeps image-to-video on Qwen while skipping default-disabled Together video runtime', () => {
+    const capability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'image_to_video')!
+    const profile = getRoutingProfile('balanced', { artifactSupport: true })
+    const qwen = PROVIDER_TRUTH.find((entry) => entry.id === 'qwen')!
+    const together = PROVIDER_TRUTH.find((entry) => entry.id === 'together')!
+    const health: ProviderHealthSnapshot = {
+      provider: 'qwen',
+      state: 'healthy',
+      configured: true,
+      tested: true,
+      healthy: true,
+      checkedAt: '2026-06-21T00:00:00.000Z',
+      detail: 'Healthy',
+    }
+    const qwenModel: DiscoveredModel = {
+      provider: 'qwen',
+      id: 'wan2.1-i2v-turbo',
+      capabilities: ['image_to_video'],
+      capabilityEvidence: 'provider_contract',
+      status: 'available',
+      speed: 0.5,
+      quality: 0.7,
+      cost: 0.4,
+      context: null,
+      adult: 'unknown',
+      streaming: false,
+      research: false,
+      artifactSupport: true,
+      raw: {},
+      discoveredAt: '2026-06-21T00:00:00.000Z',
+    }
+    const togetherModel: DiscoveredModel = {
+      ...qwenModel,
+      provider: 'together',
+      id: 'Wan-AI/Wan2.1-I2V-14B',
+      raw: {},
+    }
+
+    expect(scoreProviderModel({ provider: qwen, model: qwenModel, capability, health, profile })).toMatchObject({
+      provider: 'qwen',
+      model: { id: 'wan2.1-i2v-turbo' },
+    })
+    expect(scoreProviderModel({
+      provider: together,
+      model: togetherModel,
+      capability,
+      health: { ...health, provider: 'together' },
+      profile,
+    })).toBeNull()
+    expect(rejectionForProviderModel({
+      provider: together,
+      model: togetherModel,
+      capability,
+      health: { ...health, provider: 'together' },
+      profile,
+    })).toMatchObject({
+      code: 'DEDICATED_ENDPOINT_REQUIRED',
+      reason: expect.stringContaining('/videos returned HTTP 404'),
     })
   })
 

@@ -391,6 +391,15 @@ const PROOF_TAXONOMY: Record<string, string> = {
   worker_job_retry_and_polling_completion: 'text_to_video',
 }
 
+const SOURCE_WIRED_ON_ROUTE_FAILURE = new Set([
+  'image_editing_source_transform',
+  'image_to_video',
+])
+
+const BLOCKED_ON_ROUTE_FAILURE = new Set([
+  'rerank_search_relevance',
+])
+
 const PROVIDER_KEY_ENVS: Record<string, string[]> = {
   genx: ['GENX_API_KEY'],
   huggingface: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
@@ -1275,7 +1284,7 @@ function classifyFailure(capabilityId: string, routeOrAdapter: string, result: A
     providerSelected: result.provider ?? null,
     modelSelected: result.model ?? null,
     routeOrAdapter,
-    status: classifyFailureStatus(result),
+    status: classifyFailureStatus(capabilityId, result),
     artifactId: result.artifactId ?? null,
     jobId: result.jobId ?? null,
     pollUrl: result.pollUrl ?? null,
@@ -1299,10 +1308,27 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
   }
 }
 
-function classifyFailureStatus(result: Awaited<ReturnType<typeof executeCapability>>): ProofStatus {
+function classifyFailureStatus(capabilityId: string, result: Awaited<ReturnType<typeof executeCapability>>): ProofStatus {
+  if (SOURCE_WIRED_ON_ROUTE_FAILURE.has(capabilityId)) {
+    if (
+      result.error_category === 'no_route_found'
+      || result.error_category === 'unsupported_endpoint'
+      || result.code === 'NO_ROUTE_FOUND'
+      || result.providerAttempts?.length
+    ) return 'SOURCE_WIRED'
+  }
   if (/no configured provider/i.test(result.error ?? '')) return 'BLOCKED'
-  if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') return 'NOT_WIRED'
-  if (result.error_category === 'unsupported_endpoint') return 'NOT_WIRED'
+  if (
+    BLOCKED_ON_ROUTE_FAILURE.has(capabilityId)
+    && (
+      result.providerAttempts?.some((attempt) => attempt.classification === 'endpoint_required')
+      || /endpoint|required|dedicated|specialist/i.test(result.error ?? '')
+    )
+  ) return 'BLOCKED'
+  if (result.error_category === 'no_route_found' || result.code === 'NO_ROUTE_FOUND') {
+    return result.providerAttempts?.length ? 'BLOCKED' : 'NOT_WIRED'
+  }
+  if (result.error_category === 'unsupported_endpoint') return result.providerAttempts?.length ? 'BLOCKED' : 'NOT_WIRED'
   if (result.readiness === 'NEEDS_INPUT' || result.readiness === 'BLOCKED') return 'BLOCKED'
   if (result.readiness === 'NEEDS_CONFIGURATION' || result.readiness === 'UNAVAILABLE') {
     return result.providerAttempts?.length ? 'BLOCKED' : 'NOT_WIRED'

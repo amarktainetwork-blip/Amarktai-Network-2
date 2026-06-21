@@ -659,6 +659,36 @@ describe('provider adapter contracts', () => {
     }
   })
 
+  it('keeps Together image-to-video disabled by default under the video runtime gate', async () => {
+    const previousTogetherVideoRuntime = process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+    delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const adapter = getProviderCapabilityAdapter('together')!
+    const input = {
+      ...adapterInput('image_to_video', 'together', 'Wan-AI/Wan2.1-T2V-14B'),
+      references: [{ kind: 'image' as const, url: 'https://cdn.example/source.png' }],
+    }
+
+    try {
+      const result = await adapter.execute(input)
+
+      expect(result).toMatchObject({
+        status: 'failed',
+        provider: 'together',
+        model: 'Wan-AI/Wan2.1-T2V-14B',
+        providerJobId: null,
+        errorCategory: 'unsupported_endpoint',
+      })
+      expect(result.error).toContain('Together video runtime is disabled')
+      expect(result.error).toContain('TOGETHER_VIDEO_RUNTIME_ENABLED=true')
+      expect(fetchMock).not.toHaveBeenCalled()
+    } finally {
+      if (previousTogetherVideoRuntime === undefined) delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
+      else process.env.TOGETHER_VIDEO_RUNTIME_ENABLED = previousTogetherVideoRuntime
+    }
+  })
+
   it('creates and polls Together video through the official async video endpoint', async () => {
     const previousTogetherVideoRuntime = process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
     process.env.TOGETHER_VIDEO_RUNTIME_ENABLED = 'true'

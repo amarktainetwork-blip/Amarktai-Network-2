@@ -45,6 +45,7 @@ export const HF_SPECIALIST_DEFAULT_MODELS: Readonly<Record<string, string>> = {
 }
 
 export const HF_ENDPOINT_REQUIRED_CAPABILITIES = [
+  'rerank',
   'image_to_video',
   'image_text_to_video',
   'text_to_video',

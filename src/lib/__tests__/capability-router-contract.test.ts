@@ -327,6 +327,45 @@ describe('capability router contract', () => {
     })
   })
 
+  it('reports endpoint-required rerank candidates without attempting blind fallbacks', async () => {
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'rerank',
+      profile: 'balanced',
+      code: 'NO_ROUTE_FOUND',
+      reason: 'No executable rerank route. Top blockers: Hugging Face rerank requires a specialist endpoint.',
+      selected: null,
+      candidates: [],
+      rejectedCandidates: [{
+        provider: 'huggingface',
+        modelId: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+        capability: 'rerank',
+        code: 'DEDICATED_ENDPOINT_REQUIRED',
+        reason: 'Hugging Face rerank models are catalog-visible, but rerank execution requires a specialist endpoint before routing.',
+      }],
+    })
+
+    const result = await executeCapability({
+      input: 'rank these documents',
+      capability: 'rerank',
+      metadata: { documents: ['alpha', 'beta'] },
+    })
+
+    expect(result).toMatchObject({
+      success: false,
+      readiness: 'NEEDS_CONFIGURATION',
+      error_category: 'provider_misconfigured',
+      code: 'NO_ROUTE_FOUND',
+      providerAttempts: [{
+        provider: 'huggingface',
+        model: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+        status: 'needs_configuration',
+        classification: 'endpoint_required',
+        errorCategory: 'provider_misconfigured',
+      }],
+    })
+    expect(result.error).toContain('NO_ROUTE_FOUND')
+  })
+
   it('creates artifacts for immediate text, image, audio, and crawl outputs', async () => {
     const route = (provider: string, model: string, capability: string) => {
       const selected = {

@@ -161,4 +161,18 @@ describe('V1 universal AI capability truth', () => {
     expect(route).toContain('runtimeAvailabilityRequiresLiveDiscovery: true')
     expect(route).not.toMatch(/selectedModel|modelOverride|model picker/i)
   })
+
+  it('keeps V1 proof classification truthful for unresolved Phase 2 provider capabilities', () => {
+    const proof = fs.readFileSync(
+      path.join(ROOT, 'scripts/v1-25-capability-proof.ts'),
+      'utf8',
+    )
+
+    expect(proof).toContain('SOURCE_WIRED_ON_ROUTE_FAILURE')
+    expect(proof).toContain("'image_editing_source_transform'")
+    expect(proof).toContain("'image_to_video'")
+    expect(proof).toContain('BLOCKED_ON_ROUTE_FAILURE')
+    expect(proof).toContain("'rerank_search_relevance'")
+    expect(proof).toContain("result.providerAttempts?.some((attempt) => attempt.classification === 'endpoint_required')")
+  })
 })

@@ -142,7 +142,7 @@ const HF_CURATED_MODELS: Array<{
 }> = [
   { id: 'mistralai/Mistral-7B-Instruct-v0.3', task: 'text-generation', capabilities: ['chat', 'reasoning', 'coding'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated core text model.' },
   { id: 'sentence-transformers/all-MiniLM-L6-v2', task: 'feature-extraction', capabilities: ['embeddings'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated embeddings model.' },
-  { id: 'cross-encoder/ms-marco-MiniLM-L-6-v2', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated rerank model.' },
+  { id: 'cross-encoder/ms-marco-MiniLM-L-6-v2', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated rerank model; specialist endpoint required before execution proof.' },
   { id: 'stabilityai/stable-diffusion-xl-base-1.0', task: 'text-to-image', capabilities: ['image'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image generation model.' },
   { id: 'timbrooks/instruct-pix2pix', task: 'image-to-image', capabilities: ['image_edit'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated source-image transform model.' },
   { id: 'Wan-AI/Wan2.1-T2V-14B', task: 'text-to-video', capabilities: ['video'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated video model; specialist endpoint required before execution.' },
@@ -616,7 +616,8 @@ function normalizeModel(
     ? MUSIC_DURATION_LIMITS[provider.id]!
     : null
   const requiresDedicatedEndpoint = routeType === 'hf_specialist_endpoint'
-    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'adult_video')
+    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'rerank' || capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'adult_video')
+    || provider.id === 'together' && capabilities.some((capability) => capability === 'rerank')
   const adapterMissing = provider.id === 'mimo'
     && capabilities.some((capability) => ['image', 'agents'].includes(capability))
     || provider.id === 'qwen'
@@ -686,9 +687,13 @@ function executionClassificationFor(
 
 function endpointEnvFor(provider: ProviderId, capabilities: CapabilityId[]): string | null {
   if (provider === 'huggingface') {
+    if (capabilities.includes('rerank')) return 'HF_ENDPOINT_RERANK'
     if (capabilities.includes('music')) return 'HF_ENDPOINT_MUSIC_GENERATION'
     if (capabilities.includes('video') || capabilities.includes('adult_video')) return 'HF_ENDPOINT_TEXT_TO_VIDEO'
     if (capabilities.includes('image_to_video')) return 'HF_ENDPOINT_IMAGE_TO_VIDEO'
+  }
+  if (provider === 'together' && capabilities.includes('rerank')) {
+    return 'TOGETHER_DEDICATED_ENDPOINTS_JSON'
   }
   if (provider === 'together' && capabilities.some((capability) => capability === 'video' || capability === 'image_to_video')) {
     return 'TOGETHER_VIDEO_BASE_URL'
@@ -849,7 +854,7 @@ function inferProviderContractCapabilities(
 
   if (providerId === 'together') return providerContractFromPatterns(lowerModelId, descriptor, {
     image: [/flux/, /recraft/, /stable[-_]?diffusion/, /playground/, /seedream/, /image/],
-    image_edit: [/flux/, /recraft/, /stable[-_]?diffusion/, /image[-_\s]?edit/],
+    image_edit: [/image[-_\s]?edit/, /image[-_\s]?to[-_\s]?image/, /inpaint/],
     video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /luma/, /minimax\//],
     image_to_video: [/\bi2v\b/, /image[-_\s]?to[-_\s]?video/],
     tts: [/orpheus/, /\btts\b/, /speech/],

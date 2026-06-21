@@ -398,14 +398,21 @@ export async function executeCapabilityOrchestration(
   })
   const candidates = routePlan.candidates
   if (candidates.length === 0) {
+    const rejectedAttempts = attemptsFromRejectedCandidates(
+      routePlan.rejectedCandidates ?? [],
+      definition.outputType,
+    )
+    const endpointRequired = rejectedAttempts.some((attempt) =>
+      attempt.classification === 'endpoint_required',
+    )
     return capabilityFailure(
       capability,
-      'UNAVAILABLE',
+      endpointRequired ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
       `NO_ROUTE_FOUND: ${routePlan.reason}`,
-      'no_route_found',
+      endpointRequired ? 'provider_misconfigured' : 'no_route_found',
       requestedProvider ?? null,
       requestedModel ?? null,
-      [],
+      rejectedAttempts,
       'NO_ROUTE_FOUND',
     )
   }
@@ -733,6 +740,38 @@ function resolveExecutableRoute(input: {
   }
 
   return { route: null }
+}
+
+function attemptsFromRejectedCandidates(
+  rejectedCandidates: NonNullable<Awaited<ReturnType<typeof planCanonicalExecution>>['rejectedCandidates']>,
+  outputType: string,
+): ProviderAttempt[] {
+  return rejectedCandidates.slice(0, 6).map((entry) => ({
+    provider: entry.provider,
+    model: entry.modelId ?? 'unselected',
+    adapter: `${entry.provider}_capability_adapter`,
+    outputType,
+    status: 'needs_configuration',
+    classification: rejectionAttemptClassification(entry.code),
+    errorCategory: entry.code === 'DEDICATED_ENDPOINT_REQUIRED'
+      ? 'provider_misconfigured'
+      : entry.code === 'ADAPTER_MISSING'
+        ? 'unsupported_endpoint'
+        : 'no_route_found',
+    retryable: true,
+    error: entry.reason,
+  }))
+}
+
+function rejectionAttemptClassification(
+  code: NonNullable<Awaited<ReturnType<typeof planCanonicalExecution>>['rejectedCandidates']>[number]['code'],
+): NonNullable<ProviderAttempt['classification']> {
+  if (code === 'DEDICATED_ENDPOINT_REQUIRED') return 'endpoint_required'
+  if (code === 'ADAPTER_MISSING') return 'adapter_missing'
+  if (code === 'CATALOG_ONLY') return 'unsupported_by_contract'
+  if (code === 'ADULT_GATE_REQUIRED') return 'blocked_by_policy'
+  if (code === 'DURATION_LIMITED') return 'duration_limited'
+  return 'unsupported_by_contract'
 }
 
 function requestedDurationSeconds(request: CapabilityRequest): number | null {
