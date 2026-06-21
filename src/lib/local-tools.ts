@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import { verifyStorage } from '@/lib/storage-driver'
 
 const execFileAsync = promisify(execFile)
 
@@ -27,7 +27,8 @@ export function setupCommandForLocalTool(id: LocalToolResult['id']): string {
 }
 
 function pythonBinary() {
-  return process.env.AMARKTAI_PYTHON_BIN || process.env.PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3')
+  const configured = process.env.AMARKTAI_PYTHON_BIN?.trim() || process.env.PYTHON_PATH?.trim()
+  return configured || (process.platform === 'win32' ? 'python' : 'python3')
 }
 
 async function commandAvailable(command: string, args: string[]) {
@@ -58,12 +59,15 @@ async function serviceAvailable(url: string) {
 
 export async function testLocalTool(id: LocalToolResult['id']): Promise<LocalToolResult> {
   if (id === 'storage') {
-    const writable = checkWritable(LOCAL_STORE_FILES.artifacts)
+    const storage = await verifyStorage()
+    const detail = storage.ready
+      ? `Artifact storage is writable at ${storage.root}.`
+      : `Artifact storage is not ready at ${storage.root}: ${storage.error ?? storage.note}`
     return {
       id,
-      connected: writable.writable,
+      connected: storage.ready,
       capabilities: ['storage'],
-      detail: writable.writable ? 'Artifact storage is writable.' : 'Artifact storage is not writable.',
+      detail,
       setupCommand: setupCommandForLocalTool(id),
     }
   }
@@ -133,11 +137,16 @@ export async function testLocalTool(id: LocalToolResult['id']): Promise<LocalToo
   }
   if (id === 'playwright' || id === 'scrapy' || id === 'trafilatura') {
     const result = await checks[id]()
+    const detail = result.ok
+      ? id === 'playwright'
+        ? result.output
+        : `${result.output} via ${pythonBinary()}`
+      : `${id.toUpperCase()}_REQUIRED: ${setupCommandForLocalTool(id)}. Last error: ${result.output}`
     return {
       id,
       connected: result.ok,
       capabilities: id === 'playwright' ? ['crawl', 'render'] : ['crawl'],
-      detail: result.ok ? result.output : `${id.toUpperCase()}_REQUIRED: ${setupCommandForLocalTool(id)}. Last error: ${result.output}`,
+      detail,
       setupCommand: setupCommandForLocalTool(id),
     }
   }

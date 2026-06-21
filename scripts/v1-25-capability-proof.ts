@@ -719,7 +719,7 @@ async function collectToolReadinessProofs(): Promise<ToolReadinessProof[]> {
     ...localTools.map((tool) => toolProof(
       tool.id,
       tool.connected,
-      true,
+      isToolWired(tool.id),
       toolUsage(tool.id),
       tool.setupCommand ?? setupCommandForTool(tool.id),
       tool.detail,
@@ -752,6 +752,20 @@ function toolUsage(id: string): string[] {
   if (id === 'rhubarb') return ['talking_avatar_video']
   if (id === 'storage') return ['artifact persistence', 'preview/download']
   return []
+}
+
+function isToolWired(id: string): boolean {
+  if (id === 'scrapy' || id === 'trafilatura') {
+    return Boolean(process.env.AMARKTAI_PYTHON_BIN?.trim() || process.env.PYTHON_PATH?.trim())
+  }
+  if (id === 'rhubarb') {
+    return Boolean(process.env.RHUBARB_PATH?.trim() || process.env.LIPSYNC_SERVICE_URL?.trim())
+  }
+  if (id === 'storage') {
+    const root = process.env.AMARKTAI_STORAGE_ROOT?.trim()
+    return (process.env.STORAGE_DRIVER ?? '').trim().toLowerCase() === 'local_vps' && Boolean(root)
+  }
+  return true
 }
 
 function setupCommandForTool(id: string): string {

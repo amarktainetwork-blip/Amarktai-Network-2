@@ -8,7 +8,12 @@ vi.mock('node:child_process', () => ({
   execFile: mocks.execFile,
 }))
 
+vi.mock('@/lib/storage-driver', () => ({
+  verifyStorage: vi.fn(),
+}))
+
 import { setupCommandForLocalTool, testLocalTool } from '@/lib/local-tools'
+import { verifyStorage } from '@/lib/storage-driver'
 
 const originalEnv = { ...process.env }
 
@@ -33,6 +38,7 @@ beforeEach(() => {
   delete process.env.AMARKTAI_PYTHON_BIN
   delete process.env.PYTHON_PATH
   mocks.execFile.mockReset()
+  vi.mocked(verifyStorage).mockReset()
 })
 
 describe('local open-source tool readiness', () => {
@@ -86,7 +92,37 @@ describe('local open-source tool readiness', () => {
     expect(result).toMatchObject({
       id: 'scrapy',
       connected: true,
-      detail: 'Scrapy available',
+      detail: 'Scrapy available via /var/www/amarktai/.venv/bin/python',
+    })
+  })
+
+  it('reports storage readiness from the production storage verifier', async () => {
+    vi.mocked(verifyStorage).mockResolvedValue({
+      requiredDriver: 'local_vps',
+      requiredRoot: '/var/www/amarktai/storage',
+      requiredDirectories: ['artifacts'],
+      missingSetup: [],
+      driver: 'local_vps',
+      configured: true,
+      persistent: true,
+      basePath: '/var/www/amarktai/storage',
+      note: 'ready',
+      ready: true,
+      root: '/var/www/amarktai/storage',
+      writable: true,
+      readable: true,
+      deletable: true,
+      checkedAt: new Date().toISOString(),
+      directories: [],
+      error: null,
+    })
+
+    const result = await testLocalTool('storage')
+
+    expect(result).toMatchObject({
+      id: 'storage',
+      connected: true,
+      detail: 'Artifact storage is writable at /var/www/amarktai/storage.',
     })
   })
 
