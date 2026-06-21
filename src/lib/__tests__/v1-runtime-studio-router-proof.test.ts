@@ -1,10 +1,11 @@
 import fs from 'fs'
 import path from 'path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   normalizeRoutingQuality,
   selectCapabilityRoutePlan,
 } from '@/lib/capability-routing-policy'
+import { clearProviderPerformanceMemory } from '@/lib/provider-performance'
 import {
   buildLyricsPrompt,
   resolveGenre,
@@ -14,6 +15,7 @@ import {
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
 
 const ROOT = process.cwd()
+const originalEnv = { ...process.env }
 const configured: ApprovedDirectProviderId[] = [
   'genx',
   'huggingface',
@@ -26,6 +28,17 @@ const configured: ApprovedDirectProviderId[] = [
 function source(file: string) {
   return fs.readFileSync(path.join(ROOT, file), 'utf8')
 }
+
+beforeEach(() => {
+  process.env = { ...originalEnv }
+  delete process.env.MIMO_RUNTIME_API_ENABLED
+  clearProviderPerformanceMemory()
+})
+
+afterEach(() => {
+  process.env = { ...originalEnv }
+  clearProviderPerformanceMemory()
+})
 
 describe('V1 runtime, Studio, and capability router proof', () => {
   it('uses MariaDB in Prisma and documents the exact production URL format', () => {
@@ -96,6 +109,45 @@ describe('V1 runtime, Studio, and capability router proof', () => {
       balancedVideo.selected?.route.provider,
       premiumText.selected?.route.provider,
     ]).size).toBeGreaterThan(1)
+  })
+
+  it('keeps MiMo visible while routing around runtime-blocked audio execution by default', async () => {
+    const plan = await selectCapabilityRoutePlan({
+      capability: 'text_to_speech',
+      qualityTier: 'balanced',
+      configuredProviderIds: ['mimo', 'groq'],
+    })
+
+    expect(plan.candidates.map((candidate) => candidate.route.provider)).toContain('mimo')
+    expect(plan.selected?.route.provider).toBe('groq')
+    expect(plan.rejectedCandidates).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        provider: 'mimo',
+        code: 'RUNTIME_FALLBACK_SELECTED',
+      }),
+    ]))
+  })
+
+  it('allows tests to opt into MiMo runtime execution explicitly without hiding the provider by default', async () => {
+    const disabledPlan = await selectCapabilityRoutePlan({
+      capability: 'text_to_speech',
+      qualityTier: 'balanced',
+      configuredProviderIds: ['mimo', 'groq'],
+    })
+
+    process.env.MIMO_RUNTIME_API_ENABLED = 'true'
+    clearProviderPerformanceMemory()
+
+    const enabledPlan = await selectCapabilityRoutePlan({
+      capability: 'text_to_speech',
+      qualityTier: 'balanced',
+      configuredProviderIds: ['mimo', 'groq'],
+    })
+
+    expect(disabledPlan.candidates.map((candidate) => candidate.route.provider)).toContain('mimo')
+    expect(enabledPlan.candidates.map((candidate) => candidate.route.provider)).toContain('mimo')
+    expect(enabledPlan.selected?.configured).toBe(true)
+    expect(enabledPlan.selected?.route.executable).toBe(true)
   })
 
   it('returns setup required instead of selecting an unconfigured provider', async () => {
