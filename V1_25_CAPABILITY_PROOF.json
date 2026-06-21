@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-20T13:34:20.858Z",
+  "generatedAt": "2026-06-21T09:50:14.051Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -154,7 +154,7 @@
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
       "imageModels": 15,
-      "imageEditModels": 15,
+      "imageEditModels": 0,
       "videoModels": 19,
       "imageToVideoModels": 7,
       "ttsModels": 3,
@@ -181,9 +181,9 @@
       "rawCatalogCount": 100,
       "modelCount": 15,
       "executableCandidateCount": 13,
-      "executableModels": 10,
+      "executableModels": 9,
       "catalogOnlyModels": 2,
-      "requiresDedicatedEndpointModels": 3,
+      "requiresDedicatedEndpointModels": 4,
       "adultGatedModels": 2,
       "chatModels": 2,
       "reasoningModels": 1,
@@ -256,9 +256,9 @@
       "rawCatalogCount": 265,
       "modelCount": 267,
       "executableCandidateCount": 255,
-      "executableModels": 267,
+      "executableModels": 265,
       "catalogOnlyModels": 0,
-      "requiresDedicatedEndpointModels": 0,
+      "requiresDedicatedEndpointModels": 2,
       "adultGatedModels": 0,
       "chatModels": 177,
       "reasoningModels": 7,
@@ -268,7 +268,7 @@
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
       "imageModels": 29,
-      "imageEditModels": 1,
+      "imageEditModels": 0,
       "videoModels": 39,
       "imageToVideoModels": 3,
       "ttsModels": 3,
@@ -775,17 +775,17 @@
     },
     {
       "capabilityId": "rerank_search_relevance",
-      "providerSelected": "huggingface",
-      "modelSelected": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:rerank",
-      "status": "NOT_WIRED",
+      "status": "BLOCKED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed.",
-      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Hugging Face rerank models are catalog-visible, but rera",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Rerank",
-      "routeFile": "src/lib/providers/execution.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "huggingface:cross-encoder/ms-marco-MiniLM-L-6-v2",
         "together:provider-discovery"
@@ -806,7 +806,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "8a6ad14a-2146-4b71-aa63-06a93a2e3194",
+      "artifactId": "9fad2b6b-02ec-473a-b562-101326a62ebe",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -829,15 +829,15 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 8a6ad14a-2146-4b71-aa63-06a93a2e3194.",
+      "artifactBehavior": "Intentional artifact persisted: 9fad2b6b-02ec-473a-b562-101326a62ebe.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "image_editing_source_transform",
-      "providerSelected": "genx",
-      "modelSelected": "genxlm-pro-v1-img-fast",
+      "providerSelected": "qwen",
+      "modelSelected": "qwen-image-edit",
       "routeOrAdapter": "executeCapability:image_edit",
-      "status": "NOT_WIRED",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
@@ -871,8 +871,8 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "1d82ca7d-2f66-48af-9754-2c0b22411834",
-      "pollUrl": "/api/brain/media-jobs/1d82ca7d-2f66-48af-9754-2c0b22411834",
+      "jobId": "eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82",
+      "pollUrl": "/api/brain/media-jobs/eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82",
       "exactError": null,
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
@@ -892,7 +892,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 1d82ca7d-2f66-48af-9754-2c0b22411834 via /api/brain/media-jobs/1d82ca7d-2f66-48af-9754-2c0b22411834."
+      "jobBehavior": "Async job tracked as eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82 via /api/brain/media-jobs/eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82."
     },
     {
       "capabilityId": "text_to_speech",
@@ -900,7 +900,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "2b08ae24-0a59-4b52-8676-3683e7d348ba",
+      "artifactId": "e1f00039-54e4-4432-96a0-65f9ee56781c",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -925,7 +925,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 2b08ae24-0a59-4b52-8676-3683e7d348ba.",
+      "artifactBehavior": "Intentional artifact persisted: e1f00039-54e4-4432-96a0-65f9ee56781c.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -935,7 +935,7 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_2950dfaf7b19413f95df9b7faa25dead",
+      "jobId": "gnxsh_job_68f2233f99654db8af38cc58f0446912",
       "pollUrl": null,
       "exactError": null,
       "sourceFileResponsible": null,
@@ -960,7 +960,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_2950dfaf7b19413f95df9b7faa25dead."
+      "jobBehavior": "Async job tracked as gnxsh_job_68f2233f99654db8af38cc58f0446912."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1041,7 +1041,7 @@
       "providerSelected": "qwen",
       "modelSelected": "wan2.1-i2v-turbo",
       "routeOrAdapter": "executeCapability:image_to_video",
-      "status": "NOT_WIRED",
+      "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
@@ -1101,8 +1101,8 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "6f9d9a32-b590-48e0-96be-e956b87c0f90",
-      "pollUrl": "/api/brain/media-jobs/6f9d9a32-b590-48e0-96be-e956b87c0f90",
+      "jobId": "80f27fc6-a56d-4647-8859-e4592d029072",
+      "pollUrl": "/api/brain/media-jobs/80f27fc6-a56d-4647-8859-e4592d029072",
       "exactError": null,
       "sourceFileResponsible": null,
       "capabilityName": "Avatar Generation",
@@ -1124,7 +1124,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 6f9d9a32-b590-48e0-96be-e956b87c0f90 via /api/brain/media-jobs/6f9d9a32-b590-48e0-96be-e956b87c0f90."
+      "jobBehavior": "Async job tracked as 80f27fc6-a56d-4647-8859-e4592d029072 via /api/brain/media-jobs/80f27fc6-a56d-4647-8859-e4592d029072."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -1362,10 +1362,10 @@
   ],
   "summary": {
     "liveProven": 10,
-    "sourceWired": 6,
+    "sourceWired": 8,
     "providerAvailable": 0,
-    "blocked": 6,
-    "notWired": 3
+    "blocked": 7,
+    "notWired": 0
   },
   "proofState": {
     "partial": false,
