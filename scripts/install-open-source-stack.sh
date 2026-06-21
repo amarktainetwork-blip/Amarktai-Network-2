@@ -43,8 +43,11 @@ redis-cli ping
 ffmpeg -version | head -n 1
 "$VENV_DIR/bin/python" -c 'import scrapy, trafilatura; print("Python crawler stack ready")'
 node -e 'require("playwright"); console.log("Playwright ready")'
-curl -fsS http://127.0.0.1:6333/readyz >/dev/null && echo "Qdrant ready" || true
+curl -fsS http://127.0.0.1:6333/healthz >/dev/null && echo "Qdrant healthz ready" \
+  || curl -fsS http://127.0.0.1:6333/readyz >/dev/null && echo "Qdrant readyz ready" \
+  || true
 echo "Recommended env:"
+echo "Installer rerun: sudo APP_ROOT=$APP_ROOT PLATFORM_ROOT=$PLATFORM_ROOT bash scripts/install-open-source-stack.sh"
 echo "REDIS_URL=redis://127.0.0.1:6379"
 echo "QDRANT_URL=http://127.0.0.1:6333"
 echo "AMARKTAI_PYTHON_BIN=$VENV_DIR/bin/python"

@@ -76,7 +76,7 @@ Current split truth sources found:
 | Image edit transform proof | SOURCE_WIRED | Prove a source-image transform adapter/model path; do not substitute text-to-image |
 | Image-to-video proof | SOURCE_WIRED | Reprove Qwen Wanx I2V or GenX I2V job start/poll/artifact path |
 | Avatar video | BLOCKED | Install/configure Rhubarb/lip-sync service/binary and expose executable path/service URL |
-| Local media/research stack | BLOCKED where required | Run `sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform scripts/install-open-source-stack.sh`, configure env paths, then rerun proof on the VPS |
+| Local media/research stack | BLOCKED where required | Run `sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform bash scripts/install-open-source-stack.sh`, configure env paths, then rerun proof on the VPS |
 
 ## Open-Source Stack Status
 

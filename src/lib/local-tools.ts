@@ -13,7 +13,7 @@ export type LocalToolResult = {
 }
 
 export function setupCommandForLocalTool(id: LocalToolResult['id']): string {
-  if (id === 'local-crawler') return 'sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform scripts/install-open-source-stack.sh'
+  if (id === 'local-crawler') return 'sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform bash scripts/install-open-source-stack.sh'
   if (id === 'playwright') return 'npx playwright install --with-deps chromium'
   if (id === 'scrapy' || id === 'trafilatura') {
     return 'python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python'

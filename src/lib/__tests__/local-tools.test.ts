@@ -36,6 +36,12 @@ beforeEach(() => {
 })
 
 describe('local open-source tool readiness', () => {
+  it('uses the canonical bash installer invocation for the VPS open-source stack', () => {
+    expect(setupCommandForLocalTool('local-crawler')).toBe(
+      'sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform bash scripts/install-open-source-stack.sh',
+    )
+  })
+
   it('blocks Rhubarb truthfully until a binary path or lip-sync service is configured', async () => {
     const result = await testLocalTool('rhubarb')
 
