@@ -754,9 +754,13 @@ function attemptsFromRejectedCandidates(
     status: 'needs_configuration',
     classification: rejectionAttemptClassification(entry.code),
     errorCategory: entry.code === 'DEDICATED_ENDPOINT_REQUIRED'
+      || entry.code === 'RUNTIME_FLAG_DISABLED'
+      || entry.code === 'TOOL_PLAN_ONLY'
       ? 'provider_misconfigured'
       : entry.code === 'ADAPTER_MISSING'
         ? 'unsupported_endpoint'
+        : entry.code === 'POLICY_BLOCKED'
+          ? 'guardrail_block'
         : 'no_route_found',
     retryable: true,
     error: entry.reason,
@@ -769,8 +773,9 @@ function rejectionAttemptClassification(
   if (code === 'DEDICATED_ENDPOINT_REQUIRED') return 'endpoint_required'
   if (code === 'ADAPTER_MISSING') return 'adapter_missing'
   if (code === 'CATALOG_ONLY') return 'unsupported_by_contract'
-  if (code === 'ADULT_GATE_REQUIRED') return 'blocked_by_policy'
+  if (code === 'ADULT_GATE_REQUIRED' || code === 'POLICY_BLOCKED') return 'blocked_by_policy'
   if (code === 'DURATION_LIMITED') return 'duration_limited'
+  if (code === 'RUNTIME_FLAG_DISABLED' || code === 'TOOL_PLAN_ONLY') return 'needs_configuration'
   return 'unsupported_by_contract'
 }
 

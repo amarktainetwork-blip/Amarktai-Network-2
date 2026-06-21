@@ -17,6 +17,10 @@ import { prisma } from '@/lib/prisma'
 import { testLocalTool } from '@/lib/local-tools'
 import { isRedisHealthy } from '@/lib/redis'
 import { isQdrantHealthy } from '@/lib/vector-store'
+import { collectProviderRuntimeConfigTruth, type ProviderRuntimeConfigTruth } from '@/lib/provider-runtime-truth'
+import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
+import { getCanonicalProviderHealth } from '@/lib/providers/health'
+import { buildProviderCapabilityContracts } from '@/lib/providers/provider-capability-contracts'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
@@ -100,6 +104,21 @@ type ModelSmokeProof = {
   error: string | null
 }
 
+type ProviderContractSummary = {
+  provider: string
+  contracts: number
+  executableNow: number
+  liveProven: number
+  endpointRequired: number
+  specialistRequired: number
+  adapterMissing: number
+  runtimeFlagDisabled: number
+  toolPlanOnly: number
+  blockedByPolicy: number
+  missingCredential: number
+  nextActions: string[]
+}
+
 type ToolReadinessProof = {
   id: string
   installed: boolean
@@ -155,7 +174,9 @@ type ProofReport = {
     dbCheck?: DbCheckResult
   }
   providerKeyPath: ProviderKeyResult[]
+  providerConfigTruth: ProviderRuntimeConfigTruth[]
   providerDiscovery: ProviderDiscoveryResult[]
+  providerContractSummary: ProviderContractSummary[]
   modelSmokeProofs: ModelSmokeProof[]
   toolReadiness: ToolReadinessProof[]
   capabilities: CapabilityProof[]
@@ -193,7 +214,9 @@ let watchdog: ReturnType<typeof setTimeout> | null = null
 let exiting = false
 let dbCheckResult: DbCheckResult = { attempted: false, available: false, error: null }
 let providerKeyResults: ProviderKeyResult[] = []
+let providerConfigTruthResults: ProviderRuntimeConfigTruth[] = []
 let providerDiscoveryResults: ProviderDiscoveryResult[] = []
+let providerContractSummaryResults: ProviderContractSummary[] = []
 let modelSmokeProofs: ModelSmokeProof[] = []
 let toolReadinessProofs: ToolReadinessProof[] = []
 let capabilityResults: CapabilityProof[] = []
@@ -215,9 +238,15 @@ async function main() {
   setPhase('PROVIDER_KEY_RESOLUTION_DONE')
   await writePartialProof(null)
 
+  providerConfigTruthResults = await collectProviderConfigTruth()
+  await writePartialProof(null)
+
   setPhase('PROVIDER_DISCOVERY_START')
   providerDiscoveryResults = await collectProviderDiscovery()
   setPhase('PROVIDER_DISCOVERY_DONE')
+  await writePartialProof(null)
+
+  providerContractSummaryResults = await collectProviderContractSummary()
   await writePartialProof(null)
 
   setPhase('MODEL_SMOKE_START')
@@ -311,7 +340,9 @@ function buildReport(partial: boolean, failure: string | null): ProofReport {
       dbCheck: dbCheckResult,
     },
     providerKeyPath: providerKeyResults,
+    providerConfigTruth: providerConfigTruthResults,
     providerDiscovery: providerDiscoveryResults,
+    providerContractSummary: providerContractSummaryResults,
     modelSmokeProofs,
     toolReadiness: toolReadinessProofs,
     capabilities: capabilityResults,
@@ -495,6 +526,14 @@ async function collectProviderKeys(dbCheck: DbCheckResult): Promise<ProviderKeyR
   })))
 }
 
+async function collectProviderConfigTruth(): Promise<ProviderRuntimeConfigTruth[]> {
+  return withTimeout(
+    () => collectProviderRuntimeConfigTruth(),
+    PROVIDER_TIMEOUT_MS,
+    [],
+  )
+}
+
 async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
   const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
   return Promise.all(providers.map((provider) => withTimeout(async () => {
@@ -573,6 +612,61 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
       }
     }
   }, PROVIDER_TIMEOUT_MS, timedOutProviderDiscovery(provider))))
+}
+
+async function collectProviderContractSummary(): Promise<ProviderContractSummary[]> {
+  const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
+  return Promise.all(providers.map((providerId) => withTimeout(async () => {
+    const provider = getProviderTruth(providerId)
+    if (!provider) {
+      return emptyProviderContractSummary(providerId, ['Unknown provider truth definition.'])
+    }
+    const [snapshot, health] = await Promise.all([
+      discoverProvider(providerId, { force: true }),
+      getCanonicalProviderHealth(providerId),
+    ])
+    const contracts = buildProviderCapabilityContracts({
+      provider,
+      models: snapshot.models,
+      capabilities: CAPABILITY_REGISTRY,
+      health,
+    })
+    const nextActions = [...new Set(contracts
+      .filter((contract) => !contract.runtimeExecutableNow)
+      .map((contract) => contract.nextAction)
+      .filter(Boolean))].slice(0, 8)
+    return {
+      provider: providerId,
+      contracts: contracts.length,
+      executableNow: contracts.filter((contract) => contract.runtimeExecutableNow).length,
+      liveProven: contracts.filter((contract) => contract.liveProven).length,
+      endpointRequired: contracts.filter((contract) => contract.requiresDedicatedEndpoint).length,
+      specialistRequired: contracts.filter((contract) => contract.requiresSpecialistEndpoint).length,
+      adapterMissing: contracts.filter((contract) => !contract.adapterAvailable).length,
+      runtimeFlagDisabled: contracts.filter((contract) => contract.runtimeFlagState === 'disabled').length,
+      toolPlanOnly: contracts.filter((contract) => contract.toolPlanOnly).length,
+      blockedByPolicy: contracts.filter((contract) => contract.requiresAppPolicyApproval || contract.requiresAdultToggle).length,
+      missingCredential: contracts.filter((contract) => !contract.accountKeyAvailable).length,
+      nextActions,
+    }
+  }, PROVIDER_TIMEOUT_MS, emptyProviderContractSummary(providerId, [`Provider contract summary timed out after ${PROVIDER_TIMEOUT_MS}ms.`]))))
+}
+
+function emptyProviderContractSummary(provider: string, nextActions: string[]): ProviderContractSummary {
+  return {
+    provider,
+    contracts: 0,
+    executableNow: 0,
+    liveProven: 0,
+    endpointRequired: 0,
+    specialistRequired: 0,
+    adapterMissing: 0,
+    runtimeFlagDisabled: 0,
+    toolPlanOnly: 0,
+    blockedByPolicy: 0,
+    missingCredential: 0,
+    nextActions,
+  }
 }
 
 async function collectModelSmokeProofs(
@@ -1403,11 +1497,23 @@ function renderMarkdown(report: ProofReport) {
     '|---|---:|---|---|',
     ...report.providerKeyPath.map((entry) => `| ${entry.provider} | ${entry.configured ? 'yes' : 'no'} | ${mdCell(entry.masked)} | ${mdCell(entry.error)} |`),
     '',
+    '## Provider Config Truth',
+    '',
+    '| Provider | Credential source | Credential | Base URLs | Runtime flags | Endpoint requirements | DB warnings | Runtime status | Next action |',
+    '|---|---|---:|---|---|---|---|---|---|',
+    ...report.providerConfigTruth.map((entry) => `| ${entry.provider} | ${entry.credential.source} | ${entry.credential.present ? 'yes' : 'no'} | ${mdCell(entry.baseUrls.map((base) => `${base.family}: ${base.currentValue} (${base.source}${base.envName ? `/${base.envName}` : ''})`).join('<br>'))} | ${mdCell(entry.runtimeFlags.map((flag) => `${flag.name}=${flag.currentValue}; required ${flag.requiredValue}; blocking=${flag.blocking ? 'yes' : 'no'}`).join('<br>'))} | ${mdCell(entry.endpointRequirements.map((endpoint) => `${endpoint.capability}: ${endpoint.configured ? 'configured' : 'missing'} ${endpoint.envNames.join(' or ')}`).join('<br>'))} | ${mdCell(entry.db.warnings.join('<br>'))} | ${entry.runtimeExecutableStatus} | ${mdCell(entry.nextActions[0] ?? '')} |`),
+    '',
     '## Provider Discovery',
     '',
     '| Provider | Credential envs | Catalog endpoint | Status | Source | Raw | Normalized | Executable candidates | Executable models | Catalog-only | Dedicated endpoint | Adult-gated | Chat | Reasoning | Coding | Image | Image edit | Video | I2V | TTS | STT | Embeddings | Rerank | Music | Avatar | Adult image | Blocker |',
     '|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ...report.providerDiscovery.map((entry) => `| ${entry.provider} | ${mdCell(entry.credentialEnvNames.join('<br>'))} | ${mdCell(entry.catalogEndpoint)} | ${entry.status} | ${entry.discoverySource} | ${entry.rawCatalogCount} | ${entry.modelCount} | ${entry.executableCandidateCount} | ${entry.executableModels} | ${entry.catalogOnlyModels} | ${entry.requiresDedicatedEndpointModels} | ${entry.adultGatedModels} | ${entry.chatModels} | ${entry.reasoningModels} | ${entry.codingModels} | ${entry.imageModels} | ${entry.imageEditModels} | ${entry.videoModels} | ${entry.imageToVideoModels} | ${entry.ttsModels} | ${entry.sttModels} | ${entry.embeddingsModels} | ${entry.rerankModels} | ${entry.musicModels} | ${entry.avatarModels} | ${entry.adultImageModels} | ${mdCell(entry.executableBlocker ?? entry.error)} |`),
+    '',
+    '## Provider Capability Contract Summary',
+    '',
+    '| Provider | Contracts | Executable now | Live-proven | Endpoint required | Specialist required | Adapter missing | Runtime flag disabled | Tool-plan only | Policy/adult blocked | Missing credential | Next actions |',
+    '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
+    ...report.providerContractSummary.map((entry) => `| ${entry.provider} | ${entry.contracts} | ${entry.executableNow} | ${entry.liveProven} | ${entry.endpointRequired} | ${entry.specialistRequired} | ${entry.adapterMissing} | ${entry.runtimeFlagDisabled} | ${entry.toolPlanOnly} | ${entry.blockedByPolicy} | ${entry.missingCredential} | ${mdCell(entry.nextActions.join('<br>'))} |`),
     '',
     '## Model-Level Smoke Proof',
     '',

@@ -7,6 +7,7 @@ import type {
   ProviderTruthDefinition,
   RoutingProfile,
 } from './provider-types'
+import { evaluateProviderCapabilityContract } from './provider-capability-contracts'
 
 export function scoreProviderModel(input: {
   provider: ProviderTruthDefinition
@@ -78,6 +79,25 @@ export function rejectionForProviderModel(input: {
   }
   if (model.status === 'unavailable') return { ...base, code: 'MODEL_UNAVAILABLE', reason: 'Model catalog marks this model unavailable.' }
   if (!model.capabilities.includes(capability.id)) return { ...base, code: 'CAPABILITY_UNSUPPORTED', reason: 'Model does not advertise or inherit the requested capability.' }
+  const contract = evaluateProviderCapabilityContract({ provider, model, capability, health })
+  if (!contract.runtimeExecutableNow) {
+    if (contract.blockerType === 'missing_credential') return { ...base, code: 'PROVIDER_NOT_CONFIGURED', reason: contract.reason }
+    if (contract.blockerType === 'adapter_missing') return { ...base, code: 'ADAPTER_MISSING', reason: contract.reason }
+    if (contract.blockerType === 'specialist_endpoint_required' || contract.blockerType === 'endpoint_required') {
+      return { ...base, code: 'DEDICATED_ENDPOINT_REQUIRED', reason: `${contract.reason} Next action: ${contract.nextAction}` }
+    }
+    if (contract.blockerType === 'runtime_flag_disabled') {
+      return {
+        ...base,
+        code: provider.id === 'together' && ['video', 'image_to_video', 'adult_video'].includes(capability.id)
+          ? 'DEDICATED_ENDPOINT_REQUIRED'
+          : 'RUNTIME_FLAG_DISABLED',
+        reason: `${contract.reason} Next action: ${contract.nextAction}`,
+      }
+    }
+    if (contract.blockerType === 'tool_plan_only') return { ...base, code: 'TOOL_PLAN_ONLY', reason: `${contract.reason} Next action: ${contract.nextAction}` }
+    if (contract.blockerType === 'policy_blocked') return { ...base, code: 'POLICY_BLOCKED', reason: `${contract.reason} Next action: ${contract.nextAction}` }
+  }
   if (requiresTogetherVideoRuntimeProof(provider.id, capability.id)) {
     return {
       ...base,

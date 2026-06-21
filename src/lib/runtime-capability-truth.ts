@@ -1,5 +1,6 @@
 import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
+import { collectProviderRuntimeConfigTruth, type ProviderRuntimeConfigTruth } from '@/lib/provider-runtime-truth'
 import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
@@ -36,6 +37,9 @@ export interface ProviderRuntimeEntry {
   showInPrimarySetup?: boolean
   defaultCostRole?: string
   capabilities?: string[]
+  configTruth?: Pick<ProviderRuntimeConfigTruth,
+    'runtimeExecutableStatus' | 'dashboardDisplayStatus' | 'blockers' | 'nextActions'
+  >
 }
 
 export interface CapabilityRuntimeEntry {
@@ -105,20 +109,28 @@ function getLocalCoreStatus(): LocalCoreStatus {
 }
 
 export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
-  const truth = await getPlatformSettingsTruth()
+  const [truth, configTruth] = await Promise.all([
+    getPlatformSettingsTruth(),
+    collectProviderRuntimeConfigTruth().catch(() => []),
+  ])
+  const configByProvider = new Map(configTruth.map((entry) => [entry.provider, entry]))
   return Promise.all(truth.entries.map(async (entry) => {
     const source = entry.kind === 'provider'
       ? (await getProviderKeyWithSource(entry.key)).source
       : entry.configured ? 'env' as const : 'missing' as const
+    const providerConfig = configByProvider.get(entry.key as never)
+    const configBlocked = Boolean(providerConfig?.blockers.length)
     return {
       key: entry.key,
       displayName: entry.label,
-      reason: entry.connected ? 'Live test passed.' : entry.blocker,
-      configured: entry.configured,
+      reason: providerConfig?.blockers[0] ?? (entry.connected ? 'Live test passed.' : entry.blocker),
+      configured: providerConfig?.credential.present ?? entry.configured,
       connected: entry.connected,
       coveredByGenX: false,
       keySource: source,
-      status: entry.connected
+      status: configBlocked
+        ? 'BLOCKED' as const
+        : entry.connected
         ? 'READY' as const
         : entry.configured
           ? 'DEGRADED' as const
@@ -129,6 +141,12 @@ export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]
       showInPrimarySetup: entry.kind === 'provider',
       defaultCostRole: entry.key === 'genx' ? 'primary' : 'specialist',
       capabilities: entry.capabilities,
+      configTruth: providerConfig ? {
+        runtimeExecutableStatus: providerConfig.runtimeExecutableStatus,
+        dashboardDisplayStatus: providerConfig.dashboardDisplayStatus,
+        blockers: providerConfig.blockers,
+        nextActions: providerConfig.nextActions,
+      } : undefined,
     }
   }))
 }
