@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T11:32:06.825Z",
+  "generatedAt": "2026-06-21T11:55:39.807Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -920,9 +920,9 @@
         "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
         "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports stt, or add a truthful contract.",
         "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports agents, or add a truthful contract."
       ]
     }
@@ -1126,15 +1126,15 @@
     },
     {
       "id": "storage",
-      "installed": true,
+      "installed": false,
       "wired": true,
       "usedBy": [
         "artifact persistence",
         "preview/download"
       ],
       "setupCommand": "Ensure AMARKTAI_STORAGE_ROOT exists and is writable by the app user.",
-      "blocker": null,
-      "detail": "Artifact storage is writable."
+      "blocker": "Artifact storage is not writable.",
+      "detail": "Artifact storage is not writable."
     }
   ],
   "capabilities": [
@@ -1413,7 +1413,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "39095dd9-07c6-484b-a110-23594b9490d5",
+      "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1436,7 +1436,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 39095dd9-07c6-484b-a110-23594b9490d5.",
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1473,14 +1473,14 @@
     },
     {
       "capabilityId": "text_to_video_short_clip",
-      "providerSelected": "genx",
-      "modelSelected": "grok-imagine-video",
-      "routeOrAdapter": "executeCapability:video_generation",
-      "status": "LIVE_PROVEN",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "text-to-video short clip",
+      "status": "BLOCKED",
       "artifactId": null,
-      "jobId": "bc8203d8-9603-4feb-993b-7d319ec657e5",
-      "pollUrl": "/api/brain/media-jobs/bc8203d8-9603-4feb-993b-7d319ec657e5",
-      "exactError": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Local media job storage is unavailable.",
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1499,7 +1499,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as bc8203d8-9603-4feb-993b-7d319ec657e5 via /api/brain/media-jobs/bc8203d8-9603-4feb-993b-7d319ec657e5."
+      "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1507,7 +1507,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "9ca2eab6-6d41-4c7a-987a-a7e7b58bc937",
+      "artifactId": null,
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1532,7 +1532,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 9ca2eab6-6d41-4c7a-987a-a7e7b58bc937.",
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1542,7 +1542,7 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_18c2ea8e86c248cfb43b6179ed48b8e7",
+      "jobId": "gnxsh_job_5befb86c706545089a4efbcc85a2180e",
       "pollUrl": null,
       "exactError": null,
       "sourceFileResponsible": null,
@@ -1567,7 +1567,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_18c2ea8e86c248cfb43b6179ed48b8e7."
+      "jobBehavior": "Async job tracked as gnxsh_job_5befb86c706545089a4efbcc85a2180e."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1703,14 +1703,14 @@
     },
     {
       "capabilityId": "avatar_library_avatar_image_generation",
-      "providerSelected": "genx",
-      "modelSelected": "gpt-image-2",
-      "routeOrAdapter": "executeCapability:avatar_generation",
-      "status": "LIVE_PROVEN",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "avatar library/avatar image generation",
+      "status": "BLOCKED",
       "artifactId": null,
-      "jobId": "e01572f1-414d-4725-8e39-1986529d25fc",
-      "pollUrl": "/api/brain/media-jobs/e01572f1-414d-4725-8e39-1986529d25fc",
-      "exactError": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Local media job storage is unavailable.",
       "sourceFileResponsible": null,
       "capabilityName": "Avatar Generation",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1731,7 +1731,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as e01572f1-414d-4725-8e39-1986529d25fc via /api/brain/media-jobs/e01572f1-414d-4725-8e39-1986529d25fc."
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -1968,10 +1968,10 @@
     }
   ],
   "summary": {
-    "liveProven": 10,
+    "liveProven": 8,
     "sourceWired": 8,
     "providerAvailable": 0,
-    "blocked": 7,
+    "blocked": 9,
     "notWired": 0
   },
   "proofState": {
