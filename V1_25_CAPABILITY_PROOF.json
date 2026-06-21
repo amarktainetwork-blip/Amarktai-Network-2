@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T09:50:14.051Z",
+  "generatedAt": "2026-06-21T11:32:06.825Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -90,6 +90,474 @@
       "configured": true,
       "masked": "tgp_...EPgU",
       "error": null
+    }
+  ],
+  "providerConfigTruth": [
+    {
+      "provider": "huggingface",
+      "displayName": "Hugging Face",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "hf_E...oTeP",
+        "aliasesChecked": [
+          "HUGGINGFACE_API_KEY",
+          "HUGGINGFACEHUB_API_TOKEN",
+          "HF_TOKEN"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "hub",
+          "currentValue": "https://router.huggingface.co",
+          "defaultValue": "https://huggingface.co",
+          "envName": null,
+          "source": "ai_provider"
+        },
+        {
+          "family": "inference_router",
+          "currentValue": "https://router.huggingface.co",
+          "defaultValue": "https://router.huggingface.co",
+          "envName": "HUGGINGFACE_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [
+        {
+          "capability": "rerank",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_RERANK",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_edit",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_IMAGE_EDIT",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON for image_edit before routing this provider/model as executable."
+        },
+        {
+          "capability": "video",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_TEXT_TO_VIDEO",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_IMAGE_TO_VIDEO",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
+        },
+        {
+          "capability": "music",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_MUSIC_GENERATION",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable."
+        },
+        {
+          "capability": "tts",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_TTS",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON for tts before routing this provider/model as executable."
+        },
+        {
+          "capability": "stt",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_ENDPOINT_STT",
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON for stt before routing this provider/model as executable."
+        }
+      ],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Inference Provider and curated model API routes are distinct from specialist endpoints.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "rerank requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "image_edit requires HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "video requires HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "image_to_video requires HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "music requires HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "tts requires HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON.",
+        "stt requires HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON."
+      ],
+      "nextActions": [
+        "Configure HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON for image_edit before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON for tts before routing this provider/model as executable.",
+        "Configure HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON for stt before routing this provider/model as executable."
+      ]
+    },
+    {
+      "provider": "together",
+      "displayName": "Together AI",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "tgp_...EPgU",
+        "aliasesChecked": [
+          "TOGETHER_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "openai_compatible",
+          "currentValue": "https://api.together.ai/v1",
+          "defaultValue": "https://api.together.ai/v1",
+          "envName": "TOGETHER_BASE_URL",
+          "source": "ai_provider"
+        },
+        {
+          "family": "video",
+          "currentValue": "https://api.together.ai/v1",
+          "defaultValue": "https://api.together.ai/v1",
+          "envName": "TOGETHER_VIDEO_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [
+        {
+          "name": "TOGETHER_VIDEO_RUNTIME_ENABLED",
+          "currentValue": "false",
+          "requiredValue": "true",
+          "source": "default",
+          "blocking": true,
+          "usedBy": [
+            "video",
+            "image_to_video",
+            "adult_video"
+          ],
+          "nextAction": "Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404."
+        }
+      ],
+      "endpointRequirements": [
+        {
+          "capability": "rerank",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_DEDICATED_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_DEDICATED_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
+        },
+        {
+          "capability": "video",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_VIDEO_RUNTIME_ENABLED",
+            "TOGETHER_VIDEO_BASE_URL"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for video before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_VIDEO_RUNTIME_ENABLED",
+            "TOGETHER_VIDEO_BASE_URL"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for image_to_video before routing this provider/model as executable."
+        }
+      ],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Catalog models remain visible; video/rerank execution requires endpoint proof/config.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "TOGETHER_VIDEO_RUNTIME_ENABLED=false; required true.",
+        "rerank requires TOGETHER_DEDICATED_ENDPOINTS_JSON.",
+        "video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL.",
+        "image_to_video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL."
+      ],
+      "nextActions": [
+        "Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404.",
+        "Configure TOGETHER_DEDICATED_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
+        "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for video before routing this provider/model as executable.",
+        "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for image_to_video before routing this provider/model as executable."
+      ]
+    },
+    {
+      "provider": "groq",
+      "displayName": "Groq",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "gsk_...xJ9r",
+        "aliasesChecked": [
+          "GROQ_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "openai_compatible",
+          "currentValue": "https://api.groq.com/openai/v1",
+          "defaultValue": "https://api.groq.com/openai/v1",
+          "envName": "GROQ_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Account policy is provider default.",
+      "dashboardDisplayStatus": "ready",
+      "runtimeExecutableStatus": "executable_possible",
+      "blockers": [],
+      "nextActions": []
+    },
+    {
+      "provider": "genx",
+      "displayName": "GenX",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "gnxk...5dea",
+        "aliasesChecked": [
+          "GENX_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "async_generation",
+          "currentValue": "https://query.genx.sh/api/v1",
+          "defaultValue": "https://query.genx.sh/api/v1",
+          "envName": "GENX_BASE_URL",
+          "source": "ai_provider"
+        },
+        {
+          "family": "streaming_text",
+          "currentValue": "https://query.genx.sh/api/v1",
+          "defaultValue": "https://query.genx.sh/v1",
+          "envName": "GENX_TEXT_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Account policy is provider default.",
+      "dashboardDisplayStatus": "ready",
+      "runtimeExecutableStatus": "executable_possible",
+      "blockers": [],
+      "nextActions": []
+    },
+    {
+      "provider": "qwen",
+      "displayName": "Qwen / DashScope",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "sk-w...sDBc",
+        "aliasesChecked": [
+          "QWEN_API_KEY",
+          "DASHSCOPE_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "compatible_mode",
+          "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "defaultValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "envName": "DASHSCOPE_BASE_URL",
+          "source": "ai_provider"
+        },
+        {
+          "family": "aigc",
+          "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+          "defaultValue": "https://dashscope-intl.aliyuncs.com/api/v1",
+          "envName": "DASHSCOPE_AIGC_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [
+        {
+          "name": "QWEN_PAID_ENABLED",
+          "currentValue": "false",
+          "requiredValue": "true for paid/non-free-quota model execution",
+          "source": "default",
+          "blocking": false,
+          "usedBy": [
+            "chat",
+            "image",
+            "video",
+            "image_to_video",
+            "embeddings"
+          ],
+          "nextAction": "Keep false for free-token-only routing; set true only when paid DashScope execution is approved."
+        }
+      ],
+      "endpointRequirements": [
+        {
+          "capability": "video",
+          "type": "provider_endpoint",
+          "envNames": [
+            "DASHSCOPE_AIGC_BASE_URL"
+          ],
+          "configured": true,
+          "currentValue": "https://dashscope-intl.aliyuncs.com/api/v1",
+          "requiredValue": "https://dashscope-intl.aliyuncs.com/api/v1",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "provider_endpoint",
+          "envNames": [
+            "DASHSCOPE_AIGC_BASE_URL"
+          ],
+          "configured": true,
+          "currentValue": "https://dashscope-intl.aliyuncs.com/api/v1",
+          "requiredValue": "https://dashscope-intl.aliyuncs.com/api/v1",
+          "nextAction": "No action required for this endpoint requirement."
+        }
+      ],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Free-token-only routing; paid/non-free-quota models are blocked until QWEN_PAID_ENABLED=true.",
+      "dashboardDisplayStatus": "ready",
+      "runtimeExecutableStatus": "executable_possible",
+      "blockers": [],
+      "nextActions": []
+    },
+    {
+      "provider": "mimo",
+      "displayName": "Xiaomi MiMo",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "tp-s...ync9",
+        "aliasesChecked": [
+          "MIMO_API_KEY",
+          "XIAOMI_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "token_plan",
+          "currentValue": "https://token-plan-sgp.xiaomimimo.com/v1",
+          "defaultValue": "https://api.xiaomimimo.com/v1",
+          "envName": "MIMO_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [
+        {
+          "name": "MIMO_RUNTIME_API_ENABLED",
+          "currentValue": "false",
+          "requiredValue": "true",
+          "source": "default",
+          "blocking": true,
+          "usedBy": [
+            "tts",
+            "stt",
+            "agents"
+          ],
+          "nextAction": "Set MIMO_RUNTIME_API_ENABLED=true only when Xiaomi MiMo backend runtime API access is confirmed beyond token-plan catalog access."
+        }
+      ],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Token-plan/catalog access only; backend runtime execution is blocked for non-proven specialist routes.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "MIMO_RUNTIME_API_ENABLED=false; required true."
+      ],
+      "nextActions": [
+        "Set MIMO_RUNTIME_API_ENABLED=true only when Xiaomi MiMo backend runtime API access is confirmed beyond token-plan catalog access."
+      ]
     }
   ],
   "providerDiscovery": [
@@ -320,6 +788,145 @@
       "endpoint": "https://api.groq.com/openai/v1/models"
     }
   ],
+  "providerContractSummary": [
+    {
+      "provider": "mimo",
+      "contracts": 63,
+      "executableNow": 4,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 27,
+      "toolPlanOnly": 27,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
+        "Select a provider/model that supports stt, or add a truthful contract.",
+        "Select a provider/model that supports vision, or add a truthful contract.",
+        "Select a provider/model that supports agents, or add a truthful contract.",
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Set MIMO_RUNTIME_API_ENABLED=true only after MiMo backend runtime API access is confirmed."
+      ]
+    },
+    {
+      "provider": "genx",
+      "contracts": 661,
+      "executableNow": 75,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports image_to_video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "huggingface",
+      "contracts": 271,
+      "executableNow": 18,
+      "liveProven": 0,
+      "endpointRequired": 73,
+      "specialistRequired": 117,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 62,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract.",
+        "Select a provider/model that supports music, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "qwen",
+      "contracts": 2058,
+      "executableNow": 110,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 280,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports image_to_video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "together",
+      "contracts": 4274,
+      "executableNow": 239,
+      "liveProven": 0,
+      "endpointRequired": 297,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 801,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 534,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports image_to_video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "groq",
+      "contracts": 104,
+      "executableNow": 11,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports stt, or add a truthful contract.",
+        "Select a provider/model that supports vision, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
+        "Select a provider/model that supports agents, or add a truthful contract."
+      ]
+    }
+  ],
   "modelSmokeProofs": [
     {
       "provider": "genx",
@@ -427,7 +1034,7 @@
         "worker_job_retry_and_polling_completion",
         "async media jobs"
       ],
-      "setupCommand": "sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; set REDIS_URL=redis://127.0.0.1:6379",
+      "setupCommand": "sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379",
       "blocker": null,
       "detail": "Redis ping passed."
     },
@@ -440,7 +1047,7 @@
         "memory",
         "RAG"
       ],
-      "setupCommand": "docker run -d --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant; set QDRANT_URL=http://127.0.0.1:6333",
+      "setupCommand": "docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; export QDRANT_URL=http://127.0.0.1:6333",
       "blocker": "Qdrant is not reachable or QDRANT_URL is absent.",
       "detail": "Qdrant is not reachable or QDRANT_URL is absent."
     },
@@ -464,9 +1071,9 @@
         "web_research",
         "scrape_website"
       ],
-      "setupCommand": "python -m pip install scrapy",
-      "blocker": "Command failed: python -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n",
-      "detail": "Command failed: python -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n"
+      "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
+      "blocker": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n",
+      "detail": "SCRAPY_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import scrapy; print(\"Scrapy available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'scrapy'\n"
     },
     {
       "id": "trafilatura",
@@ -476,9 +1083,9 @@
         "web_research",
         "scrape_website"
       ],
-      "setupCommand": "python -m pip install trafilatura",
-      "blocker": "Command failed: python -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n",
-      "detail": "Command failed: python -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n"
+      "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
+      "blocker": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n",
+      "detail": "TRAFILATURA_REQUIRED: python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python. Last error: Command failed: python3 -c import trafilatura; print(\"Trafilatura available\")\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\nError in sys.excepthook:\nTraceback (most recent call last):\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 228, in partial_apport_excepthook\n    return apport_excepthook(binary, exc_type, exc_obj, exc_tb)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3/dist-packages/apport_python_hook.py\", line 114, in apport_excepthook\n    report[\"ExecutableTimestamp\"] = str(int(os.stat(binary).st_mtime))\n                                            ^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/var/www/amarktai/platform/-c'\n\nOriginal exception was:\nTraceback (most recent call last):\n  File \"<string>\", line 1, in <module>\nModuleNotFoundError: No module named 'trafilatura'\n"
     },
     {
       "id": "ffmpeg",
@@ -513,9 +1120,9 @@
       "usedBy": [
         "talking_avatar_video"
       ],
-      "setupCommand": "Install Rhubarb Lip Sync and set RHUBARB_PATH=/absolute/path/to/rhubarb",
-      "blocker": "spawn rhubarb ENOENT",
-      "detail": "spawn rhubarb ENOENT"
+      "setupCommand": "Install Rhubarb Lip Sync for the VPS architecture, then set RHUBARB_PATH=/var/www/amarktai/tools/rhubarb/rhubarb or LIPSYNC_SERVICE_URL=http://127.0.0.1:<port>",
+      "blocker": "LIPSYNC_SERVICE_REQUIRED: set RHUBARB_PATH to the Rhubarb binary or LIPSYNC_SERVICE_URL to a reachable lip-sync service before proving talking_avatar_video.",
+      "detail": "LIPSYNC_SERVICE_REQUIRED: set RHUBARB_PATH to the Rhubarb binary or LIPSYNC_SERVICE_URL to a reachable lip-sync service before proving talking_avatar_video."
     },
     {
       "id": "storage",
@@ -525,7 +1132,7 @@
         "artifact persistence",
         "preview/download"
       ],
-      "setupCommand": "Ensure local artifact storage directories are writable by the app user.",
+      "setupCommand": "Ensure AMARKTAI_STORAGE_ROOT exists and is writable by the app user.",
       "blocker": null,
       "detail": "Artifact storage is writable."
     }
@@ -782,7 +1389,7 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Hugging Face rerank models are catalog-visible, but rera",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: huggingface/cross-encoder/ms-marco-MiniLM-L6-v2 is catal",
       "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Rerank",
       "routeFile": "src/lib/providers/provider-scoring.ts",
@@ -806,7 +1413,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "9fad2b6b-02ec-473a-b562-101326a62ebe",
+      "artifactId": "39095dd9-07c6-484b-a110-23594b9490d5",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -829,7 +1436,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 9fad2b6b-02ec-473a-b562-101326a62ebe.",
+      "artifactBehavior": "Intentional artifact persisted: 39095dd9-07c6-484b-a110-23594b9490d5.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -871,8 +1478,8 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82",
-      "pollUrl": "/api/brain/media-jobs/eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82",
+      "jobId": "bc8203d8-9603-4feb-993b-7d319ec657e5",
+      "pollUrl": "/api/brain/media-jobs/bc8203d8-9603-4feb-993b-7d319ec657e5",
       "exactError": null,
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
@@ -892,7 +1499,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82 via /api/brain/media-jobs/eaba7ba5-1de2-4ea3-ac5a-e4ec24ae9d82."
+      "jobBehavior": "Async job tracked as bc8203d8-9603-4feb-993b-7d319ec657e5 via /api/brain/media-jobs/bc8203d8-9603-4feb-993b-7d319ec657e5."
     },
     {
       "capabilityId": "text_to_speech",
@@ -900,7 +1507,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "e1f00039-54e4-4432-96a0-65f9ee56781c",
+      "artifactId": "9ca2eab6-6d41-4c7a-987a-a7e7b58bc937",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -925,7 +1532,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: e1f00039-54e4-4432-96a0-65f9ee56781c.",
+      "artifactBehavior": "Intentional artifact persisted: 9ca2eab6-6d41-4c7a-987a-a7e7b58bc937.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -935,7 +1542,7 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_68f2233f99654db8af38cc58f0446912",
+      "jobId": "gnxsh_job_18c2ea8e86c248cfb43b6179ed48b8e7",
       "pollUrl": null,
       "exactError": null,
       "sourceFileResponsible": null,
@@ -960,7 +1567,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_68f2233f99654db8af38cc58f0446912."
+      "jobBehavior": "Async job tracked as gnxsh_job_18c2ea8e86c248cfb43b6179ed48b8e7."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1101,8 +1708,8 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "80f27fc6-a56d-4647-8859-e4592d029072",
-      "pollUrl": "/api/brain/media-jobs/80f27fc6-a56d-4647-8859-e4592d029072",
+      "jobId": "e01572f1-414d-4725-8e39-1986529d25fc",
+      "pollUrl": "/api/brain/media-jobs/e01572f1-414d-4725-8e39-1986529d25fc",
       "exactError": null,
       "sourceFileResponsible": null,
       "capabilityName": "Avatar Generation",
@@ -1124,7 +1731,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 80f27fc6-a56d-4647-8859-e4592d029072 via /api/brain/media-jobs/80f27fc6-a56d-4647-8859-e4592d029072."
+      "jobBehavior": "Async job tracked as e01572f1-414d-4725-8e39-1986529d25fc via /api/brain/media-jobs/e01572f1-414d-4725-8e39-1986529d25fc."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -1383,8 +1990,12 @@
       "PROVIDER_KEY_RESOLUTION_DONE",
       "WRITE_PROOF_START",
       "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
       "PROVIDER_DISCOVERY_START",
       "PROVIDER_DISCOVERY_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
       "WRITE_PROOF_START",
       "WRITE_PROOF_DONE",
       "MODEL_SMOKE_START",
