@@ -14,7 +14,7 @@ import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 import { getLocalMediaJob } from '@/lib/media-job-store'
 import { getArtifact, listArtifacts } from '@/lib/artifact-store'
 import { prisma } from '@/lib/prisma'
-import { testLocalTool } from '@/lib/local-tools'
+import { setupCommandForLocalTool, testLocalTool } from '@/lib/local-tools'
 import { isRedisHealthy } from '@/lib/redis'
 import { isQdrantHealthy } from '@/lib/vector-store'
 import { collectProviderRuntimeConfigTruth, type ProviderRuntimeConfigTruth } from '@/lib/provider-runtime-truth'
@@ -714,14 +714,14 @@ async function collectToolReadinessProofs(): Promise<ToolReadinessProof[]> {
     false,
   )
   return [
-    toolProof('redis_bullmq', redis, Boolean(process.env.REDIS_URL?.trim()), ['worker_job_retry_and_polling_completion', 'async media jobs'], 'sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; set REDIS_URL=redis://127.0.0.1:6379', redis ? 'Redis ping passed.' : 'Redis/BullMQ is not reachable or REDIS_URL is absent.'),
-    toolProof('qdrant', qdrant, Boolean(process.env.QDRANT_URL?.trim()), ['research', 'memory', 'RAG'], 'docker run -d --name qdrant -p 6333:6333 -v qdrant_storage:/qdrant/storage qdrant/qdrant; set QDRANT_URL=http://127.0.0.1:6333', qdrant ? 'Qdrant health passed.' : 'Qdrant is not reachable or QDRANT_URL is absent.'),
+    toolProof('redis_bullmq', redis, Boolean(process.env.REDIS_URL?.trim()), ['worker_job_retry_and_polling_completion', 'async media jobs'], 'sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379', redis ? 'Redis ping passed.' : 'Redis/BullMQ is not reachable or REDIS_URL is absent.'),
+    toolProof('qdrant', qdrant, Boolean(process.env.QDRANT_URL?.trim()), ['research', 'memory', 'RAG'], 'docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; export QDRANT_URL=http://127.0.0.1:6333', qdrant ? 'Qdrant health passed.' : 'Qdrant is not reachable or QDRANT_URL is absent.'),
     ...localTools.map((tool) => toolProof(
       tool.id,
       tool.connected,
       true,
       toolUsage(tool.id),
-      setupCommandForTool(tool.id),
+      tool.setupCommand ?? setupCommandForTool(tool.id),
       tool.detail,
     )),
   ]
@@ -755,12 +755,9 @@ function toolUsage(id: string): string[] {
 }
 
 function setupCommandForTool(id: string): string {
-  if (id === 'playwright') return 'npx playwright install --with-deps chromium'
-  if (id === 'scrapy') return 'python -m pip install scrapy'
-  if (id === 'trafilatura') return 'python -m pip install trafilatura'
-  if (id === 'ffmpeg' || id === 'ffprobe') return 'sudo apt-get install -y ffmpeg'
-  if (id === 'rhubarb') return 'Install Rhubarb Lip Sync and set RHUBARB_PATH=/absolute/path/to/rhubarb'
-  if (id === 'storage') return 'Ensure local artifact storage directories are writable by the app user.'
+  if (id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'ffprobe' || id === 'rhubarb' || id === 'storage') {
+    return setupCommandForLocalTool(id)
+  }
   return 'See ACTIVE_OPEN_SOURCE_STACK.md.'
 }
 

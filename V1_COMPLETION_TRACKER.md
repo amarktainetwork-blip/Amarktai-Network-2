@@ -4,14 +4,14 @@ Current source of truth ledger for V1 provider/runtime completion. Older audit f
 
 ## Current Phase
 
-Phase 2 Chunk 3 - Provider contracts and config source of truth.
+Phase 3 Chunk 1 - Open-source stack install/proof contract.
 
 ## Current Source Head
 
 - Branch: `integration/cline-source-of-truth`
 - Phase 2 Chunk 2 source head: `9b18182 fix: classify unresolved media provider capabilities truthfully`
-- Current source head before this chunk: `185d3c4 proof: update VPS capability baseline after provider classification`
-- Current chunk target commit: `fix: unify provider config and capability truth`
+- Phase 2 Chunk 3 source head: `92d5efe fix: unify provider config and capability truth`
+- Current chunk target commit: `feat: install and prove open-source runtime stack`
 
 ## Current Proof Summary
 
@@ -76,22 +76,22 @@ Current split truth sources found:
 | Image edit transform proof | SOURCE_WIRED | Prove a source-image transform adapter/model path; do not substitute text-to-image |
 | Image-to-video proof | SOURCE_WIRED | Reprove Qwen Wanx I2V or GenX I2V job start/poll/artifact path |
 | Avatar video | BLOCKED | Install/configure Rhubarb/lip-sync service/binary and expose executable path/service URL |
-| Local media/research stack | BLOCKED where required | Install Redis/BullMQ worker, Qdrant, Scrapy, Trafilatura, ffmpeg, ffprobe |
+| Local media/research stack | BLOCKED where required | Run `sudo APP_ROOT=/var/www/amarktai PLATFORM_ROOT=/var/www/amarktai/platform scripts/install-open-source-stack.sh`, configure env paths, then rerun proof on the VPS |
 
 ## Open-Source Stack Status
 
 | Tool | Installed | Wired | Used by | Setup command | Blocker |
 |---|---|---|---|---|---|
-| Redis | Target VPS: pending proof | Partially | Async media jobs, BullMQ worker | `sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server` | Needs Phase 3 install/proof |
-| BullMQ worker | Pending proof | Partially | Async provider polling/retry | Configure worker service with `REDIS_URL` | Needs worker service install |
-| Qdrant | Pending proof | Partially | RAG/memory/research | `docker run -d --name qdrant -p 6333:6333 qdrant/qdrant` | Needs Phase 3 install/proof |
-| Playwright | Source-wired | Yes | Web research/scrape | `npx playwright install --with-deps chromium` | Verify target VPS browser install |
-| Scrapy | Pending proof | Source-wired | Web research/scrape | `python -m pip install scrapy` | Needs Python package install |
-| Trafilatura | Pending proof | Source-wired | Web extraction | `python -m pip install trafilatura` | Needs Python package install |
-| ffmpeg | Pending proof | Source-wired | Video/music/media assembly | `sudo apt-get install -y ffmpeg` | Needs binary install/proof |
-| ffprobe | Pending proof | Source-wired | Media duration/probe | `sudo apt-get install -y ffmpeg` | Needs binary install/proof |
-| Rhubarb/lip-sync | Missing | Source-wired boundary only | Talking avatar video | Install Rhubarb and set `RHUBARB_PATH` | Required before avatar video live proof |
-| Local artifact storage | Present in source | Yes | Durable preview/download | Ensure storage directory writable | Verify target VPS permissions |
+| Redis | Target VPS: pending proof | Partially | Async media jobs, BullMQ worker | `sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379` | Proof must show Redis ping; local Windows proof may report missing |
+| BullMQ worker | Pending proof | Partially | Async provider polling/retry | Configure worker service with `REDIS_URL=redis://127.0.0.1:6379` | Worker service unit still needs target VPS proof |
+| Qdrant | Target VPS: pending proof | Partially | RAG/memory/research | `docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; export QDRANT_URL=http://127.0.0.1:6333` | Requires Docker/service proof on target VPS |
+| Playwright | Source-wired | Yes | Web research/scrape | `cd /var/www/amarktai/platform && npx playwright install --with-deps chromium` | Proof must show Node package and browser deps available |
+| Scrapy | Target VPS: pending proof | Source-wired | Web research/scrape | `python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python` | Proof must import Scrapy with configured Python |
+| Trafilatura | Target VPS: pending proof | Source-wired | Web extraction | `python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python` | Proof must import Trafilatura with configured Python |
+| ffmpeg | Target VPS: pending proof | Source-wired | Video/music/media assembly | `sudo apt-get install -y ffmpeg; export FFMPEG_PATH=/usr/bin/ffmpeg` | Proof must run `ffmpeg -version` |
+| ffprobe | Target VPS: pending proof | Source-wired | Media duration/probe | `sudo apt-get install -y ffmpeg; export FFPROBE_PATH=/usr/bin/ffprobe` | Proof must run `ffprobe -version` |
+| Rhubarb/lip-sync | BLOCKED until configured | Source-wired boundary only | Talking avatar video | Install Rhubarb for VPS architecture, then set `RHUBARB_PATH=/var/www/amarktai/tools/rhubarb/rhubarb` or `LIPSYNC_SERVICE_URL=http://127.0.0.1:<port>` | Not auto-installed; proof must report `LIPSYNC_SERVICE_REQUIRED` until configured |
+| Local artifact storage | Present in source | Yes | Durable preview/download | Ensure `AMARKTAI_STORAGE_ROOT=/var/www/amarktai/storage` exists and is writable | Verify target VPS permissions |
 
 ## Dashboard And Frontend Missing-Functions Inventory
 

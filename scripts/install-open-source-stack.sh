@@ -2,6 +2,7 @@
 set -euo pipefail
 
 APP_ROOT="${APP_ROOT:-/var/www/amarktai}"
+PLATFORM_ROOT="${PLATFORM_ROOT:-$APP_ROOT/platform}"
 STORAGE_ROOT="${AMARKTAI_STORAGE_ROOT:-$APP_ROOT/storage}"
 VENV_DIR="${AMARKTAI_PYTHON_VENV:-$APP_ROOT/.venv}"
 QDRANT_DIR="${QDRANT_DATA_DIR:-$APP_ROOT/qdrant}"
@@ -23,7 +24,7 @@ python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip
 "$VENV_DIR/bin/pip" install scrapy trafilatura
 
-cd "$APP_ROOT"
+cd "$PLATFORM_ROOT"
 npx playwright install --with-deps chromium
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -43,4 +44,11 @@ ffmpeg -version | head -n 1
 "$VENV_DIR/bin/python" -c 'import scrapy, trafilatura; print("Python crawler stack ready")'
 node -e 'require("playwright"); console.log("Playwright ready")'
 curl -fsS http://127.0.0.1:6333/readyz >/dev/null && echo "Qdrant ready" || true
+echo "Recommended env:"
+echo "REDIS_URL=redis://127.0.0.1:6379"
+echo "QDRANT_URL=http://127.0.0.1:6333"
+echo "AMARKTAI_PYTHON_BIN=$VENV_DIR/bin/python"
+echo "FFMPEG_PATH=/usr/bin/ffmpeg"
+echo "FFPROBE_PATH=/usr/bin/ffprobe"
+echo "RHUBARB_PATH=$RHUBARB_DIR/rhubarb"
 echo "Open-source stack checks complete."
