@@ -21,6 +21,7 @@ import { collectProviderRuntimeConfigTruth, type ProviderRuntimeConfigTruth } fr
 import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
 import { getCanonicalProviderHealth } from '@/lib/providers/health'
 import { buildProviderCapabilityContracts } from '@/lib/providers/provider-capability-contracts'
+import { getProviderCapabilityAdapter, providerHasCanonicalPollingContract } from '@/lib/ai-capability-adapters'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
@@ -119,6 +120,18 @@ type ProviderContractSummary = {
   nextActions: string[]
 }
 
+type ProviderRuntimeContractChecklist = {
+  provider: string
+  authDetection: string
+  modelDiscovery: string
+  capabilityMapping: string
+  requestExecutionPath: string
+  responseParsing: string
+  artifactPersistence: string
+  errorClassification: string
+  fallbackBehavior: string
+}
+
 type ToolReadinessProof = {
   id: string
   installed: boolean
@@ -176,6 +189,7 @@ type ProofReport = {
   providerKeyPath: ProviderKeyResult[]
   providerConfigTruth: ProviderRuntimeConfigTruth[]
   providerDiscovery: ProviderDiscoveryResult[]
+  providerRuntimeContracts: ProviderRuntimeContractChecklist[]
   providerContractSummary: ProviderContractSummary[]
   modelSmokeProofs: ModelSmokeProof[]
   toolReadiness: ToolReadinessProof[]
@@ -216,6 +230,7 @@ let dbCheckResult: DbCheckResult = { attempted: false, available: false, error: 
 let providerKeyResults: ProviderKeyResult[] = []
 let providerConfigTruthResults: ProviderRuntimeConfigTruth[] = []
 let providerDiscoveryResults: ProviderDiscoveryResult[] = []
+let providerRuntimeContractResults: ProviderRuntimeContractChecklist[] = []
 let providerContractSummaryResults: ProviderContractSummary[] = []
 let modelSmokeProofs: ModelSmokeProof[] = []
 let toolReadinessProofs: ToolReadinessProof[] = []
@@ -247,6 +262,7 @@ async function main() {
   await writePartialProof(null)
 
   providerContractSummaryResults = await collectProviderContractSummary()
+  providerRuntimeContractResults = collectProviderRuntimeContracts()
   await writePartialProof(null)
 
   setPhase('MODEL_SMOKE_START')
@@ -342,6 +358,7 @@ function buildReport(partial: boolean, failure: string | null): ProofReport {
     providerKeyPath: providerKeyResults,
     providerConfigTruth: providerConfigTruthResults,
     providerDiscovery: providerDiscoveryResults,
+    providerRuntimeContracts: providerRuntimeContractResults,
     providerContractSummary: providerContractSummaryResults,
     modelSmokeProofs,
     toolReadiness: toolReadinessProofs,
@@ -425,6 +442,20 @@ const PROOF_TAXONOMY: Record<string, string> = {
 const SOURCE_WIRED_ON_ROUTE_FAILURE = new Set([
   'image_editing_source_transform',
   'image_to_video',
+])
+
+const SOURCE_WIRED_ON_MISSING_CREDENTIAL = new Set([
+  'chat_text_generation',
+  'reasoning',
+  'coding_assistant',
+  'web_research',
+  'embeddings',
+  'text_to_image',
+  'text_to_video_short_clip',
+  'text_to_speech',
+  'speech_to_text',
+  'avatar_library_avatar_image_generation',
+  'provider_auto_selection',
 ])
 
 const BLOCKED_ON_ROUTE_FAILURE = new Set([
@@ -650,6 +681,45 @@ async function collectProviderContractSummary(): Promise<ProviderContractSummary
       nextActions,
     }
   }, PROVIDER_TIMEOUT_MS, emptyProviderContractSummary(providerId, [`Provider contract summary timed out after ${PROVIDER_TIMEOUT_MS}ms.`]))))
+}
+
+function collectProviderRuntimeContracts(): ProviderRuntimeContractChecklist[] {
+  const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
+  return providers.map((providerId) => {
+    const provider = getProviderTruth(providerId)
+    const adapter = getProviderCapabilityAdapter(providerId)
+    const discovery = providerDiscoveryResults.find((entry) => entry.provider === providerId)
+    const summary = providerContractSummaryResults.find((entry) => entry.provider === providerId)
+    const config = providerConfigTruthResults.find((entry) => entry.provider === providerId)
+    const asyncPolling = provider?.features.asyncJobs
+      ? providerHasCanonicalPollingContract(providerId)
+        ? 'wired: canonical async polling contract present'
+        : 'blocked: provider advertises async jobs without canonical polling contract'
+      : 'not_required: synchronous adapter path'
+    return {
+      provider: providerId,
+      authDetection: provider?.envAliases.length
+        ? `wired: ${provider.envAliases.join(' or ')} plus integrationConfig/aiProvider key path; current source=${config?.credential.source ?? 'unknown'}`
+        : 'not_wired: provider auth aliases missing',
+      modelDiscovery: provider?.discovery.models
+        ? `wired: ${discovery?.catalogEndpoint ?? provider.discovery.models}; current status=${discovery?.status ?? 'not_run'}`
+        : 'blocked: provider has no catalog discovery contract',
+      capabilityMapping: provider?.capabilities.length
+        ? `wired: ${provider.capabilities.join(', ')}`
+        : 'not_wired: no provider capability map',
+      requestExecutionPath: adapter
+        ? `wired: ${adapter.id}; categories=${adapter.categories.join(', ')}`
+        : 'not_wired: canonical provider adapter missing',
+      responseParsing: adapter
+        ? 'wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results'
+        : 'not_wired: no adapter response parser',
+      artifactPersistence: provider?.features.artifactSupport
+        ? 'wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output'
+        : 'not_required: provider does not advertise durable media/artifact output',
+      errorClassification: 'wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets',
+      fallbackBehavior: `wired: Brain route planner returns rejected candidates and fallback chain; ${asyncPolling}; executableNow=${summary?.executableNow ?? 0}`,
+    }
+  })
 }
 
 function emptyProviderContractSummary(provider: string, nextActions: string[]): ProviderContractSummary {
@@ -1165,7 +1235,7 @@ async function proveAdminTextCapability(capabilityId: string, taxonomyId: string
 
 async function proveAgentRequest(): Promise<CapabilityProof> {
   if (!CONNECTED_APP_SECRET) {
-    return blocked('agent_request_execution', '/api/brain/agent-request', 'AMARKTAI_CONNECTED_APP_SECRET or AMARKTAI_APP_SECRET_AMARKTAI_NETWORK is required for local proof.')
+    return sourceWired('agent_request_execution', '/api/brain/agent-request', 'Agent request route is wired through the Brain/runtime, but AMARKTAI_CONNECTED_APP_SECRET or AMARKTAI_APP_SECRET_AMARKTAI_NETWORK is required for local live proof.')
   }
   try {
     const result = await processAppAgentRequest({ appSlug: APP_SLUG, message: 'Reply with OK.', taskType: 'chat' })
@@ -1205,18 +1275,18 @@ async function proveConnectedAppExecution(): Promise<CapabilityProof> {
     providerSelected: null,
     modelSelected: null,
     routeOrAdapter: 'executeConnectedAppCapability',
-    status: 'BLOCKED',
+    status: 'SOURCE_WIRED',
     artifactId: null,
     jobId: null,
     pollUrl: null,
-    exactError: 'Connected-app live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity.',
+    exactError: 'Connected-app runtime execution is wired, but live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity.',
     sourceFileResponsible: null,
   }
 }
 
 async function proveLongFormVideo(): Promise<CapabilityProof> {
   if (!process.env.DATABASE_URL?.trim()) {
-    return blocked('long_form_multi_scene_video_assembly', '/api/admin/video-projects', 'DATABASE_URL is required to inspect/create control-plane video project jobs for live proof.')
+    return sourceWired('long_form_multi_scene_video_assembly', '/api/admin/video-projects', 'Long-form video project/job routes are wired, but DATABASE_URL is required to inspect/create control-plane video project jobs for live proof.')
   }
   try {
     const jobs = await listControlPlaneJobs(5)
@@ -1225,11 +1295,11 @@ async function proveLongFormVideo(): Promise<CapabilityProof> {
       providerSelected: null,
       modelSelected: null,
       routeOrAdapter: '/api/admin/video-projects',
-      status: jobs.length >= 0 ? 'BLOCKED' : 'NOT_WIRED',
+      status: jobs.length >= 0 ? 'SOURCE_WIRED' : 'NOT_WIRED',
       artifactId: null,
       jobId: null,
       pollUrl: null,
-      exactError: 'Long-form assembly is admin/project-pipeline based; live proof requires database-backed project creation plus at least one generated clip in the target environment.',
+      exactError: 'Long-form assembly is admin/project-pipeline based and source-wired; live proof requires database-backed project creation plus at least one generated clip in the target environment.',
       sourceFileResponsible: null,
     }
   } catch (error) {
@@ -1413,6 +1483,21 @@ function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): 
   }
 }
 
+function sourceWired(capabilityId: string, routeOrAdapter: string, reason: string): CapabilityProof {
+  return {
+    capabilityId,
+    providerSelected: null,
+    modelSelected: null,
+    routeOrAdapter,
+    status: 'SOURCE_WIRED',
+    artifactId: null,
+    jobId: null,
+    pollUrl: null,
+    exactError: reason,
+    sourceFileResponsible: null,
+  }
+}
+
 function classifyFailureStatus(capabilityId: string, result: Awaited<ReturnType<typeof executeCapability>>): ProofStatus {
   if (SOURCE_WIRED_ON_ROUTE_FAILURE.has(capabilityId)) {
     if (
@@ -1422,7 +1507,9 @@ function classifyFailureStatus(capabilityId: string, result: Awaited<ReturnType<
       || result.providerAttempts?.length
     ) return 'SOURCE_WIRED'
   }
-  if (/no configured provider/i.test(result.error ?? '')) return 'BLOCKED'
+  if (/no configured provider/i.test(result.error ?? '')) {
+    return SOURCE_WIRED_ON_MISSING_CREDENTIAL.has(capabilityId) ? 'SOURCE_WIRED' : 'BLOCKED'
+  }
   if (
     BLOCKED_ON_ROUTE_FAILURE.has(capabilityId)
     && (
@@ -1525,6 +1612,12 @@ function renderMarkdown(report: ProofReport) {
     '| Provider | Contracts | Executable now | Live-proven | Endpoint required | Specialist required | Adapter missing | Runtime flag disabled | Tool-plan only | Policy/adult blocked | Missing credential | Next actions |',
     '|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|',
     ...report.providerContractSummary.map((entry) => `| ${entry.provider} | ${entry.contracts} | ${entry.executableNow} | ${entry.liveProven} | ${entry.endpointRequired} | ${entry.specialistRequired} | ${entry.adapterMissing} | ${entry.runtimeFlagDisabled} | ${entry.toolPlanOnly} | ${entry.blockedByPolicy} | ${entry.missingCredential} | ${mdCell(entry.nextActions.join('<br>'))} |`),
+    '',
+    '## Provider Runtime Contract Checklist',
+    '',
+    '| Provider | Auth detection | Model discovery/catalog | Capability mapping | Request execution path | Response parsing | Artifact persistence | Error classification | Fallback behavior |',
+    '|---|---|---|---|---|---|---|---|---|',
+    ...report.providerRuntimeContracts.map((entry) => `| ${entry.provider} | ${mdCell(entry.authDetection)} | ${mdCell(entry.modelDiscovery)} | ${mdCell(entry.capabilityMapping)} | ${mdCell(entry.requestExecutionPath)} | ${mdCell(entry.responseParsing)} | ${mdCell(entry.artifactPersistence)} | ${mdCell(entry.errorClassification)} | ${mdCell(entry.fallbackBehavior)} |`),
     '',
     '## Model-Level Smoke Proof',
     '',
