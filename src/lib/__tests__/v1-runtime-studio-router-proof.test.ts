@@ -84,7 +84,23 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     })
 
     expect(cheapText.selected?.route.provider).toBe('groq')
-    expect(autoImage.selected?.route.provider).toBe('qwen')
+    expect(autoImage.selected?.configured).toBe(true)
+    expect(autoImage.selected?.route.executable).toBe(true)
+    const qwenImageCandidate = autoImage.candidates.find((candidate) => candidate.route.provider === 'qwen')
+    const selectedImageCandidate = autoImage.selected
+    expect(qwenImageCandidate).toBeDefined()
+    expect(qwenImageCandidate?.configured).toBe(true)
+    expect(qwenImageCandidate?.route.executable).toBe(true)
+    expect(qwenImageCandidate?.rank).toBeLessThanOrEqual(selectedImageCandidate?.rank ?? Infinity)
+    if (selectedImageCandidate?.route.provider !== 'qwen') {
+      expect(autoImage.reason).toContain('runtime proof/performance selected')
+      expect(autoImage.rejectedCandidates).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          provider: 'qwen',
+          code: 'RUNTIME_FALLBACK_SELECTED',
+        }),
+      ]))
+    }
     expect(balancedVideo.selected?.route.provider).toBe('qwen')
     expect(premiumText.selected?.configured).toBe(true)
     expect(premiumText.selected?.route.executable).toBe(true)
