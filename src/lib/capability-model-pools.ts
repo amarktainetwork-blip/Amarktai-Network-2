@@ -240,7 +240,7 @@ export const CAPABILITY_MODEL_POOLS: readonly CapabilityModelPool[] = [
   {
     capabilityId: 'image_editing_source_transform',
     workflow: 'Source-image editing / transform',
-    primaryCandidates: [candidate('genx', 'veo-3.1', 'production_allowed', 'Provider-safe short-video route for production selection while grok-imagine-video remains quality-gated proof.')],
+    primaryCandidates: [],
     fallbackCandidates: [
       candidate('genx', 'gpt-image-1', 'proof_only', 'Candidate exists but no live image-edit proof yet.'),
       candidate('huggingface', 'timbrooks/instruct-pix2pix', 'blocked_endpoint_required', 'HF image edit remains specialist-endpoint gated in active truth.'),

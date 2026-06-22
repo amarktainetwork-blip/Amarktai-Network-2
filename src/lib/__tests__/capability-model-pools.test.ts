@@ -153,6 +153,9 @@ describe('Phase 2 capability model pools', () => {
   })
 
   it('reports honest replacement status for image edit and image-to-video', () => {
+    expect(getCapabilityModelPool('image_editing_source_transform')?.primaryCandidates).toEqual([])
+    expect(blockedOrProofOnlyModelsFor('image_editing_source_transform').map((candidate) => candidate.model))
+      .not.toContain('veo-3.1')
     expect(capabilityPoolStatus('image_editing_source_transform')).toMatchObject({
       productionReady: false,
       qualityStatus: 'source_wired_unproven',
