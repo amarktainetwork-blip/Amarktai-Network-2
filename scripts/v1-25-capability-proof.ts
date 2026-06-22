@@ -1182,7 +1182,15 @@ function capabilityErrorProof(capabilityId: string, error: unknown): CapabilityP
 
 async function proveExecuteCapability(label: string, capabilityId: string, request: Parameters<typeof executeCapability>[0]): Promise<CapabilityProof> {
   try {
-    const result = await executeCapability({ appId: APP_SLUG, ...request })
+    const result = await executeCapability({
+      appId: APP_SLUG,
+      ...request,
+      metadata: {
+        ...(request.metadata ?? {}),
+        proofMode: true,
+        executionMode: 'proof',
+      },
+    })
     if (result.success) {
       return {
         capabilityId,

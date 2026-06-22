@@ -11,6 +11,11 @@ import {
   type UniversalCostTier,
 } from '@/lib/universal-model-catalog'
 import type { ApprovedDirectProviderId } from '@/lib/provider-mesh'
+import {
+  allowedPoolModelsFor,
+  evaluateCapabilityModelCandidate,
+  productionPoolRejectionReason,
+} from '@/lib/capability-model-pools'
 
 export const ROUTING_QUALITY_TIERS = ['cheap', 'balanced', 'premium', 'auto', 'mixed'] as const
 export type RoutingQualityTier = typeof ROUTING_QUALITY_TIERS[number]
@@ -43,6 +48,8 @@ export interface CapabilityRoutePlan {
   setupRequired: boolean
   reason: string
 }
+
+type RouteSelectionMode = 'production' | 'proof'
 
 const SURFACE_PROFILE: Record<RoutingSurface, string> = {
   studio: '__studio__',
@@ -144,11 +151,14 @@ export async function selectCapabilityRoutePlan(input: {
   requestedModel?: string
   configuredProviderIds?: readonly ApprovedDirectProviderId[]
   allowedProviderIds?: readonly ApprovedDirectProviderId[]
+  selectionMode?: RouteSelectionMode
+  adultGate?: boolean
 }): Promise<CapabilityRoutePlan> {
   const capability = typeof input.capability === 'string'
     ? getCapabilityDefinition(input.capability)
     : input.capability
   const qualityTier = normalizeRoutingQuality(input.qualityTier)
+  const selectionMode = input.selectionMode ?? 'production'
   if (!capability) {
     return {
       capability: String(input.capability),
@@ -168,20 +178,22 @@ export async function selectCapabilityRoutePlan(input: {
   const policyRankedCandidates = capability.providerRoutes
     .filter((route) => route.executable)
     .filter((route) => !input.allowedProviderIds || input.allowedProviderIds.includes(route.provider))
-    .map((route) => {
+    .flatMap((route) => {
       const model = selectModel(
         capability,
         route,
         qualityTier,
         route.provider === input.requestedProvider ? input.requestedModel : undefined,
+        selectionMode,
+        input.adultGate,
       )
-      return {
+      return model ? [{
         route,
         model,
         configured: configured.has(route.provider),
         rank: routeRank(capability, route, model, qualityTier)
           + (route.provider === input.requestedProvider ? -100_000 : 0),
-      }
+      }] : []
     })
     .sort((left, right) => left.rank - right.rank)
   const candidates = await rankProvidersForCapability(capability.id, policyRankedCandidates)
@@ -210,8 +222,15 @@ export async function selectCapabilityRoutePlan(input: {
         : `${qualityTier} policy selected an available ${capability.group} route.`
       : candidates.length > 0
         ? `No configured provider credential can execute ${capability.id}.`
-        : `No executable approved provider route exists for ${capability.id}.`,
+        : noRouteReasonForSelectionMode(capability.id, selectionMode),
   }
+}
+
+function noRouteReasonForSelectionMode(capabilityId: string, selectionMode: RouteSelectionMode): string {
+  if (selectionMode === 'proof') {
+    return `No executable approved provider route exists for ${capabilityId}.`
+  }
+  return `${capitalize(productionPoolRejectionReason(capabilityId))} for ${capabilityId}.`
 }
 
 function buildRejectedCandidates(input: {
@@ -279,9 +298,37 @@ function selectModel(
   route: AiCapabilityProviderRoute,
   qualityTier: StoredRoutingQualityTier,
   requestedModel?: string,
+  selectionMode: RouteSelectionMode = 'production',
+  adultGate = false,
 ): string {
-  if (requestedModel) return requestedModel
-  return [...route.modelIds].sort((left, right) => {
+  if (requestedModel) {
+    const decision = evaluateCapabilityModelCandidate({
+      capabilityId: capability.id,
+      provider: route.provider,
+      model: requestedModel,
+      executionMode: selectionMode,
+      adultGate,
+    })
+    return decision.allowed ? requestedModel : ''
+  }
+  const poolAllowed = allowedPoolModelsFor({
+    capabilityId: capability.id,
+    provider: route.provider,
+    executionMode: selectionMode,
+    adultGate,
+  })
+  const allowed = route.modelIds.filter((modelId) => {
+    if (poolAllowed.length > 0) return poolAllowed.includes(modelId)
+    const decision = evaluateCapabilityModelCandidate({
+      capabilityId: capability.id,
+      provider: route.provider,
+      model: modelId,
+      executionMode: selectionMode,
+      adultGate,
+    })
+    return decision.allowed
+  })
+  return [...allowed].sort((left, right) => {
     const leftCost = UNIVERSAL_MODEL_ROUTES.find(
       (entry) => entry.provider === route.provider && entry.modelId === left,
     )?.costTier ?? 'unknown'
@@ -290,6 +337,10 @@ function selectModel(
     )?.costTier ?? 'unknown'
     return COST_RANK[qualityTier].indexOf(leftCost) - COST_RANK[qualityTier].indexOf(rightCost)
   })[0] ?? ''
+}
+
+function capitalize(value: string): string {
+  return value.length > 0 ? `${value[0].toUpperCase()}${value.slice(1)}` : value
 }
 
 function routingCategory(capability: AiCapabilityDefinition): string {

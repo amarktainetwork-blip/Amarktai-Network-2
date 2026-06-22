@@ -23,6 +23,12 @@ import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 import type { AiCapabilityDefinition, AiCapabilityProviderRoute } from '@/lib/ai-capability-taxonomy'
 import { productCapabilityToTaxonomyId } from '@/lib/capability-routing-policy'
 import {
+  evaluateCapabilityModelCandidate,
+  getCapabilityModelPool,
+  productionAllowedModelsFor,
+  productionPoolRejectionReason,
+} from '@/lib/capability-model-pools'
+import {
   isApprovedDirectProvider,
   sanitizeProviderError,
   type ApprovedDirectProviderId,
@@ -290,6 +296,8 @@ export async function executeCapabilityOrchestration(
 
   const requestedProvider = request.providerOverride ?? request.provider
   const requestedModel = request.modelOverride ?? request.model
+  const poolExecutionMode = isProofExecutionRequest(request) ? 'proof' : 'production'
+  const adultGate = request.adultMode === true && request.safeMode === false
   if (requestedProvider && !isApprovedDirectProvider(requestedProvider)) {
     return capabilityFailure(
       capability,
@@ -382,6 +390,30 @@ export async function executeCapabilityOrchestration(
     )
   }
 
+  if (requestedProvider && requestedModel) {
+    const poolDecision = evaluateCapabilityModelCandidate({
+      capabilityId: taxonomyId,
+      provider: requestedProvider,
+      model: requestedModel,
+      executionMode: poolExecutionMode,
+      adultGate,
+    })
+    if (!poolDecision.allowed) {
+      return capabilityFailure(
+        capability,
+        poolDecision.reason === 'endpoint required' || poolDecision.reason === 'contract missing'
+          ? 'NEEDS_CONFIGURATION'
+          : 'UNAVAILABLE',
+        `${capitalizePoolReason(poolDecision.reason)} for ${taxonomyId}.`,
+        poolDecision.reason === 'endpoint required' || poolDecision.reason === 'contract missing'
+          ? 'provider_misconfigured'
+          : 'no_route_found',
+        requestedProvider,
+        requestedModel,
+      )
+    }
+  }
+
   const routePlan = await planCanonicalExecution({
     capability,
     profile: canonicalRoutingProfile(request),
@@ -396,23 +428,57 @@ export async function executeCapabilityOrchestration(
       durationSeconds: requestedDurationSeconds(request) ?? undefined,
     },
   })
-  const candidates = routePlan.candidates
+  const poolRejectedAttempts: ProviderAttempt[] = []
+  const candidates = routePlan.candidates.filter((candidate) => {
+    const poolDecision = evaluateCapabilityModelCandidate({
+      capabilityId: taxonomyId,
+      provider: candidate.provider,
+      model: candidate.model.id,
+      executionMode: poolExecutionMode,
+      adultGate,
+    })
+    if (poolDecision.allowed) return true
+    poolRejectedAttempts.push({
+      provider: candidate.provider,
+      model: candidate.model.id,
+      adapter: candidate.adapter,
+      outputType: definition.outputType,
+      status: 'failed',
+      classification: poolDecision.reason === 'endpoint required'
+        ? 'endpoint_required'
+        : poolDecision.reason === 'contract missing'
+          ? 'unsupported_by_contract'
+          : 'blocked_by_policy',
+      errorCategory: poolDecision.reason === 'endpoint required' || poolDecision.reason === 'contract missing'
+        ? 'provider_misconfigured'
+        : 'no_route_found',
+      retryable: false,
+      error: `${capitalizePoolReason(poolDecision.reason)} for ${taxonomyId}.`,
+      requestedDurationSeconds: requestedDurationSeconds(request),
+      providerLimitSeconds: providerLimitSeconds(candidate.model.metadata),
+      diagnostics: {
+        poolReason: poolDecision.reason,
+        executionMode: poolExecutionMode,
+      },
+    })
+    return false
+  })
   if (candidates.length === 0) {
     const rejectedAttempts = attemptsFromRejectedCandidates(
       routePlan.rejectedCandidates ?? [],
       definition.outputType,
     )
-    const endpointRequired = rejectedAttempts.some((attempt) =>
-      attempt.classification === 'endpoint_required',
-    )
+    const allRejectedAttempts = [...poolRejectedAttempts, ...rejectedAttempts]
+    const endpointRequired = allRejectedAttempts.some((attempt) => attempt.classification === 'endpoint_required')
+    const missingContract = allRejectedAttempts.some((attempt) => attempt.classification === 'unsupported_by_contract')
     return capabilityFailure(
       capability,
-      endpointRequired ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
-      `NO_ROUTE_FOUND: ${routePlan.reason}`,
-      endpointRequired ? 'provider_misconfigured' : 'no_route_found',
+      endpointRequired || missingContract ? 'NEEDS_CONFIGURATION' : 'UNAVAILABLE',
+      `NO_ROUTE_FOUND: ${productionFailureReason(taxonomyId, poolExecutionMode, routePlan.reason)}`,
+      endpointRequired || missingContract ? 'provider_misconfigured' : 'no_route_found',
       requestedProvider ?? null,
       requestedModel ?? null,
-      rejectedAttempts,
+      allRejectedAttempts,
       'NO_ROUTE_FOUND',
     )
   }
@@ -1313,4 +1379,25 @@ function summarizeDiagnosticValue(value: unknown): unknown {
       .map(([key, item]) => [key, summarizeDiagnosticValue(item)]))
   }
   return value
+}
+
+function isProofExecutionRequest(request: CapabilityRequest): boolean {
+  return request.metadata?.proofMode === true || request.metadata?.executionMode === 'proof'
+}
+
+function productionFailureReason(
+  taxonomyId: string,
+  executionMode: 'production' | 'proof',
+  fallbackReason: string,
+): string {
+  if (executionMode === 'proof') return fallbackReason
+  const pool = getCapabilityModelPool(taxonomyId)
+  if (!pool) return fallbackReason
+  if (productionAllowedModelsFor(taxonomyId).length > 0) return fallbackReason
+  return productionPoolRejectionReason(taxonomyId)
+}
+
+function capitalizePoolReason(reason: string | null): string {
+  const value = reason ?? 'no production-approved model pool candidate'
+  return value.length > 0 ? `${value[0].toUpperCase()}${value.slice(1)}` : value
 }

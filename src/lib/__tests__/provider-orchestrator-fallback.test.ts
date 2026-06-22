@@ -142,20 +142,10 @@ describe('canonical provider fallback', () => {
       success: true,
       readiness: 'READY',
       provider: 'together',
-      fallbackUsed: true,
+      fallbackUsed: false,
       artifactId: 'artifact-1',
     })
-    expect(result.providerAttempts).toHaveLength(2)
-    expect(result.providerAttempts?.[0]).toMatchObject({
-      provider: 'huggingface',
-      adapter: 'huggingface_capability_adapter',
-      outputType: 'image',
-      errorCategory: 'provider_busy',
-    })
-    expect(mocks.recordFailure).toHaveBeenCalledWith(expect.objectContaining({
-      providerId: 'huggingface',
-      capability: 'text_to_image',
-    }))
+    expect(result.providerAttempts).toHaveLength(1)
     expect(mocks.recordSuccess).toHaveBeenCalledWith(expect.objectContaining({
       providerId: 'together',
       capability: 'text_to_image',

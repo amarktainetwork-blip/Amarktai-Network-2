@@ -7,8 +7,8 @@ This is the single checklist we keep updating.
 ## 1. Current Source Of Truth
 
 - Branch: `integration/cline-source-of-truth`
-- Current HEAD: `d568e6d23d5d3f7ce50a84ddd3a22eae05a2584d`
-- Latest VPS proof commit observed in current source truth: `d568e6d proof: refresh VPS media truth diagnostics`
+- Current HEAD: `3d96cee`
+- Latest VPS proof commit observed in current source truth: `3d96cee proof: refresh VPS five-provider baseline`
 - Current VPS proof counts from `V1_25_CAPABILITY_PROOF.md:28-32`:
   - `LIVE_PROVEN: 14`
   - `SOURCE_WIRED: 10`
@@ -130,16 +130,20 @@ Status terms used here:
 - long-form video proof is technical assembly only, not coherent advert quality
 - music/song quality and generation path are not live-proven
 - adult capabilities are not product-quality launch ready
+- image editing still lacks a proven provider-safe replacement route
+- image-to-video still lacks a proven provider-safe replacement route
 
 ### UI/dashboard blockers
 
 - dashboard truth still has duplicated/mixed readiness layers
 - Studio is usable but not final investor/user launch polish
+- dashboard/studio redesign remains a later phase outside Phase 2
 
 ### App-integration blockers
 
 - capability-only signed app execution is not fully proven end to end
 - app agents and self-learning are not yet live enough for launch claims
+- connected apps/agents remain a post-Phase-2 blocker area
 
 ### Policy/adult blockers
 
@@ -157,10 +161,22 @@ Status terms used here:
 
 ### Phase 2 Capability/model pools
 
-- [ ] Define primary/fallback models per capability
-- [ ] Add quality/cost/speed routing rules
-- [ ] Add blacklist for bad models
-- [ ] Add launch-required capability matrix
+- [x] Define primary/fallback models per capability
+- [x] Add quality/cost/speed routing rules
+- [x] Add blacklist for bad models
+- [x] Add launch-required capability matrix
+- [x] Mark production enforcement complete only after tests/typecheck/build/proof verification pass
+
+Phase 2 notes:
+
+- `src/lib/capability-model-pools.ts` now holds the launch-critical model pool truth.
+- Production routing rejects proof-only, admin-only, adult-only without an adult gate, blocked low-quality, blocked missing contract, blocked endpoint-required, catalog-only, and non-pool model selections.
+- `text_to_video_short_clip` remains technical proof only via `grok-imagine-video`; it is not production-ready without a quality gate.
+- `long_form_multi_scene_video_assembly` remains technical assembly proof only.
+- `music_audio_bed_generation` remains local audio-bed assembly only and is not provider-native song generation.
+- `music_song_generation` remains blocked/source-wired until provider-native song generation is live-proven.
+- `image_editing_source_transform` remains source-wired/unproven with endpoint/contract blockers still honest.
+- `image_to_video` remains blocked until a provider-safe GenX/Together/HF contract and proof exist.
 
 ### Phase 3 Core runtime
 

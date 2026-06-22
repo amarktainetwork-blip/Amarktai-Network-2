@@ -327,6 +327,98 @@ describe('capability router contract', () => {
     })
   })
 
+  it('rejects production short-video overrides that are only technical proof or quality-gated', async () => {
+    const result = await executeCapability({
+      input: 'Create a four second cinematic sunrise.',
+      capability: 'video_generation',
+      providerOverride: 'genx',
+      modelOverride: 'grok-imagine-video',
+      saveArtifact: true,
+    })
+
+    expect(result).toMatchObject({
+      success: false,
+      readiness: 'UNAVAILABLE',
+      error_category: 'no_route_found',
+      provider: 'genx',
+      model: 'grok-imagine-video',
+    })
+    expect(result.error).toContain('Technical proof only for text_to_video')
+    expect(mocks.planCanonicalExecution).not.toHaveBeenCalled()
+  })
+
+  it('permits explicit proof-mode short-video execution to reach canonical planning', async () => {
+    mocks.planCanonicalExecution.mockResolvedValue({
+      capability: 'video',
+      profile: 'balanced',
+      code: 'ROUTE_FOUND',
+      reason: 'proof route ready',
+      selected: {
+        provider: 'genx',
+        model: {
+          provider: 'genx',
+          id: 'grok-imagine-video',
+          capabilities: ['video'],
+          capabilityEvidence: 'provider_contract',
+          status: 'available',
+          artifactSupport: true,
+          raw: {},
+          discoveredAt: '2026-06-15T00:00:00.000Z',
+        },
+        score: 100,
+        scoreBreakdown: {},
+        health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+        adapter: 'genx_capability_adapter',
+      },
+      candidates: [{
+        provider: 'genx',
+        model: {
+          provider: 'genx',
+          id: 'grok-imagine-video',
+          capabilities: ['video'],
+          capabilityEvidence: 'provider_contract',
+          status: 'available',
+          artifactSupport: true,
+          raw: {},
+          discoveredAt: '2026-06-15T00:00:00.000Z',
+        },
+        score: 100,
+        scoreBreakdown: {},
+        health: { provider: 'genx', state: 'healthy', configured: true, tested: true, healthy: true },
+        adapter: 'genx_capability_adapter',
+      }],
+    })
+    mocks.getVaultApiKey.mockResolvedValue('configured')
+    mocks.callGenXMedia.mockResolvedValue({
+      success: true,
+      url: 'https://media.example/proof-video.mp4',
+      jobId: null,
+      status: 'completed',
+      model: 'grok-imagine-video',
+      error: null,
+    })
+
+    const result = await executeCapability({
+      input: 'Create a four second cinematic sunrise.',
+      capability: 'video_generation',
+      providerOverride: 'genx',
+      modelOverride: 'grok-imagine-video',
+      saveArtifact: true,
+      metadata: {
+        proofMode: true,
+        executionMode: 'proof',
+      },
+    })
+
+    expect(result).toMatchObject({
+      success: true,
+      readiness: 'READY',
+      provider: 'genx',
+      model: 'grok-imagine-video',
+    })
+    expect(mocks.planCanonicalExecution).toHaveBeenCalled()
+  })
+
   it('reports endpoint-required rerank candidates without attempting blind fallbacks', async () => {
     mocks.planCanonicalExecution.mockResolvedValue({
       capability: 'rerank',
@@ -395,9 +487,9 @@ describe('capability router contract', () => {
       }
     }
     mocks.planCanonicalExecution
-      .mockResolvedValueOnce(route('groq', 'runtime-chat', 'chat'))
-      .mockResolvedValueOnce(route('genx', 'genx-image', 'image'))
-      .mockResolvedValueOnce(route('genx', 'genx-tts', 'tts'))
+      .mockResolvedValueOnce(route('groq', 'llama-3.3-70b-versatile', 'chat'))
+      .mockResolvedValueOnce(route('genx', 'gpt-image-1', 'image'))
+      .mockResolvedValueOnce(route('genx', 'gpt-4o-mini-tts', 'tts'))
     mocks.getVaultApiKey.mockResolvedValue('configured')
     mocks.callProvider.mockResolvedValue({
       ok: true,
@@ -528,7 +620,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'gpt-image-2',
+        id: 'gpt-image-1',
         capabilities: ['image'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -555,7 +647,7 @@ describe('capability router contract', () => {
       url: null,
       jobId: 'provider-image-job-1',
       status: 'pending',
-      model: 'gpt-image-2',
+        model: 'gpt-image-1',
       error: null,
     })
 
@@ -570,7 +662,7 @@ describe('capability router contract', () => {
       success: true,
       readiness: 'READY',
       provider: 'genx',
-      model: 'gpt-image-2',
+      model: 'gpt-image-1',
       status: 'processing',
       providerJobId: 'provider-image-job-1',
       output: null,
@@ -586,7 +678,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'genx-music',
+        id: 'lyria-2',
         capabilities: ['music'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -613,7 +705,7 @@ describe('capability router contract', () => {
       url: null,
       jobId: 'music-job-1',
       status: 'pending',
-      model: 'genx-music',
+      model: 'lyria-2',
       error: null,
     })
 
@@ -622,13 +714,14 @@ describe('capability router contract', () => {
       capability: 'music_generation',
       providerOverride: 'genx',
       saveArtifact: true,
+      metadata: { proofMode: true, executionMode: 'proof' },
     })
 
     expect(result, JSON.stringify(result)).toMatchObject({
       success: true,
       readiness: 'READY',
       provider: 'genx',
-      model: 'genx-music',
+      model: 'lyria-2',
       status: 'processing',
       providerJobId: 'music-job-1',
       output: null,
@@ -643,7 +736,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'genx-music',
+        id: 'lyria-2',
         capabilities: ['music'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -672,7 +765,7 @@ describe('capability router contract', () => {
       contentType: 'audio/mpeg',
       jobId: null,
       status: 'completed',
-      model: 'genx-music',
+      model: 'lyria-2',
       error: null,
     })
 
@@ -681,6 +774,7 @@ describe('capability router contract', () => {
       capability: 'music_generation',
       providerOverride: 'genx',
       saveArtifact: true,
+      metadata: { proofMode: true, executionMode: 'proof' },
     })
 
     expect(result).toMatchObject({
@@ -688,7 +782,7 @@ describe('capability router contract', () => {
       readiness: 'READY',
       artifactId: 'artifact-1',
       provider: 'genx',
-      model: 'genx-music',
+      model: 'lyria-2',
     })
     expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
       type: 'music',
@@ -703,7 +797,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'genx-music',
+        id: 'lyria-2',
         capabilities: ['music'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -732,7 +826,7 @@ describe('capability router contract', () => {
       contentType: 'audio/wav',
       jobId: null,
       status: 'completed',
-      model: 'genx-music',
+      model: 'lyria-2',
       error: null,
     })
 
@@ -741,6 +835,7 @@ describe('capability router contract', () => {
       capability: 'music_generation',
       providerOverride: 'genx',
       saveArtifact: true,
+      metadata: { proofMode: true, executionMode: 'proof' },
     })
 
     expect(result).toMatchObject({
@@ -755,7 +850,7 @@ describe('capability router contract', () => {
     }))
   })
 
-  it('persists Hugging Face music endpoint audio bytes as local artifacts', async () => {
+  it('keeps Hugging Face music endpoint audio bytes blocked in production without promotion to launch-ready', async () => {
     process.env.HF_ENDPOINT_MUSIC_GENERATION = 'https://hf.example/music'
     const audioBytes = Buffer.from('hf-audio-bytes')
     const selected = {
@@ -802,17 +897,11 @@ describe('capability router contract', () => {
     })
 
     expect(result, JSON.stringify(result)).toMatchObject({
-      success: true,
-      readiness: 'READY',
-      artifactId: 'artifact-1',
+      success: false,
+      readiness: 'NEEDS_CONFIGURATION',
       provider: 'huggingface',
-      model: 'facebook/musicgen-small',
     })
-    expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'music',
-      content: audioBytes,
-      mimeType: 'audio/wav',
-    }))
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
 
   it('skips Hugging Face music candidates that require an endpoint and falls back truthfully', async () => {
@@ -838,7 +927,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'genx-music',
+        id: 'lyria-2',
         capabilities: ['music'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -867,7 +956,7 @@ describe('capability router contract', () => {
       contentType: 'audio/mpeg',
       jobId: null,
       status: 'completed',
-      model: 'genx-music',
+      model: 'lyria-2',
       error: null,
     })
 
@@ -878,21 +967,21 @@ describe('capability router contract', () => {
     })
 
     expect(result, JSON.stringify(result)).toMatchObject({
-      success: true,
-      readiness: 'READY',
-      provider: 'genx',
+      success: false,
+      readiness: 'NEEDS_CONFIGURATION',
       fallbackUsed: true,
     })
     expect(result.providerAttempts?.[0]).toMatchObject({
       provider: 'huggingface',
-      status: 'needs_configuration',
+      status: 'failed',
       errorCategory: 'provider_misconfigured',
     })
-    expect(result.providerAttempts?.[0].error).toContain('HF_ENDPOINT_MUSIC_GENERATION')
+    expect(result.providerAttempts?.[0].error).toContain('Endpoint required for music_generation.')
     expect(result.providerAttempts?.[0].error).not.toContain('No canonical adapter contract')
     expect(result.providerAttempts?.[1]).toMatchObject({
       provider: 'genx',
-      status: 'completed',
+      status: 'failed',
+      classification: 'blocked_by_policy',
     })
   })
 
@@ -901,7 +990,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'genx-music',
+        id: 'lyria-2',
         capabilities: ['music'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -930,7 +1019,7 @@ describe('capability router contract', () => {
       contentType: null,
       jobId: null,
       status: 'completed',
-      model: 'genx-music',
+      model: 'lyria-2',
       error: 'Gemini returned no audio data',
     })
 
@@ -944,11 +1033,11 @@ describe('capability router contract', () => {
     expect(result).toMatchObject({
       success: false,
       readiness: 'UNAVAILABLE',
-      error: 'No configured music provider has a working music_generation adapter that returned audio.',
+      error: 'NO_ROUTE_FOUND: endpoint required',
     })
     expect(result.providerAttempts?.[0]).toMatchObject({
       provider: 'genx',
-      error: 'Provider returned no audio bytes, audio URL, or pollable audio job. Provider message: Gemini returned no audio data',
+      error: 'Technical proof only for music_generation.',
     })
     expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
@@ -958,7 +1047,7 @@ describe('capability router contract', () => {
       provider: 'genx',
       model: {
         provider: 'genx',
-        id: 'gpt-image-2',
+        id: 'gpt-image-1',
         capabilities: ['image'],
         capabilityEvidence: 'provider_contract',
         status: 'available',
@@ -985,7 +1074,7 @@ describe('capability router contract', () => {
       url: 'https://media.example/genx.png',
       jobId: null,
       status: 'completed',
-      model: 'gpt-image-2',
+        model: 'gpt-image-1',
       error: null,
     })
 
@@ -1000,7 +1089,7 @@ describe('capability router contract', () => {
       success: true,
       readiness: 'READY',
       provider: 'genx',
-      model: 'gpt-image-2',
+      model: 'gpt-image-1',
     })
   })
 })
