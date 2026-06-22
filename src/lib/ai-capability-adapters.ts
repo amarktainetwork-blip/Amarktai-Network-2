@@ -473,6 +473,7 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
   const key = await getVaultApiKey(provider)
   const isVideo = input.capability.group === 'video'
   const imageReference = firstReference(input, ['image'])
+  const isImageEdit = input.capability.id === 'image_edit' || input.capability.id === 'image_to_image' || input.capability.id === 'image_text_to_image'
   const isImageToVideo = isVideo && (
     input.capability.id === 'image_to_video'
     || input.capability.id === 'image_text_to_video'
@@ -509,17 +510,26 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
   if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
   const videoReference = firstReference(input, ['video'])
   const isWanxImage = !isVideo && model.startsWith('wanx')
-  const endpoint = qwenAigcEndpoint(isVideo ? 'video' : model.startsWith('wanx') ? 'wanx_image' : 'qwen_image')
+  const endpoint = qwenAigcEndpoint(isVideo ? 'video' : isImageEdit ? 'image_edit' : model.startsWith('wanx') ? 'wanx_image' : 'qwen_image')
   const body = isVideo
     ? {
         model,
         input: {
           prompt: input.prompt,
-          ...(imageReference?.url ? { img_url: imageReference.url } : {}),
+          ...(imageReference?.url ? { img_url: imageReference.url, image_url: imageReference.url } : {}),
           ...(videoReference?.url ? { video_url: videoReference.url } : {}),
         },
         parameters: providerSafeVideoParameters(videoContract!, input.inputs ?? {}),
       }
+    : isImageEdit
+      ? {
+          model,
+          input: {
+            prompt: input.prompt,
+            ...(imageReference?.url ? { image_url: imageReference.url, img_url: imageReference.url } : {}),
+          },
+          parameters: input.inputs ?? {},
+        }
     : isWanxImage
       ? {
           model,
@@ -574,10 +584,11 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
   }
 }
 
-function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image'): string {
+function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image' | 'image_edit'): string {
   const root = resolveProviderEndpoint(getProviderTruth('qwen')!, 'aigc')
   if (kind === 'video') return `${root}/services/aigc/video-generation/video-synthesis`
   if (kind === 'wanx_image') return `${root}/services/aigc/text2image/image-synthesis`
+  if (kind === 'image_edit') return `${root}/services/aigc/multimodal-generation/generation`
   return `${root}/services/aigc/multimodal-generation/generation`
 }
 

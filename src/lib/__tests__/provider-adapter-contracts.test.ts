@@ -104,6 +104,30 @@ describe('provider adapter contracts', () => {
     expect(init.headers).toMatchObject({ Authorization: 'Bearer provider-secret' })
   })
 
+  it('uses source-image fields for Qwen image edit requests', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      output: { choices: [{ message: { content: [{ image: 'https://cdn.example/qwen-edit.png' }] } }] },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('qwen')!.execute({
+      ...adapterInput('image_text_to_image', 'qwen', 'qwen-image-edit'),
+      references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
+      prompt: 'Make the source image warmer.',
+    })
+
+    expect(result.status).toBe('completed')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/services/aigc/multimodal-generation/generation')
+    const body = JSON.parse(String(init.body))
+    expect(body.model).toBe('qwen-image-edit')
+    expect(body.input).toMatchObject({
+      prompt: 'Make the source image warmer.',
+      image_url: 'https://cdn.example/source.png',
+      img_url: 'https://cdn.example/source.png',
+    })
+  })
+
   it('normalizes DashScope aliases and preserves Qwen auth/env truth', () => {
     const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
 
@@ -629,6 +653,34 @@ describe('provider adapter contracts', () => {
     expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
       taskId: 'qwen-task-1',
       model: 'wan2.1-t2v-turbo',
+    })
+  })
+
+  it('sends both img_url and image_url for Qwen image-to-video starts', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      output: { task_id: 'qwen-i2v-task-1' },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('qwen')!.execute({
+      ...adapterInput('image_to_video', 'qwen', 'wan2.1-i2v-turbo'),
+      references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
+      prompt: 'Animate the source image.',
+    })
+
+    expect(result).toMatchObject({
+      status: 'processing',
+      provider: 'qwen',
+      model: 'wan2.1-i2v-turbo',
+      providerJobId: 'qwen-i2v-task-1',
+    })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/services/aigc/video-generation/video-synthesis')
+    const body = JSON.parse(String(init.body))
+    expect(body.input).toMatchObject({
+      prompt: 'Animate the source image.',
+      img_url: 'https://cdn.example/source.png',
+      image_url: 'https://cdn.example/source.png',
     })
   })
 
