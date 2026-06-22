@@ -68,7 +68,7 @@ export async function runHuggingFaceInference(params: {
 
   const url = params.endpointUrl?.trim()
     ? params.endpointUrl.trim()
-    : `https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`
+    : `https://router.huggingface.co/hf-inference/models/${encodeURIComponent(model)}`
 
   try {
     const response = await fetch(url, {

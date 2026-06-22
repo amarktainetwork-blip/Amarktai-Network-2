@@ -137,7 +137,7 @@ describe('Phase 1 provider truth layer', () => {
       paidEnabledEnv: 'QWEN_PAID_ENABLED',
     })
     expect(resolveProviderEndpoint(mimo, 'token_plan'))
-      .toBe('https://api.xiaomimimo.com/v1')
+      .toBe('https://token-plan-sgp.xiaomimimo.com/v1')
     expect(resolveProviderEndpoint(genx, 'async_generation'))
       .toBe('https://query.genx.sh/api/v1')
     expect(resolveProviderEndpoint(genx, 'streaming_text'))
@@ -231,6 +231,28 @@ describe('Phase 1 provider truth layer', () => {
     })
   })
 
+  it('uses bounded Hugging Face pagination and normalizes more than a tiny curated subset', async () => {
+    mocks.getProviderKeyWithSource.mockResolvedValue({ key: null, source: 'missing' })
+    const page = (offset: number, count: number) => Array.from({ length: count }, (_, index) => ({
+      id: `org/model-${offset + index}`,
+      pipeline_tag: index % 2 === 0 ? 'text-generation' : 'text-to-image',
+      tags: index % 2 === 0 ? ['instruct'] : ['diffusion'],
+      available: true,
+    }))
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(page(0, 100)), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page(100, 100)), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(page(200, 40)), { status: 200 }))
+
+    const snapshot = await discoverProvider('huggingface', { fetcher, force: true })
+
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(snapshot.rawCatalogCount).toBe(240)
+    expect(snapshot.models.length).toBeGreaterThan(15)
+    expect(snapshot.models.some((model) => model.capabilities.includes('chat'))).toBe(true)
+    expect(snapshot.models.some((model) => model.capabilities.includes('image'))).toBe(true)
+  })
+
   it('maps Hugging Face auth aliases through canonical provider config', () => {
     process.env.HF_TOKEN = 'hf-token-value'
 
@@ -262,6 +284,44 @@ describe('Phase 1 provider truth layer', () => {
       executionClassification: 'endpoint_required',
       endpointEnv: 'HF_ENDPOINT_RERANK',
     })
+  })
+
+  it('keeps Hugging Face TTS, STT, and image edit specialist blockers aligned in normalized discovery', () => {
+    const models = normalizeProviderCatalog('huggingface', [
+      { id: 'org/runtime-image-edit', pipeline_tag: 'image-to-image', available: true },
+      { id: 'org/runtime-tts', pipeline_tag: 'text-to-speech', available: true },
+      { id: 'org/runtime-asr', pipeline_tag: 'automatic-speech-recognition', available: true },
+    ])
+
+    expect(models.find((model) => model.id === 'org/runtime-image-edit')?.metadata).toMatchObject({
+      executable: 'REQUIRES_DEDICATED_ENDPOINT',
+      executionClassification: 'endpoint_required',
+      endpointEnv: 'HF_ENDPOINT_IMAGE_EDIT',
+    })
+    expect(models.find((model) => model.id === 'org/runtime-tts')?.metadata).toMatchObject({
+      executable: 'REQUIRES_DEDICATED_ENDPOINT',
+      executionClassification: 'endpoint_required',
+      endpointEnv: 'HF_ENDPOINT_TTS',
+    })
+    expect(models.find((model) => model.id === 'org/runtime-asr')?.metadata).toMatchObject({
+      executable: 'REQUIRES_DEDICATED_ENDPOINT',
+      executionClassification: 'endpoint_required',
+      endpointEnv: 'HF_ENDPOINT_STT',
+    })
+  })
+
+  it('allows bounded Hugging Face provider-contract fallback without making specialist routes executable', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify([
+      { id: 'org/runtime-text-model', available: true },
+    ]), { status: 200 }))
+    const snapshot = await discoverProvider('huggingface', { fetcher, capability: 'translation', force: true })
+
+    expect(modelsForCapability(snapshot, 'translation').some((model) =>
+      model.id === 'org/runtime-text-model'
+      && model.capabilityEvidence === 'provider_contract'
+      && model.capabilities.includes('translation'),
+    )).toBe(true)
+    expect(modelsForCapability(snapshot, 'rerank')).toEqual([])
   })
 
   it('caches provider discovery and does not invent fallback models', async () => {
@@ -381,8 +441,32 @@ describe('Phase 1 provider truth layer', () => {
       ['mimo/runtime-agent', ['agents']],
       ['mimo/runtime-code', ['coding']],
     ])
-    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executionClassification).toBe('executable')
+    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executionClassification).toBe('blocked_by_policy')
+    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata?.executable).toBe('CATALOG_ONLY')
     expect(models.find((model) => model.id === 'mimo/runtime-vision')?.metadata?.executionClassification).toBe('executable')
+  })
+
+  it('keeps MiMo specialist routes catalog-visible but not executable while the runtime flag is disabled', () => {
+    const models = normalizeProviderCatalog('mimo', {
+      data: [
+        { id: 'mimo/runtime-tts', type: 'speech-generation', available: true },
+        { id: 'mimo/runtime-asr', type: 'speech-to-text', available: true },
+        { id: 'mimo/runtime-agent', type: 'tool-calling', available: true },
+      ],
+    })
+
+    expect(models.find((model) => model.id === 'mimo/runtime-tts')?.metadata).toMatchObject({
+      executable: 'CATALOG_ONLY',
+      executionClassification: 'blocked_by_policy',
+    })
+    expect(models.find((model) => model.id === 'mimo/runtime-asr')?.metadata).toMatchObject({
+      executable: 'CATALOG_ONLY',
+      executionClassification: 'blocked_by_policy',
+    })
+    expect(models.find((model) => model.id === 'mimo/runtime-agent')?.metadata).toMatchObject({
+      executable: 'ADAPTER_MISSING',
+      executionClassification: 'adapter_missing',
+    })
   })
 
   it('does not fabricate MiMo unsupported routes from empty catalogs', async () => {

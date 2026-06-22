@@ -31,7 +31,7 @@ export async function syncHuggingFaceCatalog(input?: {
   includeAdultCandidates?: boolean
 }) {
   const tasks = input?.tasks?.length ? input.tasks : [...TASKS]
-  const limit = Math.min(Math.max(input?.limitPerTask ?? 12, 1), 50)
+  const limit = Math.min(Math.max(input?.limitPerTask ?? 24, 1), 100)
   const approvedModels = configuredApprovedModels()
   const results: Array<{ task: string; discovered: number; stored: number; error: string | null }> = []
   for (const task of tasks) {

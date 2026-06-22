@@ -173,7 +173,7 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     auth: { header: 'api-key', prefix: '' },
     endpoints: [{
       family: 'token_plan',
-      baseUrl: 'https://api.xiaomimimo.com/v1',
+      baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
       baseUrlEnv: 'MIMO_BASE_URL',
     }],
     discovery: {

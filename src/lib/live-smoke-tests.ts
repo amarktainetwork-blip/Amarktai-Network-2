@@ -120,7 +120,7 @@ async function smokeTestGenX(apiKey: string): Promise<{ ok: boolean; latencyMs: 
  * Hugging Face smoke test — uses the HF Inference API with a small text model.
  */
 async function smokeTestHuggingFace(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const model = process.env.HF_SMOKE_MODEL?.trim() || 'meta-llama/Llama-3.1-8B-Instruct'
+  const model = process.env.HF_SMOKE_MODEL?.trim() || 'mistralai/Mistral-7B-Instruct-v0.3'
   const start = Date.now()
   try {
     const res = await fetch(`https://router.huggingface.co/v1/chat/completions`, {

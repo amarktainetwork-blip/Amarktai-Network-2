@@ -122,9 +122,9 @@ const CHEAP_TEXT_FALLBACKS: AiRouteCandidate[] = [
   { provider: 'qwen', model: 'qwen-plus', displayName: 'Qwen Plus', costTier: 'very_low', reason: 'Cheap capable multilingual/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'qwen', model: 'qwen-turbo', displayName: 'Qwen Turbo', costTier: 'very_low', reason: 'Very low-cost fast chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'groq', model: 'llama-3.3-70b-versatile', displayName: 'Groq Llama 3.3 70B', costTier: 'low', reason: 'Fast low-cost open model for chat and coding support.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'mimo', model: 'mimo-v2-flash', displayName: 'MiMo V2 Flash', costTier: 'low', reason: 'Low-cost multimodal app/chat/coding route.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'together', model: 'meta-llama/Llama-3-70b-chat-hf', displayName: 'Together Llama 3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'huggingface', model: 'meta-llama/Llama-3.1-8B-Instruct', displayName: 'HF Llama 3.1 8B', costTier: 'free', reason: 'Hugging Face serverless/custom-model fallback.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'mimo', model: 'mimo-v2.5', displayName: 'MiMo V2.5', costTier: 'low', reason: 'Low-cost MiMo chat/coding route when generic text execution is available.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'together', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', displayName: 'Together Llama 3.3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'huggingface', model: 'mistralai/Mistral-7B-Instruct-v0.3', displayName: 'HF Mistral 7B Instruct', costTier: 'free', reason: 'Hugging Face router-model fallback with canonical text metadata.', enabled: true, configured: false, blocked: false, blocker: null },
 ]
 
 const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = [

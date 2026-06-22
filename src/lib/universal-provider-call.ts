@@ -40,7 +40,7 @@ const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
   },
   mimo: {
     providerKey: 'mimo',
-    baseUrl: 'https://api.xiaomimimo.com/v1',
+    baseUrl: 'https://token-plan-sgp.xiaomimimo.com/v1',
     envVars: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
     defaultModel: 'mimo-v2.5',
     timeoutMs: 35_000,

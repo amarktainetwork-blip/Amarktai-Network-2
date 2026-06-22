@@ -58,7 +58,7 @@ export function evaluateProviderCapabilityContract(input: {
   const requiresSpecialistEndpoint = provider.id === 'huggingface'
     && (
       model.metadata?.routeType === 'hf_specialist_endpoint'
-      || ['rerank', 'video', 'image_to_video', 'music', 'adult_video'].includes(capability.id)
+      || ['rerank', 'image_edit', 'video', 'image_to_video', 'music', 'tts', 'stt', 'adult_video'].includes(capability.id)
     )
     && !hfSpecialistConfigured(capability.id)
   const requiresDedicatedEndpoint = model.metadata?.executable === 'REQUIRES_DEDICATED_ENDPOINT'

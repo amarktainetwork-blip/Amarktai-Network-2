@@ -84,7 +84,9 @@ export function modelsForCapability(
 }
 
 function providerContractEligible(provider: ProviderId, capability: CapabilityId) {
-  if (provider === 'huggingface') return false
+  if (provider === 'huggingface') {
+    return ['chat', 'reasoning', 'coding', 'image', 'embeddings', 'translation', 'documents', 'vision', 'ocr', 'adult_image', 'adult_video'].includes(capability)
+  }
   if (provider === 'groq') return ['chat', 'reasoning', 'coding', 'tts', 'stt'].includes(capability)
   if (provider === 'mimo') return ['chat', 'reasoning', 'coding', 'tts'].includes(capability)
   if (provider === 'qwen') return ['chat', 'reasoning', 'coding', 'translation', 'embeddings', 'image', 'video'].includes(capability)

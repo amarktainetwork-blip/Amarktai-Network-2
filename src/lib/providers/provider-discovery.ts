@@ -7,6 +7,10 @@ import {
   GENX_VIDEO_MODELS,
   normalizeGenXBaseUrl,
 } from '@/lib/genx-client'
+import {
+  ADULT_IMAGE_MODELS,
+  ADULT_VIDEO_MODELS,
+} from '@/lib/adult-model-catalog'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
 import { VIDEO_MODEL_CONTRACTS } from '@/lib/video-route-specs'
@@ -22,6 +26,9 @@ import type {
 } from './provider-types'
 
 const discoveryCache = new ProviderDiscoveryCache<ProviderDiscoverySnapshot>()
+const HUGGINGFACE_DISCOVERY_PAGE_LIMIT = 100
+const HUGGINGFACE_DISCOVERY_MAX_PAGES = 3
+const HUGGINGFACE_CURATED_FALLBACK_COUNT = 24
 
 const HF_PIPELINE_TASK: Partial<Record<CapabilityId, string>> = {
   chat: 'text-generation',
@@ -157,6 +164,25 @@ const HF_CURATED_MODELS: Array<{
   { id: 'Wan-AI/Wan2.1-T2V-14B', task: 'text-to-video', capabilities: ['adult_video'], routeType: 'policy_gated_candidate', safetyPolicy: 'adult_gate_required', safetyNotes: 'Adult video candidate only when explicit adult policy/app gate allows it and specialist endpoint is configured.' },
 ]
 
+const HF_ADULT_POLICY_CANDIDATES = [
+  ...ADULT_IMAGE_MODELS.map((model) => ({
+    id: model.id,
+    task: 'text-to-image',
+    capabilities: ['adult_image'] as CapabilityId[],
+    routeType: 'policy_gated_candidate' as const,
+    safetyPolicy: 'adult_gate_required' as const,
+    safetyNotes: `${model.label}. Adult-gated candidate only; requires app/provider approval and safety review before execution.`,
+  })),
+  ...ADULT_VIDEO_MODELS.map((model) => ({
+    id: model.id,
+    task: 'text-to-video',
+    capabilities: ['adult_video'] as CapabilityId[],
+    routeType: 'policy_gated_candidate' as const,
+    safetyPolicy: 'adult_gate_required' as const,
+    safetyNotes: `${model.label}. Adult-gated candidate only; requires specialist endpoint and explicit policy approval before execution.`,
+  })),
+]
+
 const HF_CORE_MODEL_ALLOWLIST = new Set(HF_CURATED_MODELS.map((model) => model.id))
 
 type FetchLike = typeof fetch
@@ -234,7 +260,9 @@ export async function discoverProvider(
       : { Accept: 'application/json' }
     const rawRecords = providerId === 'genx'
       ? await fetchGenxCategoryRecords(endpoint, headers, options.fetcher ?? fetch)
-      : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
+      : providerId === 'huggingface'
+        ? await fetchHuggingFaceDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
+        : await fetchDiscoveryRecords(endpoint, headers, options.fetcher ?? fetch)
     const records = providerId === 'huggingface'
       ? curateHuggingFaceRecords(rawRecords, options.capability)
       : mergeProviderContractRecords(providerId, rawRecords, options.capability)
@@ -333,6 +361,24 @@ function curateHuggingFaceRecords(
   capability?: CapabilityId,
 ): Record<string, unknown>[] {
   if (records.length === 0) return []
+  const expanded = records.filter((record) => {
+    const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
+    if (!id) return false
+    if (HF_CORE_MODEL_ALLOWLIST.has(id)) return true
+    const descriptor = [
+      id,
+      firstString(record.pipeline_tag, record.task, record.type, record.category) ?? '',
+      ...stringList(record.tasks, record.tags),
+      firstString(record.description) ?? '',
+    ].join(' ').toLowerCase()
+    const matched = descriptorCapabilities('huggingface', id, descriptor)
+    const inferred = inferProviderContractCapabilities('huggingface', id, descriptor, record)
+    if (!capability) return matched.length > 0 || inferred.length > 0
+    if (matched.includes(capability) || inferred.includes(capability)) return true
+    if (capability === 'adult_image') return /nsfw|adult|uncensored|realvisxl|dreamshaper|sdxl|flux/i.test(`${id} ${descriptor}`)
+    if (capability === 'adult_video') return /nsfw|adult|uncensored|wan|ltx/i.test(`${id} ${descriptor}`)
+    return false
+  })
   const curated = records.filter((record) => {
     const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
     if (!id) return false
@@ -346,11 +392,12 @@ function curateHuggingFaceRecords(
     }
     return false
   })
-  const filtered = curated.length > 0 ? curated : records.slice(0, 12)
+  const filtered = dedupeRecordsById([...expanded, ...curated])
+  const bounded = filtered.length > 0 ? filtered : records.slice(0, HUGGINGFACE_CURATED_FALLBACK_COUNT)
   const existing = new Set(filtered.map((record) =>
     firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name),
   ).filter((value): value is string => Boolean(value)))
-  const curatedDefaults = HF_CURATED_MODELS
+  const curatedDefaults = [...HF_CURATED_MODELS, ...HF_ADULT_POLICY_CANDIDATES]
     .filter((model) => !capability || model.capabilities.includes(capability))
     .filter((model) => !existing.has(model.id))
     .map((model) => ({
@@ -368,7 +415,17 @@ function curateHuggingFaceRecords(
       safetyNotes: model.safetyNotes,
       adult: model.safetyPolicy === 'adult_gate_required',
     }))
-  return [...filtered, ...curatedDefaults]
+  return [...bounded, ...curatedDefaults]
+}
+
+function dedupeRecordsById(records: Record<string, unknown>[]) {
+  const deduped = new Map<string, Record<string, unknown>>()
+  for (const record of records) {
+    const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
+    if (!id || deduped.has(id)) continue
+    deduped.set(id, record)
+  }
+  return [...deduped.values()]
 }
 
 function mergeProviderContractRecords(
@@ -615,8 +672,11 @@ function normalizeModel(
   const durationLimit = MUSIC_DURATION_LIMITS[provider.id] && capabilities.includes('music')
     ? MUSIC_DURATION_LIMITS[provider.id]!
     : null
+  const mimoRuntimeFlagDisabled = provider.id === 'mimo'
+    && capabilities.some((capability) => ['tts', 'stt', 'agents'].includes(capability))
+    && process.env.MIMO_RUNTIME_API_ENABLED?.trim().toLowerCase() !== 'true'
   const requiresDedicatedEndpoint = routeType === 'hf_specialist_endpoint'
-    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'rerank' || capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'adult_video')
+    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'rerank' || capability === 'image_edit' || capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'tts' || capability === 'stt' || capability === 'adult_video')
     || provider.id === 'together' && capabilities.some((capability) => capability === 'rerank')
   const adapterMissing = provider.id === 'mimo'
     && capabilities.some((capability) => ['image', 'agents'].includes(capability))
@@ -624,6 +684,8 @@ function normalizeModel(
     && capabilities.some((capability) => ['tts', 'stt'].includes(capability))
   const executableState = adapterMissing
     ? 'ADAPTER_MISSING'
+    : mimoRuntimeFlagDisabled
+    ? 'CATALOG_ONLY'
     : routeType === 'hf_specialist_endpoint'
     ? 'REQUIRES_DEDICATED_ENDPOINT'
     : routeType === 'policy_gated_candidate'
@@ -678,6 +740,9 @@ function executionClassificationFor(
   if (executable === true || executable === 'candidate') return 'executable'
   if (executable === 'REQUIRES_DEDICATED_ENDPOINT') return 'endpoint_required'
   if (executable === 'ADAPTER_MISSING') return 'adapter_missing'
+  if (executable === 'CATALOG_ONLY' && input.provider === 'mimo' && input.capabilities.some((capability) => ['tts', 'stt', 'agents'].includes(capability))) {
+    return 'blocked_by_policy'
+  }
   if (executable === 'CATALOG_ONLY') return input.routeType === 'policy_gated_candidate'
     ? 'blocked_by_policy'
     : 'unsupported_by_contract'
@@ -688,9 +753,12 @@ function executionClassificationFor(
 function endpointEnvFor(provider: ProviderId, capabilities: CapabilityId[]): string | null {
   if (provider === 'huggingface') {
     if (capabilities.includes('rerank')) return 'HF_ENDPOINT_RERANK'
+    if (capabilities.includes('image_edit')) return 'HF_ENDPOINT_IMAGE_EDIT'
     if (capabilities.includes('music')) return 'HF_ENDPOINT_MUSIC_GENERATION'
     if (capabilities.includes('video') || capabilities.includes('adult_video')) return 'HF_ENDPOINT_TEXT_TO_VIDEO'
     if (capabilities.includes('image_to_video')) return 'HF_ENDPOINT_IMAGE_TO_VIDEO'
+    if (capabilities.includes('tts')) return 'HF_ENDPOINT_TTS'
+    if (capabilities.includes('stt')) return 'HF_ENDPOINT_STT'
   }
   if (provider === 'together' && capabilities.includes('rerank')) {
     return 'TOGETHER_DEDICATED_ENDPOINTS_JSON'
@@ -712,6 +780,29 @@ async function fetchDiscoveryRecords(
   })
   if (!response.ok) throw new Error(`Discovery returned HTTP ${response.status}.`)
   return modelRecords(await response.json() as unknown)
+}
+
+async function fetchHuggingFaceDiscoveryRecords(
+  endpoint: string,
+  headers: Record<string, string>,
+  fetcher: FetchLike,
+) {
+  const records = new Map<string, Record<string, unknown>>()
+  for (let page = 0; page < HUGGINGFACE_DISCOVERY_MAX_PAGES; page += 1) {
+    const url = new URL(endpoint)
+    url.searchParams.set('limit', String(HUGGINGFACE_DISCOVERY_PAGE_LIMIT))
+    url.searchParams.set('full', 'true')
+    url.searchParams.set('sort', 'downloads')
+    url.searchParams.set('direction', '-1')
+    url.searchParams.set('offset', String(page * HUGGINGFACE_DISCOVERY_PAGE_LIMIT))
+    const batch = await fetchDiscoveryRecords(url.toString(), headers, fetcher)
+    for (const record of batch) {
+      const id = firstString(record.id, record.model, record.modelId, record.model_id, record.slug, record.name)
+      if (id) records.set(id, record)
+    }
+    if (batch.length < HUGGINGFACE_DISCOVERY_PAGE_LIMIT) break
+  }
+  return [...records.values()]
 }
 
 async function fetchGenxCategoryRecords(
