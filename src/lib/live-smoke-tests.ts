@@ -12,7 +12,6 @@
  * Providers covered:
  *   - GenX
  *   - Hugging Face
- *   - Qwen / DashScope
  *   - Xiaomi MiMo
  *   - Groq
  *   - Together AI
@@ -58,7 +57,6 @@ export interface ProviderSmokeResult {
 const PROVIDER_CAPABILITY_GROUPS: Record<ApprovedDirectProviderId, string[]> = {
   genx: ['text', 'image', 'video', 'audio', 'tts', 'stt', 'music', 'avatar'],
   huggingface: ['text', 'image', 'audio', 'stt', 'embeddings'],
-  qwen: ['text', 'image', 'video', 'audio', 'embeddings'],
   mimo: ['text', 'reasoning', 'vision', 'audio', 'tts', 'stt'],
   groq: ['text', 'reasoning', 'stt', 'tts'],
   together: ['text', 'image', 'embeddings', 'rerank'],
@@ -149,16 +147,6 @@ async function smokeTestHuggingFace(apiKey: string): Promise<{ ok: boolean; late
 }
 
 /**
- * Qwen / DashScope smoke test — uses the DashScope compatible OpenAI endpoint.
- */
-async function smokeTestQwen(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
-  const model = process.env.QWEN_SMOKE_MODEL?.trim() || 'qwen-turbo'
-  const baseUrl = process.env.QWEN_BASE_URL?.trim() || process.env.DASHSCOPE_BASE_URL?.trim() || 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
-  const result = await probeTextProvider(baseUrl, apiKey, model)
-  return { ...result, model }
-}
-
-/**
  * MiMo smoke test — uses the Xiaomi MiMo OpenAI-compatible endpoint.
  */
 async function smokeTestMiMo(apiKey: string): Promise<{ ok: boolean; latencyMs: number; error: string | null; model: string }> {
@@ -191,7 +179,6 @@ async function smokeTestTogether(apiKey: string): Promise<{ ok: boolean; latency
 const SMOKE_CAPABILITY: Record<ApprovedDirectProviderId, string> = {
   genx: 'chat/text',
   huggingface: 'chat/text',
-  qwen: 'chat/text',
   mimo: 'chat/text',
   groq: 'chat/text',
   together: 'chat/text',
@@ -209,7 +196,6 @@ async function runProviderSmokeTest(
   switch (id) {
     case 'genx': return smokeTestGenX(apiKey)
     case 'huggingface': return smokeTestHuggingFace(apiKey)
-    case 'qwen': return smokeTestQwen(apiKey)
     case 'mimo': return smokeTestMiMo(apiKey)
     case 'groq': return smokeTestGroq(apiKey)
     case 'together': return smokeTestTogether(apiKey)

@@ -51,36 +51,36 @@ const SURFACE_PROFILE: Record<RoutingSurface, string> = {
 
 const PROVIDER_ORDER: Record<StoredRoutingQualityTier, Record<string, ApprovedDirectProviderId[]>> = {
   cheap: {
-    text: ['groq', 'qwen', 'together', 'huggingface', 'mimo', 'genx'],
-    image: ['huggingface', 'together', 'qwen', 'genx', 'mimo', 'groq'],
-    video: ['qwen', 'genx', 'together', 'huggingface', 'mimo', 'groq'],
-    audio: ['groq', 'huggingface', 'qwen', 'mimo', 'genx', 'together'],
-    music: ['huggingface', 'genx', 'qwen', 'together', 'mimo', 'groq'],
-    data: ['huggingface', 'qwen', 'together', 'genx', 'mimo', 'groq'],
+    text: ['groq', 'together', 'huggingface', 'mimo', 'genx'],
+    image: ['huggingface', 'together', 'genx', 'mimo', 'groq'],
+    video: ['genx', 'together', 'huggingface', 'mimo', 'groq'],
+    audio: ['groq', 'huggingface', 'mimo', 'genx', 'together'],
+    music: ['huggingface', 'genx', 'together', 'mimo', 'groq'],
+    data: ['huggingface', 'together', 'genx', 'mimo', 'groq'],
   },
   balanced: {
-    text: ['qwen', 'mimo', 'groq', 'together', 'genx', 'huggingface'],
-    image: ['qwen', 'together', 'genx', 'huggingface', 'mimo', 'groq'],
-    video: ['qwen', 'genx', 'together', 'huggingface', 'mimo', 'groq'],
-    audio: ['groq', 'genx', 'huggingface', 'qwen', 'mimo', 'together'],
-    music: ['genx', 'huggingface', 'qwen', 'together', 'mimo', 'groq'],
-    data: ['qwen', 'huggingface', 'together', 'genx', 'mimo', 'groq'],
+    text: ['mimo', 'groq', 'together', 'genx', 'huggingface'],
+    image: ['together', 'genx', 'huggingface', 'mimo', 'groq'],
+    video: ['genx', 'together', 'huggingface', 'mimo', 'groq'],
+    audio: ['groq', 'genx', 'huggingface', 'mimo', 'together'],
+    music: ['genx', 'huggingface', 'together', 'mimo', 'groq'],
+    data: ['huggingface', 'together', 'genx', 'mimo', 'groq'],
   },
   premium: {
-    text: ['genx', 'mimo', 'qwen', 'together', 'groq', 'huggingface'],
-    image: ['genx', 'qwen', 'together', 'huggingface', 'mimo', 'groq'],
-    video: ['genx', 'qwen', 'together', 'huggingface', 'mimo', 'groq'],
-    audio: ['genx', 'huggingface', 'groq', 'qwen', 'mimo', 'together'],
-    music: ['genx', 'huggingface', 'qwen', 'together', 'mimo', 'groq'],
-    data: ['genx', 'qwen', 'huggingface', 'together', 'mimo', 'groq'],
+    text: ['genx', 'mimo', 'together', 'groq', 'huggingface'],
+    image: ['genx', 'together', 'huggingface', 'mimo', 'groq'],
+    video: ['genx', 'together', 'huggingface', 'mimo', 'groq'],
+    audio: ['genx', 'huggingface', 'groq', 'mimo', 'together'],
+    music: ['genx', 'huggingface', 'together', 'mimo', 'groq'],
+    data: ['genx', 'huggingface', 'together', 'mimo', 'groq'],
   },
   auto: {
-    text: ['qwen', 'groq', 'mimo', 'together', 'genx', 'huggingface'],
-    image: ['qwen', 'together', 'huggingface', 'genx', 'mimo', 'groq'],
-    video: ['qwen', 'genx', 'together', 'huggingface', 'mimo', 'groq'],
-    audio: ['groq', 'huggingface', 'genx', 'qwen', 'mimo', 'together'],
-    music: ['huggingface', 'genx', 'qwen', 'together', 'mimo', 'groq'],
-    data: ['huggingface', 'qwen', 'together', 'genx', 'mimo', 'groq'],
+    text: ['groq', 'mimo', 'together', 'genx', 'huggingface'],
+    image: ['together', 'huggingface', 'genx', 'mimo', 'groq'],
+    video: ['genx', 'together', 'huggingface', 'mimo', 'groq'],
+    audio: ['groq', 'huggingface', 'genx', 'mimo', 'together'],
+    music: ['huggingface', 'genx', 'together', 'mimo', 'groq'],
+    data: ['huggingface', 'together', 'genx', 'mimo', 'groq'],
   },
 }
 
@@ -281,15 +281,6 @@ function selectModel(
   requestedModel?: string,
 ): string {
   if (requestedModel) return requestedModel
-  if (
-    route.provider === 'qwen'
-    && capability.outputTypes.includes('image')
-    && route.modelIds.includes('qwen-image-2.0')
-  ) {
-    return qualityTier === 'premium' && route.modelIds.includes('qwen-image-2.0-pro')
-      ? 'qwen-image-2.0-pro'
-      : 'qwen-image-2.0'
-  }
   return [...route.modelIds].sort((left, right) => {
     const leftCost = UNIVERSAL_MODEL_ROUTES.find(
       (entry) => entry.provider === route.provider && entry.modelId === left,

@@ -1,5 +1,4 @@
 import { getGenXJobStatus } from '@/lib/genx-client'
-import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import {
   getProviderCapabilityAdapter,
@@ -101,7 +100,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
     return failed
   }
 
-  if (!providerHasCanonicalPollingContract(job.provider as 'genx' | 'qwen' | 'together')) {
+  if (!providerHasCanonicalPollingContract(job.provider as 'genx' | 'together')) {
     const failed = saveJob(job, {
       status: 'failed',
       error: `Provider "${job.provider}" does not have a local media polling contract.`,
@@ -111,11 +110,9 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
     return failed
   }
 
-  const providerResult = job.provider === 'qwen'
-    ? await qwenJobStatus(job.providerJobId, job.model)
-    : job.provider === 'genx'
-      ? await getGenXJobStatus(job.providerJobId)
-      : await togetherJobStatus(job)
+  const providerResult = job.provider === 'genx'
+    ? await getGenXJobStatus(job.providerJobId)
+    : await togetherJobStatus(job)
   if (!providerResult) return job
   if (providerResult.status === 'failed') {
     const failed = saveJob(job, {
@@ -182,25 +179,6 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
   }
 }
 
-async function qwenJobStatus(providerJobId: string, model: string) {
-  const taskId = providerJobId.replace(/^qwen-wan:/, '')
-  const result = await pollQwenWanxTask({ taskId, model })
-  if (!result.ok) {
-    return { status: 'failed', resultUrl: null, error: result.error ?? 'Qwen task polling failed.' }
-  }
-  const payload = result.json as Record<string, unknown> | undefined
-  const output = record(payload?.output)
-  const status = String(output?.task_status ?? output?.status ?? 'processing').toLowerCase()
-  const resultUrl = nestedUrl(output)
-  return {
-    status: ['succeeded', 'completed', 'success'].includes(status) ? 'completed'
-      : ['failed', 'canceled', 'cancelled'].includes(status) ? 'failed'
-        : 'processing',
-    resultUrl,
-    error: status === 'failed' ? String(output?.message ?? 'Qwen task failed.') : null,
-  }
-}
-
 async function togetherJobStatus(job: LocalMediaJob) {
   const adapter = getProviderCapabilityAdapter('together')
   const capability = getCapabilityDefinition('text_to_video')
@@ -230,27 +208,6 @@ async function togetherJobStatus(job: LocalMediaJob) {
     resultUrl: result.mediaUrl,
     error: result.error,
   }
-}
-
-function record(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null
-}
-
-function nestedUrl(output: Record<string, unknown> | null): string | null {
-  if (!output) return null
-  for (const value of [output.video_url, output.url]) {
-    if (typeof value === 'string' && value) return value
-  }
-  const results = Array.isArray(output.results) ? output.results : []
-  for (const item of results) {
-    const row = record(item)
-    for (const value of [row?.url, row?.video_url]) {
-      if (typeof value === 'string' && value) return value
-    }
-  }
-  return null
 }
 
 async function reconcileExecution(job: LocalMediaJob | null) {

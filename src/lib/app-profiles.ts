@@ -134,11 +134,11 @@ export interface AppProfile {
 // ── Shared constants ────────────────────────────────────────────────────────
 
 const ALL_PROVIDERS = [
-  'genx', 'groq', 'huggingface', 'together', 'qwen', 'mimo',
+  'genx', 'groq', 'huggingface', 'together', 'mimo',
 ];
 
 const BACKBONE_PROVIDERS = [
-  'genx', 'huggingface', 'groq', 'together', 'qwen', 'mimo',
+  'genx', 'huggingface', 'groq', 'together', 'mimo',
 ];
 
 const BASIC_AGENT_PERMISSIONS = [
@@ -174,7 +174,7 @@ export const DEFAULT_PROFILE: AppProfile = {
   // A non-empty list would restrict routing to only the listed model IDs, which
   // would filter out valid chat/image models for unknown-slug requests.
   allowed_models: [],
-  preferred_models: ['gpt-5.4-mini', 'llama-3.3-70b-versatile', 'qwen-plus'],
+  preferred_models: ['gpt-5.4-mini', 'llama-3.3-70b-versatile', 'mistralai/Mistral-7B-Instruct-v0.3'],
 
   escalation_rules: [],
   validator_rules: [],

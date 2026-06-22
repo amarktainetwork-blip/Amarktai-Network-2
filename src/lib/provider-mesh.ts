@@ -35,7 +35,6 @@ export type ProviderCapability =
 export type ProviderMeshId =
   | 'genx'
   | 'huggingface'
-  | 'qwen'
   | 'mimo'
   | 'groq'
   | 'together'
@@ -95,7 +94,6 @@ const CAPABILITY_TO_MESH: Readonly<Record<CapabilityId, readonly ProviderCapabil
 const PROVIDER_MESH_ORDER: readonly ProviderId[] = [
   'genx',
   'huggingface',
-  'qwen',
   'mimo',
   'groq',
   'together',
@@ -115,9 +113,8 @@ function providerCapabilities(provider: ProviderTruthDefinition): ProviderCapabi
 function providerBaseUrl(provider: ProviderTruthDefinition): string {
   const preferredFamily =
     provider.id === 'huggingface' ? 'inference_router'
-      : provider.id === 'qwen' ? 'compatible_mode'
-        : provider.id === 'genx' ? 'async_generation'
-          : provider.endpoints[0]?.family
+      : provider.id === 'genx' ? 'async_generation'
+        : provider.endpoints[0]?.family
   return provider.endpoints.find((endpoint) => endpoint.family === preferredFamily)?.baseUrl
     ?? provider.endpoints[0]?.baseUrl
     ?? ''
@@ -132,7 +129,7 @@ function authMethod(provider: ProviderTruthDefinition): string {
 
 function artifactHandling(provider: ProviderTruthDefinition): ProviderMeshNode['artifactHandling'] {
   if (!provider.features.artifactSupport) return 'none'
-  if (provider.id === 'qwen' || provider.id === 'together') return 'remote_url'
+  if (provider.id === 'together') return 'remote_url'
   return 'download'
 }
 

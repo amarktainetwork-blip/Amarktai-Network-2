@@ -53,7 +53,6 @@ type RoutingPolicy = {
 const PROVIDER_DOCS: Record<string, { url: string }> = {
   genx: { url: 'https://query.genx.sh' },
   huggingface: { url: 'https://huggingface.co/settings/tokens' },
-  qwen: { url: 'https://dashscope.aliyuncs.com' },
   mimo: { url: 'https://api.xiaomimimo.com' },
   groq: { url: 'https://console.groq.com/keys' },
   together: { url: 'https://api.together.xyz/settings/api-keys' },

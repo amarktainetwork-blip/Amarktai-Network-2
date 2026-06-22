@@ -514,7 +514,7 @@ export interface RAGHealthStatus {
 
 export async function getRAGHealth(): Promise<RAGHealthStatus> {
   const vectorStoreHealthy = await isQdrantHealthy()
-  const embeddingAvailable = !!(await getVaultApiKey('qwen'))
+  const embeddingAvailable = !!(await getVaultApiKey('huggingface')) || !!(await getVaultApiKey('genx'))
   return {
     vectorStoreHealthy,
     embeddingAvailable,

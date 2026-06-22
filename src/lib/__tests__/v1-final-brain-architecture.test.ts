@@ -14,13 +14,12 @@ const ROOT = process.cwd()
 const source = (file: string) => fs.readFileSync(path.join(ROOT, file), 'utf8')
 
 describe('V1 final Brain architecture', () => {
-  it('keeps exactly the six canonical production providers', () => {
+  it('keeps exactly the five canonical production providers', () => {
     expect(CANONICAL_PROVIDER_IDS).toEqual([
       'huggingface',
       'together',
       'groq',
       'genx',
-      'qwen',
       'mimo',
     ])
     expect(PROVIDER_TRUTH.map((provider) => provider.id)).toEqual(CANONICAL_PROVIDER_IDS)

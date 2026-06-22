@@ -31,11 +31,7 @@ describe('canonical provider registry and performance', () => {
   })
 
   it('publishes correct provider metadata and auth contracts', () => {
-    expect(getProviderInfo('qwen')).toMatchObject({
-      id: 'qwen',
-      supportsAsync: true,
-      adapter: 'qwen_capability_adapter',
-    })
+    expect(getProviderInfo('qwen')).toBeNull()
     expect(getProviderInfo('mimo')).toMatchObject({
       authHeaderName: 'api-key',
       authPrefix: '',
@@ -45,13 +41,13 @@ describe('canonical provider registry and performance', () => {
       Authorization: 'Bearer secret',
     })
     expect(listProvidersByCapability('image').map((entry) => entry.id)).toContain('together')
-    expect(getDefaultModel('qwen', 'image')).toBe('qwen-image-2.0')
-    expect(validateProviderModel('qwen', 'qwen-image-2.0', 'image').valid).toBe(true)
+    expect(getDefaultModel('huggingface', 'image')).toBe('stabilityai/stable-diffusion-xl-base-1.0')
+    expect(validateProviderModel('huggingface', 'stabilityai/stable-diffusion-xl-base-1.0', 'image').valid).toBe(true)
   })
 
   it('demotes a repeatedly failing provider/model combination', async () => {
     const candidates = [
-      { route: { provider: 'qwen' as const }, model: 'qwen-image-2.0', rank: 0 },
+      { route: { provider: 'huggingface' as const }, model: 'stabilityai/stable-diffusion-xl-base-1.0', rank: 0 },
       {
         route: { provider: 'together' as const },
         model: 'black-forest-labs/FLUX.1-schnell',
@@ -60,8 +56,8 @@ describe('canonical provider registry and performance', () => {
     ]
     for (let attempt = 0; attempt < 2; attempt += 1) {
       await recordProviderFailure({
-        providerId: 'qwen',
-        model: 'qwen-image-2.0',
+        providerId: 'huggingface',
+        model: 'stabilityai/stable-diffusion-xl-base-1.0',
         capability: 'text_to_image',
         latencyMs: 100,
         errorCategory: 'model_not_supported',

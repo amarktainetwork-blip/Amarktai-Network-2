@@ -19,7 +19,7 @@ const source = (relativePath: string) =>
 
 describe('V1 final source-of-truth contracts', () => {
   it('derives every runtime provider projection from provider-mesh', () => {
-    const expected = ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together']
+    const expected = ['genx', 'huggingface', 'mimo', 'groq', 'together']
     expect(APPROVED_DIRECT_PROVIDER_IDS).toEqual(expected)
     expect(AI_PROVIDER_MESH.map((provider) => provider.id)).toEqual(expected)
     expect(APPROVED_AI_PROVIDERS.map((provider) => provider.key)).toEqual(expected)
@@ -64,7 +64,6 @@ describe('V1 final source-of-truth contracts', () => {
     expect(LIVE_SMOKE_PROVIDER_IDS).toEqual([
       'genx',
       'huggingface',
-      'qwen',
       'mimo',
       'groq',
       'together',

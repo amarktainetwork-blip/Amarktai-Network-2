@@ -126,47 +126,6 @@ export const PROVIDER_TRUTH: readonly ProviderTruthDefinition[] = [
     billing: { plan: 'credits', freeQuotaEligible: false, pricingSource: 'provider_catalog', staticPrices: false },
   },
   {
-    id: 'qwen',
-    displayName: 'Qwen / DashScope',
-    envAliases: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
-    auth: { header: 'Authorization', prefix: 'Bearer ' },
-    endpoints: [
-      {
-        family: 'compatible_mode',
-        baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-        baseUrlEnv: 'DASHSCOPE_BASE_URL',
-      },
-      {
-        family: 'aigc',
-        baseUrl: 'https://dashscope-intl.aliyuncs.com/api/v1',
-        baseUrlEnv: 'DASHSCOPE_AIGC_BASE_URL',
-      },
-    ],
-    discovery: {
-      models: '/models',
-      tasks: 'model_metadata',
-      providers: null,
-      privateEndpointsEnv: null,
-      dedicatedEndpointsEnv: null,
-      cacheTtlMs: CACHE_TTL_MS,
-    },
-    capabilities: ['chat', 'reasoning', 'coding', 'vision', 'ocr', 'image', 'image_edit', 'video', 'image_to_video', 'avatar', 'embeddings', 'translation', 'tts', 'stt'],
-    features: {
-      streaming: true,
-      asyncJobs: true,
-      webhooks: false,
-      toolCalling: true,
-      artifactSupport: true,
-    },
-    billing: {
-      plan: 'standard_free_quota',
-      freeQuotaEligible: true,
-      paidEnabledEnv: 'QWEN_PAID_ENABLED',
-      pricingSource: 'provider_catalog',
-      staticPrices: false,
-    },
-  },
-  {
     id: 'mimo',
     displayName: 'Xiaomi MiMo',
     envAliases: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],

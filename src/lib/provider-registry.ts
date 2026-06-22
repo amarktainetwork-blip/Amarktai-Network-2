@@ -73,14 +73,6 @@ const DEFAULT_MODELS: Record<ApprovedDirectProviderId, Record<string, string>> =
     stt: 'openai/whisper-large-v3',
     embeddings: 'sentence-transformers/all-MiniLM-L6-v2',
   },
-  qwen: {
-    text: 'qwen-plus',
-    reasoning: 'qwen-plus',
-    code: 'qwen-plus',
-    vision: 'qwen-vl-max',
-    image: 'qwen-image-2.0',
-    video: 'wan2.1-i2v-turbo',
-  },
   mimo: {
     text: 'mimo-v2.5',
     reasoning: 'mimo-v2.5-pro',
@@ -115,11 +107,6 @@ const REGISTRY_OVERRIDES: Record<
   huggingface: {
     supportsDynamicModels: true,
     readinessCheck: 'identity',
-  },
-  qwen: {
-    supportsDynamicModels: true,
-    region: process.env.DASHSCOPE_REGION?.trim() || 'international',
-    readinessCheck: 'models',
   },
   mimo: {
     supportsDynamicModels: true,
@@ -167,7 +154,6 @@ function providerBaseUrl(id: ApprovedDirectProviderId, fallback: string): string
   const env: Partial<Record<ApprovedDirectProviderId, string | undefined>> = {
     genx: process.env.GENX_BASE_URL,
     huggingface: process.env.HUGGINGFACE_BASE_URL,
-    qwen: process.env.DASHSCOPE_BASE_URL ?? process.env.QWEN_BASE_URL,
     mimo: process.env.MIMO_BASE_URL,
     groq: process.env.GROQ_BASE_URL,
     together: process.env.TOGETHER_BASE_URL,

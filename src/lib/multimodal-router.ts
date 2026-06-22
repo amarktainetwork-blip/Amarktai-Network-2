@@ -129,7 +129,7 @@ const ALL_CONTENT_TYPES: ContentType[] = [
 ]
 
 /** Preferred provider order for creative generation. */
-const CREATIVE_PROVIDER_PREFERENCE = ['genx', 'qwen', 'groq', 'together', 'huggingface']
+const CREATIVE_PROVIDER_PREFERENCE = ['genx', 'groq', 'together', 'huggingface']
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

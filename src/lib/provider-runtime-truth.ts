@@ -299,18 +299,6 @@ function runtimeFlagsFor(
       nextAction: 'Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404.',
     })
   }
-  if (provider.id === 'qwen') {
-    const value = env.QWEN_PAID_ENABLED?.trim().toLowerCase() || 'false'
-    flags.push({
-      name: 'QWEN_PAID_ENABLED',
-      currentValue: value,
-      requiredValue: 'true for paid/non-free-quota model execution',
-      source: env.QWEN_PAID_ENABLED ? 'env' : 'default',
-      blocking: false,
-      usedBy: ['chat', 'image', 'video', 'image_to_video', 'embeddings'],
-      nextAction: 'Keep false for free-token-only routing; set true only when paid DashScope execution is approved.',
-    })
-  }
   if (provider.id === 'mimo') {
     const value = env.MIMO_RUNTIME_API_ENABLED?.trim().toLowerCase() || 'false'
     flags.push({
@@ -346,12 +334,6 @@ function endpointRequirementsFor(
       endpointRequirement('rerank', 'dedicated_endpoint', ['TOGETHER_DEDICATED_ENDPOINTS_JSON'], env),
       endpointRequirement('video', 'dedicated_endpoint', ['TOGETHER_VIDEO_RUNTIME_ENABLED', 'TOGETHER_VIDEO_BASE_URL'], env),
       endpointRequirement('image_to_video', 'dedicated_endpoint', ['TOGETHER_VIDEO_RUNTIME_ENABLED', 'TOGETHER_VIDEO_BASE_URL'], env),
-    ]
-  }
-  if (provider.id === 'qwen') {
-    return [
-      endpointRequirement('video', 'provider_endpoint', ['DASHSCOPE_AIGC_BASE_URL'], env, 'https://dashscope-intl.aliyuncs.com/api/v1'),
-      endpointRequirement('image_to_video', 'provider_endpoint', ['DASHSCOPE_AIGC_BASE_URL'], env, 'https://dashscope-intl.aliyuncs.com/api/v1'),
     ]
   }
   return []
@@ -401,11 +383,6 @@ function dbConsistencyWarnings(
 }
 
 function accountPolicyFor(provider: ProviderTruthDefinition, env: NodeJS.ProcessEnv): string {
-  if (provider.id === 'qwen') {
-    return env.QWEN_PAID_ENABLED?.trim().toLowerCase() === 'true'
-      ? 'Paid DashScope routing is explicitly enabled.'
-      : 'Free-token-only routing; paid/non-free-quota models are blocked until QWEN_PAID_ENABLED=true.'
-  }
   if (provider.id === 'mimo') {
     return env.MIMO_RUNTIME_API_ENABLED?.trim().toLowerCase() === 'true'
       ? 'Runtime API enabled.'

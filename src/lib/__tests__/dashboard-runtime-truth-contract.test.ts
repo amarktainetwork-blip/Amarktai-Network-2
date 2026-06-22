@@ -123,12 +123,13 @@ describe('dashboard runtime truth contract', () => {
     expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 
-  it('keeps Qwen readiness truthful by separating chat probes from capability-specific route proof', () => {
-    const qwen = source('src/app/api/admin/settings/test-qwen/route.ts')
+  it('removes Qwen from active admin provider readiness surfaces', () => {
     const providerTest = source('src/app/api/admin/settings/test-provider/route.ts')
+    const settings = source('src/app/admin/dashboard/settings/page.tsx')
 
-    expect(qwen).toContain('capabilityExecutionProven: false')
-    expect(qwen).toContain('chat probe passed')
+    expect(providerTest).not.toContain("id === 'qwen'")
+    expect(providerTest).not.toContain('test-qwen')
+    expect(settings).not.toContain("qwen: { url: 'https://dashscope.aliyuncs.com' }")
     expect(providerTest).toContain('result.capabilityExecutionProven === true')
   })
 

@@ -31,7 +31,7 @@ export async function GET() {
     providers,
     proposedBacklog: PROPOSED_PROVIDER_BACKLOG,
     recommendations: {
-      keepCore: ['genx', 'github', 'qwen', 'groq', 'together', 'huggingface'],
+      keepCore: ['genx', 'github', 'groq', 'together', 'huggingface'],
       keepActiveOptional: ['smtp'],
       advancedOnly: [],
       debateBeforeAdding: [],

@@ -262,7 +262,7 @@ async function callProviderFallback(
   const systemMsg = messages.find((m) => m.role === 'system')?.content ?? ''
   const userMsg   = messages.filter((m) => m.role !== 'system').map((m) => m.content).join('\n')
 
-  const fallbackChain = ['genx', 'qwen', 'groq', 'together', 'huggingface']
+  const fallbackChain = ['genx', 'groq', 'together', 'huggingface']
 
   for (const providerKey of fallbackChain) {
     try {

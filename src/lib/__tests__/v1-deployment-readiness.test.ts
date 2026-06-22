@@ -54,9 +54,11 @@ describe('V1 deployment readiness', () => {
     const readiness = getHfSpecialistReadiness()
     expect(readiness).toHaveLength(hfCapabilities.length)
     for (const route of readiness) {
-      expect(route.configured || route.endpointRequired).toBe(true)
+      expect(route.configured || route.endpointRequired || route.endpointSource === 'model_api').toBe(true)
       if (!route.configured) {
-        expect(route.requiredEnv.some((name) => name.startsWith('HF_ENDPOINT_'))).toBe(true)
+        if (route.endpointRequired) {
+          expect(route.requiredEnv.some((name) => name.startsWith('HF_ENDPOINT_'))).toBe(true)
+        }
       }
     }
   })

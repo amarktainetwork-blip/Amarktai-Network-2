@@ -45,11 +45,10 @@ describe('provider key path', () => {
     delete process.env.TOGETHER_API_KEY
   })
 
-  it('resolves stored integrationConfig credentials for all six canonical providers', async () => {
+  it('resolves stored integrationConfig credentials for all five canonical providers', async () => {
     const providers = {
       genx: 'genx-stored-key-123456789',
       huggingface: 'hf_stored_key_123456789',
-      qwen: 'qwen-stored-key-123456789',
       mimo: 'mimo-stored-key-123456789',
       groq: 'groq-stored-key-123456789',
       together: 'together-stored-key-123456789',
@@ -61,7 +60,6 @@ describe('provider key path', () => {
 
     await expect(getMeshCredential('genx')).resolves.toBe(providers.genx)
     await expect(getMeshCredential('huggingface')).resolves.toBe(providers.huggingface)
-    await expect(getMeshCredential('qwen')).resolves.toBe(providers.qwen)
     await expect(getMeshCredential('mimo')).resolves.toBe(providers.mimo)
     await expect(getMeshCredential('groq')).resolves.toBe(providers.groq)
     await expect(getMeshCredential('together')).resolves.toBe(providers.together)

@@ -98,7 +98,7 @@ describe('Smoke test framework — not_configured', () => {
 
     const results = await runAllProviderSmokeTests()
 
-    expect(results).toHaveLength(6)
+    expect(results).toHaveLength(5)
     for (const result of results) {
       expect(result.status).toBe('not_configured')
       expect(result.configured).toBe(false)
@@ -108,14 +108,14 @@ describe('Smoke test framework — not_configured', () => {
     }
   })
 
-  it('covers all 6 approved providers', async () => {
+  it('covers all 5 approved providers', async () => {
     mocks.isUsableServiceKey.mockReturnValue(false)
     mocks.getMeshCredential.mockResolvedValue(null)
 
     const results = await runAllProviderSmokeTests()
     const providerIds = results.map((r) => r.provider).sort()
 
-    expect(providerIds).toEqual(['genx', 'groq', 'huggingface', 'mimo', 'qwen', 'together'].sort())
+    expect(providerIds).toEqual(['genx', 'groq', 'huggingface', 'mimo', 'together'].sort())
   })
 
   it('includes supportedCapabilityGroups for each provider', async () => {

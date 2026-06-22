@@ -261,7 +261,7 @@ function buildModelPackage(capabilities: string[], businessType: string) {
   const hasResearch = capabilities.some(c => ['research', 'scrape_website'].includes(c))
 
   // Cheap direct-provider fallbacks in preference order
-  const cheapFallbacks = ['qwen', 'groq', 'together', 'huggingface']
+  const cheapFallbacks = ['groq', 'together', 'huggingface']
 
   // Safety-sensitive businesses get premium primary
   const safetySensitive = ['health', 'finance', 'education', 'legal'].includes(businessType)

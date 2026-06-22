@@ -27,12 +27,10 @@ const ALIASES: Readonly<Record<string, readonly GatewayRoute[]>> = {
   'text.fast': [
     route('text.fast', 'genx', 'gpt-5.4-mini', 20_000, 1),
     route('text.fast', 'groq', 'llama-3.3-70b-versatile', 18_000, 1),
-    route('text.fast', 'qwen', 'qwen-plus', 25_000, 1),
     route('text.fast', 'mimo', 'mimo-v2.5', 30_000, 1),
   ],
   'text.balanced': [
     route('text.balanced', 'genx', 'gpt-5.4-mini', 30_000, 1),
-    route('text.balanced', 'qwen', 'qwen-plus', 30_000, 1),
     route('text.balanced', 'together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo', 35_000, 1),
     route('text.balanced', 'groq', 'llama-3.3-70b-versatile', 20_000, 1),
     route('text.balanced', 'mimo', 'mimo-v2.5', 35_000, 1),
@@ -41,7 +39,6 @@ const ALIASES: Readonly<Record<string, readonly GatewayRoute[]>> = {
     route('text.premium', 'genx', 'gpt-5.4-mini', 40_000, 1),
     route('text.premium', 'mimo', 'mimo-v2.5-pro', 45_000, 1),
     route('text.premium', 'together', 'deepseek-ai/DeepSeek-R1', 50_000, 1),
-    route('text.premium', 'qwen', 'qwen-plus', 35_000, 1),
   ],
 }
 

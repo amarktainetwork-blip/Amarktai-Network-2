@@ -15,7 +15,7 @@ interface RequestBody {
   provider?: unknown
 }
 
-const CHAT_PRIORITY = ['genx', 'groq', 'together', 'qwen', 'mimo', 'huggingface'] as const
+const CHAT_PRIORITY = ['genx', 'groq', 'together', 'mimo', 'huggingface'] as const
 
 export async function POST(request: NextRequest) {
   const session = await getSession()

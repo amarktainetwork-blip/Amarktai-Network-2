@@ -75,27 +75,27 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   general_chat: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'general chat',
-    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
+    suggestedProviders: ['genx', 'groq', 'mimo', 'together', 'huggingface'],
   },
   deep_reasoning: {
     anyCapabilityFlag: ['supports_reasoning'],
     label: 'deep reasoning',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   coding: {
     anyCapabilityFlag: ['supports_code'],
     label: 'code generation / editing',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   retrieval: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'retrieval / RAG',
-    suggestedProviders: ['huggingface', 'together', 'qwen'],
+    suggestedProviders: ['huggingface', 'genx', 'together'],
   },
   embeddings: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'text embeddings',
-    suggestedProviders: ['huggingface', 'together', 'qwen'],
+    suggestedProviders: ['huggingface', 'genx', 'together'],
   },
   reranking: {
     anyCapabilityFlag: ['supports_reranking'],
@@ -105,55 +105,55 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   summarization: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'summarization',
-    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
+    suggestedProviders: ['genx', 'groq', 'mimo', 'together', 'huggingface'],
   },
   classification: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'text classification',
-    suggestedProviders: ['genx', 'groq', 'qwen', 'mimo', 'together', 'huggingface'],
+    suggestedProviders: ['genx', 'groq', 'mimo', 'together', 'huggingface'],
   },
   validation: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'output validation',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   agent_planning: {
     anyCapabilityFlag: ['supports_agent_planning'],
     label: 'agent planning',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   multimodal_understanding: {
     anyCapabilityFlag: ['supports_vision'],
     label: 'multimodal / vision understanding',
-    suggestedProviders: ['qwen', 'mimo', 'together', 'huggingface', 'genx'],
+    suggestedProviders: ['mimo', 'together', 'huggingface', 'genx'],
   },
   image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image generation',
-    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   image_editing: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image editing',
-    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'video planning / storyboarding',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'video generation',
     // Hugging Face is NOT a valid video generation provider (no async job API).
     // Gemini Veo 2 requires Vertex AI enterprise tier — not available via standard API key.
-    suggestedProviders: ['genx', 'together', 'qwen'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   voice_input: {
     anyCapabilityFlag: ['supports_stt', 'supports_voice_interaction'],
     anyRole: ['voice_interaction'],
     label: 'voice / speech input (STT)',
-    suggestedProviders: ['groq', 'genx', 'qwen', 'mimo', 'huggingface'],
+    suggestedProviders: ['groq', 'genx', 'mimo', 'huggingface'],
   },
   voice_output: {
     anyCapabilityFlag: ['supports_tts'],
@@ -179,37 +179,37 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   app_analysis: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'app analysis / crawl',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   research_search: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'research / web search',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   deep_research: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'deep multi-step research',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'together', 'huggingface'],
   },
   scraping_extraction: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'web scraping / data extraction',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'groq', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
   },
   suggestive_image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'suggestive image generation (non-explicit)',
-    suggestedProviders: ['genx', 'together', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   suggestive_video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'suggestive video planning (non-explicit)',
-    suggestedProviders: ['genx', 'qwen', 'mimo', 'together'],
+    suggestedProviders: ['genx', 'mimo', 'together', 'huggingface'],
   },
   suggestive_video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'suggestive video generation (non-explicit, prompt-guarded)',
-    suggestedProviders: ['genx', 'qwen', 'together'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
 };
 

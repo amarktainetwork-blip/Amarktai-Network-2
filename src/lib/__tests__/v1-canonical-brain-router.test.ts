@@ -57,11 +57,11 @@ describe('canonical V1 brain capability router', () => {
     }
   })
 
-  it('keeps text-to-video off image-to-video models and requires an image for image-to-video', async () => {
+  it('keeps text-to-video on remaining provider-safe contracts and requires an image for image-to-video', async () => {
     const textToVideo = getCapabilityDefinition('text_to_video')!
-    const qwen = textToVideo.providerRoutes.find((route) => route.provider === 'qwen')!
-    expect(qwen.modelIds).toContain('wan2.1-t2v-turbo')
-    expect(qwen.modelIds.some((model) => /i2v/i.test(model))).toBe(false)
+    const genx = textToVideo.providerRoutes.find((route) => route.provider === 'genx')!
+    expect(genx.modelIds).toContain('veo-3.1')
+    expect(genx.modelIds.some((model) => /i2v/i.test(model))).toBe(false)
 
     const result = await executeCapabilityOrchestration({
       input: 'Animate this product image.',

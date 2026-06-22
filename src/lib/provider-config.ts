@@ -4,13 +4,11 @@ import { isUsableServiceKey } from '@/lib/service-vault'
 
 export type CoreProvider =
   | ProviderMeshId
-  | 'dashscope'
   | 'hf'
 
 export type ProviderKeySource = 'vault' | 'ai_provider' | 'legacy_github' | 'env' | 'missing'
 
 function normalizeProviderKey(provider: string): string {
-  if (provider === 'dashscope') return 'qwen'
   if (provider === 'hf') return 'huggingface'
   return provider
 }

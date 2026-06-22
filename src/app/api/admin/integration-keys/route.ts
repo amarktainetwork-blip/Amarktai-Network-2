@@ -21,7 +21,6 @@ const APPROVED_V1_AI_PROVIDER_IDS = [
   'together',
   'groq',
   'genx',
-  'qwen',
   'mimo',
 ] as const
 
@@ -38,7 +37,6 @@ const KNOWN_INTEGRATIONS: Record<string, { displayName: string; urlPlaceholder?:
   together:   { displayName: 'Together AI', keyEnvVar: 'TOGETHER_API_KEY',   urlEnvVar: 'TOGETHER_BASE_URL',    urlPlaceholder: 'https://api.together.ai/v1',     description: 'Approved V1 provider key for Together runtime access' },
   groq:       { displayName: 'Groq',        keyEnvVar: 'GROQ_API_KEY',       urlEnvVar: 'GROQ_BASE_URL',        urlPlaceholder: 'https://api.groq.com/openai/v1', description: 'Approved V1 provider key for Groq runtime access' },
   genx:       { displayName: 'GenX',        keyEnvVar: 'GENX_API_KEY',       urlEnvVar: 'GENX_BASE_URL',        urlPlaceholder: 'https://query.genx.sh/api/v1',   description: 'Approved V1 provider key for GenX runtime access' },
-  qwen:       { displayName: 'Qwen / DashScope', keyEnvVar: 'QWEN_API_KEY', urlEnvVar: 'DASHSCOPE_BASE_URL',   urlPlaceholder: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', description: 'Approved V1 provider key for Qwen runtime access' },
   mimo:       { displayName: 'Xiaomi MiMo', keyEnvVar: 'MIMO_API_KEY',       urlEnvVar: 'MIMO_BASE_URL',        urlPlaceholder: 'https://token-plan-sgp.xiaomimimo.com/v1', description: 'Approved V1 provider key for MiMo runtime access' },
 }
 

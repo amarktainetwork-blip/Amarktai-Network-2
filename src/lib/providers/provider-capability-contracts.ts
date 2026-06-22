@@ -66,9 +66,6 @@ export function evaluateProviderCapabilityContract(input: {
   const togetherVideoBlocked = provider.id === 'together'
     && ['video', 'image_to_video', 'adult_video'].includes(capability.id)
     && process.env.TOGETHER_VIDEO_RUNTIME_ENABLED?.trim().toLowerCase() !== 'true'
-  const qwenPaidBlocked = provider.id === 'qwen'
-    && model.raw.free_quota_eligible === false
-    && process.env.QWEN_PAID_ENABLED?.trim().toLowerCase() !== 'true'
   const toolPlanOnly = provider.id === 'mimo'
     && ['tts', 'stt', 'agents'].includes(capability.id)
     && process.env.MIMO_RUNTIME_API_ENABLED?.trim().toLowerCase() !== 'true'
@@ -82,7 +79,7 @@ export function evaluateProviderCapabilityContract(input: {
     !adapterAvailable ? 'adapter_missing' : null,
     requiresSpecialistEndpoint ? 'specialist_endpoint_required' : null,
     requiresDedicatedEndpoint ? 'endpoint_required' : null,
-    togetherVideoBlocked || qwenPaidBlocked ? 'runtime_flag_disabled' : null,
+    togetherVideoBlocked ? 'runtime_flag_disabled' : null,
     toolPlanOnly ? 'tool_plan_only' : null,
     policyBlocked ? 'policy_blocked' : null,
   ])
@@ -103,7 +100,7 @@ export function evaluateProviderCapabilityContract(input: {
     adapterAvailable,
     adapterContractName: `${provider.id}_capability_adapter`,
     accountKeyAvailable: health.configured,
-    runtimeFlagState: togetherVideoBlocked || qwenPaidBlocked || toolPlanOnly ? 'disabled' : 'not_applicable',
+    runtimeFlagState: togetherVideoBlocked || toolPlanOnly ? 'disabled' : 'not_applicable',
     runtimeExecutableNow,
     requiresDedicatedEndpoint,
     requiresSpecialistEndpoint,
@@ -194,7 +191,6 @@ function nextActionFor(
   if (blocker === 'endpoint_required') return `Configure the dedicated endpoint/account contract required for ${provider}/${capability}.`
   if (blocker === 'runtime_flag_disabled') {
     if (provider === 'together') return 'Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.'
-    if (provider === 'qwen') return 'Set QWEN_PAID_ENABLED=true only when paid DashScope execution is approved.'
   }
   if (blocker === 'tool_plan_only') return 'Set MIMO_RUNTIME_API_ENABLED=true only after MiMo backend runtime API access is confirmed.'
   if (blocker === 'adapter_missing') return `Implement or enable the ${provider} adapter contract for ${capability}.`

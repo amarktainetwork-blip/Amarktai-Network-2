@@ -136,17 +136,6 @@ export const UNIVERSAL_MODEL_ROUTES: readonly UniversalModelRoute[] = [
   route('huggingface', 'sentence-transformers/all-MiniLM-L6-v2', 'MiniLM Embeddings', 'Sentence Transformers', ['embeddings/moderation'], ['embeddings'], { costTier: 'free', taskBased: true }),
   route('huggingface', 'cross-encoder/ms-marco-MiniLM-L-6-v2', 'MS MARCO MiniLM Reranker', 'Cross Encoder', ['embeddings/moderation'], ['rerank'], { costTier: 'free', taskBased: true }),
 
-  route('qwen', 'qwen-turbo', 'Qwen Turbo', 'Qwen', ['chat', 'coding'], ['text', 'code'], { costTier: 'very_low', latencyTier: 'low', recommendedFor: ['repo_workbench'] }),
-  route('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code'], { costTier: 'low', recommendedFor: ['assistant'] }),
-  route('qwen', 'qwen-max', 'Qwen Max', 'Qwen', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'vision'], { costTier: 'medium' }),
-  route('qwen', 'qwen-image', 'Qwen Image', 'Qwen Image', ['image'], ['image'], { costTier: 'low', recommendedFor: ['media_studio'] }),
-  route('qwen', 'qwen-image-plus', 'Qwen Image Plus', 'Qwen Image', ['image'], ['image'], { costTier: 'medium', recommendedFor: ['media_studio'] }),
-  route('qwen', 'qwen-image-max', 'Qwen Image Max', 'Qwen Image', ['image'], ['image'], { costTier: 'high', recommendedFor: ['media_studio'] }),
-  route('qwen', 'qwen-image-2.0', 'Qwen Image 2.0', 'Qwen Image', ['image'], ['image'], { costTier: 'low', recommendedFor: ['media_studio'] }),
-  route('qwen', 'qwen-image-2.0-pro', 'Qwen Image 2.0 Pro', 'Qwen Image', ['image'], ['image'], { costTier: 'premium', recommendedFor: ['media_studio'] }),
-  route('qwen', 'wan2.1-t2v-turbo', 'Wan Text to Video Turbo', 'Wan', ['video'], ['video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
-  route('qwen', 'wan2.1-i2v-turbo', 'Wan Image to Video', 'Wan', ['video'], ['video', 'image_to_video', 'async_jobs'], { costTier: 'medium', latencyTier: 'high', recommendedFor: ['media_studio'] }),
-
   route('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'medium', recommendedFor: ['assistant', 'repo_workbench'] }),
   route('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['chat', 'reasoning', 'coding'], ['text', 'reasoning', 'code', 'tools'], { costTier: 'premium', contextWindow: 128_000 }),
   route('mimo', 'mimo-tts-1', 'Xiaomi MiMo TTS', 'Xiaomi MiMo Audio', ['voice/TTS'], ['tts', 'audio'], { costTier: 'medium', recommendedFor: ['media_studio'] }),

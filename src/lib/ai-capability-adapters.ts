@@ -1,7 +1,6 @@
 import { callUniversalProvider } from '@/lib/universal-provider-call'
 import { callGenXMedia, getGenXJobStatus } from '@/lib/genx-client'
 import { getVaultApiKey } from '@/lib/brain'
-import { pollQwenWanxTask } from '@/lib/qwen-wanx-polling'
 import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 import type {
   AiCapabilityDefinition,
@@ -96,7 +95,6 @@ export interface ProviderCapabilityAdapter {
 const PROVIDER_CATEGORIES: Record<ApprovedDirectProviderId, readonly string[]> = {
   genx: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'music', 'avatar_voice', 'agents_or_planning'],
   huggingface: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'music', 'avatar_voice', 'tabular', 'experimental'],
-  qwen: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
   mimo: ['text', 'multimodal', 'video', 'audio', 'agents_or_planning'],
   groq: ['text', 'multimodal', 'audio', 'agents_or_planning'],
   together: ['text', 'multimodal', 'computer_vision', 'video', 'audio', 'agents_or_planning'],
@@ -458,202 +456,6 @@ function numericInput(value: unknown): number | null {
   return null
 }
 
-async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
-  if (
-    input.capability.group === 'multimodal'
-    && !input.capability.outputTypes.includes('image')
-    && !input.capability.outputTypes.includes('video')
-  ) {
-    return executeQwenMultimodal(input)
-  }
-  if (input.capability.group !== 'video' && !input.capability.outputTypes.includes('image')) {
-    return executeText(input)
-  }
-  const provider = 'qwen' as const
-  const key = await getVaultApiKey(provider)
-  const isVideo = input.capability.group === 'video'
-  const imageReference = firstReference(input, ['image'])
-  const isImageEdit = input.capability.id === 'image_edit' || input.capability.id === 'image_to_image' || input.capability.id === 'image_text_to_image'
-  const isImageToVideo = isVideo && (
-    input.capability.id === 'image_to_video'
-    || input.capability.id === 'image_text_to_video'
-  )
-  const model = input.model
-  if (!model) return failedResult(provider, '', 'Discovery did not select a Qwen media model.')
-  if (isImageToVideo && !imageReference?.url) {
-    return result(provider, model, 'blocked', {
-      error: 'Image-to-video requires a source image.',
-      errorCategory: 'model_not_supported',
-    })
-  }
-  const videoContract = isVideo ? getVideoModelContract(provider, model) : null
-  if (isVideo && !videoContract) {
-    return result(provider, model, 'failed', {
-      error: `No provider-safe video contract is registered for ${provider}/${model}.`,
-      errorCategory: 'model_not_supported',
-      retryable: true,
-    })
-  }
-  if (videoContract?.requiresSourceImage && !imageReference?.url) {
-    return result(provider, model, 'blocked', {
-      error: `${model} requires a source image.`,
-      errorCategory: 'model_not_supported',
-    })
-  }
-  if (isVideo && !isImageToVideo && /i2v|image.to.video/i.test(model)) {
-    return result(provider, model, 'failed', {
-      error: 'Text-to-video cannot execute an image-to-video model without image input.',
-      errorCategory: 'model_not_supported',
-      retryable: true,
-    })
-  }
-  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
-  const videoReference = firstReference(input, ['video'])
-  const isWanxImage = !isVideo && model.startsWith('wanx')
-  const endpoint = qwenAigcEndpoint(isVideo ? 'video' : isImageEdit ? 'image_edit' : model.startsWith('wanx') ? 'wanx_image' : 'qwen_image')
-  const body = isVideo
-    ? {
-        model,
-        input: {
-          prompt: input.prompt,
-          ...(imageReference?.url ? { img_url: imageReference.url, image_url: imageReference.url } : {}),
-          ...(videoReference?.url ? { video_url: videoReference.url } : {}),
-        },
-        parameters: providerSafeVideoParameters(videoContract!, input.inputs ?? {}),
-      }
-    : isImageEdit
-      ? {
-          model,
-          input: {
-            messages: [{
-              role: 'user',
-              content: [
-                ...(imageReference?.url ? [{ image: imageReference.url }] : []),
-                { text: input.prompt },
-              ],
-            }],
-          },
-          parameters: input.inputs ?? {},
-        }
-    : isWanxImage
-      ? {
-          model,
-          input: { prompt: input.prompt },
-          parameters: input.inputs ?? {},
-        }
-    : {
-        model,
-        input: {
-          messages: [{
-            role: 'user',
-            content: [
-              ...(imageReference?.url ? [{ image: imageReference.url }] : []),
-              { text: input.prompt },
-            ],
-          }],
-        },
-        parameters: input.inputs ?? {},
-      }
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-        ...(isVideo || isWanxImage ? { 'X-DashScope-Async': 'enable' } : {}),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(45_000),
-    })
-    const json = await response.json().catch(() => null) as Record<string, unknown> | null
-    if (!response.ok) {
-      return failedResult(
-        provider,
-        model,
-        `Qwen HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
-        response.status,
-      )
-    }
-    const taskId = nestedString(json, ['output', 'task_id']) ?? nestedString(json, ['task_id'])
-    const media = mediaFromJsonOutput(json)
-    return result(provider, model, taskId ? 'processing' : 'completed', {
-      output: json,
-      mediaUrl: media?.url ?? null,
-      bytes: media?.bytes ?? null,
-      providerJobId: taskId,
-      contentType: media?.contentType ?? 'application/json',
-      diagnostics: {
-        qwenEndpointKind: isVideo ? 'video' : isImageEdit ? 'image_edit' : isWanxImage ? 'wanx_image' : 'qwen_image',
-        qwenAigcEndpoint: endpoint,
-        mediaUrlPresent: Boolean(media?.url),
-        mediaBytesPresent: Boolean(media?.bytes),
-        taskId: taskId ?? null,
-      },
-    })
-  } catch (error) {
-    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen capability execution failed.')
-  }
-}
-
-function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image' | 'image_edit'): string {
-  const root = qwenAigcRoot()
-  if (kind === 'video') return `${root}/services/aigc/video-generation/video-synthesis`
-  if (kind === 'wanx_image') return `${root}/services/aigc/text2image/image-synthesis`
-  if (kind === 'image_edit') return `${root}/services/aigc/multimodal-generation/generation`
-  return `${root}/services/aigc/multimodal-generation/generation`
-}
-
-function qwenAigcRoot(): string {
-  const configured = resolveProviderEndpoint(getProviderTruth('qwen')!, 'aigc').replace(/\/+$/, '')
-  if (/\/compatible-mode\/v1$/i.test(configured)) {
-    return configured.replace(/\/compatible-mode\/v1$/i, '/api/v1')
-  }
-  if (/\/compatible-mode$/i.test(configured)) {
-    return configured.replace(/\/compatible-mode$/i, '/api/v1')
-  }
-  return configured
-}
-
-async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
-  const provider = 'qwen' as const
-  const key = await getVaultApiKey(provider)
-  const model = input.model
-  if (!model) return failedResult(provider, '', 'Discovery did not select a Qwen multimodal model.')
-  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
-  const referenceContent: Record<string, unknown>[] = []
-  for (const reference of input.references) {
-      const url = publicHttpsUrl(reference.url)
-      if (!url) continue
-      if (reference.kind === 'image') referenceContent.push({ type: 'image_url', image_url: { url } })
-      if (reference.kind === 'video') referenceContent.push({ type: 'video_url', video_url: { url } })
-      if (reference.kind === 'audio') referenceContent.push({ type: 'audio_url', audio_url: { url } })
-  }
-  const content: Record<string, unknown>[] = [
-    ...referenceContent,
-    { type: 'text', text: structuredPrompt(input) },
-  ]
-  try {
-    const response = await fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'compatible_mode')}/chat/completions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content }] }),
-      signal: AbortSignal.timeout(60_000),
-    })
-    const json = await response.json().catch(() => null)
-    if (!response.ok) {
-      return failedResult(
-        provider,
-        model,
-        `Qwen multimodal HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`,
-        response.status,
-      )
-    }
-    return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
-  } catch (error) {
-    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen multimodal execution failed.')
-  }
-}
-
 async function executeTogetherImage(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
   const provider = 'together' as const
   const key = await getVaultApiKey(provider)
@@ -852,34 +654,6 @@ async function referenceAudioDataUri(reference: CapabilityReference): Promise<st
   if (!response.ok) return null
   const bytes = Buffer.from(await response.arrayBuffer())
   return `data:${response.headers.get('content-type') ?? mimeType};base64,${bytes.toString('base64')}`
-}
-
-async function executeQwenEmbeddings(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
-  const provider = 'qwen' as const
-  const key = await getVaultApiKey(provider)
-  const model = input.model
-  if (!model) return failedResult(provider, '', 'Discovery did not select an embeddings model.')
-  if (!key) return failedResult(provider, model, 'Qwen/DashScope key not configured.')
-  const truth = getProviderTruth(provider)!
-  try {
-    const response = await fetch(`${resolveProviderEndpoint(truth, 'compatible_mode')}/embeddings`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        input: input.inputs?.input ?? input.text ?? input.prompt,
-        encoding_format: 'float',
-      }),
-      signal: AbortSignal.timeout(45_000),
-    })
-    const json = await response.json().catch(() => null)
-    if (!response.ok) {
-      return failedResult(provider, model, `Qwen embeddings HTTP ${response.status}: ${JSON.stringify(json).slice(0, 600)}`, response.status)
-    }
-    return result(provider, model, 'completed', { output: json, contentType: 'application/json' })
-  } catch (error) {
-    return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen embeddings failed.')
-  }
 }
 
 async function executeTogetherTts(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -1138,8 +912,6 @@ async function adapterExecute(provider: ApprovedDirectProviderId, input: Capabil
   const startedAt = Date.now()
   let execution: Promise<CapabilityAdapterResult>
   if (provider === 'huggingface') execution = executeHuggingFace(input)
-  else if (provider === 'qwen' && input.capability.id === 'embeddings') execution = executeQwenEmbeddings(input)
-  else if (provider === 'qwen') execution = executeQwen(input)
   else if (provider === 'genx' && (
     input.capability.longRunning
     || ['computer_vision', 'video', 'audio', 'music', 'avatar_voice'].includes(input.capability.group)
@@ -1200,34 +972,6 @@ async function pollProvider(
       contentType: polled.contentType ?? null,
     })
   }
-  if (provider === 'qwen') {
-    const polled = await pollQwenWanxTask({ taskId: providerJobId, model })
-    if (!polled.ok) return result(provider, model, polled.executed ? 'failed' : 'needs_configuration', { providerJobId, error: polled.error })
-    const json = polled.json
-    const taskStatus = nestedString(json, ['output', 'task_status']) ?? ''
-    if (['PENDING', 'RUNNING', 'QUEUED'].includes(taskStatus.toUpperCase())) {
-      return result(provider, model, 'processing', { providerJobId, output: json })
-    }
-    const media = mediaFromJsonOutput(json)
-    if (!media) {
-      return result(provider, model, 'failed', {
-        providerJobId,
-        output: json,
-        error: 'Provider completed without a media URL or bytes.',
-        errorCategory: 'malformed_response',
-        retryable: true,
-        diagnostics: { qwenPollTaskStatus: taskStatus || null, mediaUrlPresent: false },
-      })
-    }
-    return result(provider, model, 'completed', {
-      providerJobId,
-      mediaUrl: media.url,
-      bytes: media.bytes,
-      contentType: media.contentType,
-      output: json,
-      diagnostics: { qwenPollTaskStatus: taskStatus || null, mediaUrlPresent: Boolean(media.url), mediaBytesPresent: Boolean(media.bytes) },
-    })
-  }
   if (provider === 'together') {
     const key = await getVaultApiKey(provider)
     if (!key) return failedResult(provider, model, 'Together AI key not configured.')
@@ -1284,7 +1028,7 @@ async function pollProvider(
 }
 
 export function providerHasCanonicalPollingContract(provider: ApprovedDirectProviderId) {
-  return ['genx', 'qwen', 'together'].includes(provider)
+  return ['genx', 'together'].includes(provider)
 }
 
 export const PROVIDER_CAPABILITY_ADAPTERS: readonly ProviderCapabilityAdapter[] =

@@ -474,7 +474,6 @@ const BLOCKED_ON_ROUTE_FAILURE = new Set([
 const PROVIDER_KEY_ENVS: Record<string, string[]> = {
   genx: ['GENX_API_KEY'],
   huggingface: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
-  qwen: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
   mimo: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
   groq: ['GROQ_API_KEY'],
   together: ['TOGETHER_API_KEY'],
@@ -539,7 +538,7 @@ function jobBehaviorFor(entry: CapabilityProof, longRunning: boolean): string {
 }
 
 async function collectProviderKeys(dbCheck: DbCheckResult): Promise<ProviderKeyResult[]> {
-  const providers = ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'] as const
+  const providers = ['genx', 'huggingface', 'mimo', 'groq', 'together'] as const
   return Promise.all(providers.map((provider) => withTimeout(async () => {
     try {
       const credential = await getMeshCredential(provider)
@@ -579,7 +578,7 @@ async function collectProviderConfigTruth(): Promise<ProviderRuntimeConfigTruth[
 }
 
 async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
-  const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
+  const providers = ['mimo', 'genx', 'huggingface', 'together', 'groq'] as const
   return Promise.all(providers.map((provider) => withTimeout(async () => {
     try {
       const snapshot = await discoverProvider(provider, { force: true })
@@ -659,7 +658,7 @@ async function collectProviderDiscovery(): Promise<ProviderDiscoveryResult[]> {
 }
 
 async function collectProviderContractSummary(): Promise<ProviderContractSummary[]> {
-  const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
+  const providers = ['mimo', 'genx', 'huggingface', 'together', 'groq'] as const
   return Promise.all(providers.map((providerId) => withTimeout(async () => {
     const provider = getProviderTruth(providerId)
     if (!provider) {
@@ -697,7 +696,7 @@ async function collectProviderContractSummary(): Promise<ProviderContractSummary
 }
 
 function collectProviderRuntimeContracts(): ProviderRuntimeContractChecklist[] {
-  const providers = ['mimo', 'genx', 'huggingface', 'qwen', 'together', 'groq'] as const
+  const providers = ['mimo', 'genx', 'huggingface', 'together', 'groq'] as const
   return providers.map((providerId) => {
     const provider = getProviderTruth(providerId)
     const adapter = getProviderCapabilityAdapter(providerId)

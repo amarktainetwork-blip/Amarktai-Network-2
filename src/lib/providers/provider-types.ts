@@ -3,7 +3,6 @@ export const CANONICAL_PROVIDER_IDS = [
   'together',
   'groq',
   'genx',
-  'qwen',
   'mimo',
 ] as const
 

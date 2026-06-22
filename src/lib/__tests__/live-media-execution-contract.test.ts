@@ -263,58 +263,6 @@ describe('local media job lifecycle', () => {
     })
   })
 
-  it('polls Qwen async media jobs through the canonical Brain local job surface', async () => {
-    createLocalMediaJob({
-      capability: 'video_generation',
-      appSlug: 'amarktai-network',
-      type: 'video',
-      subType: 'video_generation',
-      title: 'Qwen Video',
-      prompt: 'City flyover',
-      provider: 'qwen',
-      model: 'wan2.1-t2v-turbo',
-      providerJobId: 'qwen-wan:task-2',
-    })
-    mocks.pollQwenWanxTask.mockResolvedValue({
-      ok: true,
-      executed: true,
-      provider: 'qwen',
-      model: 'wan2.1-t2v-turbo',
-      capability: 'text_to_image_poll',
-      latencyMs: 11,
-      contentType: 'application/json',
-      json: {
-        output: {
-          task_status: 'SUCCEEDED',
-          video_url: 'https://cdn.example/qwen-task.mp4',
-        },
-      },
-    })
-    mocks.persistCanonicalMediaResult.mockResolvedValue({
-      artifactId: 'artifact-qwen-1',
-      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
-      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
-    })
-
-    const completed = await pollLocalMediaJob('local-media-job-1')
-
-    expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
-      taskId: 'task-2',
-      model: 'wan2.1-t2v-turbo',
-    })
-    expect(completed).toMatchObject({
-      status: 'completed',
-      artifactId: 'artifact-qwen-1',
-      mediaUrl: '/api/artifacts/file/artifacts/amarktai-network/video/qwen-task.mp4',
-    })
-    expect(localMediaJobResponse(completed!)).toMatchObject({
-      artifactUrl: '/api/admin/artifacts/artifact-qwen-1/download',
-      previewUrl: '/api/admin/artifacts/artifact-qwen-1/download',
-      downloadUrl: '/api/admin/artifacts/artifact-qwen-1/download',
-      videoUrl: '/api/admin/artifacts/artifact-qwen-1/download',
-    })
-  })
-
   it('fails stale jobs instead of leaving them processing forever', async () => {
     const job = createLocalMediaJob({
       capability: 'tts',

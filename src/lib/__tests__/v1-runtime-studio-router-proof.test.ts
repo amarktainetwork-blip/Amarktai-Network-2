@@ -19,7 +19,6 @@ const originalEnv = { ...process.env }
 const configured: ApprovedDirectProviderId[] = [
   'genx',
   'huggingface',
-  'qwen',
   'mimo',
   'groq',
   'together',
@@ -86,22 +85,22 @@ describe('V1 runtime, Studio, and capability router proof', () => {
     expect(cheapText.selected?.route.provider).toBe('groq')
     expect(autoImage.selected?.configured).toBe(true)
     expect(autoImage.selected?.route.executable).toBe(true)
-    const qwenImageCandidate = autoImage.candidates.find((candidate) => candidate.route.provider === 'qwen')
+    const togetherImageCandidate = autoImage.candidates.find((candidate) => candidate.route.provider === 'together')
     const selectedImageCandidate = autoImage.selected
-    expect(qwenImageCandidate).toBeDefined()
-    expect(qwenImageCandidate?.configured).toBe(true)
-    expect(qwenImageCandidate?.route.executable).toBe(true)
-    expect(qwenImageCandidate?.rank).toBeLessThanOrEqual(selectedImageCandidate?.rank ?? Infinity)
-    if (selectedImageCandidate?.route.provider !== 'qwen') {
+    expect(togetherImageCandidate).toBeDefined()
+    expect(togetherImageCandidate?.configured).toBe(true)
+    expect(togetherImageCandidate?.route.executable).toBe(true)
+    expect(togetherImageCandidate?.rank).toBeLessThanOrEqual(selectedImageCandidate?.rank ?? Infinity)
+    if (selectedImageCandidate?.route.provider !== 'together') {
       expect(autoImage.reason).toContain('runtime proof/performance selected')
       expect(autoImage.rejectedCandidates).toEqual(expect.arrayContaining([
         expect.objectContaining({
-          provider: 'qwen',
+          provider: 'together',
           code: 'RUNTIME_FALLBACK_SELECTED',
         }),
       ]))
     }
-    expect(balancedVideo.selected?.route.provider).toBe('qwen')
+    expect(['genx', 'together']).toContain(balancedVideo.selected?.route.provider)
     expect(premiumText.selected?.configured).toBe(true)
     expect(premiumText.selected?.route.executable).toBe(true)
     const genxPremiumCandidate = premiumText.candidates.find((candidate) => candidate.route.provider === 'genx')

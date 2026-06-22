@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
   getMeshCredential: vi.fn(),
   callGenXMedia: vi.fn(),
   getGenXJobStatus: vi.fn(),
-  pollQwenWanxTask: vi.fn(),
 }))
 
 vi.mock('@/lib/brain', () => ({
@@ -37,8 +36,6 @@ vi.mock('@/lib/genx-client', async (importOriginal) => {
     getGenXJobStatus: mocks.getGenXJobStatus,
   }
 })
-vi.mock('@/lib/qwen-wanx-polling', () => ({ pollQwenWanxTask: mocks.pollQwenWanxTask }))
-
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import {
   getProviderCapabilityAdapter,
@@ -59,7 +56,7 @@ function source(file: string) {
 
 function adapterInput(
   capabilityId: string,
-  provider: 'qwen' | 'together' | 'huggingface' | 'genx' | 'mimo',
+  provider: 'together' | 'huggingface' | 'genx' | 'mimo',
   model: string,
 ) {
   const capability = getCapabilityDefinition(capabilityId)!
@@ -84,88 +81,10 @@ describe('provider adapter contracts', () => {
 
   afterEach(() => vi.unstubAllGlobals())
 
-  it('uses the DashScope AIGC multimodal endpoint and input.messages for Qwen image', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: { choices: [{ message: { content: [{ image: 'https://cdn.example/qwen.png' }] } }] },
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const result = await getProviderCapabilityAdapter('qwen')!.execute(
-      adapterInput('text_to_image', 'qwen', 'qwen-image-2.0'),
-    )
-
-    expect(result.status).toBe('completed')
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/v1/services/aigc/multimodal-generation/generation')
-    expect(url).not.toContain('/chat/completions')
-    const body = JSON.parse(String(init.body))
-    expect(body.model).toBe('qwen-image-2.0')
-    expect(body.input.messages[0].content).toEqual([{ text: 'Create a launch visual' }])
-    expect(init.headers).toMatchObject({ Authorization: 'Bearer provider-secret' })
-  })
-
-  it('uses source-image fields for Qwen image edit requests', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: { choices: [{ message: { content: [{ image: 'https://cdn.example/qwen-edit.png' }] } }] },
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const result = await getProviderCapabilityAdapter('qwen')!.execute({
-      ...adapterInput('image_text_to_image', 'qwen', 'qwen-image-edit'),
-      references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
-      prompt: 'Make the source image warmer.',
-    })
-
-    expect(result.status).toBe('completed')
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/v1/services/aigc/multimodal-generation/generation')
-    const body = JSON.parse(String(init.body))
-    expect(body.model).toBe('qwen-image-edit')
-    expect(body.input.messages[0].content).toEqual([
-      { image: 'https://cdn.example/source.png' },
-      { text: 'Make the source image warmer.' },
-    ])
-    expect(result.mediaUrl).toBe('https://cdn.example/qwen-edit.png')
-  })
-
-  it('normalizes a compatible-mode DashScope AIGC base before Qwen media execution', async () => {
-    const previous = process.env.DASHSCOPE_AIGC_BASE_URL
-    process.env.DASHSCOPE_AIGC_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: { choices: [{ message: { content: [{ image: 'https://cdn.example/qwen-edit.png' }] } }] },
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    try {
-      await getProviderCapabilityAdapter('qwen')!.execute({
-        ...adapterInput('image_text_to_image', 'qwen', 'qwen-image-edit'),
-        references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
-      })
-
-      const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
-      expect(url).toContain('https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation')
-      expect(url).not.toContain('/compatible-mode/v1/services/aigc')
-    } finally {
-      if (previous === undefined) delete process.env.DASHSCOPE_AIGC_BASE_URL
-      else process.env.DASHSCOPE_AIGC_BASE_URL = previous
-    }
-  })
-
-  it('normalizes DashScope aliases and preserves Qwen auth/env truth', () => {
-    const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
-
-    expect(getIntegrationKey('dashscope')).toBe('qwen')
-    expect(getIntegrationKey('qwen')).toBe('qwen')
-    expect(qwen.envAliases).toEqual(expect.arrayContaining(['QWEN_API_KEY', 'DASHSCOPE_API_KEY']))
-    expect(qwen.billing).toMatchObject({
-      plan: 'standard_free_quota',
-      freeQuotaEligible: true,
-      paidEnabledEnv: 'QWEN_PAID_ENABLED',
-    })
-    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("getProviderKey('qwen')")
-    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("getVaultApiKey('qwen')")
-    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain("proofType: 'chat_route_probe'")
-    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain('capabilityExecutionProven: false')
+  it('removes Qwen from active adapter and admin readiness surfaces', () => {
+    expect(getProviderCapabilityAdapter('qwen' as never)).toBeNull()
+    expect(getIntegrationKey('dashscope')).toBe('dashscope')
+    expect(source('src/app/api/admin/settings/test-provider/route.ts')).not.toContain("id === 'qwen'")
   })
 
   it('preserves Groq auth/env truth conservatively', () => {
@@ -179,32 +98,8 @@ describe('provider adapter contracts', () => {
     expect(source('src/app/api/admin/settings/test-groq/route.ts')).toContain('capabilityExecutionProven: false')
   })
 
-  it('represents Qwen chat, media, and audio catalog truth while leaving unsupported families out', () => {
-    const qwen = PROVIDER_TRUTH.find((provider) => provider.id === 'qwen')!
-
-    expect(qwen.capabilities).toEqual(expect.arrayContaining([
-      'chat',
-      'reasoning',
-      'coding',
-      'vision',
-      'ocr',
-      'image',
-      'video',
-      'image_to_video',
-      'tts',
-      'stt',
-      'embeddings',
-      'translation',
-    ]))
-    expect(qwen.capabilities).not.toEqual(expect.arrayContaining([
-      'music',
-      'voice_clone',
-      'adult_text',
-      'adult_image',
-      'adult_video',
-      'documents',
-      'agents',
-    ]))
+  it('removes Qwen from the canonical provider truth set', () => {
+    expect(PROVIDER_TRUTH.map((provider) => provider.id)).not.toContain('qwen')
   })
 
   it('uses Together image generations rather than chat completions', async () => {
@@ -318,7 +213,6 @@ describe('provider adapter contracts', () => {
       'together',
       'groq',
       'genx',
-      'qwen',
       'mimo',
     ])
     expect(source('src/lib/provider-mesh.ts')).not.toContain("id: 'minimax'")
@@ -354,11 +248,8 @@ describe('provider adapter contracts', () => {
     expect(await getProviderKey('genx')).toBe('provider-secret')
   })
 
-  it('reads a dashboard-saved Qwen key through the same provider-key path Brain uses', async () => {
-    process.env.QWEN_API_KEY = ''
-    process.env.DASHSCOPE_API_KEY = ''
-
-    expect(await getProviderKey('qwen')).toBe('provider-secret')
+  it('does not expose a Qwen provider-key path as active runtime truth', async () => {
+    expect(await getProviderKey('qwen')).toBeNull()
   })
 
   it('treats Hugging Face loading and 503 responses as retryable', async () => {
@@ -478,24 +369,16 @@ describe('provider adapter contracts', () => {
     })
   })
 
-  it('classifies Qwen image and Wan video families correctly', () => {
-    const models = normalizeProviderCatalog('qwen', {
+  it('keeps image and video family classification on remaining providers only', () => {
+    const models = normalizeProviderCatalog('together', {
       data: [
-        { id: 'qwen-image-2.0', available: true },
-        { id: 'wan2.1-t2v-turbo', available: true },
-        { id: 'wan2.1-i2v-turbo', available: true },
-        { id: 'qwen3-tts', available: true },
-        { id: 'qwen3-asr', available: true },
+        { id: 'black-forest-labs/FLUX.1-schnell', available: true },
+        { id: 'Wan-AI/Wan2.1-T2V-14B', available: true },
       ],
     })
 
-    expect(models.find((model) => model.id === 'qwen-image-2.0')?.capabilities).toContain('image')
-    expect(models.find((model) => model.id === 'wan2.1-t2v-turbo')?.capabilities).toContain('video')
-    expect(models.find((model) => model.id === 'wan2.1-i2v-turbo')?.capabilities).toContain('image_to_video')
-    expect(models.find((model) => model.id === 'qwen3-tts')?.capabilities).toEqual(['tts'])
-    expect(models.find((model) => model.id === 'qwen3-tts')?.metadata?.executionClassification).toBe('adapter_missing')
-    expect(models.find((model) => model.id === 'qwen3-asr')?.capabilities).toEqual(['stt'])
-    expect(models.find((model) => model.id === 'qwen3-asr')?.metadata?.executionClassification).toBe('adapter_missing')
+    expect(models.find((model) => model.id === 'black-forest-labs/FLUX.1-schnell')?.capabilities).toContain('image')
+    expect(models.find((model) => model.id === 'Wan-AI/Wan2.1-T2V-14B')?.capabilities).toContain('video')
   })
 
   it('classifies Together image and video families correctly', () => {
@@ -647,90 +530,8 @@ describe('provider adapter contracts', () => {
     expect(genxTest).toContain('generateOk')
   })
 
-  it('polls Qwen Wanx tasks through the canonical adapter contract', async () => {
-    mocks.pollQwenWanxTask.mockResolvedValue({
-      ok: true,
-      executed: true,
-      provider: 'qwen',
-      model: 'wan2.1-t2v-turbo',
-      capability: 'text_to_image_poll',
-      latencyMs: 12,
-      contentType: 'application/json',
-      json: {
-        output: {
-          task_status: 'SUCCEEDED',
-          video_url: 'https://cdn.example/qwen-video.mp4',
-        },
-      },
-    })
-
-    const adapter = getProviderCapabilityAdapter('qwen')!
-    const input = adapterInput('text_to_video', 'qwen', 'wan2.1-t2v-turbo')
-    const completed = await adapter.poll!('qwen-task-1', input)
-
-    expect(completed).toMatchObject({
-      status: 'completed',
-      providerJobId: 'qwen-task-1',
-      mediaUrl: 'https://cdn.example/qwen-video.mp4',
-    })
-    expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
-      taskId: 'qwen-task-1',
-      model: 'wan2.1-t2v-turbo',
-    })
-  })
-
-  it('extracts Qwen Wanx image/video media from alternate task result shapes', async () => {
-    mocks.pollQwenWanxTask.mockResolvedValue({
-      ok: true,
-      executed: true,
-      provider: 'qwen',
-      model: 'wan2.1-i2v-turbo',
-      capability: 'text_to_image_poll',
-      latencyMs: 12,
-      contentType: 'application/json',
-      json: {
-        output: {
-          task_status: 'SUCCEEDED',
-          results: [{ video_url: 'https://cdn.example/qwen-i2v.mp4' }],
-        },
-      },
-    })
-
-    const adapter = getProviderCapabilityAdapter('qwen')!
-    const completed = await adapter.poll!('qwen-task-2', adapterInput('image_to_video', 'qwen', 'wan2.1-i2v-turbo'))
-
-    expect(completed).toMatchObject({
-      status: 'completed',
-      mediaUrl: 'https://cdn.example/qwen-i2v.mp4',
-    })
-  })
-
-  it('sends both img_url and image_url for Qwen image-to-video starts', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      output: { task_id: 'qwen-i2v-task-1' },
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    vi.stubGlobal('fetch', fetchMock)
-
-    const result = await getProviderCapabilityAdapter('qwen')!.execute({
-      ...adapterInput('image_to_video', 'qwen', 'wan2.1-i2v-turbo'),
-      references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
-      prompt: 'Animate the source image.',
-    })
-
-    expect(result).toMatchObject({
-      status: 'processing',
-      provider: 'qwen',
-      model: 'wan2.1-i2v-turbo',
-      providerJobId: 'qwen-i2v-task-1',
-    })
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(url).toContain('/api/v1/services/aigc/video-generation/video-synthesis')
-    const body = JSON.parse(String(init.body))
-    expect(body.input).toMatchObject({
-      prompt: 'Animate the source image.',
-      img_url: 'https://cdn.example/source.png',
-      image_url: 'https://cdn.example/source.png',
-    })
+  it('does not expose a Qwen adapter or polling contract after provider reset', () => {
+    expect(getProviderCapabilityAdapter('qwen' as never)).toBeNull()
   })
 
   it('keeps Together video disabled by default until endpoint proof is complete', async () => {
@@ -844,7 +645,7 @@ describe('provider adapter contracts', () => {
       .filter((provider) => provider.features.asyncJobs)
       .map((provider) => provider.id)
 
-    expect(asyncProviders).toEqual(['together', 'genx', 'qwen'])
+    expect(asyncProviders).toEqual(['together', 'genx'])
     for (const provider of asyncProviders) {
       expect(providerHasCanonicalPollingContract(provider)).toBe(true)
     }
@@ -967,12 +768,13 @@ describe('provider adapter contracts', () => {
     expect(providerHasCanonicalPollingContract('mimo')).toBe(false)
   })
 
-  it('keeps admin provider-key truth within the six approved V1 providers', () => {
+  it('keeps admin provider-key truth within the five approved V1 providers', () => {
     const integrationKeysRoute = source('src/app/api/admin/integration-keys/route.ts')
 
-    for (const provider of ['huggingface', 'together', 'groq', 'genx', 'qwen', 'mimo']) {
+    for (const provider of ['huggingface', 'together', 'groq', 'genx', 'mimo']) {
       expect(integrationKeysRoute).toMatch(new RegExp(`\\b${provider}:\\s*\\{`))
     }
+    expect(integrationKeysRoute).not.toContain("qwen:")
     for (const provider of ['openai', 'openrouter', 'gemini', 'deepseek', 'nvidia']) {
       expect(integrationKeysRoute).not.toMatch(new RegExp(`\\b${provider}:\\s*\\{`))
     }
@@ -984,7 +786,6 @@ describe('provider adapter contracts', () => {
       'together',
       'groq',
       'genx',
-      'qwen',
       'mimo',
     ])
   })

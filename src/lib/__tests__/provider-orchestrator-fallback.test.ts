@@ -3,7 +3,7 @@ import path from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  qwenExecute: vi.fn(),
+  huggingfaceExecute: vi.fn(),
   togetherExecute: vi.fn(),
   planCanonicalExecution: vi.fn(),
   createArtifact: vi.fn(),
@@ -22,7 +22,7 @@ vi.mock('@/lib/ai-capability-adapters', async (importOriginal) => {
       id: `${provider}_capability_adapter`,
       provider,
       categories: ['computer_vision'],
-      execute: provider === 'qwen' ? mocks.qwenExecute : mocks.togetherExecute,
+      execute: provider === 'huggingface' ? mocks.huggingfaceExecute : mocks.togetherExecute,
     }),
   }
 })
@@ -47,7 +47,7 @@ import { executeCapabilityOrchestration } from '@/lib/orchestrator'
 describe('canonical provider fallback', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    const candidate = (provider: 'qwen' | 'together', model: string, score: number) => ({
+    const candidate = (provider: 'huggingface' | 'together', model: string, score: number) => ({
       provider,
       model: {
         provider,
@@ -79,15 +79,15 @@ describe('canonical provider fallback', () => {
       },
       adapter: `${provider}_capability_adapter`,
     })
-    const qwen = candidate('qwen', 'qwen-image-2.0', 100)
+    const huggingface = candidate('huggingface', 'stabilityai/stable-diffusion-xl-base-1.0', 100)
     const together = candidate('together', 'black-forest-labs/FLUX.1-schnell', 90)
     mocks.planCanonicalExecution.mockResolvedValue({
       capability: 'image',
       profile: 'balanced',
       code: 'ROUTE_FOUND',
       reason: 'ready',
-      selected: qwen,
-      candidates: [qwen, together],
+      selected: huggingface,
+      candidates: [huggingface, together],
     })
     mocks.recordSuccess.mockResolvedValue(undefined)
     mocks.recordFailure.mockResolvedValue(undefined)
@@ -96,19 +96,19 @@ describe('canonical provider fallback', () => {
       downloadUrl: '/api/admin/artifacts/artifact-1/download',
       storageUrl: '/api/artifacts/file/image.png',
     })
-    mocks.qwenExecute.mockResolvedValue({
+    mocks.huggingfaceExecute.mockResolvedValue({
       status: 'failed',
-      provider: 'qwen',
-      model: 'qwen-image-2.0',
+      provider: 'huggingface',
+      model: 'stabilityai/stable-diffusion-xl-base-1.0',
       output: null,
       mediaUrl: null,
       bytes: null,
       contentType: null,
       providerJobId: null,
       latencyMs: 20,
-      rawStatus: 400,
-      error: 'Model is not supported in this region.',
-      errorCategory: 'model_not_supported',
+      rawStatus: 503,
+      error: 'Model is currently loading.',
+      errorCategory: 'provider_busy',
       retryable: true,
       diagnostics: null,
     })
@@ -130,7 +130,7 @@ describe('canonical provider fallback', () => {
     })
   })
 
-  it('falls back from a Qwen image model failure and persists the successful artifact', async () => {
+  it('falls back from a Hugging Face image model failure and persists the successful artifact', async () => {
     const result = await executeCapabilityOrchestration({
       input: 'Create a product launch image',
       capability: 'image_generation',
@@ -147,13 +147,13 @@ describe('canonical provider fallback', () => {
     })
     expect(result.providerAttempts).toHaveLength(2)
     expect(result.providerAttempts?.[0]).toMatchObject({
-      provider: 'qwen',
-      adapter: 'qwen_capability_adapter',
+      provider: 'huggingface',
+      adapter: 'huggingface_capability_adapter',
       outputType: 'image',
-      errorCategory: 'model_not_supported',
+      errorCategory: 'provider_busy',
     })
     expect(mocks.recordFailure).toHaveBeenCalledWith(expect.objectContaining({
-      providerId: 'qwen',
+      providerId: 'huggingface',
       capability: 'text_to_image',
     }))
     expect(mocks.recordSuccess).toHaveBeenCalledWith(expect.objectContaining({

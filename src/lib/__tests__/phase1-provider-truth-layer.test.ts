@@ -65,16 +65,15 @@ describe('Phase 1 provider truth layer', () => {
     delete process.env.HF_TOKEN
     delete process.env.HUGGINGFACEHUB_API_TOKEN
     delete process.env.HUGGINGFACE_API_KEY
-    delete process.env.QWEN_PAID_ENABLED
     delete process.env.MIMO_BASE_URL
   })
 
-  it('publishes only the six canonical providers and 23 canonical capabilities', () => {
+  it('publishes only the five canonical providers and 23 canonical capabilities', () => {
     expect(PROVIDER_TRUTH.map((provider) => provider.id)).toEqual([...CANONICAL_PROVIDER_IDS])
     expect(CAPABILITY_REGISTRY.map((capability) => capability.id)).toEqual([
       ...CANONICAL_CAPABILITY_IDS,
     ])
-    expect(new Set(PROVIDER_TRUTH.map((provider) => provider.id)).size).toBe(6)
+    expect(new Set(PROVIDER_TRUTH.map((provider) => provider.id)).size).toBe(5)
     expect(new Set(CAPABILITY_REGISTRY.map((capability) => capability.id)).size).toBe(23)
   })
 
@@ -96,9 +95,6 @@ describe('Phase 1 provider truth layer', () => {
     ]))
     expect(getProviderTruth('groq')?.capabilities).not.toEqual(expect.arrayContaining([
       'image', 'video', 'music', 'embeddings', 'rerank', 'translation', 'documents', 'agents', 'adult_text', 'adult_image', 'adult_video',
-    ]))
-    expect(getProviderTruth('qwen')?.capabilities).toEqual(expect.arrayContaining([
-      'chat', 'vision', 'image', 'video', 'image_to_video', 'tts', 'stt',
     ]))
     expect(getProviderTruth('mimo')?.capabilities).toEqual(expect.arrayContaining([
       'chat', 'reasoning', 'coding', 'vision', 'tts', 'stt', 'agents',
@@ -124,18 +120,10 @@ describe('Phase 1 provider truth layer', () => {
 
   it('uses provider-native discovery endpoints and token/free-quota truth', () => {
     const huggingface = getProviderTruth('huggingface')!
-    const qwen = getProviderTruth('qwen')!
     const mimo = getProviderTruth('mimo')!
     const genx = getProviderTruth('genx')!
     expect(resolveProviderEndpoint(huggingface, 'inference_router'))
       .toBe('https://router.huggingface.co')
-    expect(resolveProviderEndpoint(qwen, 'compatible_mode'))
-      .toBe('https://dashscope-intl.aliyuncs.com/compatible-mode/v1')
-    expect(qwen.billing).toMatchObject({
-      plan: 'standard_free_quota',
-      freeQuotaEligible: true,
-      paidEnabledEnv: 'QWEN_PAID_ENABLED',
-    })
     expect(resolveProviderEndpoint(mimo, 'token_plan'))
       .toBe('https://token-plan-sgp.xiaomimimo.com/v1')
     expect(resolveProviderEndpoint(genx, 'async_generation'))
@@ -593,11 +581,11 @@ describe('Phase 1 provider truth layer', () => {
     })
   })
 
-  it('scores discovered evidence and enforces adult, streaming, and billing gates', () => {
-    const provider = getProviderTruth('qwen')!
+  it('scores discovered evidence and enforces adult and streaming gates on remaining providers', () => {
+    const provider = getProviderTruth('genx')!
     const capability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'image')!
     const health: ProviderHealthSnapshot = {
-      provider: 'qwen',
+      provider: 'genx',
       state: 'healthy',
       configured: true,
       tested: true,
@@ -606,7 +594,7 @@ describe('Phase 1 provider truth layer', () => {
       detail: 'Healthy',
     }
     const model: DiscoveredModel = {
-      provider: 'qwen',
+      provider: 'genx',
       id: 'runtime-model',
       capabilities: ['image'],
       capabilityEvidence: 'model_metadata',
@@ -619,35 +607,17 @@ describe('Phase 1 provider truth layer', () => {
       streaming: true,
       research: false,
       artifactSupport: true,
-      raw: { free_quota_eligible: false },
+      raw: {},
       discoveredAt: '2026-06-15T00:00:00.000Z',
     }
     expect(scoreProviderModel({
       provider,
       model,
       capability,
-      health,
-      profile: getRoutingProfile('balanced'),
-    })).toBeNull()
-
-    process.env.QWEN_PAID_ENABLED = 'false'
-    expect(scoreProviderModel({
-      provider,
-      model,
-      capability,
-      health,
-      profile: getRoutingProfile('balanced'),
-    })).toBeNull()
-
-    expect(scoreProviderModel({
-      provider,
-      model: { ...model, raw: { free_quota_eligible: true } },
-      capability,
       health: { ...health, state: 'degraded', healthy: false },
       profile: getRoutingProfile('balanced'),
     })).toBeNull()
 
-    process.env.QWEN_PAID_ENABLED = 'true'
     expect(scoreProviderModel({
       provider,
       model,
@@ -769,13 +739,13 @@ describe('Phase 1 provider truth layer', () => {
     })
   })
 
-  it('keeps image-to-video on Qwen while skipping default-disabled Together video runtime', () => {
+  it('keeps image-to-video not launch-ready on remaining providers while Together stays endpoint-gated', () => {
     const capability = CAPABILITY_REGISTRY.find((entry) => entry.id === 'image_to_video')!
     const profile = getRoutingProfile('balanced', { artifactSupport: true })
-    const qwen = PROVIDER_TRUTH.find((entry) => entry.id === 'qwen')!
+    const genx = PROVIDER_TRUTH.find((entry) => entry.id === 'genx')!
     const together = PROVIDER_TRUTH.find((entry) => entry.id === 'together')!
     const health: ProviderHealthSnapshot = {
-      provider: 'qwen',
+      provider: 'genx',
       state: 'healthy',
       configured: true,
       tested: true,
@@ -783,9 +753,9 @@ describe('Phase 1 provider truth layer', () => {
       checkedAt: '2026-06-21T00:00:00.000Z',
       detail: 'Healthy',
     }
-    const qwenModel: DiscoveredModel = {
-      provider: 'qwen',
-      id: 'wan2.1-i2v-turbo',
+    const genxModel: DiscoveredModel = {
+      provider: 'genx',
+      id: 'seedance-2-i2v',
       capabilities: ['image_to_video'],
       capabilityEvidence: 'provider_contract',
       status: 'available',
@@ -801,15 +771,15 @@ describe('Phase 1 provider truth layer', () => {
       discoveredAt: '2026-06-21T00:00:00.000Z',
     }
     const togetherModel: DiscoveredModel = {
-      ...qwenModel,
+      ...genxModel,
       provider: 'together',
       id: 'Wan-AI/Wan2.1-I2V-14B',
       raw: {},
     }
 
-    expect(scoreProviderModel({ provider: qwen, model: qwenModel, capability, health, profile })).toMatchObject({
-      provider: 'qwen',
-      model: { id: 'wan2.1-i2v-turbo' },
+    expect(scoreProviderModel({ provider: genx, model: genxModel, capability, health, profile })).toMatchObject({
+      provider: 'genx',
+      model: { id: 'seedance-2-i2v' },
     })
     expect(scoreProviderModel({
       provider: together,
@@ -850,7 +820,7 @@ describe('Phase 1 provider truth layer', () => {
     expect(plan.selected?.model.id).toBe('runtime-chat-model')
     expect(plan.candidates.length).toBeGreaterThan(0)
     expect(providersForCapability('chat').map((provider) => provider.id))
-      .toEqual(expect.arrayContaining(['huggingface', 'together', 'groq', 'genx', 'qwen', 'mimo']))
+      .toEqual(expect.arrayContaining(['huggingface', 'together', 'groq', 'genx', 'mimo']))
 
     fetchMock.mockRestore()
     clearProviderDiscoveryCache()

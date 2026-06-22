@@ -48,9 +48,8 @@ describe('PR118 provider runtime and dashboard recovery', () => {
     expect(adapters).toContain("fetch(`${resolveProviderEndpoint(getProviderTruth(provider)!, 'video')}/videos/${encodeURIComponent(providerJobId)}`")
     expect(adapters).toContain("}/audio/transcriptions")
     expect(adapters).toContain("'rerank' : 'embeddings'")
-    expect(source('src/app/api/admin/settings/test-qwen/route.ts')).toContain('chatModel.id')
     expect(source('src/app/api/admin/settings/test-genx/route.ts')).toContain('chatModel.id')
-    expect(source('src/app/api/admin/settings/test-provider/route.ts')).toContain('chatModel.id')
+    expect(source('src/app/api/admin/settings/test-provider/route.ts')).not.toContain("id === 'qwen'")
   })
 
   it('projects provider diagnostics from canonical runtime discovery', () => {

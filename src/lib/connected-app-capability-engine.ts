@@ -320,7 +320,7 @@ export async function executeConnectedAppCapability(input: {
 function isApprovedConnectedProvider(
   provider: string | null,
 ): provider is ApprovedDirectProviderId {
-  return ['genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together'].includes(provider ?? '')
+  return ['genx', 'huggingface', 'mimo', 'groq', 'together'].includes(provider ?? '')
 }
 
 export async function pollConnectedAppCapabilityJob(

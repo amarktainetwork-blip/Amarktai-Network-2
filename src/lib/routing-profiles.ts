@@ -121,7 +121,6 @@ const BALANCED_PROFILE: RoutingProfile = {
     { provider: 'genx', tier: 'primary', maxCostTier: 'medium' },
     { provider: 'groq', tier: 'primary', maxCostTier: 'low' },
     { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
-    { provider: 'qwen', tier: 'fallback', maxCostTier: 'low' },
     { provider: 'huggingface', tier: 'emergency', maxCostTier: 'free' },
   ],
   retryPolicy: {
@@ -147,7 +146,6 @@ const PREMIUM_PROFILE: RoutingProfile = {
     // genx routes to GPT-4o, Claude-3.5-Sonnet, Gemini-2.5-Pro etc. as model labels
     { provider: 'genx', tier: 'primary', maxCostTier: 'premium' },
     { provider: 'mimo', tier: 'primary', maxCostTier: 'high' },
-    { provider: 'qwen', tier: 'fallback', maxCostTier: 'high' },
     { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
     { provider: 'groq', tier: 'emergency', maxCostTier: 'low' },
   ],
@@ -180,7 +178,6 @@ const ULTRA_RESILIENT_PROFILE: RoutingProfile = {
     { provider: 'groq', tier: 'primary', maxCostTier: 'low' },
     { provider: 'mimo', tier: 'primary', maxCostTier: 'medium' },
     { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
-    { provider: 'qwen', tier: 'fallback', maxCostTier: 'low' },
     { provider: 'huggingface', tier: 'emergency', maxCostTier: 'free' },
   ],
   retryPolicy: {

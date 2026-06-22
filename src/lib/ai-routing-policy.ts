@@ -71,10 +71,10 @@ const COST_ORDER: Record<CostPreference, Array<CostTier | 'genx'>> = {
 }
 
 const PROVIDER_PRIORITY: Record<CostPreference, string[]> = {
-  free_first: ['huggingface', 'qwen', 'groq', 'together', 'mimo', 'genx'],
-  cheap: ['qwen', 'groq', 'together', 'huggingface', 'mimo', 'genx'],
-  balanced: ['genx', 'qwen', 'mimo', 'groq', 'together', 'huggingface'],
-  premium: ['genx', 'mimo', 'qwen', 'groq', 'together', 'huggingface'],
+  free_first: ['huggingface', 'groq', 'together', 'mimo', 'genx'],
+  cheap: ['groq', 'together', 'huggingface', 'mimo', 'genx'],
+  balanced: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
+  premium: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
 }
 
 const ROLE_BY_CAPABILITY: Partial<Record<AiCapability, ModelRole[]>> = {
@@ -119,17 +119,13 @@ const GENX_BY_CAPABILITY: Partial<Record<AiCapability, AiRouteCandidate[]>> = {
 }
 
 const CHEAP_TEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'qwen', model: 'qwen-plus', displayName: 'Qwen Plus', costTier: 'very_low', reason: 'Cheap capable multilingual/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'qwen', model: 'qwen-turbo', displayName: 'Qwen Turbo', costTier: 'very_low', reason: 'Very low-cost fast chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'groq', model: 'llama-3.3-70b-versatile', displayName: 'Groq Llama 3.3 70B', costTier: 'low', reason: 'Fast low-cost open model for chat and coding support.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'mimo', model: 'mimo-v2.5', displayName: 'MiMo V2.5', costTier: 'low', reason: 'Low-cost MiMo chat/coding route when generic text execution is available.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'together', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', displayName: 'Together Llama 3.3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'huggingface', model: 'mistralai/Mistral-7B-Instruct-v0.3', displayName: 'HF Mistral 7B Instruct', costTier: 'free', reason: 'Hugging Face router-model fallback with canonical text metadata.', enabled: true, configured: false, blocked: false, blocker: null },
 ]
 
-const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'qwen', model: 'qwen-long', displayName: 'Qwen Long', costTier: 'low', reason: 'Long-context route when enabled on DashScope.', enabled: true, configured: false, blocked: false, blocker: null },
-]
+const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = []
 
 function supportsCapability(model: ModelEntry, capability: AiCapability, requireStructuredOutput: boolean): boolean {
   if (!model.enabled) return false
@@ -148,8 +144,8 @@ function supportsCapability(model: ModelEntry, capability: AiCapability, require
     case 'embeddings': return model.supports_embeddings
     case 'moderation': return model.supports_moderation === true
     case 'research': return model.supports_reasoning || model.supports_agent_planning || model.supports_tool_use
-    case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'qwen', 'mimo'].includes(model.provider)
-    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface', 'qwen'].includes(model.provider)
+    case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'mimo'].includes(model.provider)
+    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface'].includes(model.provider)
     default: return false
   }
 }

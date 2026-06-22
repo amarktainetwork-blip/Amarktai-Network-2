@@ -125,13 +125,13 @@ describe('production capability and dashboard contract', () => {
     expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 
-  it('does not treat the Qwen chat probe as full capability execution proof', () => {
-    const qwenTest = source('src/app/api/admin/settings/test-qwen/route.ts')
+  it('does not list Qwen as an active provider test surface', () => {
     const genericTest = source('src/app/api/admin/settings/test-provider/route.ts')
+    const integrationKeys = source('src/app/api/admin/integration-keys/route.ts')
 
-    expect(qwenTest).toContain("proofType: 'chat_route_probe'")
-    expect(qwenTest).toContain('capabilityExecutionProven: false')
-    expect(qwenTest).toContain('Image, video/Wanx, image-to-video, embeddings, and translation still require their own Brain/runtime route proof.')
+    expect(genericTest).not.toContain("id === 'qwen'")
+    expect(genericTest).not.toContain('test-qwen')
+    expect(integrationKeys).not.toContain("qwen:")
     expect(genericTest).toContain('result.capabilityExecutionProven === true')
   })
 

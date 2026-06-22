@@ -217,7 +217,7 @@ describe('Phase 4 Media Studio product coverage', () => {
 
   it('uses only approved direct providers and keeps removed voice authentication absent', () => {
     expect(APPROVED_DIRECT_PROVIDER_IDS).toEqual([
-      'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together',
+      'genx', 'huggingface', 'mimo', 'groq', 'together',
     ])
     const corpus = [
       read('app/admin/dashboard/studio/page.tsx'),

@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { getSession } from '@/lib/session'
 import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
 import { callUniversalProvider } from '@/lib/universal-provider-call'
-import { runHuggingFaceInference, runQwenWanxImage } from '@/lib/specialist-provider-routes'
+import { runHuggingFaceInference } from '@/lib/specialist-provider-routes'
 
 const testSchema = z.object({
   provider: z.string().min(1),
@@ -39,10 +39,6 @@ async function specialistTest(provider: string, capabilityId: string, modelId: s
       timeoutMs: 45_000,
     })
     return result
-  }
-
-  if (provider === 'qwen' && ['text_to_image', 'image_text_to_image'].includes(capabilityId)) {
-    return runQwenWanxImage({ prompt, model: modelId ?? 'wanx2.1-t2i-turbo' })
   }
 
   return null

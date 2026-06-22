@@ -46,7 +46,7 @@ describe('Research Capability Backend Truth', () => {
     const map = CAPABILITY_MAP as Record<string, { label?: string; suggestedProviders?: string[] }>
     expect(map.deep_research).toBeDefined()
     expect(map.deep_research.label).toContain('research')
-    expect(map.deep_research.suggestedProviders).toContain('qwen')
+    expect(map.deep_research.suggestedProviders).toContain('genx')
     expect(map.deep_research.suggestedProviders?.every(
       (provider) => APPROVED_DIRECT_PROVIDER_IDS.includes(provider as never),
     )).toBe(true)

@@ -92,7 +92,6 @@ export async function runProviderHealthCheck(
       case 'huggingface':
         response = await probe('https://huggingface.co/api/whoami-v2', resolvedApiKey, providerKey)
         break
-      case 'qwen':
       case 'mimo':
       case 'together':
         response = await probe(`${root}/models`, resolvedApiKey, providerKey)

@@ -215,7 +215,7 @@ describe('Phase 2 producer and policy coverage', () => {
     const route = getMediaCapabilityRoute('adult_video')
     expect(route?.providers.map((provider) => provider.provider)).toEqual(expect.arrayContaining([
       'genx',
-      'qwen',
+      'together',
       'huggingface',
     ]))
     expect(source('src/lib/media-capability-registry.ts')).not.toContain("return capability !== 'adult_video'")

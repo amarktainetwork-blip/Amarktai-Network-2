@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getVaultApiKey } from '@/lib/brain'
 import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
 import { createArtifact, isInvalidCompletedMediaArtifact } from '@/lib/artifact-store'
@@ -11,34 +10,6 @@ import { recordCapabilityTrace } from '@/lib/capability-tracing'
 const MAX_PROCESSING_MS = 15 * 60 * 1000
 
 // Legacy compatibility route. Apps should poll `/api/brain/media-jobs/:jobId`.
-
-async function pollQwenWanJob(providerJobId: string, apiKey: string) {
-  const taskId = providerJobId.replace(/^qwen-wan:/, '')
-  if (!taskId) throw new Error('Invalid Qwen Wan provider job ID.')
-  const response = await fetch(`https://dashscope-intl.aliyuncs.com/api/v1/tasks/${taskId}`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(15_000),
-  })
-  if (!response.ok) throw new Error(`Qwen Wan poll returned HTTP ${response.status}.`)
-  const data = await response.json() as {
-    output?: {
-      task_status?: string
-      video_url?: string
-      results?: Array<{ url?: string; video_url?: string }>
-      message?: string
-    }
-  }
-  if (data.output?.task_status === 'SUCCEEDED') {
-    return {
-      status: 'succeeded',
-      resultUrl: data.output.video_url ?? data.output.results?.[0]?.video_url ?? data.output.results?.[0]?.url,
-    }
-  }
-  if (data.output?.task_status === 'FAILED') {
-    return { status: 'failed', error: data.output.message ?? 'Qwen Wan video generation failed.' }
-  }
-  return { status: 'processing' }
-}
 
 function capabilityFor(resultMeta: string | null) {
   try {
@@ -312,11 +283,6 @@ export async function GET(
           }
         }
       }
-    } else if (job.provider === 'qwen' && job.providerJobId) {
-      const apiKey = await getVaultApiKey('qwen')
-      update = apiKey
-        ? await pollQwenWanJob(job.providerJobId, apiKey)
-        : { status: 'failed', error: 'Qwen API key is missing.' }
     } else if (job.provider === 'together') {
       update = { status: 'failed', error: 'Legacy Together video jobs used an image endpoint and are not valid video outputs.' }
     } else {

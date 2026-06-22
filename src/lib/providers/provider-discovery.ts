@@ -513,9 +513,7 @@ function resolveDiscoveryUrl(
   }
   const family = provider.id === 'genx'
     ? 'async_generation'
-    : provider.id === 'qwen'
-      ? 'compatible_mode'
-      : undefined
+    : undefined
   return `${resolveProviderEndpoint(provider, family)}${provider.discovery.models}`
 }
 
@@ -680,8 +678,6 @@ function normalizeModel(
     || provider.id === 'together' && capabilities.some((capability) => capability === 'rerank')
   const adapterMissing = provider.id === 'mimo'
     && capabilities.some((capability) => ['image', 'agents'].includes(capability))
-    || provider.id === 'qwen'
-    && capabilities.some((capability) => ['tts', 'stt'].includes(capability))
   const executableState = adapterMissing
     ? 'ADAPTER_MISSING'
     : mimoRuntimeFlagDisabled
@@ -850,13 +846,6 @@ function descriptorCapabilities(providerId: ProviderId, modelId: string, descrip
     add('stt', /\b(automatic[-_\s]?speech[-_\s]?recognition|asr|whisper|speech[-_\s]?to[-_\s]?text|transcri(?:be|ption))\b/i)
     add('embeddings', /\b(feature[-_\s]?extraction|embedding|sentence[-_\s]?transformers|mini?lm|bge|gte|e5)\b/i)
     add('rerank', /\b(text[-_\s]?ranking|rerank(?:er|ing)?|bge[-_\s]?reranker)\b/i)
-  } else if (providerId === 'qwen') {
-    add('image', /\b(qwen-image|wanx.*(?:t2i|image)|text2image|image[-_\s]synthesis)\b/i)
-    add('video', /\b(wan.*t2v|video[-_\s]synthesis|text[-_\s]?to[-_\s]?video)\b/i)
-    add('image_to_video', /\b(wan.*i2v|image[-_\s]?to[-_\s]?video|i2v)\b/i)
-    add('tts', /\bqwen3-tts\b/i)
-    add('stt', /\bqwen3-asr\b/i)
-    add('embeddings', /\b(embed(?:ding)?|text[-_\s]?embedding)\b/i)
   } else if (providerId === 'together') {
     add('image', /\b(flux|recraft|stable[-_\s]?diffusion|playground|image)\b/i)
     add('video', /\b(video|kling|wan|seedance|mochi|hunyuanvideo|luma|minimax\/)\b/i)
@@ -928,20 +917,6 @@ function inferProviderContractCapabilities(
     }
     return [...capabilities]
   }
-
-  if (providerId === 'qwen') return providerContractFromPatterns(lowerModelId, descriptor, {
-    image: [/qwen-image/, /wanx.*(?:t2i|image)/],
-    image_edit: [/qwen-image.*edit/, /image[-_\s]?edit/],
-    video: [/wan.*t2v/, /video[-_\s]?synthesis/],
-    image_to_video: [/wan.*i2v/, /image[-_\s]?to[-_\s]?video/, /\bi2v\b/],
-    tts: [/qwen3-tts/],
-    stt: [/qwen3-asr/],
-    embeddings: [/embed(?:ding)?/, /text[-_\s]?embedding/],
-    translation: [/translat/],
-    chat: [/qwen[-_].*(turbo|plus|max|chat|instruct)/, /deepseek/],
-    reasoning: [/qwen[-_].*(plus|max|reason)/, /deepseek[-_/].*r1/],
-    coding: [/coder/, /code/],
-  })
 
   if (providerId === 'together') return providerContractFromPatterns(lowerModelId, descriptor, {
     image: [/flux/, /recraft/, /stable[-_]?diffusion/, /playground/, /seedream/, /image/],
@@ -1020,10 +995,8 @@ function providerContractFromPatterns(
 function isAudioModel(providerId: ProviderId, modelId: string) {
   return providerContractFromPatterns(modelId, modelId, providerId === 'groq'
     ? { tts: [/orpheus/, /tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]synthesis/], stt: [/whisper/, /asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/] }
-    : providerId === 'mimo'
-      ? { tts: [/tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]generation/, /voice/], stt: [/asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/, /whisper/] }
-      : providerId === 'qwen'
-        ? { tts: [/qwen3-tts/], stt: [/qwen3-asr/] }
+      : providerId === 'mimo'
+        ? { tts: [/tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]generation/, /voice/], stt: [/asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/, /whisper/] }
         : providerId === 'together'
           ? { tts: [/orpheus/, /tts/, /text[-_\s]?to[-_\s]?speech/, /speech[-_\s]synthesis/], stt: [/whisper/, /asr/, /speech[-_\s]?to[-_\s]?text/, /transcri/] }
           : providerId === 'huggingface'
@@ -1032,9 +1005,7 @@ function isAudioModel(providerId: ProviderId, modelId: string) {
 }
 
 function isMediaModel(providerId: ProviderId, modelId: string) {
-  return providerContractFromPatterns(modelId, modelId, providerId === 'qwen'
-    ? { image: [/qwen-image/, /wanx.*(?:t2i|image)/], video: [/wan.*t2v/], image_to_video: [/wan.*i2v/] }
-    : providerId === 'together'
+  return providerContractFromPatterns(modelId, modelId, providerId === 'together'
       ? { image: [/flux/, /recraft/, /stable[-_]?diffusion/, /image/], video: [/video/, /kling/, /wan/, /seedance/, /mochi/, /hunyuanvideo/, /minimax\//], image_to_video: [/i2v/] }
       : providerId === 'huggingface'
         ? { image: [/flux/, /stable[-_]?diffusion/, /sdxl/, /pixart/, /kolors/, /recraft/], video: [/wan/, /cogvideo/, /mochi/, /ltx[-_]?video/, /hunyuanvideo/], image_to_video: [/i2v/] }
