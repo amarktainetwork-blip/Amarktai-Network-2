@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T11:49:38.083Z",
+  "generatedAt": "2026-06-22T13:07:12.323Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -985,12 +985,12 @@
       "blockedByPolicy": 0,
       "missingCredential": 0,
       "nextActions": [
-        "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
         "Select a provider/model that supports coding, or add a truthful contract.",
         "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports stt, or add a truthful contract.",
         "Select a provider/model that supports vision, or add a truthful contract.",
+        "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports agents, or add a truthful contract."
       ]
     }
@@ -1319,7 +1319,7 @@
       "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
       "routeOrAdapter": "researchRuntime.execute",
       "status": "LIVE_PROVEN",
-      "artifactId": "09850717-7559-436d-83dc-b6b8742ee5db",
+      "artifactId": "ed5b3576-831d-40be-95f8-10150f20c205",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1331,14 +1331,15 @@
         "documentId": "research-0fe2558733f8caa57a882554",
         "qdrantCollection": "amarktai_memory",
         "vectorIds": [
-          "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
+          "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b"
         ],
         "retrievedVectorIds": [
           "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
+          "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b",
           "7972c9c2-f228-4ff1-a636-3abbd968cb46",
           "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
         ],
-        "artifactId": "09850717-7559-436d-83dc-b6b8742ee5db"
+        "artifactId": "ed5b3576-831d-40be-95f8-10150f20c205"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Research",
@@ -1364,7 +1365,7 @@
         "Scrapy",
         "Trafilatura"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 09850717-7559-436d-83dc-b6b8742ee5db.",
+      "artifactBehavior": "Intentional artifact persisted: ed5b3576-831d-40be-95f8-10150f20c205.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1498,7 +1499,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "f313d8a3-a6b6-4a9a-be40-32f90fdabfa7",
+      "artifactId": "ca85b1ec-20e4-4c89-a51d-c5e63b6da3f3",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1521,7 +1522,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: f313d8a3-a6b6-4a9a-be40-32f90fdabfa7.",
+      "artifactBehavior": "Intentional artifact persisted: ca85b1ec-20e4-4c89-a51d-c5e63b6da3f3.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1563,12 +1564,12 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "e2daaadd-5e09-4bf4-a8df-ec47dbf4e121",
-      "pollUrl": "/api/brain/media-jobs/e2daaadd-5e09-4bf4-a8df-ec47dbf4e121",
+      "jobId": "2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e",
+      "pollUrl": "/api/brain/media-jobs/2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "2f177e1d-2377-44e5-bd7e-9a84e7a69981",
-        "controlPlaneAttemptId": "bd73bd55-6967-4744-bfc1-8c3d3e3b6c59",
+        "controlPlaneJobId": "b9145521-ab77-4540-a505-36f5898ec850",
+        "controlPlaneAttemptId": "5af15a79-d4f9-4c94-98b2-6a8fac93d819",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1591,7 +1592,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as e2daaadd-5e09-4bf4-a8df-ec47dbf4e121 via /api/brain/media-jobs/e2daaadd-5e09-4bf4-a8df-ec47dbf4e121."
+      "jobBehavior": "Async job tracked as 2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e via /api/brain/media-jobs/2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1599,7 +1600,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "76501523-d5ed-437f-8603-e52c05c448b6",
+      "artifactId": "69aba769-6bc8-49b9-b188-7a4df343e67a",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1624,7 +1625,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 76501523-d5ed-437f-8603-e52c05c448b6.",
+      "artifactBehavior": "Intentional artifact persisted: 69aba769-6bc8-49b9-b188-7a4df343e67a.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1634,12 +1635,12 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_e979fbbc8d73403b97f7ac0c0e24856d",
+      "jobId": "gnxsh_job_1416260b17674b5f86c749235716782c",
       "pollUrl": null,
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "7a998eef-935d-4cf2-9c58-843a598ec0ed",
-        "controlPlaneAttemptId": "ea7246ab-b789-41e2-a7df-8e6fa99b03d9",
+        "controlPlaneJobId": "6ea13ca8-6c18-4550-a21c-e7146f89c847",
+        "controlPlaneAttemptId": "babea48d-8beb-45bd-886d-1dcc0d9ca6ad",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1666,7 +1667,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_e979fbbc8d73403b97f7ac0c0e24856d."
+      "jobBehavior": "Async job tracked as gnxsh_job_1416260b17674b5f86c749235716782c."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1772,17 +1773,24 @@
     },
     {
       "capabilityId": "long_form_multi_scene_video_assembly",
-      "providerSelected": null,
-      "modelSelected": null,
-      "routeOrAdapter": "/api/admin/video-projects",
-      "status": "SOURCE_WIRED",
-      "artifactId": null,
-      "jobId": null,
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.long_form_assembly",
+      "status": "LIVE_PROVEN",
+      "artifactId": "b5a46e50-e0c7-4485-bf68-1c37802889b2",
+      "jobId": "300270aa-074f-48da-b749-5105171d092f",
       "pollUrl": null,
-      "exactError": "Long-form assembly is admin/project-pipeline based and source-wired; live proof requires database-backed project creation plus at least one generated clip in the target environment.",
+      "exactError": null,
+      "diagnostics": {
+        "sourceClipCount": 2,
+        "generatedProviderClip": false,
+        "finalDurationSeconds": 2.020996,
+        "artifactId": "b5a46e50-e0c7-4485-bf68-1c37802889b2",
+        "jobId": "300270aa-074f-48da-b749-5105171d092f"
+      },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
-      "routeFile": "src/app/api/admin/video-projects/route.ts",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
       "providerCandidates": [
         "genx:veo-3.1",
         "qwen:wan2.1-t2v-turbo",
@@ -1795,10 +1803,86 @@
         "TOGETHER_API_KEY"
       ],
       "requiredLocalTools": [
-        "ffmpeg"
+        "ffmpeg",
+        "ffprobe",
+        "local storage"
       ],
-      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "artifactBehavior": "Intentional artifact persisted: b5a46e50-e0c7-4485-bf68-1c37802889b2.",
+      "jobBehavior": "Async job tracked as 300270aa-074f-48da-b749-5105171d092f."
+    },
+    {
+      "capabilityId": "music_audio_bed_generation",
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.audio_bed",
+      "status": "LIVE_PROVEN",
+      "artifactId": "eebad211-7e0e-4fad-ab14-74dcab4e471b",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "diagnostics": {
+        "productContract": "audio_bed_assembly",
+        "providerMusicGeneration": false,
+        "durationSeconds": 2,
+        "artifactId": "eebad211-7e0e-4fad-ab14-74dcab4e471b"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Audio",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
+      "providerCandidates": [],
+      "requiredKeys": [],
+      "requiredLocalTools": [
+        "ffmpeg",
+        "ffprobe",
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: eebad211-7e0e-4fad-ab14-74dcab4e471b.",
       "jobBehavior": "Async job/polling expected when provider returns processing."
+    },
+    {
+      "capabilityId": "captions_subtitles_pipeline",
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.captions",
+      "status": "LIVE_PROVEN",
+      "artifactId": "84e22318-92e8-4892-b657-de7f0e2f1195",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "diagnostics": {
+        "sourceMedia": "V1 proof generated transcript",
+        "cueCount": 2,
+        "formats": [
+          "vtt",
+          "srt"
+        ],
+        "artifactId": "84e22318-92e8-4892-b657-de7f0e2f1195"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Automatic Speech Recognition",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
+      "providerCandidates": [
+        "genx:gpt-4o-transcribe",
+        "groq:whisper-large-v3-turbo",
+        "together:provider-discovery",
+        "huggingface:openai/whisper-large-v3",
+        "mimo:mimo-v2.5-asr"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: 84e22318-92e8-4892-b657-de7f0e2f1195.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "avatar_library_avatar_image_generation",
@@ -1807,12 +1891,12 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "47e59d81-b98c-4cfe-ab89-363f29bbcc9b",
-      "pollUrl": "/api/brain/media-jobs/47e59d81-b98c-4cfe-ab89-363f29bbcc9b",
+      "jobId": "d7aeee5f-188e-4600-bad0-dd6920c8a064",
+      "pollUrl": "/api/brain/media-jobs/d7aeee5f-188e-4600-bad0-dd6920c8a064",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "2ee03f5f-2682-478f-83af-6ceb4ffc909f",
-        "controlPlaneAttemptId": "f4e82027-88df-42ce-ad2d-afcb02341e24",
+        "controlPlaneJobId": "1fc75d43-30a4-494d-9550-cb5422e5a2d8",
+        "controlPlaneAttemptId": "4c1ad8f0-b191-4a14-8a13-dcef3634202a",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1837,7 +1921,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 47e59d81-b98c-4cfe-ab89-363f29bbcc9b via /api/brain/media-jobs/47e59d81-b98c-4cfe-ab89-363f29bbcc9b."
+      "jobBehavior": "Async job tracked as d7aeee5f-188e-4600-bad0-dd6920c8a064 via /api/brain/media-jobs/d7aeee5f-188e-4600-bad0-dd6920c8a064."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -2074,8 +2158,8 @@
     }
   ],
   "summary": {
-    "liveProven": 11,
-    "sourceWired": 11,
+    "liveProven": 14,
+    "sourceWired": 10,
     "providerAvailable": 0,
     "blocked": 3,
     "notWired": 0
@@ -2111,6 +2195,14 @@
       "WRITE_PROOF_START",
       "WRITE_PROOF_DONE",
       "CAPABILITY_PROOF_START",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
       "WRITE_PROOF_START",
       "WRITE_PROOF_DONE",
       "WRITE_PROOF_START",
