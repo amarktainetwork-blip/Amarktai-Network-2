@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T13:07:12.323Z",
+  "generatedAt": "2026-06-22T13:48:44.919Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -985,12 +985,12 @@
       "blockedByPolicy": 0,
       "missingCredential": 0,
       "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
         "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports stt, or add a truthful contract.",
         "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports agents, or add a truthful contract."
       ]
     }
@@ -1319,7 +1319,7 @@
       "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
       "routeOrAdapter": "researchRuntime.execute",
       "status": "LIVE_PROVEN",
-      "artifactId": "ed5b3576-831d-40be-95f8-10150f20c205",
+      "artifactId": "951d9978-0ffd-4a62-be6d-96f6b97973a9",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1331,15 +1331,16 @@
         "documentId": "research-0fe2558733f8caa57a882554",
         "qdrantCollection": "amarktai_memory",
         "vectorIds": [
-          "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b"
+          "3c51557f-0c95-485d-9226-2e04ea8ae8fc"
         ],
         "retrievedVectorIds": [
+          "3c51557f-0c95-485d-9226-2e04ea8ae8fc",
           "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
           "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b",
           "7972c9c2-f228-4ff1-a636-3abbd968cb46",
           "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
         ],
-        "artifactId": "ed5b3576-831d-40be-95f8-10150f20c205"
+        "artifactId": "951d9978-0ffd-4a62-be6d-96f6b97973a9"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Research",
@@ -1365,7 +1366,7 @@
         "Scrapy",
         "Trafilatura"
       ],
-      "artifactBehavior": "Intentional artifact persisted: ed5b3576-831d-40be-95f8-10150f20c205.",
+      "artifactBehavior": "Intentional artifact persisted: 951d9978-0ffd-4a62-be6d-96f6b97973a9.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1499,7 +1500,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "ca85b1ec-20e4-4c89-a51d-c5e63b6da3f3",
+      "artifactId": "1af9275f-42a2-46e1-82d4-f5dc6fb15411",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1522,7 +1523,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: ca85b1ec-20e4-4c89-a51d-c5e63b6da3f3.",
+      "artifactBehavior": "Intentional artifact persisted: 1af9275f-42a2-46e1-82d4-f5dc6fb15411.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1534,7 +1535,71 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed.",
+      "exactError": "All eligible provider/model attempts failed. | Attempts: qwen/qwen-image-edit-plus: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"d3b8ef60-5185-94c7-8cc3-b5d08208415a\"}; qwen/qwen-image-edit-plus-2025-10-30: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"49920ed6-ae08-9c4c-b65f-30d80c566f92\"}; qwen/qwen-image-edit: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"3b520cac-c615-961e-a0f5-256d2d07b01f\"}",
+      "diagnostics": {
+        "providerAttempts": [
+          {
+            "provider": "qwen",
+            "model": "qwen-image-edit-max",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"6ff9de59-a9e0-9941-937e-f8807c01c880\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "qwen",
+            "model": "qwen-image-edit-plus-2025-12-15",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"6e8f8bf9-10d4-9ab6-a526-172c6947770d\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "qwen",
+            "model": "qwen-image-edit-plus",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"d3b8ef60-5185-94c7-8cc3-b5d08208415a\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "qwen",
+            "model": "qwen-image-edit-plus-2025-10-30",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"49920ed6-ae08-9c4c-b65f-30d80c566f92\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "qwen",
+            "model": "qwen-image-edit",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"3b520cac-c615-961e-a0f5-256d2d07b01f\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          }
+        ]
+      },
       "sourceFileResponsible": "src/lib/providers/execution.ts",
       "capabilityName": "Image and Text to Image",
       "routeFile": "src/lib/providers/execution.ts",
@@ -1564,12 +1629,12 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e",
-      "pollUrl": "/api/brain/media-jobs/2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e",
+      "jobId": "e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1",
+      "pollUrl": "/api/brain/media-jobs/e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "b9145521-ab77-4540-a505-36f5898ec850",
-        "controlPlaneAttemptId": "5af15a79-d4f9-4c94-98b2-6a8fac93d819",
+        "controlPlaneJobId": "0651b2ce-b56a-40cc-924e-f3916710689f",
+        "controlPlaneAttemptId": "c97e16f2-1205-4737-8b8f-cc2af8b5be97",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1592,7 +1657,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e via /api/brain/media-jobs/2d4dccf0-9de6-4a3c-82a7-c842d6da9c5e."
+      "jobBehavior": "Async job tracked as e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1 via /api/brain/media-jobs/e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1600,7 +1665,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "69aba769-6bc8-49b9-b188-7a4df343e67a",
+      "artifactId": "67ca9f26-26a5-4dbe-9916-1817b4bbe13f",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1625,7 +1690,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 69aba769-6bc8-49b9-b188-7a4df343e67a.",
+      "artifactBehavior": "Intentional artifact persisted: 67ca9f26-26a5-4dbe-9916-1817b4bbe13f.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1635,12 +1700,12 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_1416260b17674b5f86c749235716782c",
+      "jobId": "gnxsh_job_8514acef504442e6bbd10a190aed8886",
       "pollUrl": null,
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "6ea13ca8-6c18-4550-a21c-e7146f89c847",
-        "controlPlaneAttemptId": "babea48d-8beb-45bd-886d-1dcc0d9ca6ad",
+        "controlPlaneJobId": "6960661a-4735-4ad3-b725-d3d83b7d1d64",
+        "controlPlaneAttemptId": "710d249a-c4e3-4a96-8b83-913f62bd27d5",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1667,7 +1732,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_1416260b17674b5f86c749235716782c."
+      "jobBehavior": "Async job tracked as gnxsh_job_8514acef504442e6bbd10a190aed8886."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1752,7 +1817,71 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed.",
+      "exactError": "All eligible provider/model attempts failed. | Attempts: genx/seedance-2-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-2-i2v.; genx/seedance-v1-fast-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.; qwen/wan2.1-i2v-turbo: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"048bf9c4-a2a1-9196-9b02-6a4cd13ae025\"}",
+      "diagnostics": {
+        "providerAttempts": [
+          {
+            "provider": "genx",
+            "model": "pixverse-v5.5-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "model_not_supported",
+            "error": "No provider-safe video contract is registered for genx/pixverse-v5.5-i2v.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "genx",
+            "model": "pixverse-v6-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "model_not_supported",
+            "error": "No provider-safe video contract is registered for genx/pixverse-v6-i2v.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "genx",
+            "model": "seedance-2-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "model_not_supported",
+            "error": "No provider-safe video contract is registered for genx/seedance-2-i2v.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "genx",
+            "model": "seedance-v1-fast-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "model_not_supported",
+            "error": "No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
+          {
+            "provider": "qwen",
+            "model": "wan2.1-i2v-turbo",
+            "status": "failed",
+            "classification": "provider_error",
+            "errorCategory": "unknown",
+            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"048bf9c4-a2a1-9196-9b02-6a4cd13ae025\"}",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          }
+        ]
+      },
       "sourceFileResponsible": "src/lib/providers/execution.ts",
       "capabilityName": "Image to Video",
       "routeFile": "src/lib/providers/execution.ts",
@@ -1777,16 +1906,16 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.long_form_assembly",
       "status": "LIVE_PROVEN",
-      "artifactId": "b5a46e50-e0c7-4485-bf68-1c37802889b2",
-      "jobId": "300270aa-074f-48da-b749-5105171d092f",
+      "artifactId": "278deb9d-3f55-4100-bac0-2578e9ef4a33",
+      "jobId": "3211c68f-dd2f-4b7b-a940-ced703bc6a7a",
       "pollUrl": null,
-      "exactError": null,
+      "exactError": "Technical assembly proof only: ffmpeg assembled provided/local proof clips and persisted an artifact; provider-native long-form generation, coherent advert quality, pronunciation, and voice/video sync are not proven.",
       "diagnostics": {
         "sourceClipCount": 2,
         "generatedProviderClip": false,
         "finalDurationSeconds": 2.020996,
-        "artifactId": "b5a46e50-e0c7-4485-bf68-1c37802889b2",
-        "jobId": "300270aa-074f-48da-b749-5105171d092f"
+        "artifactId": "278deb9d-3f55-4100-bac0-2578e9ef4a33",
+        "jobId": "3211c68f-dd2f-4b7b-a940-ced703bc6a7a"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
@@ -1807,8 +1936,8 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: b5a46e50-e0c7-4485-bf68-1c37802889b2.",
-      "jobBehavior": "Async job tracked as 300270aa-074f-48da-b749-5105171d092f."
+      "artifactBehavior": "Intentional artifact persisted: 278deb9d-3f55-4100-bac0-2578e9ef4a33.",
+      "jobBehavior": "Async job tracked as 3211c68f-dd2f-4b7b-a940-ced703bc6a7a."
     },
     {
       "capabilityId": "music_audio_bed_generation",
@@ -1816,7 +1945,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.audio_bed",
       "status": "LIVE_PROVEN",
-      "artifactId": "eebad211-7e0e-4fad-ab14-74dcab4e471b",
+      "artifactId": "5125991b-224e-46dd-83e3-2f82d680d426",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1824,7 +1953,7 @@
         "productContract": "audio_bed_assembly",
         "providerMusicGeneration": false,
         "durationSeconds": 2,
-        "artifactId": "eebad211-7e0e-4fad-ab14-74dcab4e471b"
+        "artifactId": "5125991b-224e-46dd-83e3-2f82d680d426"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Audio",
@@ -1836,7 +1965,7 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: eebad211-7e0e-4fad-ab14-74dcab4e471b.",
+      "artifactBehavior": "Intentional artifact persisted: 5125991b-224e-46dd-83e3-2f82d680d426.",
       "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
@@ -1845,7 +1974,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.captions",
       "status": "LIVE_PROVEN",
-      "artifactId": "84e22318-92e8-4892-b657-de7f0e2f1195",
+      "artifactId": "b6c0a672-e5a0-486a-9131-316c3a6fa221",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1856,7 +1985,7 @@
           "vtt",
           "srt"
         ],
-        "artifactId": "84e22318-92e8-4892-b657-de7f0e2f1195"
+        "artifactId": "b6c0a672-e5a0-486a-9131-316c3a6fa221"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Automatic Speech Recognition",
@@ -1881,7 +2010,7 @@
       "requiredLocalTools": [
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 84e22318-92e8-4892-b657-de7f0e2f1195.",
+      "artifactBehavior": "Intentional artifact persisted: b6c0a672-e5a0-486a-9131-316c3a6fa221.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1891,12 +2020,12 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "d7aeee5f-188e-4600-bad0-dd6920c8a064",
-      "pollUrl": "/api/brain/media-jobs/d7aeee5f-188e-4600-bad0-dd6920c8a064",
+      "jobId": "e29a383a-b4ef-4e90-96ac-0b80f4bf542d",
+      "pollUrl": "/api/brain/media-jobs/e29a383a-b4ef-4e90-96ac-0b80f4bf542d",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "1fc75d43-30a4-494d-9550-cb5422e5a2d8",
-        "controlPlaneAttemptId": "4c1ad8f0-b191-4a14-8a13-dcef3634202a",
+        "controlPlaneJobId": "1509cda8-61b4-4c14-a30e-f7a046af46d7",
+        "controlPlaneAttemptId": "54d40023-2016-41ae-895d-b4f57b925b79",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1921,7 +2050,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as d7aeee5f-188e-4600-bad0-dd6920c8a064 via /api/brain/media-jobs/d7aeee5f-188e-4600-bad0-dd6920c8a064."
+      "jobBehavior": "Async job tracked as e29a383a-b4ef-4e90-96ac-0b80f4bf542d via /api/brain/media-jobs/e29a383a-b4ef-4e90-96ac-0b80f4bf542d."
     },
     {
       "capabilityId": "talking_avatar_video",
