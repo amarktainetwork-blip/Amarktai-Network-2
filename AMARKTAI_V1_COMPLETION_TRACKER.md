@@ -150,10 +150,10 @@ Status terms used here:
 
 ### Phase 1 Provider reset
 
-- [ ] Remove Qwen completely
-- [ ] Lock provider roles
-- [ ] Stop bad/default model routing
-- [ ] Add provider/model pool tests
+- [x] Remove Qwen completely
+- [x] Lock provider roles
+- [x] Stop bad/default model routing
+- [x] Add provider/model pool tests
 
 ### Phase 2 Capability/model pools
 
