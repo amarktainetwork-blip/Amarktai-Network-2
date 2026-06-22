@@ -137,6 +137,10 @@ export async function proveLongFormAssemblyFromProvidedClips(input: {
         sceneCount,
         generatedProviderClip: false,
         proofOnly: true,
+        productContract: 'technical_ffmpeg_assembly_only',
+        creativeWorkflowStatus: 'TECHNICAL_ASSEMBLY_PASSED',
+        providerNativeLongFormProven: false,
+        coherentAdvertQualityProven: false,
       },
     })
     const attempt = await startControlPlaneAttempt({
@@ -160,9 +164,14 @@ export async function proveLongFormAssemblyFromProvidedClips(input: {
       content: await fs.readFile(finalVideo),
       metadata: {
         proofOnly: true,
+        productContract: 'technical_ffmpeg_assembly_only',
+        creativeWorkflowStatus: 'TECHNICAL_ASSEMBLY_PASSED',
         sourceClipCount: clips.length,
         sourceMedia: clips.map((clip) => path.basename(clip)),
         generatedProviderClip: false,
+        providerNativeLongFormProven: false,
+        coherentAdvertQualityProven: false,
+        voiceSyncQuality: 'not_checked',
         finalDurationSeconds: finalDuration,
         workspace,
       },
@@ -176,6 +185,12 @@ export async function proveLongFormAssemblyFromProvidedClips(input: {
         sourceClipCount: clips.length,
         finalDurationSeconds: finalDuration,
         artifactId: artifact.id,
+        productContract: 'technical_ffmpeg_assembly_only',
+        creativeWorkflowStatus: 'TECHNICAL_ASSEMBLY_PASSED',
+        generatedProviderClip: false,
+        providerNativeLongFormProven: false,
+        coherentAdvertQualityProven: false,
+        voiceSyncQuality: 'not_checked',
       },
     })
 
@@ -199,7 +214,14 @@ export async function proveLongFormAssemblyFromProvidedClips(input: {
       artifactId: null,
       artifactUrl: null,
       jobId: null,
-      diagnostics: { source: 'media_workflow_foundation.long_form_assembly' },
+      diagnostics: {
+        source: 'media_workflow_foundation.long_form_assembly',
+        productContract: 'technical_ffmpeg_assembly_only',
+        creativeWorkflowStatus: 'BLOCKED_FINAL_ASSEMBLY',
+        generatedProviderClip: false,
+        providerNativeLongFormProven: false,
+        coherentAdvertQualityProven: false,
+      },
       error: error instanceof Error ? error.message : 'Long-form assembly proof failed.',
     }
   }

@@ -1271,6 +1271,9 @@ function capabilityFailure(
     error_category: errorCategory,
     code,
     providerAttempts: attempts,
+    diagnostics: attempts.length
+      ? { providerAttempts: summarizeFailedProviderAttempts(attempts) }
+      : undefined,
     nextActions: readiness === 'NEEDS_INPUT'
       ? ['Attach the required source input and retry.']
       : readiness === 'NEEDS_CONFIGURATION'
@@ -1279,4 +1282,35 @@ function capabilityFailure(
         ? ['Review provider attempts in admin diagnostics and retry after correcting the provider contract.']
         : [],
   }
+}
+
+function summarizeFailedProviderAttempts(attempts: ProviderAttempt[]) {
+  return attempts.slice(-5).map((attempt) => ({
+    provider: attempt.provider,
+    model: attempt.model,
+    status: attempt.status,
+    classification: attempt.classification ?? null,
+    errorCategory: attempt.errorCategory ?? null,
+    error: attempt.error ?? null,
+    diagnostics: summarizeAttemptDiagnostics(attempt.diagnostics),
+  }))
+}
+
+function summarizeAttemptDiagnostics(diagnostics: ProviderAttempt['diagnostics']) {
+  if (!diagnostics) return null
+  return Object.fromEntries(Object.entries(diagnostics)
+    .filter(([key]) => !/key|token|secret|password|authorization/i.test(key))
+    .map(([key, value]) => [key, summarizeDiagnosticValue(value)]))
+}
+
+function summarizeDiagnosticValue(value: unknown): unknown {
+  if (typeof value === 'string') return value.length > 240 ? `${value.slice(0, 240)}...` : value
+  if (Array.isArray(value)) return value.slice(0, 8).map(summarizeDiagnosticValue)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !/key|token|secret|password|authorization/i.test(key))
+      .slice(0, 12)
+      .map(([key, item]) => [key, summarizeDiagnosticValue(item)]))
+  }
+  return value
 }

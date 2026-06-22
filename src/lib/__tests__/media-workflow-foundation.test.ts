@@ -92,7 +92,11 @@ describe('media workflow foundation', () => {
       subType: 'long_form_multi_scene_video_assembly',
       capability: 'long_form_multi_scene_video_assembly',
       metadata: expect.objectContaining({
+        productContract: 'technical_ffmpeg_assembly_only',
+        creativeWorkflowStatus: 'TECHNICAL_ASSEMBLY_PASSED',
         generatedProviderClip: false,
+        providerNativeLongFormProven: false,
+        coherentAdvertQualityProven: false,
         sourceClipCount: 2,
       }),
     }))

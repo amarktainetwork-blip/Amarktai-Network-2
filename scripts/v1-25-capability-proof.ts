@@ -1411,6 +1411,9 @@ function mediaFoundationProof(
   blocker: string,
 ): CapabilityProof {
   if (result.status === 'completed' && result.artifactId) {
+    const exactError = capabilityId === 'long_form_multi_scene_video_assembly'
+      ? 'Technical assembly proof only: ffmpeg assembled provided/local proof clips and persisted an artifact; provider-native long-form generation, coherent advert quality, pronunciation, and voice/video sync are not proven.'
+      : null
     return {
       capabilityId,
       providerSelected: 'local',
@@ -1420,7 +1423,7 @@ function mediaFoundationProof(
       artifactId: result.artifactId,
       jobId: result.jobId,
       pollUrl: null,
-      exactError: null,
+      exactError,
       diagnostics: result.diagnostics,
       sourceFileResponsible: null,
     }
@@ -1587,6 +1590,11 @@ async function classifyBlocked(label: string, capabilityId: string, sourceFile: 
 }
 
 function classifyFailure(capabilityId: string, routeOrAdapter: string, result: Awaited<ReturnType<typeof executeCapability>>): CapabilityProof {
+  const attemptSummary = summarizeProviderAttemptErrors(result.providerAttempts)
+  const exactError = [
+    result.error ?? result.code ?? result.readiness,
+    attemptSummary ? `Attempts: ${attemptSummary}` : null,
+  ].filter(Boolean).join(' | ')
   return {
     capabilityId,
     providerSelected: result.provider ?? null,
@@ -1596,10 +1604,29 @@ function classifyFailure(capabilityId: string, routeOrAdapter: string, result: A
     artifactId: result.artifactId ?? null,
     jobId: result.jobId ?? null,
     pollUrl: result.pollUrl ?? null,
-    exactError: result.error ?? result.code ?? result.readiness,
-    diagnostics: result.diagnostics,
+    exactError,
+    diagnostics: result.diagnostics ?? (result.providerAttempts?.length ? {
+      providerAttempts: result.providerAttempts.slice(-5).map((attempt) => ({
+        provider: attempt.provider,
+        model: attempt.model,
+        status: attempt.status,
+        classification: attempt.classification ?? null,
+        errorCategory: attempt.errorCategory ?? null,
+        error: attempt.error ? sanitizeProofError(attempt.error) : null,
+      })),
+    } : undefined),
     sourceFileResponsible: sourceFileForFailure(result),
   }
+}
+
+function summarizeProviderAttemptErrors(attempts: Awaited<ReturnType<typeof executeCapability>>['providerAttempts']): string | null {
+  if (!attempts?.length) return null
+  return attempts.slice(-3).map((attempt) => [
+    `${attempt.provider}/${attempt.model || 'auto'}`,
+    attempt.status,
+    attempt.errorCategory,
+    attempt.error ? sanitizeProofError(attempt.error) : null,
+  ].filter(Boolean).join(': ')).join('; ')
 }
 
 function blocked(capabilityId: string, routeOrAdapter: string, error: unknown): CapabilityProof {
@@ -1709,8 +1736,13 @@ function capabilityDiagnosticsCell(entry: CapabilityProof): string {
     const parts = [
       diagnostics.artifactId ? `artifact=${diagnostics.artifactId}` : null,
       diagnostics.jobId ? `job=${diagnostics.jobId}` : null,
+      diagnostics.productContract ? `productContract=${diagnostics.productContract}` : null,
+      diagnostics.creativeWorkflowStatus ? `creativeWorkflowStatus=${diagnostics.creativeWorkflowStatus}` : null,
       diagnostics.sourceClipCount ? `sourceClipCount=${diagnostics.sourceClipCount}` : null,
       diagnostics.generatedProviderClip === false ? 'generatedProviderClip=false' : null,
+      diagnostics.providerNativeLongFormProven === false ? 'providerNativeLongFormProven=false' : null,
+      diagnostics.coherentAdvertQualityProven === false ? 'coherentAdvertQualityProven=false' : null,
+      diagnostics.voiceSyncQuality ? `voiceSyncQuality=${diagnostics.voiceSyncQuality}` : null,
       diagnostics.providerMusicGeneration === false ? 'providerMusicGeneration=false' : null,
       diagnostics.durationSeconds ? `durationSeconds=${diagnostics.durationSeconds}` : null,
       diagnostics.finalDurationSeconds ? `finalDurationSeconds=${diagnostics.finalDurationSeconds}` : null,

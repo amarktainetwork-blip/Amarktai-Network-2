@@ -181,6 +181,8 @@ describe('V1 universal AI capability truth', () => {
     expect(proof).toContain('HF_ENDPOINT_RERANK')
     expect(proof).toContain('TOGETHER_DEDICATED_ENDPOINTS_JSON')
     expect(proof).toContain("result.providerAttempts?.some((attempt) => attempt.classification === 'endpoint_required')")
+    expect(proof).toContain('summarizeProviderAttemptErrors')
+    expect(proof).toContain('Attempts:')
     expect(proof).toContain('## Provider Runtime Contract Checklist')
     expect(proof).toContain('authDetection')
     expect(proof).toContain('requestExecutionPath')

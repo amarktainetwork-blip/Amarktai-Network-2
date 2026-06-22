@@ -2,6 +2,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
+import {
+  buildLongFormScenePrompts,
+  evaluateLongFormScenePlan,
+} from '@/lib/long-form-video'
 
 const ROOT = process.cwd()
 const read = (file: string) => fs.readFileSync(path.join(ROOT, file), 'utf8')
@@ -45,6 +49,40 @@ describe('V1 capability recovery and visible product replacement', () => {
     expect(pipeline).toContain("'-f', 'concat'")
     expect(pipeline).toContain("type: 'video'")
     expect(pipeline).toContain('totalDuration ?? 90')
+    expect(pipeline).toContain('BLOCKED_FINAL_ASSEMBLY')
+    expect(pipeline).toContain('Final video artifact was created but has no preview, download, or storage URL.')
+    expect(pipeline).toContain('Final video assembly failed:')
+  })
+
+  it('flags generic repeated long-form scene plans instead of claiming creative quality', () => {
+    const generic = evaluateLongFormScenePlan([
+      'cinematic confident scene 1 of 4.\nCreate a 30 second video ad.',
+      'cinematic confident scene 2 of 4.\nCreate a 30 second video ad.',
+    ])
+    expect(generic.scenePlanGeneric).toBe(true)
+    expect(generic.scenePromptsDistinct).toBe(false)
+    expect(generic.notes.join(' ')).toContain('Production advert quality')
+
+    const planned = buildLongFormScenePrompts({
+      prompt: 'Create a 30 second advert for equiprofile.online',
+      sceneCount: 3,
+      sceneDuration: 10,
+      style: 'commercial',
+      tone: 'confident',
+    })
+    const gate = evaluateLongFormScenePlan(planned)
+    expect(gate.scenePlanGeneric).toBe(false)
+    expect(gate.scenePromptsDistinct).toBe(true)
+    expect(planned.every((prompt) => prompt.includes('Primary visual intent:'))).toBe(true)
+    expect(planned.every((prompt) => prompt.includes('Shot direction:'))).toBe(true)
+  })
+
+  it('keeps proof wording honest about technical long-form assembly only', () => {
+    const proof = read('scripts/v1-25-capability-proof.ts')
+    expect(proof).toContain('Technical assembly proof only')
+    expect(proof).toContain('providerNativeLongFormProven=false')
+    expect(proof).toContain('coherentAdvertQualityProven=false')
+    expect(proof).toContain('voiceSyncQuality')
   })
 
   it('surfaces long-form projects in the canonical Jobs view', () => {

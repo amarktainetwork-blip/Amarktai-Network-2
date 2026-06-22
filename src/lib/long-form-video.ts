@@ -43,6 +43,21 @@ export type VideoProjectStatus =
   | 'failed'
   | 'blocked'
 
+export type LongFormCreativeWorkflowStatus =
+  | 'SOURCE_WIRED_CREATIVE_WORKFLOW'
+  | 'NEEDS_QUALITY_GATE'
+  | 'BLOCKED_FINAL_ASSEMBLY'
+  | 'TECHNICAL_ASSEMBLY_PASSED'
+
+export interface LongFormQualityGate {
+  creativeWorkflowStatus: LongFormCreativeWorkflowStatus
+  scenePlanGeneric: boolean
+  scenePromptsDistinct: boolean
+  finalOutputDownloadable: boolean
+  syncQuality: 'not_applicable' | 'unverified' | 'metadata_required'
+  notes: string[]
+}
+
 export interface VideoScene {
   id: string
   order: number
@@ -79,6 +94,7 @@ export interface VideoProject {
   finalArtifactId: string | null
   finalVideoUrl: string | null
   controlPlaneJobId: string | null
+  qualityGate: LongFormQualityGate
   error: string | null
   blocker: string | null
   createdAt: string
@@ -123,15 +139,18 @@ export async function createLongFormVideoProject(input: {
   const sceneDuration = Math.ceil(totalDuration / sceneCount)
   const kit = getBrandKit(input.brandKitId)
   const context = brandKitPrompt(kit)
+  const scenePrompts = buildLongFormScenePrompts({
+    prompt: input.prompt.trim(),
+    sceneCount,
+    sceneDuration,
+    style: input.style ?? 'cinematic',
+    tone: input.tone ?? 'confident',
+    context,
+  })
   const scenes = Array.from({ length: sceneCount }, (_, index): VideoScene => ({
     id: crypto.randomUUID(),
     order: index + 1,
-    prompt: [
-      `${input.style ?? 'cinematic'} ${input.tone ?? 'confident'} scene ${index + 1} of ${sceneCount}.`,
-      input.prompt.trim(),
-      `Advance the story visually; do not repeat earlier shots. Target ${sceneDuration} seconds.`,
-      context,
-    ].filter(Boolean).join('\n'),
+    prompt: scenePrompts[index] ?? '',
     duration: sceneDuration,
     status: 'queued',
     jobId: null,
@@ -142,6 +161,7 @@ export async function createLongFormVideoProject(input: {
     model: null,
     error: null,
   }))
+  const qualityGate = buildInitialQualityGate(scenes, Boolean(input.audioReference))
   const now = new Date().toISOString()
   const project = appendRecord<VideoProject>(LOCAL_STORE_FILES.videoProjects, {
     id: crypto.randomUUID(),
@@ -164,6 +184,7 @@ export async function createLongFormVideoProject(input: {
     finalArtifactId: null,
     finalVideoUrl: null,
     controlPlaneJobId: null,
+    qualityGate,
     error: null,
     blocker: null,
     createdAt: now,
@@ -199,6 +220,7 @@ export async function createLongFormVideoProject(input: {
 export async function advanceVideoProject(id: string): Promise<VideoProject | null> {
   let project = getVideoProject(id)
   if (!project || ['completed', 'failed', 'blocked'].includes(project.status)) return project
+  project = ensureQualityGate(project)
 
   const scenes = await pollScenes(project.scenes)
   const activeCount = scenes.filter((scene) => scene.status === 'processing').length
@@ -268,6 +290,14 @@ export async function advanceVideoProject(id: string): Promise<VideoProject | nu
       status: 'failed',
       error: error instanceof Error ? error.message : 'Final video assembly failed.',
       blocker: 'Scene clips are preserved. Correct FFmpeg or storage readiness, then retry final assembly.',
+      qualityGate: updateQualityGate(project.qualityGate, {
+        creativeWorkflowStatus: 'BLOCKED_FINAL_ASSEMBLY',
+        finalOutputDownloadable: false,
+        notes: [
+          ...project.qualityGate.notes,
+          exactAssemblyFailure(error),
+        ],
+      }),
     })
   }
 }
@@ -369,13 +399,32 @@ async function stitchProject(project: VideoProject): Promise<VideoProject> {
       sceneArtifacts: project.scenes.map((scene) => scene.artifactId),
       ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg',
       ffprobe: process.env.FFPROBE_PATH || 'ffprobe',
+      qualityGate: {
+        ...project.qualityGate,
+        finalOutputDownloadable: true,
+        notes: [
+          ...project.qualityGate.notes,
+          'Final artifact exists locally and exposes a preview/download/storage URL.',
+        ],
+      },
     },
   })
+  const finalVideoUrl = artifact.previewUrl || artifact.downloadUrl || artifact.storageUrl
+  if (!finalVideoUrl) {
+    throw new Error('Final video artifact was created but has no preview, download, or storage URL.')
+  }
   return saveProject(project, {
     status: 'completed',
     progress: 100,
     finalArtifactId: artifact.id,
-    finalVideoUrl: artifact.previewUrl,
+    finalVideoUrl,
+    qualityGate: updateQualityGate(project.qualityGate, {
+      finalOutputDownloadable: true,
+      notes: [
+        ...project.qualityGate.notes,
+        'Final assembly completed and local artifact URL is available. Creative coherence, pronunciation, voice sync, and advert quality remain unverified.',
+      ],
+    }),
     completedAt: new Date().toISOString(),
     error: null,
     blocker: null,
@@ -383,11 +432,15 @@ async function stitchProject(project: VideoProject): Promise<VideoProject> {
 }
 
 async function runFfmpeg(args: string[]) {
-  await execFileAsync(process.env.FFMPEG_PATH || 'ffmpeg', args, {
-    timeout: 20 * 60_000,
-    windowsHide: true,
-    maxBuffer: 4 * 1024 * 1024,
-  })
+  try {
+    await execFileAsync(process.env.FFMPEG_PATH || 'ffmpeg', args, {
+      timeout: 20 * 60_000,
+      windowsHide: true,
+      maxBuffer: 4 * 1024 * 1024,
+    })
+  } catch (error) {
+    throw new Error(exactAssemblyFailure(error))
+  }
 }
 
 async function validateVideo(file: string) {
@@ -430,6 +483,7 @@ function saveProject(project: VideoProject, updates: Partial<VideoProject>) {
           videoProjectId: saved.id,
           sceneCount: saved.scenes.length,
           completedScenes: saved.scenes.filter((scene) => scene.status === 'completed').length,
+          qualityGate: saved.qualityGate,
           scenes: saved.scenes.map((scene) => ({
             id: scene.id,
             order: scene.order,
@@ -451,6 +505,102 @@ function saveProject(project: VideoProject, updates: Partial<VideoProject>) {
     })
   }
   return saved
+}
+
+function ensureQualityGate(project: VideoProject): VideoProject {
+  if (project.qualityGate) return project
+  return {
+    ...project,
+    qualityGate: buildInitialQualityGate(project.scenes, Boolean(project.audioReference)),
+  }
+}
+
+export function buildLongFormScenePrompts(input: {
+  prompt: string
+  sceneCount: number
+  sceneDuration: number
+  style: string
+  tone: string
+  context?: string
+}): string[] {
+  const beats = [
+    ['opening product context', 'establish the real business, location, audience, and brand promise'],
+    ['customer problem moment', 'show the viewer need or pain point the offer solves'],
+    ['solution demonstration', 'show the product or service in use with concrete benefits'],
+    ['proof and trust detail', 'show credentials, process, outcomes, or social proof'],
+    ['conversion close', 'show the call to action and memorable final brand frame'],
+  ] as const
+  return Array.from({ length: input.sceneCount }, (_, index) => {
+    const beat = beats[index % beats.length]
+    return [
+      `${input.style} ${input.tone} ${beat[0]}.`,
+      `Primary visual intent: ${beat[1]}.`,
+      `Brand/request: ${input.prompt.trim()}.`,
+      `Shot direction: use a distinct camera setup, foreground subject, background, and action for this beat.`,
+      `Target duration: ${input.sceneDuration} seconds.`,
+      input.context,
+    ].filter(Boolean).join('\n')
+  })
+}
+
+export function evaluateLongFormScenePlan(prompts: string[]): Pick<LongFormQualityGate, 'scenePlanGeneric' | 'scenePromptsDistinct' | 'notes'> {
+  const generic = prompts.some((prompt) =>
+    /\bscene\s+\d+\s+of\s+\d+\b/i.test(prompt)
+    || !/primary visual intent:/i.test(prompt)
+    || !/shot direction:/i.test(prompt)
+  )
+  const intents = prompts.map((prompt) =>
+    prompt.match(/primary visual intent:\s*(.+)/i)?.[1]
+      ?.toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim() ?? prompt.toLowerCase().replace(/\d+/g, '#').trim(),
+  )
+  const scenePromptsDistinct = new Set(intents).size === prompts.length
+  const notes = [
+    generic ? 'Scene plan needs a distinct visual intent and shot direction for every scene.' : 'Scene plan includes distinct visual-intent fields.',
+    scenePromptsDistinct ? 'Scene prompts are not simple repeats.' : 'Scene prompts repeat too much to claim coherent creative planning.',
+    'Production advert quality, pronunciation, lip sync, and audio/video sync remain unverified until separate quality checks pass.',
+  ]
+  return { scenePlanGeneric: generic, scenePromptsDistinct, notes }
+}
+
+function buildInitialQualityGate(scenes: VideoScene[], hasAudioReference: boolean): LongFormQualityGate {
+  const sceneGate = evaluateLongFormScenePlan(scenes.map((scene) => scene.prompt))
+  return {
+    creativeWorkflowStatus: sceneGate.scenePlanGeneric || !sceneGate.scenePromptsDistinct
+      ? 'NEEDS_QUALITY_GATE'
+      : 'SOURCE_WIRED_CREATIVE_WORKFLOW',
+    scenePlanGeneric: sceneGate.scenePlanGeneric,
+    scenePromptsDistinct: sceneGate.scenePromptsDistinct,
+    finalOutputDownloadable: false,
+    syncQuality: hasAudioReference ? 'metadata_required' : 'not_applicable',
+    notes: [
+      ...sceneGate.notes,
+      hasAudioReference
+        ? 'Audio/voice sync cannot be claimed until transcript and timing metadata are attached and checked.'
+        : 'No voiceover timing metadata was provided; sync quality is not claimed.',
+    ],
+  }
+}
+
+function updateQualityGate(current: LongFormQualityGate, updates: Partial<LongFormQualityGate>): LongFormQualityGate {
+  return {
+    ...current,
+    ...updates,
+    notes: updates.notes ?? current.notes,
+  }
+}
+
+function exactAssemblyFailure(error: unknown) {
+  if (!error || typeof error !== 'object') return 'Final video assembly failed.'
+  const value = error as { message?: unknown; stderr?: unknown; code?: unknown; signal?: unknown }
+  const details = [
+    typeof value.message === 'string' ? value.message : null,
+    typeof value.stderr === 'string' && value.stderr.trim() ? value.stderr.trim().slice(0, 1200) : null,
+    value.code !== undefined ? `exitCode=${String(value.code)}` : null,
+    value.signal !== undefined ? `signal=${String(value.signal)}` : null,
+  ].filter(Boolean)
+  return details.length ? `Final video assembly failed: ${details.join(' | ')}` : 'Final video assembly failed.'
 }
 
 function clamp(value: number, min: number, max: number) {

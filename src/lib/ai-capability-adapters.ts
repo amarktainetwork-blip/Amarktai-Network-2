@@ -525,8 +525,13 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
       ? {
           model,
           input: {
-            prompt: input.prompt,
-            ...(imageReference?.url ? { image_url: imageReference.url, img_url: imageReference.url } : {}),
+            messages: [{
+              role: 'user',
+              content: [
+                ...(imageReference?.url ? [{ image: imageReference.url }] : []),
+                { text: input.prompt },
+              ],
+            }],
           },
           parameters: input.inputs ?? {},
         }
@@ -570,14 +575,20 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
       )
     }
     const taskId = nestedString(json, ['output', 'task_id']) ?? nestedString(json, ['task_id'])
-    const mediaUrl = nestedString(json, ['output', 'choices', '0', 'message', 'content', '0', 'image'])
-      ?? nestedString(json, ['output', 'video_url'])
-      ?? nestedString(json, ['output', 'results', '0', 'url'])
+    const media = mediaFromJsonOutput(json)
     return result(provider, model, taskId ? 'processing' : 'completed', {
       output: json,
-      mediaUrl,
+      mediaUrl: media?.url ?? null,
+      bytes: media?.bytes ?? null,
       providerJobId: taskId,
-      contentType: 'application/json',
+      contentType: media?.contentType ?? 'application/json',
+      diagnostics: {
+        qwenEndpointKind: isVideo ? 'video' : isImageEdit ? 'image_edit' : isWanxImage ? 'wanx_image' : 'qwen_image',
+        qwenAigcEndpoint: endpoint,
+        mediaUrlPresent: Boolean(media?.url),
+        mediaBytesPresent: Boolean(media?.bytes),
+        taskId: taskId ?? null,
+      },
     })
   } catch (error) {
     return failedResult(provider, model, error instanceof Error ? error.message : 'Qwen capability execution failed.')
@@ -585,11 +596,22 @@ async function executeQwen(input: CapabilityAdapterInput): Promise<CapabilityAda
 }
 
 function qwenAigcEndpoint(kind: 'video' | 'wanx_image' | 'qwen_image' | 'image_edit'): string {
-  const root = resolveProviderEndpoint(getProviderTruth('qwen')!, 'aigc')
+  const root = qwenAigcRoot()
   if (kind === 'video') return `${root}/services/aigc/video-generation/video-synthesis`
   if (kind === 'wanx_image') return `${root}/services/aigc/text2image/image-synthesis`
   if (kind === 'image_edit') return `${root}/services/aigc/multimodal-generation/generation`
   return `${root}/services/aigc/multimodal-generation/generation`
+}
+
+function qwenAigcRoot(): string {
+  const configured = resolveProviderEndpoint(getProviderTruth('qwen')!, 'aigc').replace(/\/+$/, '')
+  if (/\/compatible-mode\/v1$/i.test(configured)) {
+    return configured.replace(/\/compatible-mode\/v1$/i, '/api/v1')
+  }
+  if (/\/compatible-mode$/i.test(configured)) {
+    return configured.replace(/\/compatible-mode$/i, '/api/v1')
+  }
+  return configured
 }
 
 async function executeQwenMultimodal(input: CapabilityAdapterInput): Promise<CapabilityAdapterResult> {
@@ -699,14 +721,33 @@ function mediaFromJsonOutput(value: unknown): {
     ['music_url'],
     ['downloadUrl'],
     ['download_url'],
+    ['image'],
+    ['image_url'],
+    ['img_url'],
+    ['video_url'],
     ['url'],
     ['audio', 'url'],
     ['music', 'url'],
     ['output', 'url'],
+    ['output', 'image'],
+    ['output', 'image_url'],
+    ['output', 'img_url'],
     ['output', 'video_url'],
+    ['output', 'results', '0', 'url'],
+    ['output', 'results', '0', 'image_url'],
+    ['output', 'results', '0', 'video_url'],
+    ['output', 'task_results', '0', 'url'],
+    ['output', 'task_results', '0', 'image_url'],
+    ['output', 'task_results', '0', 'video_url'],
+    ['output', 'choices', '0', 'message', 'content', '0', 'image'],
+    ['output', 'choices', '0', 'message', 'content', '0', 'image_url'],
     ['outputs', 'video_url'],
     ['result', 'url'],
+    ['result', 'image_url'],
+    ['result', 'video_url'],
     ['data', '0', 'url'],
+    ['data', '0', 'image_url'],
+    ['data', '0', 'video_url'],
   ].map((path) => nestedString(value, path)).find((candidate) => publicHttpsUrl(candidate ?? undefined))
   if (url) return { url, bytes: null, contentType: null }
 
@@ -1167,10 +1208,25 @@ async function pollProvider(
     if (['PENDING', 'RUNNING', 'QUEUED'].includes(taskStatus.toUpperCase())) {
       return result(provider, model, 'processing', { providerJobId, output: json })
     }
-    const mediaUrl = nestedString(json, ['output', 'video_url'])
-      ?? nestedString(json, ['output', 'results', '0', 'url'])
-    if (!mediaUrl) return result(provider, model, 'failed', { providerJobId, output: json, error: 'Provider completed without a media URL.' })
-    return result(provider, model, 'completed', { providerJobId, mediaUrl, output: json })
+    const media = mediaFromJsonOutput(json)
+    if (!media) {
+      return result(provider, model, 'failed', {
+        providerJobId,
+        output: json,
+        error: 'Provider completed without a media URL or bytes.',
+        errorCategory: 'malformed_response',
+        retryable: true,
+        diagnostics: { qwenPollTaskStatus: taskStatus || null, mediaUrlPresent: false },
+      })
+    }
+    return result(provider, model, 'completed', {
+      providerJobId,
+      mediaUrl: media.url,
+      bytes: media.bytes,
+      contentType: media.contentType,
+      output: json,
+      diagnostics: { qwenPollTaskStatus: taskStatus || null, mediaUrlPresent: Boolean(media.url), mediaBytesPresent: Boolean(media.bytes) },
+    })
   }
   if (provider === 'together') {
     const key = await getVaultApiKey(provider)

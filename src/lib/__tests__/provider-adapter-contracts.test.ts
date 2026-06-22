@@ -121,11 +121,34 @@ describe('provider adapter contracts', () => {
     expect(url).toContain('/api/v1/services/aigc/multimodal-generation/generation')
     const body = JSON.parse(String(init.body))
     expect(body.model).toBe('qwen-image-edit')
-    expect(body.input).toMatchObject({
-      prompt: 'Make the source image warmer.',
-      image_url: 'https://cdn.example/source.png',
-      img_url: 'https://cdn.example/source.png',
-    })
+    expect(body.input.messages[0].content).toEqual([
+      { image: 'https://cdn.example/source.png' },
+      { text: 'Make the source image warmer.' },
+    ])
+    expect(result.mediaUrl).toBe('https://cdn.example/qwen-edit.png')
+  })
+
+  it('normalizes a compatible-mode DashScope AIGC base before Qwen media execution', async () => {
+    const previous = process.env.DASHSCOPE_AIGC_BASE_URL
+    process.env.DASHSCOPE_AIGC_BASE_URL = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1'
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      output: { choices: [{ message: { content: [{ image: 'https://cdn.example/qwen-edit.png' }] } }] },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      await getProviderCapabilityAdapter('qwen')!.execute({
+        ...adapterInput('image_text_to_image', 'qwen', 'qwen-image-edit'),
+        references: [{ kind: 'image', url: 'https://cdn.example/source.png' }],
+      })
+
+      const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+      expect(url).toContain('https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation')
+      expect(url).not.toContain('/compatible-mode/v1/services/aigc')
+    } finally {
+      if (previous === undefined) delete process.env.DASHSCOPE_AIGC_BASE_URL
+      else process.env.DASHSCOPE_AIGC_BASE_URL = previous
+    }
   })
 
   it('normalizes DashScope aliases and preserves Qwen auth/env truth', () => {
@@ -653,6 +676,32 @@ describe('provider adapter contracts', () => {
     expect(mocks.pollQwenWanxTask).toHaveBeenCalledWith({
       taskId: 'qwen-task-1',
       model: 'wan2.1-t2v-turbo',
+    })
+  })
+
+  it('extracts Qwen Wanx image/video media from alternate task result shapes', async () => {
+    mocks.pollQwenWanxTask.mockResolvedValue({
+      ok: true,
+      executed: true,
+      provider: 'qwen',
+      model: 'wan2.1-i2v-turbo',
+      capability: 'text_to_image_poll',
+      latencyMs: 12,
+      contentType: 'application/json',
+      json: {
+        output: {
+          task_status: 'SUCCEEDED',
+          results: [{ video_url: 'https://cdn.example/qwen-i2v.mp4' }],
+        },
+      },
+    })
+
+    const adapter = getProviderCapabilityAdapter('qwen')!
+    const completed = await adapter.poll!('qwen-task-2', adapterInput('image_to_video', 'qwen', 'wan2.1-i2v-turbo'))
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      mediaUrl: 'https://cdn.example/qwen-i2v.mp4',
     })
   })
 

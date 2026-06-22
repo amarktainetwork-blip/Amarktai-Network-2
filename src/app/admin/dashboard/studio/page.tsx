@@ -44,6 +44,14 @@ type VideoProject = {
   progress: number
   finalArtifactId: string | null
   finalVideoUrl: string | null
+  qualityGate?: {
+    creativeWorkflowStatus: string
+    scenePlanGeneric: boolean
+    scenePromptsDistinct: boolean
+    finalOutputDownloadable: boolean
+    syncQuality: string
+    notes: string[]
+  }
   error: string | null
   blocker: string | null
   scenes: Array<{ id: string; order: number; prompt: string; status: string; mediaUrl: string | null; error: string | null }>
@@ -548,6 +556,11 @@ function LongFormVideoPanel({ project }: { project: VideoProject }) {
     </div>
     {project.finalVideoUrl && <video controls preload="metadata" src={project.finalVideoUrl} className="aspect-video w-full rounded-2xl bg-black" />}
     {(project.error || project.blocker) && <ErrorPanel message={project.blocker || project.error || 'Video project paused'} />}
+    {project.qualityGate && <div className="grid gap-3 md:grid-cols-3">
+      <Fact label="Creative workflow" value={friendly(project.qualityGate.creativeWorkflowStatus)} />
+      <Fact label="Scene plan" value={project.qualityGate.scenePlanGeneric ? 'Needs quality gate' : project.qualityGate.scenePromptsDistinct ? 'Distinct intents present' : 'Repeated prompts flagged'} />
+      <Fact label="Sync quality" value={friendly(project.qualityGate.syncQuality)} />
+    </div>}
     <div className="grid gap-3 md:grid-cols-2">
       {project.scenes.map((scene) => <article key={scene.id} className="rounded-xl border border-slate-800 bg-slate-950/55 p-3">
         <div className="flex items-center justify-between"><p className="text-xs font-black text-white">Scene {scene.order}</p><span className="text-[10px] font-black uppercase text-cyan-300">{scene.status}</span></div>
