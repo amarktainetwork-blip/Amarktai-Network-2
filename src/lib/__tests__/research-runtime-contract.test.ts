@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   createArtifact: vi.fn(),
   execFile: vi.fn(),
+  ingestDocument: vi.fn(),
+  retrieveRag: vi.fn(),
 }))
 
 vi.mock('@/lib/capability-router', () => ({
@@ -29,6 +31,11 @@ vi.mock('@/lib/artifact-store', () => ({
   createArtifact: mocks.createArtifact,
 }))
 
+vi.mock('@/lib/rag-pipeline', () => ({
+  ingestDocument: mocks.ingestDocument,
+  retrieve: mocks.retrieveRag,
+}))
+
 vi.mock('child_process', () => ({
   execFile: mocks.execFile,
 }))
@@ -40,6 +47,29 @@ describe('research runtime contract', () => {
     mocks.startExecution.mockReturnValue(undefined)
     mocks.recordExecutionResponse.mockReturnValue({ executionId: 'exec-1' })
     mocks.getSession.mockResolvedValue({ isLoggedIn: true })
+    mocks.ingestDocument.mockResolvedValue({
+      documentId: 'research-doc-1',
+      chunksCreated: 1,
+      embeddingsGenerated: 1,
+      vectorIds: ['vector-1'],
+      collection: 'amarktai_memory',
+      success: true,
+    })
+    mocks.retrieveRag.mockResolvedValue({
+      query: 'research query',
+      results: [{
+        vectorId: 'vector-1',
+        content: 'Example content',
+        score: 0.99,
+        documentId: 'research-doc-1',
+        source: 'https://example.com',
+        chunkIndex: 0,
+        metadata: {},
+      }],
+      contextWindow: '[Source 1: https://example.com]\nExample content',
+      totalChunksSearched: 1,
+      latencyMs: 12,
+    })
     mocks.execFile.mockImplementation((command, args, options, callback) => {
       const done = typeof options === 'function' ? options : callback
       done?.(null, {
@@ -111,6 +141,75 @@ describe('research runtime contract', () => {
     })
     expect(payload).not.toHaveProperty('providerOverride')
     expect(payload).not.toHaveProperty('modelOverride')
+  })
+
+  it('live-proves URL research through extraction, RAG ingestion, retrieval, Brain summary, and artifact metadata', async () => {
+    process.env.QWEN_API_KEY = 'test-qwen-key'
+    mocks.executeCapability.mockResolvedValue({
+      success: true,
+      capability: 'research',
+      readiness: 'READY',
+      provider: 'qwen',
+      model: 'qwen-plus',
+      outputType: 'text',
+      output: 'RAG summary',
+      fallbackUsed: false,
+      providerAttempts: [{ provider: 'qwen', model: 'qwen-plus', status: 'completed' }],
+    })
+    mocks.createArtifact.mockResolvedValue({
+      id: 'artifact-rag-1',
+      downloadUrl: '/api/artifacts/file/artifacts/research-app/research_result/report.json',
+      storageUrl: '/api/artifacts/file/artifacts/research-app/research_result/report.json',
+    })
+
+    const { POST } = await import('@/app/api/brain/research/route')
+    const response = await POST(new Request('http://localhost/api/brain/research', {
+      method: 'POST',
+      body: JSON.stringify({ query: 'Research https://example.com', depth: 'shallow', appSlug: 'research-app' }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as never)
+    const payload = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mocks.execFile).toHaveBeenCalled()
+    expect(mocks.ingestDocument).toHaveBeenCalledWith(expect.objectContaining({
+      source: 'https://example.com',
+      namespace: 'research-app',
+      metadata: expect.objectContaining({
+        extractionMethod: 'python-crawler',
+        capability: 'web_research',
+      }),
+    }))
+    expect(mocks.retrieveRag).toHaveBeenCalledWith('Research https://example.com', 'research-app', 5)
+    expect(mocks.executeCapability).toHaveBeenCalledWith(expect.objectContaining({
+      capability: 'research',
+      appId: 'research-app',
+      saveArtifact: false,
+      metadata: expect.objectContaining({
+        researchRuntimeStatus: 'LIVE_RAG',
+        vectorIds: ['vector-1'],
+        retrievedVectorIds: ['vector-1'],
+      }),
+    }))
+    expect(mocks.createArtifact).toHaveBeenCalledWith(expect.objectContaining({
+      appSlug: 'research-app',
+      type: 'research_result',
+      subType: 'rag_research_report',
+      capability: 'web_research',
+      metadata: expect.objectContaining({
+        researchRuntimeStatus: 'LIVE_RAG',
+        qdrantCollection: 'amarktai_memory',
+        vectorIds: ['vector-1'],
+        retrievedVectorIds: ['vector-1'],
+      }),
+    }))
+    expect(payload).toMatchObject({
+      success: true,
+      answer: 'RAG summary',
+      artifactId: 'artifact-rag-1',
+      provider: 'qwen',
+      model: 'qwen-plus',
+    })
   })
 
   it('keeps admin url research capability-level and records ignored provider/model/endpoint preferences', async () => {

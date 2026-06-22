@@ -35,6 +35,7 @@ export interface Chunk {
 }
 
 export interface RetrievalResult {
+  vectorId: string
   content: string
   score: number
   documentId: string
@@ -55,6 +56,8 @@ export interface IngestResult {
   documentId: string
   chunksCreated: number
   embeddingsGenerated: number
+  vectorIds: string[]
+  collection: string
   success: boolean
   error?: string
 }
@@ -196,13 +199,10 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
   const _start = Date.now()
 
   try {
-    // Ensure vector collection exists
-    await ensureCollection()
-
     // Chunk the document
     const textChunks = chunkText(doc.content)
     if (textChunks.length === 0) {
-      return { documentId: doc.id, chunksCreated: 0, embeddingsGenerated: 0, success: true }
+      return { documentId: doc.id, chunksCreated: 0, embeddingsGenerated: 0, vectorIds: [], collection: 'amarktai_memory', success: true }
     }
 
     // Generate embeddings in batch
@@ -219,8 +219,23 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
         documentId: doc.id,
         chunksCreated: textChunks.length,
         embeddingsGenerated: 0,
+        vectorIds: [],
+        collection: 'amarktai_memory',
         success: false,
         error: 'Failed to generate any embeddings',
+      }
+    }
+
+    const collectionReady = await ensureCollection('amarktai_memory', validPairs[0].embedding.length)
+    if (!collectionReady) {
+      return {
+        documentId: doc.id,
+        chunksCreated: textChunks.length,
+        embeddingsGenerated: validPairs.length,
+        vectorIds: [],
+        collection: 'amarktai_memory',
+        success: false,
+        error: 'Qdrant collection is not reachable or could not be prepared',
       }
     }
 
@@ -239,12 +254,25 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
       },
     }))
 
-    await upsertVectors(points)
+    const stored = await upsertVectors(points)
+    if (!stored) {
+      return {
+        documentId: doc.id,
+        chunksCreated: textChunks.length,
+        embeddingsGenerated: validPairs.length,
+        vectorIds: points.map((point) => point.id),
+        collection: 'amarktai_memory',
+        success: false,
+        error: 'Qdrant vector upsert failed',
+      }
+    }
 
     return {
       documentId: doc.id,
       chunksCreated: textChunks.length,
       embeddingsGenerated: validPairs.length,
+      vectorIds: points.map((point) => point.id),
+      collection: 'amarktai_memory',
       success: true,
     }
   } catch (err) {
@@ -252,6 +280,8 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
       documentId: doc.id,
       chunksCreated: 0,
       embeddingsGenerated: 0,
+      vectorIds: [],
+      collection: 'amarktai_memory',
       success: false,
       error: err instanceof Error ? err.message : 'Unknown ingestion error',
     }
@@ -296,6 +326,7 @@ export async function retrieve(
 
   // Map to retrieval results
   const results: RetrievalResult[] = topResults.map((r) => ({
+    vectorId: String(r.id),
     content: String(r.payload?.content ?? ''),
     score: r.score,
     documentId: String(r.payload?.documentId ?? ''),

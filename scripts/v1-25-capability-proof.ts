@@ -42,6 +42,7 @@ type CapabilityProof = {
   jobId: string | null
   pollUrl: string | null
   exactError: string | null
+  diagnostics?: Record<string, unknown>
   sourceFileResponsible: string | null
 }
 
@@ -1180,6 +1181,7 @@ async function proveExecuteCapability(label: string, capabilityId: string, reque
         jobId: result.jobId ?? null,
         pollUrl: result.pollUrl ?? null,
         exactError: null,
+        diagnostics: result.diagnostics,
         sourceFileResponsible: null,
       }
     }
@@ -1202,7 +1204,7 @@ async function proveExecuteCapability(label: string, capabilityId: string, reque
 
 async function proveResearch(): Promise<CapabilityProof> {
   try {
-    const result = await researchRuntime.execute({ query: 'Summarize current AI platform reliability concerns.', appSlug: APP_SLUG, depth: 'shallow' })
+    const result = await researchRuntime.execute({ query: 'Research https://example.com/ and summarize the page using live RAG.', appSlug: APP_SLUG, depth: 'shallow' })
     return result.success
       ? {
           capabilityId: 'web_research',
@@ -1214,6 +1216,7 @@ async function proveResearch(): Promise<CapabilityProof> {
           jobId: result.jobId ?? null,
           pollUrl: result.pollUrl ?? null,
           exactError: null,
+          diagnostics: result.diagnostics,
           sourceFileResponsible: null,
         }
       : classifyFailure('web_research', 'researchRuntime.execute', result)
@@ -1499,6 +1502,7 @@ function classifyFailure(capabilityId: string, routeOrAdapter: string, result: A
     jobId: result.jobId ?? null,
     pollUrl: result.pollUrl ?? null,
     exactError: result.error ?? result.code ?? result.readiness,
+    diagnostics: result.diagnostics,
     sourceFileResponsible: sourceFileForFailure(result),
   }
 }
@@ -1589,6 +1593,22 @@ function mdCell(value: unknown): string {
     .trim()
 }
 
+function capabilityDiagnosticsCell(entry: CapabilityProof): string {
+  if (!entry.diagnostics) return ''
+  const diagnostics = entry.diagnostics
+  if (entry.capabilityId === 'web_research') {
+    const parts = [
+      diagnostics.sourceUrl ? `source=${diagnostics.sourceUrl}` : null,
+      diagnostics.qdrantCollection ? `collection=${diagnostics.qdrantCollection}` : null,
+      Array.isArray(diagnostics.vectorIds) ? `vectorIds=${diagnostics.vectorIds.join(',')}` : null,
+      Array.isArray(diagnostics.retrievedVectorIds) ? `retrievedVectorIds=${diagnostics.retrievedVectorIds.join(',')}` : null,
+      diagnostics.artifactId ? `artifact=${diagnostics.artifactId}` : null,
+    ].filter(Boolean)
+    return parts.join('<br>')
+  }
+  return JSON.stringify(diagnostics)
+}
+
 function renderMarkdown(report: ProofReport) {
   const lines = [
     '# V1 25 Capability Proof',
@@ -1668,9 +1688,9 @@ function renderMarkdown(report: ProofReport) {
     '',
     '## Capabilities',
     '',
-    '| Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Source File |',
-    '|---|---|---|---|---|---|---|---|---|---|',
-    ...report.capabilities.map((entry) => `| ${entry.capabilityId} | ${entry.status} | ${mdCell(entry.providerSelected)} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.routeOrAdapter)} | ${mdCell(entry.artifactId)} | ${mdCell(entry.jobId)} | ${mdCell(entry.pollUrl)} | ${mdCell(entry.exactError)} | ${mdCell(entry.routeFile ?? entry.sourceFileResponsible)} |`),
+    '| Capability | Status | Provider | Model | Route/Adapter | Artifact | Job | Poll | Error | Diagnostics | Source File |',
+    '|---|---|---|---|---|---|---|---|---|---|---|',
+    ...report.capabilities.map((entry) => `| ${entry.capabilityId} | ${entry.status} | ${mdCell(entry.providerSelected)} | ${mdCell(entry.modelSelected)} | ${mdCell(entry.routeOrAdapter)} | ${mdCell(entry.artifactId)} | ${mdCell(entry.jobId)} | ${mdCell(entry.pollUrl)} | ${mdCell(entry.exactError)} | ${mdCell(capabilityDiagnosticsCell(entry))} | ${mdCell(entry.routeFile ?? entry.sourceFileResponsible)} |`),
     '',
     '## Capability Contracts',
     '',
