@@ -16,7 +16,7 @@ import { getArtifact, listArtifacts } from '@/lib/artifact-store'
 import { prisma } from '@/lib/prisma'
 import { setupCommandForLocalTool, testLocalTool } from '@/lib/local-tools'
 import { isRedisHealthy } from '@/lib/redis'
-import { isQdrantHealthy } from '@/lib/vector-store'
+import { isQdrantConfigured, isQdrantHealthy } from '@/lib/vector-store'
 import { collectProviderRuntimeConfigTruth, type ProviderRuntimeConfigTruth } from '@/lib/provider-runtime-truth'
 import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
 import { getCanonicalProviderHealth } from '@/lib/providers/health'
@@ -783,9 +783,14 @@ async function collectToolReadinessProofs(): Promise<ToolReadinessProof[]> {
     QUICK_PROOF_TIMEOUT_MS,
     false,
   )
+  const qdrantConfigured = await withTimeout(
+    () => isQdrantConfigured(),
+    QUICK_PROOF_TIMEOUT_MS,
+    false,
+  )
   return [
     toolProof('redis_bullmq', redis, Boolean(process.env.REDIS_URL?.trim()), ['worker_job_retry_and_polling_completion', 'async media jobs'], 'sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379', redis ? 'Redis ping passed.' : 'Redis/BullMQ is not reachable or REDIS_URL is absent.'),
-    toolProof('qdrant', qdrant, Boolean(process.env.QDRANT_URL?.trim()), ['research', 'memory', 'RAG'], 'docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; export QDRANT_URL=http://127.0.0.1:6333', qdrant ? 'Qdrant health passed.' : 'Qdrant is not reachable or QDRANT_URL is absent.'),
+    toolProof('qdrant', qdrant, qdrantConfigured, ['research', 'memory', 'RAG'], 'docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; add QDRANT_URL=http://127.0.0.1:6333 to the VPS .env or qdrant service config', qdrant ? 'Qdrant health passed.' : qdrantConfigured ? 'Qdrant URL is configured, but the service is not reachable.' : 'Qdrant is not configured in env or service config.'),
     ...localTools.map((tool) => toolProof(
       tool.id,
       tool.connected,
@@ -995,7 +1000,7 @@ function capabilityProofSteps(): CapabilityProofStep[] {
     capabilityStep('summarization', () => proveAdminTextCapability('summarization', 'summarization'), QUICK_PROOF_TIMEOUT_MS),
     capabilityStep('translation', () => proveAdminTextCapability('translation', 'translation'), QUICK_PROOF_TIMEOUT_MS),
     capabilityStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' })),
-    capabilityStep('rerank_search_relevance', () => proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> })),
+    capabilityStep('rerank_search_relevance', () => proveRerank()),
     mediaCapabilityStep('text_to_image', () => proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true })),
     mediaCapabilityStep('image_editing_source_transform', () => proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })),
     mediaCapabilityStep('text_to_video_short_clip', () => proveExecuteCapability('text-to-video short clip', 'text_to_video_short_clip', { input: 'A four second cinematic sunrise.', capability: 'video_generation', saveArtifact: true })),
@@ -1215,6 +1220,36 @@ async function proveResearch(): Promise<CapabilityProof> {
   } catch (error) {
     return blocked('web_research', 'researchRuntime.execute', error)
   }
+}
+
+function hasJsonEndpointConfig(raw: string | undefined, keys: string[]): boolean {
+  if (!raw?.trim()) return false
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    return keys.some((key) => Boolean(parsed[key]))
+  } catch {
+    return false
+  }
+}
+
+function hasRerankEndpointConfig(): boolean {
+  return Boolean(
+    process.env.HF_ENDPOINT_RERANK?.trim()
+      || hasJsonEndpointConfig(process.env.HF_SPECIALIST_ENDPOINTS_JSON, ['rerank', 'text_ranking', 'text-ranking'])
+      || hasJsonEndpointConfig(process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON, ['rerank', 'text_ranking', 'text-ranking']),
+  )
+}
+
+async function proveRerank(): Promise<CapabilityProof> {
+  if (hasRerankEndpointConfig()) {
+    return proveExecuteCapability('rerank/search relevance', 'rerank_search_relevance', { input: 'rank docs', capability: 'rerank', metadata: { documents: ['alpha', 'beta'] } as Record<string, unknown> })
+  }
+  return classifyBlocked(
+    'rerank/search relevance',
+    'rerank_search_relevance',
+    'src/lib/providers/provider-capability-contracts.ts',
+    'Rerank route is source-wired, but live proof requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.',
+  )
 }
 
 async function proveAdminTextCapability(capabilityId: string, taxonomyId: string): Promise<CapabilityProof> {
