@@ -23,6 +23,8 @@ export const FUTURE_RESEARCH_TOOLS = [
   'social',
 ] as const
 
+const RESEARCH_SUMMARY_CAPABILITY = 'chat' as const
+
 export interface ResearchRequest {
   query: string
   appSlug: string
@@ -249,13 +251,16 @@ async function executeLiveRagResearch(request: ResearchRequest, sourceUrl: strin
 
   const summary = await executeCapability({
     input: `Use the retrieved source context to answer the research request. Cite source notes from the context.\n\nResearch request: ${request.query}\n\nRetrieved context:\n${retrieved.contextWindow}`,
-    capability: 'research',
+    capability: RESEARCH_SUMMARY_CAPABILITY,
     appId: request.appSlug,
     saveArtifact: false,
     metadata: {
       executionId: request.executionId,
       depth: request.depth,
       researchRuntimeStatus: 'LIVE_RAG',
+      researchStage: 'summary_generation',
+      requestedCapability: 'web_research',
+      runtimeSummaryCapability: RESEARCH_SUMMARY_CAPABILITY,
       sourceUrl: source.url,
       qdrantCollection: ingest.collection,
       vectorIds: ingest.vectorIds,
@@ -264,6 +269,8 @@ async function executeLiveRagResearch(request: ResearchRequest, sourceUrl: strin
   })
   if (!summary.success || !summary.output) {
     return failedResearchResponse(request, summary.error ?? 'RESEARCH_SUMMARY_FAILED: Brain/runtime provider routing did not return a summary.', {
+      failedStage: 'summary_generation',
+      runtimeSummaryCapability: RESEARCH_SUMMARY_CAPABILITY,
       sourceUrl: source.url,
       documentId,
       vectorIds: ingest.vectorIds,
@@ -330,6 +337,7 @@ async function executeLiveRagResearch(request: ResearchRequest, sourceUrl: strin
     diagnostics: {
       ...(summary.diagnostics ?? {}),
       researchRuntimeStatus: 'LIVE_RAG',
+      runtimeSummaryCapability: RESEARCH_SUMMARY_CAPABILITY,
       sourceUrl: source.url,
       extractionMethod: source.method,
       documentId,

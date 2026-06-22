@@ -185,11 +185,14 @@ describe('research runtime contract', () => {
     }))
     expect(mocks.retrieveRag).toHaveBeenCalledWith('Research https://example.com', 'research-app', 5)
     expect(mocks.executeCapability).toHaveBeenCalledWith(expect.objectContaining({
-      capability: 'research',
+      capability: 'chat',
       appId: 'research-app',
       saveArtifact: false,
       metadata: expect.objectContaining({
         researchRuntimeStatus: 'LIVE_RAG',
+        researchStage: 'summary_generation',
+        requestedCapability: 'web_research',
+        runtimeSummaryCapability: 'chat',
         vectorIds: ['vector-1'],
         retrievedVectorIds: ['vector-1'],
       }),
