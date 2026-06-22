@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T10:22:28.084Z",
+  "generatedAt": "2026-06-22T11:49:38.083Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -520,7 +520,7 @@
         {
           "family": "token_plan",
           "currentValue": "https://token-plan-sgp.xiaomimimo.com/v1",
-          "defaultValue": "https://api.xiaomimimo.com/v1",
+          "defaultValue": "https://token-plan-sgp.xiaomimimo.com/v1",
           "envName": "MIMO_BASE_URL",
           "source": "ai_provider"
         }
@@ -573,8 +573,8 @@
       "rawCatalogCount": 9,
       "modelCount": 9,
       "executableCandidateCount": 9,
-      "executableModels": 9,
-      "catalogOnlyModels": 0,
+      "executableModels": 4,
+      "catalogOnlyModels": 5,
       "requiresDedicatedEndpointModels": 0,
       "adultGatedModels": 0,
       "chatModels": 4,
@@ -647,30 +647,30 @@
       "status": "ready",
       "discoverySource": "live_authenticated",
       "rawCatalogCount": 100,
-      "modelCount": 15,
-      "executableCandidateCount": 13,
-      "executableModels": 9,
-      "catalogOnlyModels": 2,
-      "requiresDedicatedEndpointModels": 4,
-      "adultGatedModels": 2,
-      "chatModels": 2,
-      "reasoningModels": 1,
-      "codingModels": 1,
-      "liveAuthenticatedModels": 15,
+      "modelCount": 100,
+      "executableCandidateCount": 94,
+      "executableModels": 69,
+      "catalogOnlyModels": 13,
+      "requiresDedicatedEndpointModels": 18,
+      "adultGatedModels": 13,
+      "chatModels": 40,
+      "reasoningModels": 26,
+      "codingModels": 25,
+      "liveAuthenticatedModels": 100,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
-      "imageModels": 4,
+      "imageModels": 30,
       "imageEditModels": 1,
-      "videoModels": 3,
+      "videoModels": 6,
       "imageToVideoModels": 1,
-      "ttsModels": 1,
-      "sttModels": 1,
-      "embeddingsModels": 2,
-      "rerankModels": 1,
+      "ttsModels": 3,
+      "sttModels": 7,
+      "embeddingsModels": 24,
+      "rerankModels": 3,
       "musicModels": 1,
-      "avatarModels": 4,
-      "adultImageModels": 1,
+      "avatarModels": 30,
+      "adultImageModels": 10,
       "executableBlocker": null,
       "error": null,
       "endpoint": "https://huggingface.co/api/models?limit=100&full=true"
@@ -820,7 +820,7 @@
       "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
       "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
       "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
-      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=18"
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=171"
     },
     {
       "provider": "qwen",
@@ -867,7 +867,7 @@
       "adapterMissing": 0,
       "runtimeFlagDisabled": 27,
       "toolPlanOnly": 27,
-      "blockedByPolicy": 0,
+      "blockedByPolicy": 35,
       "missingCredential": 0,
       "nextActions": [
         "Select a provider/model that supports reasoning, or add a truthful contract.",
@@ -905,15 +905,15 @@
     },
     {
       "provider": "huggingface",
-      "contracts": 271,
-      "executableNow": 18,
+      "contracts": 1802,
+      "executableNow": 171,
       "liveProven": 0,
-      "endpointRequired": 73,
-      "specialistRequired": 117,
+      "endpointRequired": 325,
+      "specialistRequired": 745,
       "adapterMissing": 0,
       "runtimeFlagDisabled": 0,
       "toolPlanOnly": 0,
-      "blockedByPolicy": 62,
+      "blockedByPolicy": 408,
       "missingCredential": 0,
       "nextActions": [
         "Select a provider/model that supports chat, or add a truthful contract.",
@@ -1079,18 +1079,18 @@
     {
       "provider": "together",
       "capability": "chat",
-      "modelStatus": "GATED_OR_UNAVAILABLE",
+      "modelStatus": "EXECUTABLE",
       "credentialPresent": true,
-      "catalogReachable": false,
-      "providerSmokePassed": false,
-      "modelExecutionPassed": false,
-      "capabilityRoutePassed": false,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": true,
+      "capabilityRoutePassed": true,
       "artifactPersisted": false,
       "previewReachable": false,
-      "providerSelected": null,
-      "modelSelected": null,
+      "providerSelected": "together",
+      "modelSelected": "zai-org/GLM-5.2",
       "artifactId": null,
-      "error": "Model smoke timed out after 30000ms."
+      "error": null
     }
   ],
   "toolReadiness": [
@@ -1319,7 +1319,7 @@
       "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
       "routeOrAdapter": "researchRuntime.execute",
       "status": "LIVE_PROVEN",
-      "artifactId": "dd394a94-c6d8-4ac2-9ce2-d857c98d6fcd",
+      "artifactId": "09850717-7559-436d-83dc-b6b8742ee5db",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1331,13 +1331,14 @@
         "documentId": "research-0fe2558733f8caa57a882554",
         "qdrantCollection": "amarktai_memory",
         "vectorIds": [
-          "7972c9c2-f228-4ff1-a636-3abbd968cb46"
+          "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
         ],
         "retrievedVectorIds": [
+          "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
           "7972c9c2-f228-4ff1-a636-3abbd968cb46",
-          "f67ec8a0-572e-44d6-9964-ccf038f4a1a4"
+          "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
         ],
-        "artifactId": "dd394a94-c6d8-4ac2-9ce2-d857c98d6fcd"
+        "artifactId": "09850717-7559-436d-83dc-b6b8742ee5db"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Research",
@@ -1363,7 +1364,7 @@
         "Scrapy",
         "Trafilatura"
       ],
-      "artifactBehavior": "Intentional artifact persisted: dd394a94-c6d8-4ac2-9ce2-d857c98d6fcd.",
+      "artifactBehavior": "Intentional artifact persisted: 09850717-7559-436d-83dc-b6b8742ee5db.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1497,7 +1498,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "83a598db-3ea0-43ec-9629-f80308724a35",
+      "artifactId": "f313d8a3-a6b6-4a9a-be40-32f90fdabfa7",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1520,7 +1521,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 83a598db-3ea0-43ec-9629-f80308724a35.",
+      "artifactBehavior": "Intentional artifact persisted: f313d8a3-a6b6-4a9a-be40-32f90fdabfa7.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1562,12 +1563,12 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "05dc4496-df60-4726-a92a-72b9c6a94602",
-      "pollUrl": "/api/brain/media-jobs/05dc4496-df60-4726-a92a-72b9c6a94602",
+      "jobId": "e2daaadd-5e09-4bf4-a8df-ec47dbf4e121",
+      "pollUrl": "/api/brain/media-jobs/e2daaadd-5e09-4bf4-a8df-ec47dbf4e121",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "3c03bf89-62fb-4b29-86a0-845f540cc328",
-        "controlPlaneAttemptId": "1581068e-7bc3-4be9-b269-20f72fcae47e",
+        "controlPlaneJobId": "2f177e1d-2377-44e5-bd7e-9a84e7a69981",
+        "controlPlaneAttemptId": "bd73bd55-6967-4744-bfc1-8c3d3e3b6c59",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1590,7 +1591,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 05dc4496-df60-4726-a92a-72b9c6a94602 via /api/brain/media-jobs/05dc4496-df60-4726-a92a-72b9c6a94602."
+      "jobBehavior": "Async job tracked as e2daaadd-5e09-4bf4-a8df-ec47dbf4e121 via /api/brain/media-jobs/e2daaadd-5e09-4bf4-a8df-ec47dbf4e121."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1598,7 +1599,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "afb3d50a-6b83-4874-b605-5f7245811197",
+      "artifactId": "76501523-d5ed-437f-8603-e52c05c448b6",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1623,7 +1624,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: afb3d50a-6b83-4874-b605-5f7245811197.",
+      "artifactBehavior": "Intentional artifact persisted: 76501523-d5ed-437f-8603-e52c05c448b6.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1633,12 +1634,12 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_30595c2b667842e28daa315046c12ad3",
+      "jobId": "gnxsh_job_e979fbbc8d73403b97f7ac0c0e24856d",
       "pollUrl": null,
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "c2f0c2c6-c6e5-4dc5-b6ee-e2aa18d171af",
-        "controlPlaneAttemptId": "74a69b38-2075-46a6-a423-3d6bc777e5f3",
+        "controlPlaneJobId": "7a998eef-935d-4cf2-9c58-843a598ec0ed",
+        "controlPlaneAttemptId": "ea7246ab-b789-41e2-a7df-8e6fa99b03d9",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1665,7 +1666,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_30595c2b667842e28daa315046c12ad3."
+      "jobBehavior": "Async job tracked as gnxsh_job_e979fbbc8d73403b97f7ac0c0e24856d."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1806,12 +1807,12 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "41e52b79-a537-4369-919d-996e539c3e54",
-      "pollUrl": "/api/brain/media-jobs/41e52b79-a537-4369-919d-996e539c3e54",
+      "jobId": "47e59d81-b98c-4cfe-ab89-363f29bbcc9b",
+      "pollUrl": "/api/brain/media-jobs/47e59d81-b98c-4cfe-ab89-363f29bbcc9b",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "ba6e62ae-9c06-4c11-a8eb-e2222583ee48",
-        "controlPlaneAttemptId": "1cafde8e-a1b9-4748-b105-38db95b4c4ea",
+        "controlPlaneJobId": "2ee03f5f-2682-478f-83af-6ceb4ffc909f",
+        "controlPlaneAttemptId": "f4e82027-88df-42ce-ad2d-afcb02341e24",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1836,7 +1837,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 41e52b79-a537-4369-919d-996e539c3e54 via /api/brain/media-jobs/41e52b79-a537-4369-919d-996e539c3e54."
+      "jobBehavior": "Async job tracked as 47e59d81-b98c-4cfe-ab89-363f29bbcc9b via /api/brain/media-jobs/47e59d81-b98c-4cfe-ab89-363f29bbcc9b."
     },
     {
       "capabilityId": "talking_avatar_video",
