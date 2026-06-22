@@ -408,6 +408,8 @@ function extensionForMime(mimeType: string): string {
     'audio/ogg': 'ogg',
     'application/json': 'json',
     'text/plain': 'txt',
+    'text/vtt': 'vtt',
+    'application/x-subrip': 'srt',
     'application/pdf': 'pdf',
   }
   return extensions[normalized] ?? 'bin'

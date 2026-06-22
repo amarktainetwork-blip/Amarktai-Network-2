@@ -22,6 +22,12 @@ import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
 import { getCanonicalProviderHealth } from '@/lib/providers/health'
 import { buildProviderCapabilityContracts } from '@/lib/providers/provider-capability-contracts'
 import { getProviderCapabilityAdapter, providerHasCanonicalPollingContract } from '@/lib/ai-capability-adapters'
+import {
+  proveAudioBedGeneration,
+  proveCaptionsSubtitlesPipeline,
+  proveLongFormAssemblyFromProvidedClips,
+  type MediaFoundationResult,
+} from '@/lib/media-workflow-foundation'
 
 type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PROVIDER_AVAILABLE' | 'BLOCKED' | 'NOT_WIRED'
 
@@ -428,6 +434,8 @@ const PROOF_TAXONOMY: Record<string, string> = {
   speech_to_text: 'automatic_speech_recognition',
   image_to_video: 'image_to_video',
   long_form_multi_scene_video_assembly: 'text_to_video',
+  music_audio_bed_generation: 'text_to_audio',
+  captions_subtitles_pipeline: 'automatic_speech_recognition',
   avatar_library_avatar_image_generation: 'avatar_generation',
   talking_avatar_video: 'avatar_video',
   adult_media_policy_gated_generation: 'text_to_image',
@@ -500,6 +508,7 @@ function routeFileFor(routeOrAdapter: string): string {
   if (routeOrAdapter.includes('researchRuntime')) return 'src/lib/research-runtime.ts'
   if (routeOrAdapter.includes('processAppAgentRequest')) return 'src/lib/app-agent.ts'
   if (routeOrAdapter.includes('executeConnectedAppCapability')) return 'src/lib/connected-app-capability-engine.ts'
+  if (routeOrAdapter.includes('media_workflow_foundation')) return 'src/lib/media-workflow-foundation.ts'
   if (routeOrAdapter.includes('control-plane-jobs')) return 'src/lib/control-plane-jobs.ts'
   if (routeOrAdapter.startsWith('/api/')) return `src/app${routeOrAdapter}/route.ts`
   return 'src/lib/orchestrator.ts'
@@ -507,6 +516,9 @@ function routeFileFor(routeOrAdapter: string): string {
 
 function localToolsFor(capabilityId: string): string[] {
   if (capabilityId === 'web_research') return ['Playwright', 'Scrapy', 'Trafilatura']
+  if (capabilityId === 'captions_subtitles_pipeline') return ['local storage']
+  if (capabilityId === 'music_audio_bed_generation') return ['ffmpeg', 'ffprobe', 'local storage']
+  if (capabilityId === 'long_form_multi_scene_video_assembly') return ['ffmpeg', 'ffprobe', 'local storage']
   if (capabilityId.includes('talking_avatar')) return ['ffmpeg', 'Rhubarb/lip-sync adapter']
   if (capabilityId.includes('video') || capabilityId.includes('music') || capabilityId.includes('voice')) return ['ffmpeg']
   if (capabilityId.includes('worker_job')) return ['Redis/BullMQ worker', 'local storage']
@@ -1011,6 +1023,8 @@ function capabilityProofSteps(): CapabilityProofStep[] {
     capabilityStep('connected_app_capability_execution', () => proveConnectedAppExecution(), QUICK_PROOF_TIMEOUT_MS),
     mediaCapabilityStep('image_to_video', () => proveExecuteCapability('image-to-video', 'image_to_video', { input: 'Animate the image.', capability: 'image_to_video', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })),
     mediaCapabilityStep('long_form_multi_scene_video_assembly', () => proveLongFormVideo()),
+    mediaCapabilityStep('music_audio_bed_generation', () => proveMusicAudioBed()),
+    capabilityStep('captions_subtitles_pipeline', () => proveCaptionsSubtitles(), QUICK_PROOF_TIMEOUT_MS),
     mediaCapabilityStep('avatar_library_avatar_image_generation', () => proveExecuteCapability('avatar library/avatar image generation', 'avatar_library_avatar_image_generation', { input: 'Create a professional avatar portrait.', capability: 'avatar_generation', saveArtifact: true })),
     mediaCapabilityStep('talking_avatar_video', () => classifyBlocked('talking-avatar video', 'talking_avatar_video', 'src/lib/orchestrator.ts', 'src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run.'), QUICK_PROOF_TIMEOUT_MS),
     mediaCapabilityStep('adult_media_policy_gated_generation', () => proveAdultMedia()),
@@ -1327,21 +1341,102 @@ async function proveLongFormVideo(): Promise<CapabilityProof> {
     return sourceWired('long_form_multi_scene_video_assembly', '/api/admin/video-projects', 'Long-form video project/job routes are wired, but DATABASE_URL is required to inspect/create control-plane video project jobs for live proof.')
   }
   try {
-    const jobs = await listControlPlaneJobs(5)
-    return {
-      capabilityId: 'long_form_multi_scene_video_assembly',
-      providerSelected: null,
-      modelSelected: null,
-      routeOrAdapter: '/api/admin/video-projects',
-      status: jobs.length >= 0 ? 'SOURCE_WIRED' : 'NOT_WIRED',
-      artifactId: null,
-      jobId: null,
-      pollUrl: null,
-      exactError: 'Long-form assembly is admin/project-pipeline based and source-wired; live proof requires database-backed project creation plus at least one generated clip in the target environment.',
-      sourceFileResponsible: null,
-    }
+    await listControlPlaneJobs(1)
+    const result = await proveLongFormAssemblyFromProvidedClips({
+      appSlug: APP_SLUG,
+      title: 'V1 proof long-form assembly',
+      prompt: 'Minimal provided-clip long-form video assembly proof.',
+      sceneCount: 2,
+      durationSeconds: 1,
+    })
+    return mediaFoundationProof(
+      'long_form_multi_scene_video_assembly',
+      'media_workflow_foundation.long_form_assembly',
+      result,
+      'Long-form assembly requires DATABASE_URL, writable artifact storage, ffmpeg, and ffprobe.',
+    )
   } catch (error) {
     return blocked('long_form_multi_scene_video_assembly', '/api/admin/video-projects', error)
+  }
+}
+
+async function proveMusicAudioBed(): Promise<CapabilityProof> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return sourceWired('music_audio_bed_generation', 'media_workflow_foundation.audio_bed', 'Audio-bed generation is source-wired, but DATABASE_URL is required to persist the proof artifact.')
+  }
+  try {
+    const result = await proveAudioBedGeneration({
+      appSlug: APP_SLUG,
+      title: 'V1 proof audio bed',
+      prompt: 'Minimal local audio-bed assembly proof. This is not provider-native music generation.',
+      durationSeconds: 2,
+    })
+    return mediaFoundationProof(
+      'music_audio_bed_generation',
+      'media_workflow_foundation.audio_bed',
+      result,
+      'Audio-bed generation requires DATABASE_URL, writable artifact storage, ffmpeg, and ffprobe. Provider-native music_generation still requires an approved provider endpoint returning audio.',
+    )
+  } catch (error) {
+    return blocked('music_audio_bed_generation', 'media_workflow_foundation.audio_bed', error)
+  }
+}
+
+async function proveCaptionsSubtitles(): Promise<CapabilityProof> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    return sourceWired('captions_subtitles_pipeline', 'media_workflow_foundation.captions', 'Captions/subtitles generation is source-wired, but DATABASE_URL is required to persist the subtitle artifact.')
+  }
+  try {
+    const result = await proveCaptionsSubtitlesPipeline({
+      appSlug: APP_SLUG,
+      sourceMedia: 'V1 proof generated transcript',
+      transcript: 'AmarktAI proof caption line one. The subtitle pipeline persists VTT and SRT-ready metadata.',
+      durationSeconds: 4,
+    })
+    return mediaFoundationProof(
+      'captions_subtitles_pipeline',
+      'media_workflow_foundation.captions',
+      result,
+      'Captions/subtitles generation requires DATABASE_URL and writable artifact storage; STT-backed live transcription remains proven separately by speech_to_text.',
+    )
+  } catch (error) {
+    return blocked('captions_subtitles_pipeline', 'media_workflow_foundation.captions', error)
+  }
+}
+
+function mediaFoundationProof(
+  capabilityId: string,
+  routeOrAdapter: string,
+  result: MediaFoundationResult,
+  blocker: string,
+): CapabilityProof {
+  if (result.status === 'completed' && result.artifactId) {
+    return {
+      capabilityId,
+      providerSelected: 'local',
+      modelSelected: String(result.diagnostics.model ?? 'ffmpeg/subtitle_formatter'),
+      routeOrAdapter,
+      status: 'LIVE_PROVEN',
+      artifactId: result.artifactId,
+      jobId: result.jobId,
+      pollUrl: null,
+      exactError: null,
+      diagnostics: result.diagnostics,
+      sourceFileResponsible: null,
+    }
+  }
+  return {
+    capabilityId,
+    providerSelected: result.diagnostics.provider ? String(result.diagnostics.provider) : null,
+    modelSelected: result.diagnostics.model ? String(result.diagnostics.model) : null,
+    routeOrAdapter,
+    status: result.status === 'blocked' ? 'BLOCKED' : 'SOURCE_WIRED',
+    artifactId: result.artifactId,
+    jobId: result.jobId,
+    pollUrl: null,
+    exactError: result.error ?? blocker,
+    diagnostics: result.diagnostics,
+    sourceFileResponsible: 'src/lib/media-workflow-foundation.ts',
   }
 }
 
@@ -1605,6 +1700,24 @@ function capabilityDiagnosticsCell(entry: CapabilityProof): string {
       diagnostics.artifactId ? `artifact=${diagnostics.artifactId}` : null,
     ].filter(Boolean)
     return parts.join('<br>')
+  }
+  if ([
+    'long_form_multi_scene_video_assembly',
+    'music_audio_bed_generation',
+    'captions_subtitles_pipeline',
+  ].includes(entry.capabilityId)) {
+    const parts = [
+      diagnostics.artifactId ? `artifact=${diagnostics.artifactId}` : null,
+      diagnostics.jobId ? `job=${diagnostics.jobId}` : null,
+      diagnostics.sourceClipCount ? `sourceClipCount=${diagnostics.sourceClipCount}` : null,
+      diagnostics.generatedProviderClip === false ? 'generatedProviderClip=false' : null,
+      diagnostics.providerMusicGeneration === false ? 'providerMusicGeneration=false' : null,
+      diagnostics.durationSeconds ? `durationSeconds=${diagnostics.durationSeconds}` : null,
+      diagnostics.finalDurationSeconds ? `finalDurationSeconds=${diagnostics.finalDurationSeconds}` : null,
+      diagnostics.cueCount ? `cueCount=${diagnostics.cueCount}` : null,
+      Array.isArray(diagnostics.formats) ? `formats=${diagnostics.formats.join(',')}` : null,
+    ].filter(Boolean)
+    if (parts.length) return parts.join('<br>')
   }
   return JSON.stringify(diagnostics)
 }
