@@ -232,6 +232,7 @@ async function executeLiveRagResearch(request: ResearchRequest, sourceUrl: strin
       embeddingsGenerated: ingest.embeddingsGenerated,
       vectorIds: ingest.vectorIds,
       qdrantCollection: ingest.collection,
+      embeddingDiagnostics: ingest.diagnostics?.embedding ?? null,
     })
   }
 

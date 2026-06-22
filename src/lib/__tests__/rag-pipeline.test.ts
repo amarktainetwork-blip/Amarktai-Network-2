@@ -46,6 +46,14 @@ describe('RAG pipeline embedding and vector truth', () => {
   it('normalizes provider embedding response payloads into numeric vectors', async () => {
     const { normalizeEmbeddingResponse } = await import('@/lib/rag-pipeline')
 
+    expect(normalizeEmbeddingResponse([0.1, '0.2', 0.3], 1)).toEqual([[0.1, 0.2, 0.3]])
+    expect(normalizeEmbeddingResponse(JSON.stringify([0.1, 0.2, 0.3]), 1)).toEqual([[0.1, 0.2, 0.3]])
+    expect(normalizeEmbeddingResponse([[0.1, 0.2, 0.3]], 1)).toEqual([[0.1, 0.2, 0.3]])
+    const averaged = normalizeEmbeddingResponse(JSON.stringify([[0.1, 0.2, 0.3], [0.3, 0.4, 0.5]]), 1)
+    expect(averaged[0]?.[0]).toBeCloseTo(0.2)
+    expect(averaged[0]?.[1]).toBeCloseTo(0.3)
+    expect(averaged[0]?.[2]).toBeCloseTo(0.4)
+    expect(normalizeEmbeddingResponse({ output: JSON.stringify([0.4, 0.5, 0.6]) }, 1)).toEqual([[0.4, 0.5, 0.6]])
     expect(normalizeEmbeddingResponse(JSON.stringify({
       data: [
         { index: 0, embedding: [0.1, '0.2', 0.3] },
@@ -62,12 +70,10 @@ describe('RAG pipeline embedding and vector truth', () => {
   it('uses the Brain embeddings capability and writes non-empty vectors to Qdrant', async () => {
     mocks.executeCapability.mockResolvedValue({
       success: true,
-      output: JSON.stringify({
-        data: [
-          { index: 0, embedding: [0.1, 0.2, 0.3] },
-          { index: 1, embedding: [0.4, 0.5, 0.6] },
-        ],
-      }),
+      provider: 'huggingface',
+      model: 'BAAI/bge-small-en-v1.5',
+      status: 'completed',
+      output: JSON.stringify([[0.1, 0.2, 0.3]]),
     })
 
     const { ingestDocument } = await import('@/lib/rag-pipeline')
@@ -108,6 +114,9 @@ describe('RAG pipeline embedding and vector truth', () => {
   it('fails truthfully when the Brain embeddings capability returns no vector', async () => {
     mocks.executeCapability.mockResolvedValue({
       success: true,
+      provider: 'huggingface',
+      model: 'BAAI/bge-small-en-v1.5',
+      status: 'completed',
       output: JSON.stringify({ data: [{ index: 0, embedding: [] }] }),
     })
 
@@ -124,8 +133,22 @@ describe('RAG pipeline embedding and vector truth', () => {
       success: false,
       embeddingsGenerated: 0,
       vectorIds: [],
-      error: 'Failed to generate any embeddings',
+      diagnostics: {
+        embedding: expect.objectContaining({
+          provider: 'huggingface',
+          model: 'BAAI/bge-small-en-v1.5',
+          resultStatus: 'completed',
+          responseShape: 'object(keys=data)',
+          vectorLengths: [0],
+        }),
+      },
     })
+    expect(result.error).toContain('Failed to generate any embeddings')
+    expect(result.error).toContain('provider=huggingface')
+    expect(result.error).toContain('model=BAAI/bge-small-en-v1.5')
+    expect(result.error).toContain('status=completed')
+    expect(result.error).toContain('shape=object(keys=data)')
+    expect(result.error).toContain('vectorLengths=0')
     expect(mocks.upsertVectors).not.toHaveBeenCalled()
   })
 })

@@ -225,6 +225,17 @@ describe('research runtime contract', () => {
       collection: 'amarktai_memory',
       success: false,
       error: 'Failed to generate any embeddings',
+      diagnostics: {
+        embedding: {
+          provider: 'huggingface',
+          model: 'BAAI/bge-small-en-v1.5',
+          resultStatus: 'completed',
+          success: true,
+          responseShape: 'object(keys=data)',
+          vectorLengths: [0],
+          expectedCount: 1,
+        },
+      },
     })
 
     const { POST } = await import('@/app/api/brain/research/route')
@@ -239,6 +250,15 @@ describe('research runtime contract', () => {
     expect(payload).toMatchObject({
       success: false,
       error: 'Failed to generate any embeddings',
+      diagnostics: {
+        embeddingDiagnostics: {
+          provider: 'huggingface',
+          model: 'BAAI/bge-small-en-v1.5',
+          resultStatus: 'completed',
+          responseShape: 'object(keys=data)',
+          vectorLengths: [0],
+        },
+      },
     })
     expect(payload.provider).toBeNull()
     expect(payload.artifactId).toBeUndefined()

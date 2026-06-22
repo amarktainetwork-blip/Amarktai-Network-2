@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     warning: result.warning,
     depth,
     error: result.error,
+    diagnostics: result.diagnostics,
     executionId: execution.executionId,
   }
   const executionResult = recordExecutionResponse(execution.executionId, payload)
