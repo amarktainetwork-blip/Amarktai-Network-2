@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T13:48:44.919Z",
+  "generatedAt": "2026-06-22T17:37:05.348Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -43,7 +43,6 @@
     "providerKeyPresent": {
       "genx": true,
       "huggingface": true,
-      "qwen": true,
       "mimo": true,
       "groq": true,
       "together": true
@@ -65,12 +64,6 @@
       "provider": "huggingface",
       "configured": true,
       "masked": "hf_E...oTeP",
-      "error": null
-    },
-    {
-      "provider": "qwen",
-      "configured": true,
-      "masked": "sk-w...sDBc",
       "error": null
     },
     {
@@ -422,89 +415,6 @@
       "nextActions": []
     },
     {
-      "provider": "qwen",
-      "displayName": "Qwen / DashScope",
-      "credential": {
-        "present": true,
-        "source": "integration_config",
-        "masked": "sk-w...sDBc",
-        "aliasesChecked": [
-          "QWEN_API_KEY",
-          "DASHSCOPE_API_KEY"
-        ]
-      },
-      "baseUrls": [
-        {
-          "family": "compatible_mode",
-          "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-          "defaultValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-          "envName": "DASHSCOPE_BASE_URL",
-          "source": "ai_provider"
-        },
-        {
-          "family": "aigc",
-          "currentValue": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-          "defaultValue": "https://dashscope-intl.aliyuncs.com/api/v1",
-          "envName": "DASHSCOPE_AIGC_BASE_URL",
-          "source": "ai_provider"
-        }
-      ],
-      "runtimeFlags": [
-        {
-          "name": "QWEN_PAID_ENABLED",
-          "currentValue": "false",
-          "requiredValue": "true for paid/non-free-quota model execution",
-          "source": "default",
-          "blocking": false,
-          "usedBy": [
-            "chat",
-            "image",
-            "video",
-            "image_to_video",
-            "embeddings"
-          ],
-          "nextAction": "Keep false for free-token-only routing; set true only when paid DashScope execution is approved."
-        }
-      ],
-      "endpointRequirements": [
-        {
-          "capability": "video",
-          "type": "provider_endpoint",
-          "envNames": [
-            "DASHSCOPE_AIGC_BASE_URL"
-          ],
-          "configured": true,
-          "currentValue": "https://dashscope-intl.aliyuncs.com/api/v1",
-          "requiredValue": "https://dashscope-intl.aliyuncs.com/api/v1",
-          "nextAction": "No action required for this endpoint requirement."
-        },
-        {
-          "capability": "image_to_video",
-          "type": "provider_endpoint",
-          "envNames": [
-            "DASHSCOPE_AIGC_BASE_URL"
-          ],
-          "configured": true,
-          "currentValue": "https://dashscope-intl.aliyuncs.com/api/v1",
-          "requiredValue": "https://dashscope-intl.aliyuncs.com/api/v1",
-          "nextAction": "No action required for this endpoint requirement."
-        }
-      ],
-      "db": {
-        "integrationConfigPresent": true,
-        "aiProviderPresent": true,
-        "integrationConfigEnabled": true,
-        "aiProviderEnabled": true,
-        "aiProviderHealth": "healthy",
-        "warnings": []
-      },
-      "accountPolicy": "Free-token-only routing; paid/non-free-quota models are blocked until QWEN_PAID_ENABLED=true.",
-      "dashboardDisplayStatus": "ready",
-      "runtimeExecutableStatus": "executable_possible",
-      "blockers": [],
-      "nextActions": []
-    },
-    {
       "provider": "mimo",
       "displayName": "Xiaomi MiMo",
       "credential": {
@@ -676,44 +586,6 @@
       "endpoint": "https://huggingface.co/api/models?limit=100&full=true"
     },
     {
-      "provider": "qwen",
-      "credentialEnvNames": [
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY"
-      ],
-      "catalogEndpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models",
-      "status": "ready",
-      "discoverySource": "live_authenticated",
-      "rawCatalogCount": 145,
-      "modelCount": 147,
-      "executableCandidateCount": 73,
-      "executableModels": 127,
-      "catalogOnlyModels": 0,
-      "requiresDedicatedEndpointModels": 0,
-      "adultGatedModels": 0,
-      "chatModels": 34,
-      "reasoningModels": 26,
-      "codingModels": 7,
-      "liveAuthenticatedModels": 147,
-      "publicCatalogModels": 0,
-      "staticFallbackModels": 0,
-      "catalogDerivedModels": 0,
-      "imageModels": 15,
-      "imageEditModels": 6,
-      "videoModels": 1,
-      "imageToVideoModels": 1,
-      "ttsModels": 16,
-      "sttModels": 4,
-      "embeddingsModels": 2,
-      "rerankModels": 0,
-      "musicModels": 0,
-      "avatarModels": 15,
-      "adultImageModels": 15,
-      "executableBlocker": null,
-      "error": null,
-      "endpoint": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models"
-    },
-    {
       "provider": "together",
       "credentialEnvNames": [
         "TOGETHER_API_KEY"
@@ -823,17 +695,6 @@
       "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=171"
     },
     {
-      "provider": "qwen",
-      "authDetection": "wired: QWEN_API_KEY or DASHSCOPE_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
-      "modelDiscovery": "wired: https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models; current status=ready",
-      "capabilityMapping": "wired: chat, reasoning, coding, vision, ocr, image, image_edit, video, image_to_video, avatar, embeddings, translation, tts, stt",
-      "requestExecutionPath": "wired: qwen_capability_adapter; categories=text, multimodal, computer_vision, video, audio, agents_or_planning",
-      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
-      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
-      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
-      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; wired: canonical async polling contract present; executableNow=110"
-    },
-    {
       "provider": "together",
       "authDetection": "wired: TOGETHER_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
       "modelDiscovery": "wired: https://api.together.ai/v1/models; current status=ready",
@@ -927,29 +788,6 @@
       ]
     },
     {
-      "provider": "qwen",
-      "contracts": 2058,
-      "executableNow": 110,
-      "liveProven": 0,
-      "endpointRequired": 0,
-      "specialistRequired": 0,
-      "adapterMissing": 280,
-      "runtimeFlagDisabled": 0,
-      "toolPlanOnly": 0,
-      "blockedByPolicy": 0,
-      "missingCredential": 0,
-      "nextActions": [
-        "Select a provider/model that supports chat, or add a truthful contract.",
-        "Select a provider/model that supports reasoning, or add a truthful contract.",
-        "Select a provider/model that supports coding, or add a truthful contract.",
-        "Select a provider/model that supports image, or add a truthful contract.",
-        "Select a provider/model that supports image_edit, or add a truthful contract.",
-        "Select a provider/model that supports video, or add a truthful contract.",
-        "Select a provider/model that supports image_to_video, or add a truthful contract.",
-        "Select a provider/model that supports avatar, or add a truthful contract."
-      ]
-    },
-    {
       "provider": "together",
       "contracts": 4274,
       "executableNow": 239,
@@ -988,9 +826,9 @@
         "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
         "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports stt, or add a truthful contract.",
         "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports agents, or add a truthful contract."
       ]
     }
@@ -1027,22 +865,6 @@
       "modelSelected": "mistralai/Mistral-7B-Instruct-v0.3",
       "artifactId": null,
       "error": "All eligible provider/model attempts failed."
-    },
-    {
-      "provider": "qwen",
-      "capability": "chat",
-      "modelStatus": "EXECUTABLE",
-      "credentialPresent": true,
-      "catalogReachable": true,
-      "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
-      "artifactPersisted": false,
-      "previewReachable": false,
-      "providerSelected": "qwen",
-      "modelSelected": "qwen-plus-character",
-      "artifactId": null,
-      "error": null
     },
     {
       "provider": "mimo",
@@ -1221,7 +1043,6 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -1229,8 +1050,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1258,15 +1077,12 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1291,7 +1107,6 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -1299,8 +1114,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1319,7 +1132,7 @@
       "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
       "routeOrAdapter": "researchRuntime.execute",
       "status": "LIVE_PROVEN",
-      "artifactId": "951d9978-0ffd-4a62-be6d-96f6b97973a9",
+      "artifactId": "26aca1fc-f65a-4f19-90d3-c745e7cc2c3f",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1331,31 +1144,28 @@
         "documentId": "research-0fe2558733f8caa57a882554",
         "qdrantCollection": "amarktai_memory",
         "vectorIds": [
-          "3c51557f-0c95-485d-9226-2e04ea8ae8fc"
+          "ce162f70-d58f-42a4-9948-1c1c8d7138a5"
         ],
         "retrievedVectorIds": [
           "3c51557f-0c95-485d-9226-2e04ea8ae8fc",
           "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
           "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b",
-          "7972c9c2-f228-4ff1-a636-3abbd968cb46",
-          "c3fe23fd-5be3-4d64-a16d-7774a361d10e"
+          "ce162f70-d58f-42a4-9948-1c1c8d7138a5",
+          "7972c9c2-f228-4ff1-a636-3abbd968cb46"
         ],
-        "artifactId": "951d9978-0ffd-4a62-be6d-96f6b97973a9"
+        "artifactId": "26aca1fc-f65a-4f19-90d3-c745e7cc2c3f"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Research",
       "routeFile": "src/lib/research-runtime.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1366,7 +1176,7 @@
         "Scrapy",
         "Trafilatura"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 951d9978-0ffd-4a62-be6d-96f6b97973a9.",
+      "artifactBehavior": "Intentional artifact persisted: 26aca1fc-f65a-4f19-90d3-c745e7cc2c3f.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1383,21 +1193,9 @@
       "capabilityName": "Summarization",
       "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
       "providerCandidates": [
-        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
-        "mimo:mimo-v2.5,mimo-v2.5-pro",
-        "groq:llama-3.3-70b-versatile",
-        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
         "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
       ],
       "requiredKeys": [
-        "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
-        "MIMO_API_KEY",
-        "XIAOMI_API_KEY",
-        "GROQ_API_KEY",
-        "TOGETHER_API_KEY",
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
         "HF_TOKEN"
@@ -1420,21 +1218,9 @@
       "capabilityName": "Translation",
       "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
       "providerCandidates": [
-        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
-        "mimo:mimo-v2.5,mimo-v2.5-pro",
-        "groq:llama-3.3-70b-versatile",
-        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
         "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
       ],
       "requiredKeys": [
-        "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
-        "MIMO_API_KEY",
-        "XIAOMI_API_KEY",
-        "GROQ_API_KEY",
-        "TOGETHER_API_KEY",
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
         "HF_TOKEN"
@@ -1457,11 +1243,14 @@
       "capabilityName": "Embeddings",
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
-        "qwen:provider-discovery"
+        "genx:text-embedding-3-large",
+        "huggingface:sentence-transformers/all-MiniLM-L6-v2"
       ],
       "requiredKeys": [
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY"
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
@@ -1500,7 +1289,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "1af9275f-42a2-46e1-82d4-f5dc6fb15411",
+      "artifactId": "48ef25be-8b65-401b-9865-c2884fc9275a",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1509,110 +1298,89 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
-        "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
         "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
         "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY",
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 1af9275f-42a2-46e1-82d4-f5dc6fb15411.",
+      "artifactBehavior": "Intentional artifact persisted: 48ef25be-8b65-401b-9865-c2884fc9275a.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "image_editing_source_transform",
-      "providerSelected": "qwen",
-      "modelSelected": "qwen-image-edit",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_edit",
       "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed. | Attempts: qwen/qwen-image-edit-plus: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"d3b8ef60-5185-94c7-8cc3-b5d08208415a\"}; qwen/qwen-image-edit-plus-2025-10-30: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"49920ed6-ae08-9c4c-b65f-30d80c566f92\"}; qwen/qwen-image-edit: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"3b520cac-c615-961e-a0f5-256d2d07b01f\"}",
+      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider discovery returned no executable model for this | Attempts: huggingface/black-forest-labs/FLUX.2-klein-4B: needs_configuration: provider_misconfigured: huggingface/black-forest-labs/FLUX.2-klein-4B is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.; huggingface/black-forest-labs/FLUX.2-dev: needs_configuration: provider_misconfigured: huggingface/black-forest-labs/FLUX.2-dev is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.; huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning: needs_configuration: provider_misconfigured: huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
       "diagnostics": {
         "providerAttempts": [
           {
-            "provider": "qwen",
-            "model": "qwen-image-edit-max",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"6ff9de59-a9e0-9941-937e-f8807c01c880\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
+            "provider": "genx",
+            "model": "unselected",
+            "status": "needs_configuration",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "no_route_found",
+            "error": "Provider discovery returned no executable model for this capability.",
+            "diagnostics": null
           },
           {
-            "provider": "qwen",
-            "model": "qwen-image-edit-plus-2025-12-15",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"6e8f8bf9-10d4-9ab6-a526-172c6947770d\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
+            "provider": "huggingface",
+            "model": "Qwen/Qwen-Image-Edit-2509",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "huggingface/Qwen/Qwen-Image-Edit-2509 is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+            "diagnostics": null
           },
           {
-            "provider": "qwen",
-            "model": "qwen-image-edit-plus",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"d3b8ef60-5185-94c7-8cc3-b5d08208415a\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
+            "provider": "huggingface",
+            "model": "black-forest-labs/FLUX.2-klein-4B",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "huggingface/black-forest-labs/FLUX.2-klein-4B is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+            "diagnostics": null
           },
           {
-            "provider": "qwen",
-            "model": "qwen-image-edit-plus-2025-10-30",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"49920ed6-ae08-9c4c-b65f-30d80c566f92\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
+            "provider": "huggingface",
+            "model": "black-forest-labs/FLUX.2-dev",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "huggingface/black-forest-labs/FLUX.2-dev is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+            "diagnostics": null
           },
           {
-            "provider": "qwen",
-            "model": "qwen-image-edit",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"3b520cac-c615-961e-a0f5-256d2d07b01f\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
+            "provider": "huggingface",
+            "model": "lightx2v/Qwen-Image-Edit-2511-Lightning",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+            "diagnostics": null
           }
         ]
       },
-      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Image and Text to Image",
-      "routeFile": "src/lib/providers/execution.ts",
+      "routeFile": "src/lib/providers/provider-scoring.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
-        "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
         "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
         "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY",
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
@@ -1629,12 +1397,12 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1",
-      "pollUrl": "/api/brain/media-jobs/e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1",
+      "jobId": "74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8",
+      "pollUrl": "/api/brain/media-jobs/74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "0651b2ce-b56a-40cc-924e-f3916710689f",
-        "controlPlaneAttemptId": "c97e16f2-1205-4737-8b8f-cc2af8b5be97",
+        "controlPlaneJobId": "b7b98783-2dab-44c3-ada7-fe1b4eae2c71",
+        "controlPlaneAttemptId": "00e608bd-a588-4e58-bfc1-35bf34640f01",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1644,20 +1412,17 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:veo-3.1",
-        "qwen:wan2.1-t2v-turbo",
         "together:Wan-AI/Wan2.1-T2V-14B"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY"
       ],
       "requiredLocalTools": [
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1 via /api/brain/media-jobs/e3a1ff66-ad9c-4e0e-8d20-b11d43030ce1."
+      "jobBehavior": "Async job tracked as 74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8 via /api/brain/media-jobs/74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1665,7 +1430,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "67ca9f26-26a5-4dbe-9916-1817b4bbe13f",
+      "artifactId": "2105841f-5caf-4941-ba4b-3097503045a5",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1690,7 +1455,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 67ca9f26-26a5-4dbe-9916-1817b4bbe13f.",
+      "artifactBehavior": "Intentional artifact persisted: 2105841f-5caf-4941-ba4b-3097503045a5.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1700,12 +1465,12 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_8514acef504442e6bbd10a190aed8886",
+      "jobId": "gnxsh_job_fbfb3dfcedd8439baafc2f7b42182478",
       "pollUrl": null,
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "6960661a-4735-4ad3-b725-d3d83b7d1d64",
-        "controlPlaneAttemptId": "710d249a-c4e3-4a96-8b83-913f62bd27d5",
+        "controlPlaneJobId": "37a630d6-2b3d-47c2-8875-6f49ef191776",
+        "controlPlaneAttemptId": "d7734511-8481-42f5-980a-e2345b9f4d38",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1732,7 +1497,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_8514acef504442e6bbd10a190aed8886."
+      "jobBehavior": "Async job tracked as gnxsh_job_fbfb3dfcedd8439baafc2f7b42182478."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1749,7 +1514,6 @@
       "routeFile": "src/app/api/brain/agent-request/route.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -1757,8 +1521,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1786,7 +1548,6 @@
       "routeFile": "src/lib/connected-app-capability-engine.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -1794,8 +1555,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -1810,16 +1569,28 @@
     },
     {
       "capabilityId": "image_to_video",
-      "providerSelected": "qwen",
-      "modelSelected": "wan2.1-i2v-turbo",
+      "providerSelected": "genx",
+      "modelSelected": "seedance-v1-fast-i2v",
       "routeOrAdapter": "executeCapability:image_to_video",
       "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed. | Attempts: genx/seedance-2-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-2-i2v.; genx/seedance-v1-fast-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.; qwen/wan2.1-i2v-turbo: failed: unknown: Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"048bf9c4-a2a1-9196-9b02-6a4cd13ae025\"}",
+      "exactError": "All eligible provider/model attempts failed. | Attempts: genx/pixverse-v6-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/pixverse-v6-i2v.; genx/seedance-2-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-2-i2v.; genx/seedance-v1-fast-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.",
       "diagnostics": {
         "providerAttempts": [
+          {
+            "provider": "genx",
+            "model": "kling-v3-pro-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "model_not_supported",
+            "error": "No provider-safe video contract is registered for genx/kling-v3-pro-i2v.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          },
           {
             "provider": "genx",
             "model": "pixverse-v5.5-i2v",
@@ -1867,18 +1638,6 @@
               "modelExecutionClassification": "executable",
               "endpointEnv": null
             }
-          },
-          {
-            "provider": "qwen",
-            "model": "wan2.1-i2v-turbo",
-            "status": "failed",
-            "classification": "provider_error",
-            "errorCategory": "unknown",
-            "error": "Qwen HTTP 400: {\"code\":\"Arrearage\",\"message\":\"Access denied, please make sure your account is in good standing. For details, see: https://www.alibabacloud.com/help/en/model-studio/error-code#overdue-payment\",\"request_id\":\"048bf9c4-a2a1-9196-9b02-6a4cd13ae025\"}",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
           }
         ]
       },
@@ -1886,12 +1645,9 @@
       "capabilityName": "Image to Video",
       "routeFile": "src/lib/providers/execution.ts",
       "providerCandidates": [
-        "qwen:wan2.1-i2v-turbo",
         "genx:provider-discovery"
       ],
       "requiredKeys": [
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "GENX_API_KEY"
       ],
       "requiredLocalTools": [
@@ -1906,29 +1662,26 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.long_form_assembly",
       "status": "LIVE_PROVEN",
-      "artifactId": "278deb9d-3f55-4100-bac0-2578e9ef4a33",
-      "jobId": "3211c68f-dd2f-4b7b-a940-ced703bc6a7a",
+      "artifactId": "0e440f8f-c121-421c-b5e4-52e8e52b8be3",
+      "jobId": "c5e4619d-53fd-468c-98ce-44396362ab0b",
       "pollUrl": null,
       "exactError": "Technical assembly proof only: ffmpeg assembled provided/local proof clips and persisted an artifact; provider-native long-form generation, coherent advert quality, pronunciation, and voice/video sync are not proven.",
       "diagnostics": {
         "sourceClipCount": 2,
         "generatedProviderClip": false,
         "finalDurationSeconds": 2.020996,
-        "artifactId": "278deb9d-3f55-4100-bac0-2578e9ef4a33",
-        "jobId": "3211c68f-dd2f-4b7b-a940-ced703bc6a7a"
+        "artifactId": "0e440f8f-c121-421c-b5e4-52e8e52b8be3",
+        "jobId": "c5e4619d-53fd-468c-98ce-44396362ab0b"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
       "routeFile": "src/lib/media-workflow-foundation.ts",
       "providerCandidates": [
         "genx:veo-3.1",
-        "qwen:wan2.1-t2v-turbo",
         "together:Wan-AI/Wan2.1-T2V-14B"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY"
       ],
       "requiredLocalTools": [
@@ -1936,8 +1689,8 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 278deb9d-3f55-4100-bac0-2578e9ef4a33.",
-      "jobBehavior": "Async job tracked as 3211c68f-dd2f-4b7b-a940-ced703bc6a7a."
+      "artifactBehavior": "Intentional artifact persisted: 0e440f8f-c121-421c-b5e4-52e8e52b8be3.",
+      "jobBehavior": "Async job tracked as c5e4619d-53fd-468c-98ce-44396362ab0b."
     },
     {
       "capabilityId": "music_audio_bed_generation",
@@ -1945,7 +1698,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.audio_bed",
       "status": "LIVE_PROVEN",
-      "artifactId": "5125991b-224e-46dd-83e3-2f82d680d426",
+      "artifactId": "2c0a918c-2bd9-4df6-a7a8-2f8b215c3355",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1953,7 +1706,7 @@
         "productContract": "audio_bed_assembly",
         "providerMusicGeneration": false,
         "durationSeconds": 2,
-        "artifactId": "5125991b-224e-46dd-83e3-2f82d680d426"
+        "artifactId": "2c0a918c-2bd9-4df6-a7a8-2f8b215c3355"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Audio",
@@ -1965,7 +1718,7 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 5125991b-224e-46dd-83e3-2f82d680d426.",
+      "artifactBehavior": "Intentional artifact persisted: 2c0a918c-2bd9-4df6-a7a8-2f8b215c3355.",
       "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
@@ -1974,7 +1727,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.captions",
       "status": "LIVE_PROVEN",
-      "artifactId": "b6c0a672-e5a0-486a-9131-316c3a6fa221",
+      "artifactId": "f4e93aa5-3966-4bf3-a715-a58fa64bc745",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1985,7 +1738,7 @@
           "vtt",
           "srt"
         ],
-        "artifactId": "b6c0a672-e5a0-486a-9131-316c3a6fa221"
+        "artifactId": "f4e93aa5-3966-4bf3-a715-a58fa64bc745"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Automatic Speech Recognition",
@@ -2010,7 +1763,7 @@
       "requiredLocalTools": [
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: b6c0a672-e5a0-486a-9131-316c3a6fa221.",
+      "artifactBehavior": "Intentional artifact persisted: f4e93aa5-3966-4bf3-a715-a58fa64bc745.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -2020,12 +1773,12 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "e29a383a-b4ef-4e90-96ac-0b80f4bf542d",
-      "pollUrl": "/api/brain/media-jobs/e29a383a-b4ef-4e90-96ac-0b80f4bf542d",
+      "jobId": "3fa79df0-3b43-4f0b-8217-ce3c9fe4849f",
+      "pollUrl": "/api/brain/media-jobs/3fa79df0-3b43-4f0b-8217-ce3c9fe4849f",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "1509cda8-61b4-4c14-a30e-f7a046af46d7",
-        "controlPlaneAttemptId": "54d40023-2016-41ae-895d-b4f57b925b79",
+        "controlPlaneJobId": "97b9b205-8530-4f6a-8bf6-c5bf5355ac69",
+        "controlPlaneAttemptId": "e08334a0-d34c-429c-bb17-422aa461f5c8",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -2036,7 +1789,6 @@
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
         "huggingface:mistralai/Mistral-7B-Instruct-v0.3",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
       ],
       "requiredKeys": [
@@ -2044,13 +1796,11 @@
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
         "HF_TOKEN",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY"
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as e29a383a-b4ef-4e90-96ac-0b80f4bf542d via /api/brain/media-jobs/e29a383a-b4ef-4e90-96ac-0b80f4bf542d."
+      "jobBehavior": "Async job tracked as 3fa79df0-3b43-4f0b-8217-ce3c9fe4849f via /api/brain/media-jobs/3fa79df0-3b43-4f0b-8217-ce3c9fe4849f."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -2089,14 +1839,11 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
-        "qwen:qwen-image,qwen-image-plus,qwen-image-max,qwen-image-2.0,qwen-image-2.0-pro",
         "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
         "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY",
         "HUGGINGFACE_API_KEY",
         "HUGGINGFACEHUB_API_TOKEN",
@@ -2121,7 +1868,6 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -2129,8 +1875,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -2158,7 +1902,6 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -2166,8 +1909,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -2195,7 +1936,6 @@
       "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -2203,8 +1943,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -2232,7 +1970,6 @@
       "routeFile": "src/lib/orchestrator.ts",
       "providerCandidates": [
         "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
-        "qwen:qwen-turbo,qwen-plus,qwen-max",
         "mimo:mimo-v2.5,mimo-v2.5-pro",
         "groq:llama-3.3-70b-versatile",
         "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -2240,8 +1977,6 @@
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "MIMO_API_KEY",
         "XIAOMI_API_KEY",
         "GROQ_API_KEY",
@@ -2269,13 +2004,10 @@
       "routeFile": "src/lib/control-plane-jobs.ts",
       "providerCandidates": [
         "genx:veo-3.1",
-        "qwen:wan2.1-t2v-turbo",
         "together:Wan-AI/Wan2.1-T2V-14B"
       ],
       "requiredKeys": [
         "GENX_API_KEY",
-        "QWEN_API_KEY",
-        "DASHSCOPE_API_KEY",
         "TOGETHER_API_KEY"
       ],
       "requiredLocalTools": [
