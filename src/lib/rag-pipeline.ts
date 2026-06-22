@@ -12,6 +12,7 @@ import { searchVectors, upsertVectors, ensureCollection, isQdrantHealthy } from 
 import { cacheGet, cacheSet } from './redis'
 import { getVaultApiKey } from './brain'
 import { randomUUID } from 'crypto'
+import { executeCapability } from '@/lib/capability-router'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,14 @@ const DEFAULT_TOP_K = 5
 const EMBEDDING_MODEL = 'text-embedding-v3'
 const EMBEDDING_CACHE_TTL = 3600 // 1 hour
 
+type ProviderEmbeddingPayload = {
+  data?: Array<{ embedding?: unknown; index?: number }>
+  embedding?: unknown
+  embeddings?: unknown
+  vector?: unknown
+  vectors?: unknown
+}
+
 // ── Text Chunking ────────────────────────────────────────────────────────────
 
 /**
@@ -114,9 +123,6 @@ export function chunkText(
  * Caches results in Redis to avoid redundant API calls.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const apiKey = await getVaultApiKey('qwen')
-  if (!apiKey) return null
-
   // Check cache first
   const cacheKey = `emb:${Buffer.from(text.slice(0, 200)).toString('base64').slice(0, 40)}`
   const cached = await cacheGet(cacheKey)
@@ -126,68 +132,76 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
     } catch { /* cache miss */ }
   }
 
-  try {
-    const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: text.slice(0, 8000), // Limit input size
-        encoding_format: 'float',
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-
-    if (!res.ok) return null
-
-    const data = await res.json() as { data: Array<{ embedding: number[] }> }
-    const embedding = data.data?.[0]?.embedding
-    if (!embedding) return null
-
-    // Cache the embedding
-    await cacheSet(cacheKey, JSON.stringify(embedding), EMBEDDING_CACHE_TTL)
-    return embedding
-  } catch {
-    return null
-  }
+  const [embedding] = await generateEmbeddings([text])
+  if (!embedding) return null
+  await cacheSet(cacheKey, JSON.stringify(embedding), EMBEDDING_CACHE_TTL)
+  return embedding
 }
 
 /**
  * Generate embeddings for multiple texts in batch.
  */
 export async function generateEmbeddings(texts: string[]): Promise<(number[] | null)[]> {
-  const apiKey = await getVaultApiKey('qwen')
-  if (!apiKey) return texts.map(() => null)
-
   try {
-    const res = await fetch('https://dashscope-intl.aliyuncs.com/compatible-mode/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+    const result = await executeCapability({
+      input: texts.length === 1 ? texts[0] : `Generate embeddings for ${texts.length} RAG chunks.`,
+      capability: 'embeddings',
+      saveArtifact: false,
+      metadata: {
+        input: texts.map((text) => text.slice(0, 8000)),
+        embeddingPurpose: 'rag_pipeline',
       },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: texts.map((t) => t.slice(0, 8000)),
-        encoding_format: 'float',
-      }),
-      signal: AbortSignal.timeout(30_000),
     })
-
-    if (!res.ok) return texts.map(() => null)
-
-    const data = await res.json() as { data: Array<{ embedding: number[]; index: number }> }
-    const result: (number[] | null)[] = texts.map(() => null)
-    for (const item of data.data) {
-      result[item.index] = item.embedding
-    }
-    return result
+    if (!result.success || !result.output) return texts.map(() => null)
+    return normalizeEmbeddingResponse(result.output, texts.length)
   } catch {
     return texts.map(() => null)
   }
+}
+
+export function normalizeEmbeddingResponse(output: unknown, expectedCount = 1): (number[] | null)[] {
+  const payload = parseEmbeddingPayload(output)
+  const empty = (): (number[] | null)[] => Array.from({ length: expectedCount }, () => null)
+  if (!payload) return empty()
+
+  const data = Array.isArray(payload.data) ? payload.data : null
+  if (data) {
+    const results = empty()
+    for (const [position, item] of data.entries()) {
+      const index = Number.isInteger(item.index) ? item.index! : position
+      if (index >= 0 && index < results.length) {
+        results[index] = numericVector(item.embedding)
+      }
+    }
+    return results
+  }
+
+  const vectors = payload.embeddings ?? payload.vectors
+  if (Array.isArray(vectors) && vectors.every(Array.isArray)) {
+    return empty().map((_, index) => numericVector(vectors[index]))
+  }
+
+  const single = numericVector(payload.embedding ?? payload.vector ?? output)
+  if (!single) return empty()
+  return [single, ...Array.from({ length: Math.max(0, expectedCount - 1) }, () => null)]
+}
+
+function parseEmbeddingPayload(output: unknown): ProviderEmbeddingPayload | null {
+  if (typeof output === 'string') {
+    try {
+      return JSON.parse(output) as ProviderEmbeddingPayload
+    } catch {
+      return null
+    }
+  }
+  if (output && typeof output === 'object') return output as ProviderEmbeddingPayload
+  return null
+}
+
+function numericVector(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null
+  const vector = value.map((entry) => typeof entry === 'number' ? entry : Number(entry))
+  return vector.length > 0 && vector.every(Number.isFinite) ? vector : null
 }
 
 // ── Document Ingestion ───────────────────────────────────────────────────────

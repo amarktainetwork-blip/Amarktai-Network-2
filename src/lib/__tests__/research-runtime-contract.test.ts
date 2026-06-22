@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const originalEnv = { ...process.env }
+
 const mocks = vi.hoisted(() => ({
   executeCapability: vi.fn(),
   ensureExecution: vi.fn(),
@@ -42,6 +44,7 @@ vi.mock('child_process', () => ({
 
 describe('research runtime contract', () => {
   beforeEach(() => {
+    process.env = { ...originalEnv }
     vi.clearAllMocks()
     mocks.ensureExecution.mockReturnValue({ executionId: 'exec-1' })
     mocks.startExecution.mockReturnValue(undefined)
@@ -210,6 +213,37 @@ describe('research runtime contract', () => {
       provider: 'qwen',
       model: 'qwen-plus',
     })
+  })
+
+  it('blocks URL research truthfully when RAG embedding/vector ingestion fails', async () => {
+    process.env.QWEN_API_KEY = 'test-qwen-key'
+    mocks.ingestDocument.mockResolvedValue({
+      documentId: 'research-doc-1',
+      chunksCreated: 1,
+      embeddingsGenerated: 0,
+      vectorIds: [],
+      collection: 'amarktai_memory',
+      success: false,
+      error: 'Failed to generate any embeddings',
+    })
+
+    const { POST } = await import('@/app/api/brain/research/route')
+    const response = await POST(new Request('http://localhost/api/brain/research', {
+      method: 'POST',
+      body: JSON.stringify({ query: 'Research https://example.com', depth: 'shallow', appSlug: 'research-app' }),
+      headers: { 'Content-Type': 'application/json' },
+    }) as never)
+    const payload = await response.json()
+
+    expect(response.status).toBe(503)
+    expect(payload).toMatchObject({
+      success: false,
+      error: 'Failed to generate any embeddings',
+    })
+    expect(payload.provider).toBeNull()
+    expect(payload.artifactId).toBeUndefined()
+    expect(mocks.retrieveRag).not.toHaveBeenCalled()
+    expect(mocks.createArtifact).not.toHaveBeenCalled()
   })
 
   it('keeps admin url research capability-level and records ignored provider/model/endpoint preferences', async () => {
