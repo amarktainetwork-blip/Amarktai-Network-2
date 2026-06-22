@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T07:49:36.699Z",
+  "generatedAt": "2026-06-22T09:54:52.058Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -985,12 +985,12 @@
       "blockedByPolicy": 0,
       "missingCredential": 0,
       "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports reasoning, or add a truthful contract.",
         "Select a provider/model that supports coding, or add a truthful contract.",
         "Select a provider/model that supports tts, or add a truthful contract.",
         "Select a provider/model that supports stt, or add a truthful contract.",
         "Select a provider/model that supports vision, or add a truthful contract.",
-        "Select a provider/model that supports chat, or add a truthful contract.",
         "Select a provider/model that supports agents, or add a truthful contract."
       ]
     }
@@ -1323,6 +1323,16 @@
       "jobId": null,
       "pollUrl": null,
       "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. Fallback was allowed.",
+      "diagnostics": {
+        "depth": "shallow",
+        "researchRuntimeStatus": "PARTIAL",
+        "sourceUrl": "https://example.com/",
+        "documentId": "research-0fe2558733f8caa57a882554",
+        "vectorIds": [
+          "f67ec8a0-572e-44d6-9964-ccf038f4a1a4"
+        ],
+        "providerAttempts": []
+      },
       "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
       "capabilityName": "Research",
       "routeFile": "src/lib/providers/provider-scoring.ts",
@@ -1481,7 +1491,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "d4cc6d4a-914f-4551-84cc-dfeb870a8c99",
+      "artifactId": "d84ccb8c-c026-4361-8138-5d80070cbdbe",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1504,7 +1514,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: d4cc6d4a-914f-4551-84cc-dfeb870a8c99.",
+      "artifactBehavior": "Intentional artifact persisted: d84ccb8c-c026-4361-8138-5d80070cbdbe.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1546,9 +1556,16 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "e4d203b8-17d9-46bb-9072-fa668acca373",
-      "pollUrl": "/api/brain/media-jobs/e4d203b8-17d9-46bb-9072-fa668acca373",
+      "jobId": "18add101-7d47-4af9-9966-85068e58173b",
+      "pollUrl": "/api/brain/media-jobs/18add101-7d47-4af9-9966-85068e58173b",
       "exactError": null,
+      "diagnostics": {
+        "controlPlaneJobId": "4d7b5315-e043-4098-b24a-d39c9bf4772c",
+        "controlPlaneAttemptId": "95573eea-1d66-4916-abd8-66e16aa6b3dc",
+        "queueStatus": "queued",
+        "requestedDurationSeconds": null,
+        "providerLimitSeconds": null
+      },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1567,7 +1584,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as e4d203b8-17d9-46bb-9072-fa668acca373 via /api/brain/media-jobs/e4d203b8-17d9-46bb-9072-fa668acca373."
+      "jobBehavior": "Async job tracked as 18add101-7d47-4af9-9966-85068e58173b via /api/brain/media-jobs/18add101-7d47-4af9-9966-85068e58173b."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1575,7 +1592,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "1f7af909-ea1d-4435-b579-aec8eb975fc7",
+      "artifactId": "c8aaa448-fa9d-47ac-aa1e-3f9f47736634",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1600,7 +1617,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 1f7af909-ea1d-4435-b579-aec8eb975fc7.",
+      "artifactBehavior": "Intentional artifact persisted: c8aaa448-fa9d-47ac-aa1e-3f9f47736634.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1610,9 +1627,16 @@
       "routeOrAdapter": "executeCapability:stt",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "gnxsh_job_8217571b10fb42a5bb9f4097e2968290",
+      "jobId": "gnxsh_job_14759e93ac8d4dcd8c72d8745e724e08",
       "pollUrl": null,
       "exactError": null,
+      "diagnostics": {
+        "controlPlaneJobId": "8d017c6d-8558-49a9-b080-7fea468685e0",
+        "controlPlaneAttemptId": "c893e664-1f91-46d8-8a6d-2109d89e5770",
+        "queueStatus": "queued",
+        "requestedDurationSeconds": null,
+        "providerLimitSeconds": null
+      },
       "sourceFileResponsible": null,
       "capabilityName": "Automatic Speech Recognition",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1635,7 +1659,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_8217571b10fb42a5bb9f4097e2968290."
+      "jobBehavior": "Async job tracked as gnxsh_job_14759e93ac8d4dcd8c72d8745e724e08."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1776,9 +1800,16 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "feef8ab7-bd7e-4ea3-8032-e27e5afec821",
-      "pollUrl": "/api/brain/media-jobs/feef8ab7-bd7e-4ea3-8032-e27e5afec821",
+      "jobId": "b58b9f02-797a-470e-ba36-24b4649e688e",
+      "pollUrl": "/api/brain/media-jobs/b58b9f02-797a-470e-ba36-24b4649e688e",
       "exactError": null,
+      "diagnostics": {
+        "controlPlaneJobId": "31f8e850-2d22-435d-ae7c-f4c7f67b62fd",
+        "controlPlaneAttemptId": "c3724f7d-b1bc-4eba-8094-39a87620cc15",
+        "queueStatus": "queued",
+        "requestedDurationSeconds": null,
+        "providerLimitSeconds": null
+      },
       "sourceFileResponsible": null,
       "capabilityName": "Avatar Generation",
       "routeFile": "src/lib/orchestrator.ts",
@@ -1799,7 +1830,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as feef8ab7-bd7e-4ea3-8032-e27e5afec821 via /api/brain/media-jobs/feef8ab7-bd7e-4ea3-8032-e27e5afec821."
+      "jobBehavior": "Async job tracked as b58b9f02-797a-470e-ba36-24b4649e688e via /api/brain/media-jobs/b58b9f02-797a-470e-ba36-24b4649e688e."
     },
     {
       "capabilityId": "talking_avatar_video",
