@@ -166,11 +166,9 @@ export interface ProviderCallResult {
  *
  */
 export async function getVaultApiKey(providerKey: string): Promise<string | null> {
-  const normalized = providerKey === 'dashscope'
-    ? 'qwen'
-    : providerKey === 'hf'
-      ? 'huggingface'
-      : providerKey
+  const normalized = providerKey === 'hf'
+    ? 'huggingface'
+    : providerKey
   if (!getProviderMeshNode(normalized)) return null
   return normalizeProviderApiKey(await getMeshCredential(normalized as ProviderMeshId))
 }
@@ -184,17 +182,6 @@ export async function getVaultApiKey(providerKey: string): Promise<string | null
 }
 
 */
-/**
- * OpenAI image generation models that require /v1/images/generations instead of /v1/chat/completions.
- * These models MUST NEVER be routed to the chat/completions endpoint.
- * Only real, currently-valid OpenAI model IDs are included here.
- */
-export const OPENAI_IMAGE_MODELS = new Set([
-  'gpt-image-1',
-  'dall-e-3',
-  'dall-e-2',
-])
-
 /**
  * Together AI image generation model prefixes.
  * Models matching these prefixes require /v1/images/generations, not /v1/chat/completions.
@@ -210,18 +197,15 @@ function isTogetherImageModel(modelId: string): boolean {
 }
 
 /**
- * Qwen Wanx model ID prefixes.
- * Wanx models require the DashScope AIGC endpoint (/v1/services/aigc/) —
- * NOT the compatible-mode /v1/chat/completions path.
- * They must not be routed through callProvider's standard chat branch.
+ * OpenAI image generation models that require /v1/images/generations instead of /v1/chat/completions.
+ * These models MUST NEVER be routed to the chat/completions endpoint.
+ * Only real, currently-valid OpenAI model IDs are included here.
  */
-const QWEN_WANX_MODEL_PREFIXES = [
-  'wanx',
-]
-
-function isQwenWanxModel(modelId: string): boolean {
-  return QWEN_WANX_MODEL_PREFIXES.some(prefix => modelId.startsWith(prefix))
-}
+export const OPENAI_IMAGE_MODELS = new Set([
+  'gpt-image-1',
+  'dall-e-3',
+  'dall-e-2',
+])
 
 /**
  * Call an AI provider via the single provider vault.
@@ -305,48 +289,19 @@ export async function callProvider(
 
   try {
     switch (providerKey) {
-      // ── OpenAI-compatible: OpenAI, Groq, DeepSeek, OpenRouter, Together AI, xAI/Grok, Qwen ──
-      case 'openai':
+      // ── OpenAI-compatible: Groq, Together AI ──
       case 'groq':
-      case 'deepseek':
-      case 'openrouter':
-      case 'together':
-      case 'grok':
-      case 'qwen': {
+      case 'together': {
         const baseMap: Record<string, string> = {
-          openai:     'https://api.openai.com',
           groq:       'https://api.groq.com/openai',
-          deepseek:   'https://api.deepseek.com',
-          openrouter: 'https://openrouter.ai/api',
           together:   'https://api.together.xyz',
-          grok:       'https://api.x.ai',
-          qwen:       'https://dashscope-intl.aliyuncs.com/compatible-mode',
         }
-        const base = meshNode.baseUrl || baseMap[providerKey] || 'https://api.openai.com'
+        const base = meshNode.baseUrl || baseMap[providerKey] || ''
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${resolvedApiKey}`,
         }
-        // OpenRouter requires a site URL header
-        if (providerKey === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://amarktai.network'
-          headers['X-Title'] = 'AmarktAI Network'
-        }
-        // ── Phase 5: Wanx guard ──────────────────────────────────────────
-        // Wanx image/video models require DashScope AIGC endpoint, NOT the
-        // compatible-mode chat/completions path. Return a clear error rather
-        // than silently routing to the wrong endpoint.
-        if (providerKey === 'qwen' && isQwenWanxModel(resolvedModel)) {
-          return {
-            ok: false,
-            output: null,
-            error: `Qwen Wanx model "${resolvedModel}" requires the DashScope AIGC endpoint which is not yet wired in callProvider. Use the specialist /api/brain/image or /api/brain/video-generate routes instead.`,
-            latencyMs: Date.now() - start,
-            model: resolvedModel,
-            providerKey,
-          }
-        }
-        // ── Phase 6: Together image routing ──────────────────────────────
+        // ── Together image routing ──────────────────────────────
         // Together AI image-generation models (FLUX, Stable Diffusion) use
         // /v1/images/generations, not /v1/chat/completions.
         if (providerKey === 'together' && isTogetherImageModel(resolvedModel)) {
@@ -363,27 +318,6 @@ export async function callProvider(
           if (!imgRes.ok) {
             const errBody = await imgRes.json().catch(() => ({})) as { error?: { message?: string } }
             return { ok: false, output: null, error: `Together Images API HTTP ${imgRes.status}: ${errBody?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-          }
-          const imgData = await imgRes.json() as { data?: Array<{ url?: string; b64_json?: string }> }
-          const imageUrl = imgData?.data?.[0]?.url ?? imgData?.data?.[0]?.b64_json ?? null
-          return { ok: true, output: imageUrl, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        // Image models require the images/generations endpoint, not chat/completions
-        if (providerKey === 'openai' && OPENAI_IMAGE_MODELS.has(resolvedModel)) {
-          const imgRes = await fetch(`${base}/v1/images/generations`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({
-              model: resolvedModel,
-              prompt: message,
-              n: 1,
-              size: '1024x1024',
-            }),
-            signal: AbortSignal.timeout(timeout),
-          })
-          if (!imgRes.ok) {
-            const errBody = await imgRes.json().catch(() => ({})) as { error?: { message?: string } }
-            return { ok: false, output: null, error: `OpenAI Images API HTTP ${imgRes.status}: ${errBody?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
           }
           const imgData = await imgRes.json() as { data?: Array<{ url?: string; b64_json?: string }> }
           const imageUrl = imgData?.data?.[0]?.url ?? imgData?.data?.[0]?.b64_json ?? null
@@ -497,10 +431,10 @@ export async function callProvider(
         return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
       }
 
-      // ── NVIDIA NIM (OpenAI-compatible) ──────────────────────────────────────
-      case 'nvidia': {
-        const base = meshNode.baseUrl || 'https://integrate.api.nvidia.com/v1'
-        const res = await fetch(`${base}/chat/completions`, {
+      // ── GenX (OpenAI-compatible) ──────────────────────────────────────
+      case 'genx': {
+        const base = meshNode.baseUrl || 'https://query.genx.sh'
+        const res = await fetch(`${base}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resolvedApiKey}` },
           body: JSON.stringify({
@@ -514,78 +448,18 @@ export async function callProvider(
           signal: AbortSignal.timeout(timeout),
         })
         if (!res.ok) {
-          return { ok: false, output: null, error: `NVIDIA HTTP ${res.status}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
+          return { ok: false, output: null, error: `GenX HTTP ${res.status}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
         }
         const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
         return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
       }
 
-      // ── Anthropic (Claude) ────────────────────────────────────────────────
-      case 'anthropic': {
-        const base = meshNode.baseUrl || 'https://api.anthropic.com'
-        const anthropicBody: Record<string, unknown> = {
-          model: resolvedModel,
-          max_tokens: 1024,
-          messages: [{ role: 'user', content: message }],
-        }
-        if (systemPrompt) {
-          anthropicBody.system = systemPrompt
-        }
-        const res = await fetch(`${base}/v1/messages`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': resolvedApiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify(anthropicBody),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
-          return { ok: false, output: null, error: `Anthropic HTTP ${res.status}: ${body?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { content?: Array<{ text?: string }> }
-        const text = data?.content?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
-      // ── Cohere ────────────────────────────────────────────────────────────
-      case 'cohere': {
-        const base = meshNode.baseUrl || 'https://api.cohere.com'
-        const res = await fetch(`${base}/v2/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resolvedApiKey}`,
-          },
-          body: JSON.stringify({
-            model: resolvedModel,
-            messages: [
-              ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
-              { role: 'user', content: message },
-            ],
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { message?: string }
-          return { ok: false, output: null, error: `Cohere HTTP ${res.status}: ${body?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { message?: { content?: Array<{ text?: string }> } }
-        const text = data?.message?.content?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
-      // ── Mistral AI (OpenAI-compatible) ─────────────────────────────────────
-      case 'mistral': {
-        const base = meshNode.baseUrl || 'https://api.mistral.ai'
+      // ── MiMo (OpenAI-compatible) ──────────────────────────────────────
+      case 'mimo': {
+        const base = meshNode.baseUrl || 'https://api.xiaomimimo.com'
         const res = await fetch(`${base}/v1/chat/completions`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resolvedApiKey}`,
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${resolvedApiKey}` },
           body: JSON.stringify({
             model: resolvedModel,
             messages: [
@@ -597,8 +471,7 @@ export async function callProvider(
           signal: AbortSignal.timeout(timeout),
         })
         if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { message?: string }
-          return { ok: false, output: null, error: `Mistral HTTP ${res.status}: ${body?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
+          return { ok: false, output: null, error: `MiMo HTTP ${res.status}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
         }
         const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
         return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }

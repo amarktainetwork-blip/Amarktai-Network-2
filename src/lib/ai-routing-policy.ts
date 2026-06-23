@@ -71,10 +71,10 @@ const COST_ORDER: Record<CostPreference, Array<CostTier | 'genx'>> = {
 }
 
 const PROVIDER_PRIORITY: Record<CostPreference, string[]> = {
-  free_first: ['huggingface', 'qwen', 'deepseek', 'groq', 'minimax', 'together', 'openrouter', 'genx', 'gemini', 'moonshot', 'zhipu', 'openai', 'xai'],
-  cheap: ['qwen', 'deepseek', 'groq', 'minimax', 'together', 'huggingface', 'openrouter', 'gemini', 'genx', 'moonshot', 'zhipu', 'openai', 'xai'],
-  balanced: ['genx', 'qwen', 'deepseek', 'gemini', 'minimax', 'groq', 'together', 'moonshot', 'zhipu', 'openrouter', 'huggingface', 'openai', 'xai'],
-  premium: ['genx', 'gemini', 'moonshot', 'zhipu', 'openai', 'xai', 'qwen', 'minimax', 'deepseek', 'openrouter', 'groq', 'together', 'huggingface'],
+  free_first: ['huggingface', 'groq', 'together', 'genx', 'mimo'],
+  cheap: ['groq', 'together', 'huggingface', 'genx', 'mimo'],
+  balanced: ['genx', 'groq', 'together', 'huggingface', 'mimo'],
+  premium: ['genx', 'groq', 'together', 'huggingface', 'mimo'],
 }
 
 const ROLE_BY_CAPABILITY: Partial<Record<AiCapability, ModelRole[]>> = {
@@ -119,20 +119,15 @@ const GENX_BY_CAPABILITY: Partial<Record<AiCapability, AiRouteCandidate[]>> = {
 }
 
 const CHEAP_TEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'qwen', model: 'qwen-plus', displayName: 'Qwen Plus', costTier: 'very_low', reason: 'Cheap capable multilingual/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'qwen', model: 'qwen-turbo', displayName: 'Qwen Turbo', costTier: 'very_low', reason: 'Very low-cost fast chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'deepseek', model: 'deepseek-chat', displayName: 'DeepSeek Chat', costTier: 'very_low', reason: 'Very low-cost chat/coding fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'deepseek', model: 'deepseek-reasoner', displayName: 'DeepSeek Reasoner', costTier: 'very_low', reason: 'Very low-cost reasoning/coding fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'groq', model: 'llama-3.3-70b-versatile', displayName: 'Groq Llama 3.3 70B', costTier: 'low', reason: 'Fast low-cost open model for chat and coding support.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'minimax', model: 'MiniMax-M2.7', displayName: 'MiniMax/Mimo M2.7', costTier: 'low', reason: 'Low-cost multimodal app/chat/coding route.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'gemini', model: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', costTier: 'low', reason: 'Low-cost multimodal reasoning/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'together', model: 'meta-llama/Llama-3-70b-chat-hf', displayName: 'Together Llama 3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'huggingface', model: 'meta-llama/Llama-3.1-8B-Instruct', displayName: 'HF Llama 3.1 8B', costTier: 'free', reason: 'Hugging Face serverless/custom-model fallback.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'mimo', model: 'mimo-v2.5', displayName: 'Xiaomi MiMo V2.5', costTier: 'low', reason: 'Low-cost multimodal reasoning/coding route.', enabled: true, configured: false, blocked: false, blocker: null },
 ]
 
 const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'moonshot', model: 'kimi-k2.6', displayName: 'Kimi K2.6', costTier: 'medium', reason: 'Long-context/coding route for massive datasets and leads.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'qwen', model: 'qwen-long', displayName: 'Qwen Long', costTier: 'low', reason: 'Long-context route when enabled on DashScope.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'groq', model: 'llama-3.3-70b-versatile', displayName: 'Groq Llama 3.3 70B', costTier: 'low', reason: 'Fast low-cost open model for long context.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'together', model: 'meta-llama/Llama-3-70b-chat-hf', displayName: 'Together Llama 3 70B', costTier: 'low', reason: 'Open model fallback for long context.', enabled: true, configured: false, blocked: false, blocker: null },
 ]
 
 function supportsCapability(model: ModelEntry, capability: AiCapability, requireStructuredOutput: boolean): boolean {
@@ -152,8 +147,8 @@ function supportsCapability(model: ModelEntry, capability: AiCapability, require
     case 'embeddings': return model.supports_embeddings
     case 'moderation': return model.supports_moderation === true
     case 'research': return model.supports_reasoning || model.supports_agent_planning || model.supports_tool_use
-    case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'xai', 'qwen', 'minimax'].includes(model.provider)
-    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface', 'qwen'].includes(model.provider)
+    case 'adult_text': return model.supports_chat && ['together', 'huggingface'].includes(model.provider)
+    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface'].includes(model.provider)
     default: return false
   }
 }

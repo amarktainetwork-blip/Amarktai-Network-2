@@ -134,11 +134,11 @@ export interface AppProfile {
 // ── Shared constants ────────────────────────────────────────────────────────
 
 const ALL_PROVIDERS = [
-  'genx', 'groq', 'huggingface', 'together', 'qwen', 'mimo',
+  'genx', 'groq', 'huggingface', 'together', 'mimo',
 ];
 
 const BACKBONE_PROVIDERS = [
-  'genx', 'huggingface', 'groq', 'together', 'qwen', 'mimo',
+  'genx', 'huggingface', 'groq', 'together', 'mimo',
 ];
 
 const BASIC_AGENT_PERMISSIONS = [

@@ -12,37 +12,17 @@ const RequestSchema = z.object({
   duration: z.number().int().min(1).max(30).optional().default(4),
   aspectRatio: z.enum(['16:9', '9:16', '1:1']).optional().default('16:9'),
   appSlug: z.string().optional(),
-  provider: z.enum(['genx', 'qwen', 'auto']).optional().default('auto'),
+  provider: z.enum(['genx', 'auto']).optional().default('auto'),
   model: z.string().optional(),
   capability: z.enum(['video_generation', 'adult_video']).optional().default('video_generation'),
 })
-
-async function createQwenJob(prompt: string, model: string, apiKey: string) {
-  const response = await fetch(
-    'https://dashscope-intl.aliyuncs.com/api/v1/services/aigc/video-generation/video-synthesis',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'X-DashScope-Async': 'enable',
-      },
-      body: JSON.stringify({ model, input: { prompt }, parameters: { size: '1280*720' } }),
-      signal: AbortSignal.timeout(15_000),
-    },
-  )
-  if (!response.ok) throw new Error(`Qwen Wan returned HTTP ${response.status}`)
-  const data = await response.json() as { output?: { task_id?: string } }
-  if (!data.output?.task_id) throw new Error('Qwen Wan did not return a task ID')
-  return { providerJobId: `qwen-wan:${data.output.task_id}`, status: 'processing' }
-}
 
 async function planningFallback(prompt: string, style: string, duration: number) {
   const request = `Create a ${duration}-second ${style} video storyboard for "${prompt}". Include scenes, shots, narration, and visual notes.`
   for (const [provider, model] of [
     ['groq', 'llama-3.3-70b-versatile'],
     ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
-    ['qwen', 'qwen-plus'],
+    ['mimo', 'mimo-v2.5'],
   ] as const) {
     const result = await callProvider(provider, model, request)
     if (result.output) return result.output
@@ -98,22 +78,6 @@ export async function POST(request: Request): Promise<NextResponse> {
       usedModel = genxModel
       status = result.url || result.status === 'completed' ? 'succeeded' : 'processing'
       resultUrl = result.url ?? ''
-    }
-  }
-
-  if (!providerJobId && (provider === 'auto' || provider === 'qwen')) {
-    const apiKey = await getVaultApiKey('qwen')
-    if (apiKey) {
-      const qwenModel = model || 'wanx2.1-t2v-turbo'
-      try {
-        const result = await createQwenJob(enhancedPrompt, qwenModel, apiKey)
-        providerJobId = result.providerJobId
-        usedProvider = 'qwen'
-        usedModel = qwenModel
-        status = result.status
-      } catch {
-        // Continue to the next approved provider.
-      }
     }
   }
 
