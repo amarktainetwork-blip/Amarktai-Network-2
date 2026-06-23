@@ -29,10 +29,6 @@ const COST_RATES: Record<string, { input: number; output: number }> = {
   'llama-3.1-8b-instant':    { input: 0.00005, output: 0.00008 },
   'mixtral-8x7b-32768':      { input: 0.00024, output: 0.00024 },
   'whisper-large-v3-turbo':  { input: 0.00011, output: 0.00011 },
-  // DeepSeek
-  'deepseek-chat':           { input: 0.00014, output: 0.00028 },
-  'deepseek-coder':          { input: 0.00014, output: 0.00028 },
-  'deepseek-reasoner':       { input: 0.00055, output: 0.00219 },
   // Gemini
   'gemini-2.0-flash':        { input: 0.00010, output: 0.00040 },
   'gemini-1.5-flash':        { input: 0.00008, output: 0.00030 },

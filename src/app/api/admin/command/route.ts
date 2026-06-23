@@ -93,7 +93,7 @@ async function executeImmediateCommand(
   }
 
   if (route.intent === 'create_image') {
-    const providerOverride = route.selectedProviders.find((provider) => ['genx', 'qwen', 'together'].includes(provider))
+    const providerOverride = route.selectedProviders.find((provider) => ['genx', 'together'].includes(provider))
     if (!providerOverride) return { executed: false, error: 'Connected image providers are not yet supported by the image execution route.' }
     const request = new NextRequest(originalRequest.url, {
       method: 'POST',
@@ -111,7 +111,7 @@ async function executeImmediateCommand(
   }
 
   if (route.intent === 'create_movie') {
-    const provider = route.selectedProviders.find((item) => ['genx', 'together', 'qwen', 'huggingface'].includes(item))
+    const provider = route.selectedProviders.find((item) => ['genx', 'together', 'huggingface'].includes(item))
     if (!provider) return { executed: false, error: 'Connected video providers are not yet supported by the video execution route.' }
     const duration = Math.min(30, Number(options?.duration || 4))
     const request = new NextRequest(originalRequest.url, {

@@ -23,7 +23,6 @@ const APPROVED_RESET_KEYS = [
   'webdock',
   'firecrawl',
   'storage_config',
-  'qwen',
   'minimax',
   'gemini',
   'groq',

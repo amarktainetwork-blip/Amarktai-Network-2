@@ -104,11 +104,6 @@ export async function GET() {
     voice.push(directModel('hf/tts-model', 'Configured TTS endpoint/model', 'Hugging Face', 'voice', 'medium'))
   }
   if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
-  if (configuredProviders.has('qwen')) {
-    image.push(directModel('qwen-image', 'Qwen Image', 'Qwen / DashScope', 'image', 'low'))
-    video.push(directModel('wanx2.1-t2v-turbo', 'Wan video', 'Qwen / DashScope', 'video', 'medium'))
-    voice.push(directModel('qwen-tts', 'Qwen TTS', 'Qwen / DashScope', 'voice', 'low'))
-  }
   if (false) {
     // Music generation for MiniMax is post-launch — route not yet implemented
   }

@@ -166,15 +166,9 @@ export const DEFAULT_PROFILE: AppProfile = {
 
   default_routing_mode: 'direct',
 
-  // Allow every known provider so the routing engine can reach any configured key.
-  // When only OpenAI is configured, BACKBONE_PROVIDERS would silently exclude it and
-  // cause the "no eligible models" fallback even with a valid key.
   allowed_providers: ALL_PROVIDERS,
-  // Empty array = wildcard (intentional): allow ALL models from the above providers.
-  // A non-empty list would restrict routing to only the listed model IDs, which
-  // would filter out OpenAI chat/image models for unknown-slug requests.
   allowed_models: [],
-  preferred_models: ['gpt-4o-mini', 'llama-3.3-70b-versatile', 'deepseek-chat'],
+  preferred_models: ['llama-3.3-70b-versatile'],
 
   escalation_rules: [],
   validator_rules: [],
@@ -185,12 +179,6 @@ export const DEFAULT_PROFILE: AppProfile = {
   memory_namespace: 'default',
   retrieval_namespace: 'default',
 
-  // budget_sensitivity maps to a cost ceiling in routing-engine.ts:
-  //   'high'   → highly budget-conscious → cost ceiling = 'low'   (only free/very_low/low models)
-  //   'medium' → balanced               → cost ceiling = 'medium' (up to medium cost, e.g. gpt-4o-mini, gpt-image-1-mini)
-  //   'low'    → cost-insensitive       → cost ceiling = 'premium' (all tiers allowed)
-  // 'medium' is the right default so that common OpenAI models (gpt-4o-mini at 'low', gpt-image-1-mini at 'medium')
-  // are not filtered out when routing unknown-app requests.
   budget_sensitivity: 'medium',
   latency_sensitivity: 'medium',
   logging_privacy_rules: BASIC_PRIVACY_RULES,
@@ -212,22 +200,21 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     allowed_providers: ALL_PROVIDERS,
     allowed_models: [
-      'gpt-4o', 'gpt-4o-mini', 'grok-3-mini-beta',
-      'llama-3.3-70b-versatile', 'deepseek-chat', 'deepseek-reasoner',
+      'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['gpt-4o', 'deepseek-reasoner', 'llama-3.3-70b-versatile'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['audit', 'decision', 'report', 'system'],
-      escalate_to_provider: 'openai',
-      escalate_to_model: 'gpt-4o',
+      escalate_to_provider: 'genx',
+      escalate_to_model: 'llama-3.3-70b-versatile',
     }],
     validator_rules: [{
       when_task_types: ['audit', 'decision', 'system', 'configuration'],
       min_complexity: 'complex',
-      validator_models: ['deepseek-reasoner', 'grok-3-mini-beta'],
+      validator_models: ['llama-3.3-70b-versatile'],
     }],
 
     agent_permissions: FULL_AGENT_PERMISSIONS,
@@ -253,37 +240,35 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     allowed_providers: ALL_PROVIDERS,
     allowed_models: [
-      'gpt-4o', 'gpt-4o-mini', 'grok-3-mini-beta',
-      'deepseek-chat', 'deepseek-reasoner',
       'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['gpt-4o', 'deepseek-reasoner', 'grok-3-mini-beta'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [
       {
         when_complexity: ['moderate', 'complex'],
         when_task_types: ['analysis', 'forecast', 'strategy', 'trading', 'recommendation'],
-        escalate_to_provider: 'openai',
-        escalate_to_model: 'gpt-4o',
+        escalate_to_provider: 'genx',
+        escalate_to_model: 'llama-3.3-70b-versatile',
       },
       {
         when_complexity: ['complex'],
         when_task_types: ['audit', 'decision', 'report'],
-        escalate_to_provider: 'grok',
-        escalate_to_model: 'grok-3-mini-beta',
+        escalate_to_provider: 'groq',
+        escalate_to_model: 'llama-3.3-70b-versatile',
       },
     ],
     validator_rules: [
       {
         when_task_types: ['analysis', 'forecast', 'strategy', 'trading', 'recommendation', 'audit'],
         min_complexity: 'moderate',
-        validator_models: ['deepseek-reasoner', 'gpt-4o', 'grok-3-mini-beta'],
+        validator_models: ['llama-3.3-70b-versatile'],
       },
       {
         when_task_types: ['decision', 'report'],
         min_complexity: 'complex',
-        validator_models: ['gpt-4o', 'deepseek-reasoner'],
+        validator_models: ['llama-3.3-70b-versatile'],
       },
     ],
 
@@ -310,23 +295,21 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     allowed_providers: ALL_PROVIDERS,
     allowed_models: [
-      'gpt-4o', 'gpt-4o-mini', 'grok-3-mini-beta',
-      'llama-3.3-70b-versatile', 'deepseek-chat',
-      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['gpt-4o', 'llama-3.3-70b-versatile', 'grok-3-mini-beta'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['strategy', 'campaign', 'brand', 'report'],
-      escalate_to_provider: 'openai',
-      escalate_to_model: 'gpt-4o',
+      escalate_to_provider: 'genx',
+      escalate_to_model: 'llama-3.3-70b-versatile',
     }],
     validator_rules: [{
       when_task_types: ['strategy', 'campaign', 'brand'],
       min_complexity: 'complex',
-      validator_models: ['deepseek-chat', 'gpt-4o-mini'],
+      validator_models: ['llama-3.3-70b-versatile'],
     }],
 
     agent_permissions: [...BASIC_AGENT_PERMISSIONS, 'tool_use', 'code_generation'],
@@ -350,25 +333,23 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     default_routing_mode: 'specialist',
 
-    allowed_providers: [...BACKBONE_PROVIDERS, 'openai'],
+    allowed_providers: BACKBONE_PROVIDERS,
     allowed_models: [
-      'gpt-4o-mini',
-      'llama-3.3-70b-versatile', 'deepseek-chat',
-      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat', 'gpt-4o-mini'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['itinerary', 'recommendation', 'analysis', 'booking'],
-      escalate_to_provider: 'openai',
-      escalate_to_model: 'gpt-4o-mini',
+      escalate_to_provider: 'genx',
+      escalate_to_model: 'llama-3.3-70b-versatile',
     }],
     validator_rules: [{
       when_task_types: ['itinerary', 'booking', 'recommendation'],
       min_complexity: 'complex',
-      validator_models: ['deepseek-chat', 'gpt-4o-mini'],
+      validator_models: ['llama-3.3-70b-versatile'],
     }],
 
     agent_permissions: [...BASIC_AGENT_PERMISSIONS, 'tool_use'],
@@ -394,22 +375,21 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     allowed_providers: BACKBONE_PROVIDERS,
     allowed_models: [
-      'llama-3.3-70b-versatile', 'deepseek-chat',
-      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [{
       when_complexity: ['complex'],
       when_task_types: ['health', 'diagnosis', 'recommendation', 'report'],
-      escalate_to_provider: 'deepseek',
-      escalate_to_model: 'deepseek-chat',
+      escalate_to_provider: 'groq',
+      escalate_to_model: 'llama-3.3-70b-versatile',
     }],
     validator_rules: [{
       when_task_types: ['health', 'diagnosis'],
       min_complexity: 'moderate',
-      validator_models: ['deepseek-chat', 'mistralai/Mixtral-8x7B-Instruct-v0.1'],
+      validator_models: ['llama-3.3-70b-versatile'],
     }],
 
     agent_permissions: BASIC_AGENT_PERMISSIONS,
@@ -435,17 +415,16 @@ export const DEFAULT_APP_PROFILES: ReadonlyMap<string, AppProfile> = new Map<str
 
     allowed_providers: BACKBONE_PROVIDERS,
     allowed_models: [
-      'llama-3.3-70b-versatile', 'deepseek-chat',
-      'mistralai/Mixtral-8x7B-Instruct-v0.1',
+      'llama-3.3-70b-versatile',
       'meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
-    preferred_models: ['llama-3.3-70b-versatile', 'deepseek-chat'],
+    preferred_models: ['llama-3.3-70b-versatile'],
 
     escalation_rules: [],
     validator_rules: [{
       when_task_types: ['analysis', 'report'],
       min_complexity: 'complex',
-      validator_models: ['deepseek-chat'],
+      validator_models: ['llama-3.3-70b-versatile'],
     }],
 
     agent_permissions: BASIC_AGENT_PERMISSIONS,

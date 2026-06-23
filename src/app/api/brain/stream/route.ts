@@ -9,31 +9,19 @@ import { getAppAgent, buildAgentSystemPrompt } from '@/lib/app-agent'
 
 /** Base URLs for OpenAI-compatible streaming providers */
 const STREAMING_PROVIDERS: Record<string, { baseUrl: string }> = {
-  openai:     { baseUrl: 'https://api.openai.com' },
+  genx:      { baseUrl: 'https://query.genx.sh' },
   groq:       { baseUrl: 'https://api.groq.com/openai' },
-  deepseek:   { baseUrl: 'https://api.deepseek.com' },
-  openrouter: { baseUrl: 'https://openrouter.ai/api' },
   together:   { baseUrl: 'https://api.together.xyz' },
-  grok:       { baseUrl: 'https://api.x.ai' },
-  qwen:       { baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode' },
-  nvidia:     { baseUrl: 'https://integrate.api.nvidia.com' },
-  mistral:    { baseUrl: 'https://api.mistral.ai' },
+  mimo:      { baseUrl: 'https://api.xiaomimimo.com' },
 }
 
 /** Default models per provider for streaming */
 const DEFAULT_STREAM_MODELS: Record<string, string> = {
-  openai:     'gpt-4o-mini',
+  genx:      'auto:chat-balanced',
   groq:       'llama-3.3-70b-versatile',
-  deepseek:   'deepseek-chat',
-  openrouter: 'openai/gpt-4o-mini',
   together:   'meta-llama/Llama-3.3-70B-Instruct-Turbo',
-  grok:       'grok-2-latest',
-  qwen:       'qwen-turbo',
-  nvidia:     'nvidia/llama-3.1-nemotron-70b-instruct',
-  gemini:     'gemini-2.0-flash',
-  anthropic:  'claude-sonnet-4-20250514',
-  cohere:     'command-r-plus',
-  mistral:    'mistral-small-latest',
+  huggingface: 'meta-llama/Llama-3.3-70B-Instruct',
+  mimo:      'mimo-v2.5',
 }
 
 // ── Request schema ────────────────────────────────────────────────────────────
@@ -52,9 +40,9 @@ const streamRequestSchema = z.object({
   systemPrompt: z.string().max(4000).optional(),
   /**
    * Cost routing mode:
-   *   free_first   — prefers cheapest/free providers (groq, deepseek, together, huggingface)
-   *   balanced     — default: quality/cost balance (openai, groq, anthropic, gemini)
-   *   quality_first — prefers highest-quality providers (openai, anthropic, gemini)
+   *   free_first   — prefers cheapest/free providers (groq, together, huggingface)
+   *   balanced     — default: quality/cost balance (genx, groq, together, mimo)
+   *   quality_first — prefers highest-quality providers (genx, groq, together, mimo)
    */
   costMode: z.enum(['free_first', 'balanced', 'quality_first']).optional(),
 })
@@ -114,7 +102,7 @@ export async function POST(request: NextRequest) {
       { status: 503 },
     )
   }
-  const resolvedModel = body.model || DEFAULT_STREAM_MODELS[resolvedProvider] || 'gpt-4o-mini'
+  const resolvedModel = body.model || DEFAULT_STREAM_MODELS[resolvedProvider] || 'llama-3.3-70b-versatile'
 
   // ── Resolve system prompt: body override → app agent → generic fallback ─
   const appName = auth.app.name
@@ -143,139 +131,6 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // ── Anthropic streaming (Messages API with SSE) ──────────────
-        if (resolvedProvider === 'anthropic') {
-          const apiKey = await getVaultApiKey('anthropic')
-          if (!apiKey) {
-            send({ type: 'error', message: 'Provider anthropic is not configured — add an API key via Admin → AI Providers.' })
-            controller.close()
-            return
-          }
-
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey,
-              'anthropic-version': '2023-06-01',
-            },
-            body: JSON.stringify({
-              model: resolvedModel,
-              max_tokens: 4096,
-              system: systemPrompt,
-              messages: [{ role: 'user', content: body.message }],
-              stream: true,
-            }),
-          })
-
-          if (!response.ok || !response.body) {
-            send({ type: 'error', message: `Anthropic HTTP ${response.status}` })
-            controller.close()
-            return
-          }
-
-          await processSSEStream(response.body, (data) => {
-            // Anthropic SSE format: content_block_delta events
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                send({ type: 'chunk', content: parsed.delta.text })
-              } else if (parsed.type === 'message_stop') {
-                send({ type: 'done', traceId, model: resolvedModel, provider: 'anthropic' })
-              }
-            } catch { /* skip */ }
-          })
-
-          send({ type: 'done', traceId, model: resolvedModel, provider: 'anthropic' })
-          controller.close()
-          return
-        }
-
-        // ── Gemini streaming (generateContent with stream) ───────────
-        if (resolvedProvider === 'gemini') {
-          const apiKey = await getVaultApiKey('gemini')
-          if (!apiKey) {
-            send({ type: 'error', message: 'Provider gemini is not configured — add an API key via Admin → AI Providers.' })
-            controller.close()
-            return
-          }
-
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:streamGenerateContent?key=${apiKey}&alt=sse`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: body.message }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-              }),
-            },
-          )
-
-          if (!response.ok || !response.body) {
-            send({ type: 'error', message: `Gemini HTTP ${response.status}` })
-            controller.close()
-            return
-          }
-
-          await processSSEStream(response.body, (data) => {
-            try {
-              const parsed = JSON.parse(data)
-              const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text
-              if (text) send({ type: 'chunk', content: text })
-            } catch { /* skip */ }
-          })
-
-          send({ type: 'done', traceId, model: resolvedModel, provider: 'gemini' })
-          controller.close()
-          return
-        }
-
-        // ── Cohere streaming (chat endpoint with stream) ─────────────
-        if (resolvedProvider === 'cohere') {
-          const apiKey = await getVaultApiKey('cohere')
-          if (!apiKey) {
-            send({ type: 'error', message: 'Provider cohere is not configured — add an API key via Admin → AI Providers.' })
-            controller.close()
-            return
-          }
-
-          const response = await fetch('https://api.cohere.com/v2/chat', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: resolvedModel,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: body.message },
-              ],
-              stream: true,
-            }),
-          })
-
-          if (!response.ok || !response.body) {
-            send({ type: 'error', message: `Cohere HTTP ${response.status}` })
-            controller.close()
-            return
-          }
-
-          await processSSEStream(response.body, (data) => {
-            try {
-              const parsed = JSON.parse(data)
-              if (parsed.type === 'content-delta' && parsed.delta?.message?.content?.text) {
-                send({ type: 'chunk', content: parsed.delta.message.content.text })
-              }
-            } catch { /* skip */ }
-          })
-
-          send({ type: 'done', traceId, model: resolvedModel, provider: 'cohere' })
-          controller.close()
-          return
-        }
-
         // ── HuggingFace / Replicate non-streaming fallback ─────────────
         // These providers don't support SSE — call via callProvider and
         // emit the full response as a single chunk + done event.
@@ -296,7 +151,7 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        // ── OpenAI-compatible streaming (9 providers incl. Mistral) ──
+        // ── OpenAI-compatible streaming ────────────────────────────────
         const providerConfig = STREAMING_PROVIDERS[resolvedProvider]
         if (!providerConfig) {
           send({ type: 'error', message: `Provider "${resolvedProvider}" does not support streaming.` })
@@ -314,10 +169,6 @@ export async function POST(request: NextRequest) {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
-        }
-        if (resolvedProvider === 'openrouter') {
-          headers['HTTP-Referer'] = 'https://amarktai.network'
-          headers['X-Title'] = 'AmarktAI Network'
         }
 
         const response = await fetch(`${providerConfig.baseUrl}/v1/chat/completions`, {
@@ -378,9 +229,9 @@ export async function POST(request: NextRequest) {
  * Checks DB vault first via getVaultApiKey(), falls back to env vars.
  *
  * costMode determines the priority order when no explicit provider is given:
- *   free_first   — groq → deepseek → together → huggingface → openai → anthropic → gemini
- *   balanced     — openai → groq → anthropic → gemini → mistral → deepseek → … (default)
- *   quality_first — openai → anthropic → gemini → grok → mistral → groq → …
+ *   free_first   — groq → together → huggingface → mimo
+ *   balanced     — genx → groq → together → huggingface → mimo (default)
+ *   quality_first — genx → groq → together → mimo → huggingface
  */
 async function resolveProvider(
   requested?: string,
@@ -395,19 +246,13 @@ async function resolveProvider(
   // Priority order per cost mode
   const COST_MODE_PRIORITY: Record<string, string[]> = {
     free_first: [
-      'groq', 'deepseek', 'together', 'huggingface',
-      'openrouter', 'qwen', 'nvidia',
-      'groq', 'together', 'qwen', 'mimo',
+      'groq', 'together', 'huggingface', 'mimo',
     ],
     balanced: [
-      'openai', 'groq', 'anthropic', 'gemini', 'mistral',
-      'deepseek', 'together', 'qwen', 'grok', 'openrouter', 'nvidia', 'cohere',
-      'huggingface',
+      'genx', 'groq', 'together', 'huggingface', 'mimo',
     ],
     quality_first: [
-      'openai', 'anthropic', 'gemini', 'grok', 'mistral',
-      'groq', 'deepseek', 'together', 'openrouter', 'cohere', 'nvidia',
-      'qwen', 'huggingface',
+      'genx', 'groq', 'together', 'mimo', 'huggingface',
     ],
   }
 

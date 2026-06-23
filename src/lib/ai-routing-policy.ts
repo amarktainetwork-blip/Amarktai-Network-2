@@ -219,10 +219,6 @@ export async function planAiRoute(request: AiRouteRequest): Promise<AiRoutePlan>
   const truth = await getDashboardRuntimeTruth()
   const configuredProviders = new Set(truth.providers.filter((provider) => provider.configured).map((provider) => provider.key))
   if (truth.genx.configured) configuredProviders.add('genx')
-  if (configuredProviders.has('xai')) configuredProviders.add('grok')
-  if (configuredProviders.has('grok')) configuredProviders.add('xai')
-  if (configuredProviders.has('minimax')) configuredProviders.add('mimo')
-  if (configuredProviders.has('mimo')) configuredProviders.add('minimax')
 
   const blockers: string[] = []
   const safety = safetyBlocker(request)

@@ -17,9 +17,8 @@ import { getGenXStatusAsync, callGenXChat, type GenXChatMessage } from '@/lib/ge
  *   2. OpenAI — high quality
  *   3. Gemini — free tier available
  *   4. Together AI
- *   5. Qwen / DashScope
- *   6. DeepSeek
- *   7. Mistral
+ *   5. DeepSeek
+ *   6. Mistral
  *
  * Request body:
  *   {
@@ -50,7 +49,6 @@ const CHAT_PROVIDER_PRIORITY = [
   { key: 'openai',    baseUrl: 'https://api.openai.com',      defaultModel: 'gpt-4o-mini' },
   { key: 'gemini',    baseUrl: null,                          defaultModel: 'gemini-2.0-flash' },
   { key: 'together',  baseUrl: 'https://api.together.xyz',    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
-  { key: 'qwen',      baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode', defaultModel: 'qwen-plus' },
   { key: 'deepseek',  baseUrl: 'https://api.deepseek.com',    defaultModel: 'deepseek-chat' },
   { key: 'mistral',   baseUrl: 'https://api.mistral.ai',      defaultModel: 'mistral-small-latest' },
 ] as const
@@ -90,7 +88,7 @@ async function callChatProvider(
     return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null
   }
 
-  // OpenAI-compatible providers (Groq, OpenAI, Together, Qwen, DeepSeek, Mistral)
+  // OpenAI-compatible providers (Groq, OpenAI, Together, DeepSeek, Mistral)
   const base = baseUrl ?? 'https://api.openai.com'
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,

@@ -5,7 +5,7 @@
  * not just a connection probe.
  *
  * The AI Engine (GenX) is NEVER used for adult content generation.
- * Only specialist providers are supported: xAI/Grok, Together AI, HuggingFace, Custom.
+ * Only specialist providers are supported: Together AI, HuggingFace, GenX, Custom.
  *
  * Returns:
  *   { provider, model, success, outputType, status, error_category?, message, latencyMs }
@@ -25,7 +25,7 @@ import { getVaultApiKey } from '@/lib/brain'
 import { getProviderKey, type CoreProvider } from '@/lib/provider-config'
 import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 
-type ProviderType = 'together' | 'huggingface' | 'xai' | 'custom'
+type ProviderType = 'together' | 'huggingface' | 'genx' | 'custom'
 
 type ErrorCategory =
   | 'missing_key'
@@ -116,7 +116,7 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
   // ── Vault key fallback ──────────────────────────────────────────────────────
   // When no inline key and no key in the adult_mode integration config, check
   // the provider vault (aiProvider table — shared key store for all features).
-  // This lets users reuse the same Together/HuggingFace/xAI key they already
+  // This lets users reuse the same Together/HuggingFace key they already
   // saved in Admin → AI Providers, without entering it a second time.
   if (!apiKey && mode === 'specialist') {
     if (!providerType) providerType = 'together'
@@ -511,31 +511,59 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── xAI / Grok Imagine — real generation test ──
-  if (providerType === 'xai') {
+  // ── GenX — real generation test ──
+  if (providerType === 'genx') {
     if (!apiKey) {
       return NextResponse.json({
-        provider: 'xai',
-        model: providerModel || 'grok-2-image',
+        provider: 'genx',
+        model: providerModel || 'genx',
         success: false,
         supported: false,
         status: 'not_configured',
         outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
+        mode: 'specialist', providerType: 'genx',
         error_category: 'missing_key' as ErrorCategory,
-        message: 'xAI API key is required. Enter it here or save it via Admin → AI Providers → xAI / Grok.',
+        message: 'GenX API key is required. Enter it here or save it via Admin → AI Providers → GenX.',
       })
     }
 
-    const testModel = providerModel || 'grok-2-image'
+    if (!endpoint) {
+      return NextResponse.json({
+        provider: 'genx',
+        model: providerModel || 'genx',
+        success: false,
+        supported: false,
+        status: 'not_configured',
+        outputType: 'image',
+        mode: 'specialist', providerType: 'genx',
+        error_category: 'endpoint_error' as ErrorCategory,
+        message: 'GenX endpoint URL is required for adult generation.',
+      })
+    }
+
+    const { url: genxUrl, error: genxErr } = validateUrl(endpoint)
+    if (genxErr) {
+      return NextResponse.json({
+        provider: 'genx',
+        model: providerModel || 'genx',
+        success: false,
+        supported: false,
+        status: 'invalid',
+        outputType: 'image',
+        mode: 'specialist', providerType: 'genx',
+        error_category: 'endpoint_error' as ErrorCategory,
+        message: genxErr,
+      })
+    }
+
+    const testModel = providerModel || 'genx'
     const start = Date.now()
     try {
-      // Real generation test with a safe test prompt.
-      // Test output is NOT stored — discarded immediately after status check.
-      // lgtm[js/request-forgery] — hardcoded xAI URL; admin-only endpoint
-      const res = await fetch('https://api.x.ai/v1/images/generations', {
+      const genxHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (apiKey) genxHeaders['Authorization'] = `Bearer ${apiKey}`
+      const res = await fetch(genxUrl.href, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        headers: genxHeaders,
         body: JSON.stringify({ model: testModel, prompt: ADULT_TEST_PROMPT, n: 1 }),
         signal: AbortSignal.timeout(30_000),
       })
@@ -550,50 +578,50 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
         } catch { /* non-JSON ok response */ }
 
         return NextResponse.json({
-          provider: 'xai',
+          provider: 'genx',
           model: testModel,
           success: imageGenerated,
           supported: true,
           status: imageGenerated ? 'ready' : 'connected_no_output',
           outputType: 'image',
-          mode: 'specialist', providerType: 'xai',
+          mode: 'specialist', providerType: 'genx',
           error_category: imageGenerated ? undefined : ('model_not_supported' as ErrorCategory),
           message: imageGenerated
-            ? `xAI/Grok generation test passed — image returned (${latencyMs}ms)`
-            : `xAI/Grok connected but no image data returned (${latencyMs}ms)`,
+            ? `GenX generation test passed — image returned (${latencyMs}ms)`
+            : `GenX connected but no image data returned (${latencyMs}ms)`,
           latencyMs,
         })
       }
 
       const errCat = classifyHttpError(res.status, bodyText)
-      let errMsg = `xAI/Grok generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
+      let errMsg = `GenX generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
       if (errCat === 'missing_key') errMsg += ' — authentication failed, check API key'
-      else if (errCat === 'provider_policy_block') errMsg += ' — xAI safety policy blocked the test prompt; adult access may not be enabled for this key'
-      else if (errCat === 'model_not_supported') errMsg += ` — model "${testModel}" may not be available for this key`
+      else if (errCat === 'provider_policy_block') errMsg += ' — provider safety policy blocked the test prompt'
+      else if (errCat === 'model_not_supported') errMsg += ` — model "${testModel}" may not be available`
 
       return NextResponse.json({
-        provider: 'xai',
+        provider: 'genx',
         model: testModel,
         success: false,
         supported: false,
         status: errCat,
         outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
+        mode: 'specialist', providerType: 'genx',
         error_category: errCat,
         message: errMsg,
         latencyMs,
       })
     } catch (err) {
       return NextResponse.json({
-        provider: 'xai',
+        provider: 'genx',
         model: testModel,
         success: false,
         supported: false,
         status: 'unreachable',
         outputType: 'image',
-        mode: 'specialist', providerType: 'xai',
+        mode: 'specialist', providerType: 'genx',
         error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach xAI API: ${err instanceof Error ? err.message : 'network error'}`,
+        message: `Cannot reach GenX API: ${err instanceof Error ? err.message : 'network error'}`,
         latencyMs: Date.now() - start,
       })
     }
@@ -699,7 +727,7 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     outputType: 'image',
     mode: 'specialist',
     error_category: 'unknown' as ErrorCategory,
-    message: `Unknown provider type: ${providerType}. Supported: xai, together, huggingface, custom`,
+    message: `Unknown provider type: ${providerType}. Supported: genx, together, huggingface, custom`,
   })
 }
 

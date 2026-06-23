@@ -153,7 +153,7 @@ function resolveCapabilities(input: AppAiPackageRecommendationInput): AiCapabili
 
 function selectForCapability(capability: AiCapabilityDefinition, catalogs: ProviderModelCatalog[], preferCheap: boolean): AppAiModelSelection {
   const providerOrder = preferCheap
-    ? [...capability.defaultProviders.filter((provider) => ['huggingface', 'qwen', 'groq', 'together', 'minimax'].includes(provider)), ...capability.defaultProviders]
+    ? [...capability.defaultProviders.filter((provider) => ['huggingface', 'groq', 'together', 'minimax'].includes(provider)), ...capability.defaultProviders]
     : capability.defaultProviders
 
   for (const provider of [...new Set(providerOrder)]) {

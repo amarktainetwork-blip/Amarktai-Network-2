@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto'
 
 interface FineTuneJob {
   id: string
-  provider: 'openai' | 'together' | 'qwen'
+  provider: 'together'
   status: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
   baseModel: string
   trainingFile: string
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      const supportedProviders = ['openai', 'together', 'qwen']
+      const supportedProviders = ['together']
       if (!supportedProviders.includes(provider)) {
         return NextResponse.json(
           { error: `Unsupported provider. Use: ${supportedProviders.join(', ')}` },
@@ -140,11 +140,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       jobs: rows.map(rowToJob),
       total: rows.length,
-      supportedProviders: ['openai', 'together', 'qwen'],
+      supportedProviders: ['together'],
       supportedModels: {
-        openai: ['gpt-4o-mini-2024-07-18', 'gpt-3.5-turbo-0125'],
         together: ['meta-llama/Llama-3-8b', 'mistralai/Mixtral-8x7B-v0.1'],
-        qwen: ['qwen-turbo', 'qwen-plus'],
       },
     })
   } catch (err) {

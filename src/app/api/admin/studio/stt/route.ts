@@ -30,6 +30,9 @@ export async function POST(request: NextRequest) {
     method: 'POST',
     body: form,
   }))
+  if (!response) {
+    return NextResponse.json({ success: false, error: 'STT route returned no response' }, { status: 500 })
+  }
   const data = await response.json().catch(() => ({})) as Record<string, unknown>
   let artifact: unknown = null
 

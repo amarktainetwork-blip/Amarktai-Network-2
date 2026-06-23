@@ -197,24 +197,12 @@ function isTogetherImageModel(modelId: string): boolean {
 }
 
 /**
- * OpenAI image generation models that require /v1/images/generations instead of /v1/chat/completions.
- * These models MUST NEVER be routed to the chat/completions endpoint.
- * Only real, currently-valid OpenAI model IDs are included here.
- */
-export const OPENAI_IMAGE_MODELS = new Set([
-  'gpt-image-1',
-  'dall-e-3',
-  'dall-e-2',
-])
-
-/**
  * Call an AI provider via the single provider vault.
  * Reads API key + base URL from the vault — never from the request.
  * Returns a normalised result. Never throws.
  *
  * @param systemPrompt - Optional system-level instructions injected via the
- *   provider's native system role (OpenAI/Groq/etc. system message, Anthropic
- *   `system` field, Gemini `systemInstruction`). Providers that lack a system
+ *   provider's native system role. Providers that lack a system
  *   role receive it prepended to the user message.
  */
 export async function callProvider(
@@ -342,30 +330,6 @@ export async function callProvider(
         }
         const data = await res.json() as { choices?: Array<{ message?: { content?: string } }> }
         return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-      }
-
-      // ── Gemini ──────────────────────────────────────────────────────────────
-      case 'gemini': {
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModel}:generateContent?key=${encodeURIComponent(resolvedApiKey)}`
-        const geminiBody: Record<string, unknown> = {
-          contents: [{ parts: [{ text: message }] }],
-        }
-        if (systemPrompt) {
-          geminiBody.systemInstruction = { parts: [{ text: systemPrompt }] }
-        }
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiBody),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({})) as { error?: { message?: string } }
-          return { ok: false, output: null, error: `Gemini HTTP ${res.status}: ${body?.error?.message ?? 'request failed'}`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
-        }
-        const data = await res.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> }
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null
-        return { ok: true, output: text, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
       }
 
       // ── Hugging Face Inference ──────────────────────────────────────────────
