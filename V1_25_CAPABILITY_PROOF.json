@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T17:37:05.348Z",
+  "generatedAt": "2026-06-23T08:14:21.341Z",
   "environment": {
     "hasDatabaseUrl": true,
     "appSlug": "amarktai-network",
@@ -118,88 +118,125 @@
       "runtimeFlags": [],
       "endpointRequirements": [
         {
+          "capability": "embeddings",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
           "capability": "rerank",
           "type": "specialist_endpoint",
           "envNames": [
-            "HF_ENDPOINT_RERANK",
             "HF_SPECIALIST_ENDPOINTS_JSON"
           ],
           "configured": false,
           "currentValue": "missing",
           "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
         },
         {
           "capability": "image_edit",
-          "type": "specialist_endpoint",
+          "type": "provider_endpoint",
           "envNames": [
-            "HF_ENDPOINT_IMAGE_EDIT",
             "HF_SPECIALIST_ENDPOINTS_JSON"
           ],
-          "configured": false,
-          "currentValue": "missing",
-          "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON for image_edit before routing this provider/model as executable."
-        },
-        {
-          "capability": "video",
-          "type": "specialist_endpoint",
-          "envNames": [
-            "HF_ENDPOINT_TEXT_TO_VIDEO",
-            "HF_SPECIALIST_ENDPOINTS_JSON"
-          ],
-          "configured": false,
-          "currentValue": "missing",
-          "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable."
-        },
-        {
-          "capability": "image_to_video",
-          "type": "specialist_endpoint",
-          "envNames": [
-            "HF_ENDPOINT_IMAGE_TO_VIDEO",
-            "HF_SPECIALIST_ENDPOINTS_JSON"
-          ],
-          "configured": false,
-          "currentValue": "missing",
-          "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
         },
         {
           "capability": "music",
           "type": "specialist_endpoint",
           "envNames": [
-            "HF_ENDPOINT_MUSIC_GENERATION",
             "HF_SPECIALIST_ENDPOINTS_JSON"
           ],
           "configured": false,
           "currentValue": "missing",
           "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable."
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable."
         },
         {
           "capability": "tts",
-          "type": "specialist_endpoint",
+          "type": "provider_endpoint",
           "envNames": [
-            "HF_ENDPOINT_TTS",
             "HF_SPECIALIST_ENDPOINTS_JSON"
           ],
-          "configured": false,
-          "currentValue": "missing",
-          "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON for tts before routing this provider/model as executable."
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
         },
         {
           "capability": "stt",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "video",
           "type": "specialist_endpoint",
           "envNames": [
-            "HF_ENDPOINT_STT",
             "HF_SPECIALIST_ENDPOINTS_JSON"
           ],
           "configured": false,
           "currentValue": "missing",
           "requiredValue": "configured endpoint/account contract",
-          "nextAction": "Configure HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON for stt before routing this provider/model as executable."
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
+        },
+        {
+          "capability": "adult_image",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "adult_video",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "adult_avatar",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
         }
       ],
       "db": {
@@ -214,22 +251,16 @@
       "dashboardDisplayStatus": "blocked",
       "runtimeExecutableStatus": "blocked",
       "blockers": [
-        "rerank requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "image_edit requires HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "video requires HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "image_to_video requires HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "music requires HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "tts requires HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON.",
-        "stt requires HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON."
+        "rerank requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "music requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "video requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "image_to_video requires HF_SPECIALIST_ENDPOINTS_JSON."
       ],
       "nextActions": [
-        "Configure HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_IMAGE_EDIT or HF_SPECIALIST_ENDPOINTS_JSON for image_edit before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_TEXT_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_IMAGE_TO_VIDEO or HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_MUSIC_GENERATION or HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_TTS or HF_SPECIALIST_ENDPOINTS_JSON for tts before routing this provider/model as executable.",
-        "Configure HF_ENDPOINT_STT or HF_SPECIALIST_ENDPOINTS_JSON for stt before routing this provider/model as executable."
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
       ]
     },
     {
@@ -557,29 +588,29 @@
       "status": "ready",
       "discoverySource": "live_authenticated",
       "rawCatalogCount": 100,
-      "modelCount": 100,
-      "executableCandidateCount": 94,
-      "executableModels": 69,
+      "modelCount": 109,
+      "executableCandidateCount": 103,
+      "executableModels": 86,
       "catalogOnlyModels": 13,
-      "requiresDedicatedEndpointModels": 18,
+      "requiresDedicatedEndpointModels": 10,
       "adultGatedModels": 13,
-      "chatModels": 40,
-      "reasoningModels": 26,
-      "codingModels": 25,
-      "liveAuthenticatedModels": 100,
+      "chatModels": 41,
+      "reasoningModels": 27,
+      "codingModels": 26,
+      "liveAuthenticatedModels": 109,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
-      "imageModels": 30,
-      "imageEditModels": 1,
+      "imageModels": 31,
+      "imageEditModels": 3,
       "videoModels": 6,
       "imageToVideoModels": 1,
-      "ttsModels": 3,
-      "sttModels": 7,
+      "ttsModels": 4,
+      "sttModels": 8,
       "embeddingsModels": 24,
-      "rerankModels": 3,
-      "musicModels": 1,
-      "avatarModels": 30,
+      "rerankModels": 6,
+      "musicModels": 3,
+      "avatarModels": 31,
       "adultImageModels": 10,
       "executableBlocker": null,
       "error": null,
@@ -593,17 +624,17 @@
       "catalogEndpoint": "https://api.together.ai/v1/models",
       "status": "ready",
       "discoverySource": "live_authenticated",
-      "rawCatalogCount": 265,
-      "modelCount": 267,
-      "executableCandidateCount": 255,
-      "executableModels": 265,
+      "rawCatalogCount": 275,
+      "modelCount": 277,
+      "executableCandidateCount": 265,
+      "executableModels": 275,
       "catalogOnlyModels": 0,
       "requiresDedicatedEndpointModels": 2,
       "adultGatedModels": 0,
-      "chatModels": 177,
+      "chatModels": 187,
       "reasoningModels": 7,
       "codingModels": 7,
-      "liveAuthenticatedModels": 267,
+      "liveAuthenticatedModels": 277,
       "publicCatalogModels": 0,
       "staticFallbackModels": 0,
       "catalogDerivedModels": 0,
@@ -692,7 +723,7 @@
       "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
       "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
       "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
-      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=171"
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=192"
     },
     {
       "provider": "together",
@@ -703,7 +734,7 @@
       "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
       "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
       "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
-      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; wired: canonical async polling contract present; executableNow=239"
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; wired: canonical async polling contract present; executableNow=249"
     },
     {
       "provider": "groq",
@@ -766,15 +797,15 @@
     },
     {
       "provider": "huggingface",
-      "contracts": 1802,
-      "executableNow": 171,
+      "contracts": 1964,
+      "executableNow": 192,
       "liveProven": 0,
-      "endpointRequired": 325,
-      "specialistRequired": 745,
+      "endpointRequired": 181,
+      "specialistRequired": 400,
       "adapterMissing": 0,
       "runtimeFlagDisabled": 0,
       "toolPlanOnly": 0,
-      "blockedByPolicy": 408,
+      "blockedByPolicy": 426,
       "missingCredential": 0,
       "nextActions": [
         "Select a provider/model that supports chat, or add a truthful contract.",
@@ -789,15 +820,15 @@
     },
     {
       "provider": "together",
-      "contracts": 4274,
-      "executableNow": 239,
+      "contracts": 4434,
+      "executableNow": 249,
       "liveProven": 0,
-      "endpointRequired": 297,
+      "endpointRequired": 307,
       "specialistRequired": 0,
       "adapterMissing": 0,
-      "runtimeFlagDisabled": 801,
+      "runtimeFlagDisabled": 831,
       "toolPlanOnly": 0,
-      "blockedByPolicy": 534,
+      "blockedByPolicy": 554,
       "missingCredential": 0,
       "nextActions": [
         "Select a provider/model that supports reasoning, or add a truthful contract.",
@@ -846,7 +877,7 @@
       "artifactPersisted": false,
       "previewReachable": false,
       "providerSelected": "genx",
-      "modelSelected": "grok-4.3",
+      "modelSelected": "gpt-5.4-mini",
       "artifactId": null,
       "error": "All eligible provider/model attempts failed."
     },
@@ -869,18 +900,18 @@
     {
       "provider": "mimo",
       "capability": "chat",
-      "modelStatus": "EXECUTABLE",
+      "modelStatus": "FAILED_PROVIDER",
       "credentialPresent": true,
       "catalogReachable": true,
       "providerSmokePassed": true,
-      "modelExecutionPassed": true,
-      "capabilityRoutePassed": true,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
       "artifactPersisted": false,
       "previewReachable": false,
       "providerSelected": "mimo",
-      "modelSelected": "mimo-v2-omni",
+      "modelSelected": null,
       "artifactId": null,
-      "error": null
+      "error": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract."
     },
     {
       "provider": "groq",
@@ -894,7 +925,7 @@
       "artifactPersisted": false,
       "previewReachable": false,
       "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "modelSelected": "llama-3.3-70b-versatile",
       "artifactId": null,
       "error": null
     },
@@ -910,7 +941,7 @@
       "artifactPersisted": false,
       "previewReachable": false,
       "providerSelected": "together",
-      "modelSelected": "zai-org/GLM-5.2",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
       "artifactId": null,
       "error": null
     }
@@ -1030,8 +1061,8 @@
   "capabilities": [
     {
       "capabilityId": "chat_text_generation",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
       "routeOrAdapter": "executeCapability:chat",
       "status": "LIVE_PROVEN",
       "artifactId": null,
@@ -1065,7 +1096,7 @@
     {
       "capabilityId": "reasoning",
       "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "modelSelected": "llama-3.3-70b-versatile",
       "routeOrAdapter": "executeCapability:reasoning",
       "status": "LIVE_PROVEN",
       "artifactId": null,
@@ -1095,7 +1126,7 @@
     {
       "capabilityId": "coding_assistant",
       "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "modelSelected": "llama-3.3-70b-versatile",
       "routeOrAdapter": "executeCapability:code",
       "status": "LIVE_PROVEN",
       "artifactId": null,
@@ -1128,11 +1159,11 @@
     },
     {
       "capabilityId": "web_research",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
       "routeOrAdapter": "researchRuntime.execute",
       "status": "LIVE_PROVEN",
-      "artifactId": "26aca1fc-f65a-4f19-90d3-c745e7cc2c3f",
+      "artifactId": "7a53dcc2-6b27-4d66-8f92-6c97f594ca48",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1144,16 +1175,16 @@
         "documentId": "research-0fe2558733f8caa57a882554",
         "qdrantCollection": "amarktai_memory",
         "vectorIds": [
-          "ce162f70-d58f-42a4-9948-1c1c8d7138a5"
+          "2438ca0f-c0c4-4c1b-a189-7b336a5fd160"
         ],
         "retrievedVectorIds": [
           "3c51557f-0c95-485d-9226-2e04ea8ae8fc",
+          "2438ca0f-c0c4-4c1b-a189-7b336a5fd160",
           "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
           "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b",
-          "ce162f70-d58f-42a4-9948-1c1c8d7138a5",
-          "7972c9c2-f228-4ff1-a636-3abbd968cb46"
+          "ce162f70-d58f-42a4-9948-1c1c8d7138a5"
         ],
-        "artifactId": "26aca1fc-f65a-4f19-90d3-c745e7cc2c3f"
+        "artifactId": "7a53dcc2-6b27-4d66-8f92-6c97f594ca48"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Research",
@@ -1176,7 +1207,7 @@
         "Scrapy",
         "Trafilatura"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 26aca1fc-f65a-4f19-90d3-c745e7cc2c3f.",
+      "artifactBehavior": "Intentional artifact persisted: 7a53dcc2-6b27-4d66-8f92-6c97f594ca48.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1265,7 +1296,7 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "Rerank route is source-wired, but live proof requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.",
+      "exactError": "Rerank route is source-wired, but live proof requires HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.",
       "sourceFileResponsible": "src/lib/providers/provider-capability-contracts.ts",
       "capabilityName": "Rerank",
       "routeFile": "src/lib/providers/provider-capability-contracts.ts",
@@ -1289,7 +1320,7 @@
       "modelSelected": "black-forest-labs/FLUX.1-schnell",
       "routeOrAdapter": "executeCapability:image_generation",
       "status": "LIVE_PROVEN",
-      "artifactId": "48ef25be-8b65-401b-9865-c2884fc9275a",
+      "artifactId": "a8a7b22b-5fe9-40ac-90b8-a2e0360dfd08",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1309,7 +1340,7 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 48ef25be-8b65-401b-9865-c2884fc9275a.",
+      "artifactBehavior": "Intentional artifact persisted: a8a7b22b-5fe9-40ac-90b8-a2e0360dfd08.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1321,11 +1352,47 @@
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "NO_ROUTE_FOUND: No configured provider returned a discovered model with model metadata or provider-contract evidence for this request. No executable provider/model satisfied this request. Fallback was allowed. Top blockers: Provider discovery returned no executable model for this | Attempts: huggingface/black-forest-labs/FLUX.2-klein-4B: needs_configuration: provider_misconfigured: huggingface/black-forest-labs/FLUX.2-klein-4B is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.; huggingface/black-forest-labs/FLUX.2-dev: needs_configuration: provider_misconfigured: huggingface/black-forest-labs/FLUX.2-dev is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.; huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning: needs_configuration: provider_misconfigured: huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+      "exactError": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract. | Attempts: huggingface/lllyasviel/control_v11p_sd15_normalbae: failed: no_route_found: No model pool candidate for image_text_to_image.; together/unselected: needs_configuration: no_route_found: Provider discovery returned no executable model for this capability.; genx/unselected: needs_configuration: no_route_found: Provider discovery returned no executable model for this capability.",
       "diagnostics": {
         "providerAttempts": [
           {
-            "provider": "genx",
+            "provider": "huggingface",
+            "model": "lllyasviel/control_v11p_sd15_softedge",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "huggingface",
+            "model": "ModelsLab/FLUX.2-klein-9B",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "huggingface",
+            "model": "lllyasviel/control_v11p_sd15_normalbae",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "together",
             "model": "unselected",
             "status": "needs_configuration",
             "classification": "unsupported_by_contract",
@@ -1334,46 +1401,19 @@
             "diagnostics": null
           },
           {
-            "provider": "huggingface",
-            "model": "Qwen/Qwen-Image-Edit-2509",
+            "provider": "genx",
+            "model": "unselected",
             "status": "needs_configuration",
-            "classification": "endpoint_required",
-            "errorCategory": "provider_misconfigured",
-            "error": "huggingface/Qwen/Qwen-Image-Edit-2509 is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
-            "diagnostics": null
-          },
-          {
-            "provider": "huggingface",
-            "model": "black-forest-labs/FLUX.2-klein-4B",
-            "status": "needs_configuration",
-            "classification": "endpoint_required",
-            "errorCategory": "provider_misconfigured",
-            "error": "huggingface/black-forest-labs/FLUX.2-klein-4B is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
-            "diagnostics": null
-          },
-          {
-            "provider": "huggingface",
-            "model": "black-forest-labs/FLUX.2-dev",
-            "status": "needs_configuration",
-            "classification": "endpoint_required",
-            "errorCategory": "provider_misconfigured",
-            "error": "huggingface/black-forest-labs/FLUX.2-dev is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
-            "diagnostics": null
-          },
-          {
-            "provider": "huggingface",
-            "model": "lightx2v/Qwen-Image-Edit-2511-Lightning",
-            "status": "needs_configuration",
-            "classification": "endpoint_required",
-            "errorCategory": "provider_misconfigured",
-            "error": "huggingface/lightx2v/Qwen-Image-Edit-2511-Lightning is catalog-visible for image_edit, but a specialist endpoint is required. Next action: Configure the specialist endpoint env for huggingface/image_edit.",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "no_route_found",
+            "error": "Provider discovery returned no executable model for this capability.",
             "diagnostics": null
           }
         ]
       },
-      "sourceFileResponsible": "src/lib/providers/provider-scoring.ts",
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
       "capabilityName": "Image and Text to Image",
-      "routeFile": "src/lib/providers/provider-scoring.ts",
+      "routeFile": "src/lib/providers/execution.ts",
       "providerCandidates": [
         "genx:gemini-2.5-pro,gpt-image-1",
         "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
@@ -1397,12 +1437,12 @@
       "routeOrAdapter": "executeCapability:video_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8",
-      "pollUrl": "/api/brain/media-jobs/74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8",
+      "jobId": "2aed707d-4a6d-41e2-a764-090f07b08525",
+      "pollUrl": "/api/brain/media-jobs/2aed707d-4a6d-41e2-a764-090f07b08525",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "b7b98783-2dab-44c3-ada7-fe1b4eae2c71",
-        "controlPlaneAttemptId": "00e608bd-a588-4e58-bfc1-35bf34640f01",
+        "controlPlaneJobId": "b0232886-44e2-4818-be47-9cc5ccd92103",
+        "controlPlaneAttemptId": "cb5609f8-8078-4abe-9450-5f28c3c0f6a7",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1422,7 +1462,7 @@
         "ffmpeg"
       ],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8 via /api/brain/media-jobs/74fc361d-872d-4b1c-9ef2-fd3f16a8e2e8."
+      "jobBehavior": "Async job tracked as 2aed707d-4a6d-41e2-a764-090f07b08525 via /api/brain/media-jobs/2aed707d-4a6d-41e2-a764-090f07b08525."
     },
     {
       "capabilityId": "text_to_speech",
@@ -1430,7 +1470,7 @@
       "modelSelected": "canopylabs/orpheus-v1-english",
       "routeOrAdapter": "executeCapability:tts",
       "status": "LIVE_PROVEN",
-      "artifactId": "2105841f-5caf-4941-ba4b-3097503045a5",
+      "artifactId": "c505699b-b6ed-4421-b3bd-2558878c69b0",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1455,29 +1495,38 @@
         "HF_TOKEN"
       ],
       "requiredLocalTools": [],
-      "artifactBehavior": "Intentional artifact persisted: 2105841f-5caf-4941-ba4b-3097503045a5.",
+      "artifactBehavior": "Intentional artifact persisted: c505699b-b6ed-4421-b3bd-2558878c69b0.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "speech_to_text",
-      "providerSelected": "genx",
-      "modelSelected": "genxlm-pro-v1-tr",
+      "providerSelected": "groq",
+      "modelSelected": "whisper-large-v3-turbo",
       "routeOrAdapter": "executeCapability:stt",
-      "status": "LIVE_PROVEN",
+      "status": "BLOCKED",
       "artifactId": null,
-      "jobId": "gnxsh_job_fbfb3dfcedd8439baafc2f7b42182478",
+      "jobId": null,
       "pollUrl": null,
-      "exactError": null,
+      "exactError": "All eligible provider/model attempts failed. | Attempts: groq/whisper-large-v3-turbo: blocked: Speech recognition requires audio bytes or a public HTTPS audio reference.",
       "diagnostics": {
-        "controlPlaneJobId": "37a630d6-2b3d-47c2-8875-6f49ef191776",
-        "controlPlaneAttemptId": "d7734511-8481-42f5-980a-e2345b9f4d38",
-        "queueStatus": "queued",
-        "requestedDurationSeconds": null,
-        "providerLimitSeconds": null
+        "providerAttempts": [
+          {
+            "provider": "groq",
+            "model": "whisper-large-v3-turbo",
+            "status": "blocked",
+            "classification": "blocked_by_policy",
+            "errorCategory": null,
+            "error": "Speech recognition requires audio bytes or a public HTTPS audio reference.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          }
+        ]
       },
-      "sourceFileResponsible": null,
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
       "capabilityName": "Automatic Speech Recognition",
-      "routeFile": "src/lib/orchestrator.ts",
+      "routeFile": "src/lib/providers/execution.ts",
       "providerCandidates": [
         "genx:gpt-4o-transcribe",
         "groq:whisper-large-v3-turbo",
@@ -1497,7 +1546,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as gnxsh_job_fbfb3dfcedd8439baafc2f7b42182478."
+      "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
       "capabilityId": "agent_request_execution",
@@ -1569,75 +1618,66 @@
     },
     {
       "capabilityId": "image_to_video",
-      "providerSelected": "genx",
-      "modelSelected": "seedance-v1-fast-i2v",
+      "providerSelected": null,
+      "modelSelected": null,
       "routeOrAdapter": "executeCapability:image_to_video",
       "status": "SOURCE_WIRED",
       "artifactId": null,
       "jobId": null,
       "pollUrl": null,
-      "exactError": "All eligible provider/model attempts failed. | Attempts: genx/pixverse-v6-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/pixverse-v6-i2v.; genx/seedance-2-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-2-i2v.; genx/seedance-v1-fast-i2v: failed: model_not_supported: No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.",
+      "exactError": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract. | Attempts: together/Wan-AI/Wan2.2-I2V-A14B: needs_configuration: provider_misconfigured: together/Wan-AI/Wan2.2-I2V-A14B is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.; together/Wan-AI/wan2.7-i2v: needs_configuration: provider_misconfigured: together/Wan-AI/wan2.7-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.; together/alibaba/happyhorse-1.0-i2v: needs_configuration: provider_misconfigured: together/alibaba/happyhorse-1.0-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
       "diagnostics": {
         "providerAttempts": [
-          {
-            "provider": "genx",
-            "model": "kling-v3-pro-i2v",
-            "status": "failed",
-            "classification": "unsupported_by_contract",
-            "errorCategory": "model_not_supported",
-            "error": "No provider-safe video contract is registered for genx/kling-v3-pro-i2v.",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
-          },
-          {
-            "provider": "genx",
-            "model": "pixverse-v5.5-i2v",
-            "status": "failed",
-            "classification": "unsupported_by_contract",
-            "errorCategory": "model_not_supported",
-            "error": "No provider-safe video contract is registered for genx/pixverse-v5.5-i2v.",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
-          },
-          {
-            "provider": "genx",
-            "model": "pixverse-v6-i2v",
-            "status": "failed",
-            "classification": "unsupported_by_contract",
-            "errorCategory": "model_not_supported",
-            "error": "No provider-safe video contract is registered for genx/pixverse-v6-i2v.",
-            "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
-            }
-          },
           {
             "provider": "genx",
             "model": "seedance-2-i2v",
             "status": "failed",
             "classification": "unsupported_by_contract",
-            "errorCategory": "model_not_supported",
-            "error": "No provider-safe video contract is registered for genx/seedance-2-i2v.",
+            "errorCategory": "provider_misconfigured",
+            "error": "Contract missing for image_to_video.",
             "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
+              "poolReason": "contract missing",
+              "executionMode": "proof"
             }
           },
           {
             "provider": "genx",
             "model": "seedance-v1-fast-i2v",
             "status": "failed",
-            "classification": "unsupported_by_contract",
-            "errorCategory": "model_not_supported",
-            "error": "No provider-safe video contract is registered for genx/seedance-v1-fast-i2v.",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_to_video.",
             "diagnostics": {
-              "modelExecutionClassification": "executable",
-              "endpointEnv": null
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
             }
+          },
+          {
+            "provider": "together",
+            "model": "Wan-AI/Wan2.2-I2V-A14B",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/Wan-AI/Wan2.2-I2V-A14B is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
+          },
+          {
+            "provider": "together",
+            "model": "Wan-AI/wan2.7-i2v",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/Wan-AI/wan2.7-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
+          },
+          {
+            "provider": "together",
+            "model": "alibaba/happyhorse-1.0-i2v",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/alibaba/happyhorse-1.0-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
           }
         ]
       },
@@ -1662,16 +1702,16 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.long_form_assembly",
       "status": "LIVE_PROVEN",
-      "artifactId": "0e440f8f-c121-421c-b5e4-52e8e52b8be3",
-      "jobId": "c5e4619d-53fd-468c-98ce-44396362ab0b",
+      "artifactId": "72c7801a-085d-4af1-87dc-0a5c274e0003",
+      "jobId": "14120d6a-c2ff-4fbe-9a11-19dddc8d178d",
       "pollUrl": null,
       "exactError": "Technical assembly proof only: ffmpeg assembled provided/local proof clips and persisted an artifact; provider-native long-form generation, coherent advert quality, pronunciation, and voice/video sync are not proven.",
       "diagnostics": {
         "sourceClipCount": 2,
         "generatedProviderClip": false,
         "finalDurationSeconds": 2.020996,
-        "artifactId": "0e440f8f-c121-421c-b5e4-52e8e52b8be3",
-        "jobId": "c5e4619d-53fd-468c-98ce-44396362ab0b"
+        "artifactId": "72c7801a-085d-4af1-87dc-0a5c274e0003",
+        "jobId": "14120d6a-c2ff-4fbe-9a11-19dddc8d178d"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Video",
@@ -1689,8 +1729,8 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 0e440f8f-c121-421c-b5e4-52e8e52b8be3.",
-      "jobBehavior": "Async job tracked as c5e4619d-53fd-468c-98ce-44396362ab0b."
+      "artifactBehavior": "Intentional artifact persisted: 72c7801a-085d-4af1-87dc-0a5c274e0003.",
+      "jobBehavior": "Async job tracked as 14120d6a-c2ff-4fbe-9a11-19dddc8d178d."
     },
     {
       "capabilityId": "music_audio_bed_generation",
@@ -1698,7 +1738,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.audio_bed",
       "status": "LIVE_PROVEN",
-      "artifactId": "2c0a918c-2bd9-4df6-a7a8-2f8b215c3355",
+      "artifactId": "4c705f71-348e-489f-940a-008285a4acbc",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1706,7 +1746,7 @@
         "productContract": "audio_bed_assembly",
         "providerMusicGeneration": false,
         "durationSeconds": 2,
-        "artifactId": "2c0a918c-2bd9-4df6-a7a8-2f8b215c3355"
+        "artifactId": "4c705f71-348e-489f-940a-008285a4acbc"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Text to Audio",
@@ -1718,7 +1758,7 @@
         "ffprobe",
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: 2c0a918c-2bd9-4df6-a7a8-2f8b215c3355.",
+      "artifactBehavior": "Intentional artifact persisted: 4c705f71-348e-489f-940a-008285a4acbc.",
       "jobBehavior": "Async job/polling expected when provider returns processing."
     },
     {
@@ -1727,7 +1767,7 @@
       "modelSelected": "ffmpeg/subtitle_formatter",
       "routeOrAdapter": "media_workflow_foundation.captions",
       "status": "LIVE_PROVEN",
-      "artifactId": "f4e93aa5-3966-4bf3-a715-a58fa64bc745",
+      "artifactId": "6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6",
       "jobId": null,
       "pollUrl": null,
       "exactError": null,
@@ -1738,7 +1778,7 @@
           "vtt",
           "srt"
         ],
-        "artifactId": "f4e93aa5-3966-4bf3-a715-a58fa64bc745"
+        "artifactId": "6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6"
       },
       "sourceFileResponsible": null,
       "capabilityName": "Automatic Speech Recognition",
@@ -1763,7 +1803,7 @@
       "requiredLocalTools": [
         "local storage"
       ],
-      "artifactBehavior": "Intentional artifact persisted: f4e93aa5-3966-4bf3-a715-a58fa64bc745.",
+      "artifactBehavior": "Intentional artifact persisted: 6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6.",
       "jobBehavior": "Synchronous completion expected; no durable job required."
     },
     {
@@ -1773,12 +1813,12 @@
       "routeOrAdapter": "executeCapability:avatar_generation",
       "status": "LIVE_PROVEN",
       "artifactId": null,
-      "jobId": "3fa79df0-3b43-4f0b-8217-ce3c9fe4849f",
-      "pollUrl": "/api/brain/media-jobs/3fa79df0-3b43-4f0b-8217-ce3c9fe4849f",
+      "jobId": "eeaa8575-0ea0-4f7b-b329-279b7fa88d38",
+      "pollUrl": "/api/brain/media-jobs/eeaa8575-0ea0-4f7b-b329-279b7fa88d38",
       "exactError": null,
       "diagnostics": {
-        "controlPlaneJobId": "97b9b205-8530-4f6a-8bf6-c5bf5355ac69",
-        "controlPlaneAttemptId": "e08334a0-d34c-429c-bb17-422aa461f5c8",
+        "controlPlaneJobId": "5d3126c0-8a39-4459-8f77-9a590661e951",
+        "controlPlaneAttemptId": "c0f21243-f307-4325-b6cb-399668a1b9a3",
         "queueStatus": "queued",
         "requestedDurationSeconds": null,
         "providerLimitSeconds": null
@@ -1800,7 +1840,7 @@
       ],
       "requiredLocalTools": [],
       "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
-      "jobBehavior": "Async job tracked as 3fa79df0-3b43-4f0b-8217-ce3c9fe4849f via /api/brain/media-jobs/3fa79df0-3b43-4f0b-8217-ce3c9fe4849f."
+      "jobBehavior": "Async job tracked as eeaa8575-0ea0-4f7b-b329-279b7fa88d38 via /api/brain/media-jobs/eeaa8575-0ea0-4f7b-b329-279b7fa88d38."
     },
     {
       "capabilityId": "talking_avatar_video",
@@ -1855,8 +1895,8 @@
     },
     {
       "capabilityId": "provider_auto_selection",
-      "providerSelected": "groq",
-      "modelSelected": "meta-llama/llama-4-scout-17b-16e-instruct",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
       "routeOrAdapter": "executeCapability:chat",
       "status": "LIVE_PROVEN",
       "artifactId": null,
@@ -2019,10 +2059,10 @@
     }
   ],
   "summary": {
-    "liveProven": 14,
+    "liveProven": 13,
     "sourceWired": 10,
     "providerAvailable": 0,
-    "blocked": 3,
+    "blocked": 4,
     "notWired": 0
   },
   "proofState": {
