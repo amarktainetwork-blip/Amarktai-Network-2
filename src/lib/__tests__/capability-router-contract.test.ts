@@ -319,8 +319,7 @@ describe('capability router contract', () => {
     expect(result).toMatchObject({
       success: false,
       readiness: 'UNAVAILABLE',
-      error_category: 'no_route_found',
-      code: 'NO_ROUTE_FOUND',
+      error_category: 'model_not_supported',
     })
   })
 

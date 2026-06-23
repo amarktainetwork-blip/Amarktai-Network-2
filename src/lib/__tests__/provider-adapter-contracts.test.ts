@@ -352,6 +352,109 @@ describe('provider adapter contracts', () => {
     expect(result.error).not.toContain('[redacted]')
   })
 
+  it('executes Hugging Face embeddings against the router model endpoint with JSON vector output', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify([[0.1, 0.2, 0.3]]), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('huggingface')!.execute({
+      ...adapterInput('embeddings', 'huggingface', 'BAAI/bge-small-en-v1.5'),
+      inputs: { texts: ['embedding check'] },
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      provider: 'huggingface',
+      model: 'BAAI/bge-small-en-v1.5',
+      output: [[0.1, 0.2, 0.3]],
+    })
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/hf-inference/models/BAAI/bge-small-en-v1.5')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' })
+  })
+
+  it('blocks Hugging Face rerank without a configured specialist endpoint and uses the rerank request shape when configured', async () => {
+    delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
+    const blocked = await getProviderCapabilityAdapter('huggingface')!.execute({
+      ...adapterInput('rerank', 'huggingface', 'cross-encoder/ms-marco-MiniLM-L-6-v2'),
+      inputs: { documents: ['alpha', 'beta'] },
+    })
+    expect(blocked).toMatchObject({
+      status: 'needs_configuration',
+      provider: 'huggingface',
+      model: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+      errorCategory: 'provider_misconfigured',
+    })
+
+    process.env.HF_SPECIALIST_ENDPOINTS_JSON = JSON.stringify({ rerank: 'https://hf.example/rerank' })
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ results: [{ index: 0, score: 0.9 }] }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('huggingface')!.execute({
+      ...adapterInput('rerank', 'huggingface', 'cross-encoder/ms-marco-MiniLM-L-6-v2'),
+      inputs: { documents: ['alpha', 'beta'] },
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      provider: 'huggingface',
+      model: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+      output: [{ index: 0, score: 0.9 }],
+    })
+    expect(String(fetchMock.mock.calls[0][0])).toBe('https://hf.example/rerank')
+    expect(String(fetchMock.mock.calls[0][1].body)).toContain('"query":"Create a launch visual"')
+    expect(String(fetchMock.mock.calls[0][1].body)).toContain('"documents":["alpha","beta"]')
+  })
+
+  it('executes Hugging Face image edit with binary image input and returns image bytes', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(Uint8Array.from([1, 2, 3, 4]), {
+      status: 200,
+      headers: { 'Content-Type': 'image/png' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('huggingface')!.execute({
+      ...adapterInput('image_text_to_image', 'huggingface', 'timbrooks/instruct-pix2pix'),
+      references: [{ kind: 'image', data: Buffer.from([9, 8, 7]), mimeType: 'image/png' }],
+    })
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      provider: 'huggingface',
+      model: 'timbrooks/instruct-pix2pix',
+      contentType: 'image/png',
+    })
+    expect(result.bytes).toBeTruthy()
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/hf-inference/models/timbrooks/instruct-pix2pix')
+  })
+
+  it('uses a configured HF specialist music endpoint and requires audio output or a pollable job', async () => {
+    process.env.HF_SPECIALIST_ENDPOINTS_JSON = JSON.stringify({ music: 'https://hf.example/music' })
+    const audioBytes = Uint8Array.from([1, 2, 3, 4])
+    const fetchMock = vi.fn().mockResolvedValue(new Response(audioBytes, {
+      status: 200,
+      headers: { 'Content-Type': 'audio/wav' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await getProviderCapabilityAdapter('huggingface')!.execute(
+      adapterInput('music_generation', 'huggingface', 'facebook/musicgen-small'),
+    )
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      provider: 'huggingface',
+      model: 'facebook/musicgen-small',
+      contentType: 'audio/wav',
+    })
+    expect(result.bytes).toBeTruthy()
+    expect(String(fetchMock.mock.calls[0][0])).toBe('https://hf.example/music')
+  })
+
   it('classifies Hugging Face FLUX task models as image generation only', () => {
     const models = normalizeProviderCatalog('huggingface', [
       { id: 'black-forest-labs/FLUX.1-schnell', pipeline_tag: 'text-to-image', available: true },

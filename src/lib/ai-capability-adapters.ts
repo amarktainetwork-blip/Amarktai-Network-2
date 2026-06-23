@@ -327,6 +327,18 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
     }
     if (responseType.includes('application/json')) {
       const json = await response.json().catch(() => null)
+      if (input.capability.id === 'embeddings' || input.capability.id === 'feature_extraction') {
+        return result(provider, model, 'completed', {
+          output: parseEmbeddingOutput(json),
+          contentType: responseType,
+        })
+      }
+      if (input.capability.id === 'rerank' || input.capability.id === 'text_ranking') {
+        return result(provider, model, 'completed', {
+          output: parseRerankOutput(json),
+          contentType: responseType,
+        })
+      }
       const media = mediaFromJsonOutput(json)
       if (media) {
         return result(provider, model, 'completed', {
@@ -341,6 +353,14 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
           provider,
           model,
           'Hugging Face music endpoint completed without audio bytes or audio URL.',
+          response.status,
+        )
+      }
+      if (input.capability.id === 'image_text_to_image' || input.capability.id === 'image_to_image') {
+        return failedResult(
+          provider,
+          model,
+          'Hugging Face image edit endpoint completed without image bytes or image URL.',
           response.status,
         )
       }
@@ -360,6 +380,9 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
 
 function huggingFaceInputs(input: CapabilityAdapterInput): unknown {
   const reference = firstReference(input, ['image', 'audio', 'video', 'document', 'tabular'])
+  if (input.capability.id === 'embeddings' || input.capability.id === 'feature_extraction') {
+    return input.inputs?.texts ?? input.inputs?.documents ?? input.text ?? input.prompt
+  }
   if (input.capability.id === 'question_answering') {
     return { question: input.prompt, context: String(input.inputs?.context ?? input.text ?? '') }
   }
@@ -368,8 +391,8 @@ function huggingFaceInputs(input: CapabilityAdapterInput): unknown {
   }
   if (['sentence_similarity', 'text_ranking', 'rerank'].includes(input.capability.id)) {
     return {
-      source_sentence: input.prompt,
-      sentences: input.inputs?.documents ?? input.inputs?.sentences ?? [],
+      query: input.prompt,
+      documents: input.inputs?.documents ?? input.inputs?.sentences ?? [],
     }
   }
   if (input.capability.id === 'zero_shot_classification') {
@@ -448,6 +471,25 @@ async function executeGenXMedia(input: CapabilityAdapterInput): Promise<Capabili
       providerLimitSeconds: type === 'audio' ? GENX_MUSIC_DURATION_LIMIT_SECONDS : null,
     },
   })
+}
+
+function parseEmbeddingOutput(json: unknown): unknown {
+  if (Array.isArray(json)) return json
+  if (json && typeof json === 'object') {
+    const record = json as Record<string, unknown>
+    if (Array.isArray(record.embeddings)) return record.embeddings
+    if (Array.isArray(record.data)) return record.data
+  }
+  return json
+}
+
+function parseRerankOutput(json: unknown): unknown {
+  if (json && typeof json === 'object') {
+    const record = json as Record<string, unknown>
+    if (Array.isArray(record.results)) return record.results
+    if (Array.isArray(record.data)) return record.data
+  }
+  return json
 }
 
 function numericInput(value: unknown): number | null {

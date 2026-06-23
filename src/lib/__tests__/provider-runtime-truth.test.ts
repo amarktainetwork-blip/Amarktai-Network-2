@@ -213,6 +213,24 @@ describe('provider capability contracts', () => {
     expect(hfTts.blockerType).toBeNull()
   })
 
+  it('keeps HF adult image execution policy-gated even when the provider is available', () => {
+    const adultImage = evaluateProviderCapabilityContract({
+      provider: provider('huggingface'),
+      model: model({
+        provider: 'huggingface',
+        id: 'SG161222/RealVisXL_V4.0',
+        capabilities: ['adult_image'],
+        metadata: { executable: 'CATALOG_ONLY', adultGate: true },
+      }),
+      capability: capability('adult_image'),
+      health: healthy('huggingface'),
+    })
+
+    expect(adultImage.runtimeExecutableNow).toBe(false)
+    expect(adultImage.blockerType).toBe('policy_blocked')
+    expect(adultImage.requiresAdultToggle).toBe(true)
+  })
+
   it('keeps large provider catalogs visible while contract truth controls executability', () => {
     const genxModels = normalizeProviderCatalog('genx', {
       models: [

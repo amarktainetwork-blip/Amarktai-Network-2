@@ -1012,7 +1012,11 @@ function capabilityProofSteps(): CapabilityProofStep[] {
     capabilityStep('web_research', () => proveResearch()),
     capabilityStep('summarization', () => proveAdminTextCapability('summarization', 'summarization'), QUICK_PROOF_TIMEOUT_MS),
     capabilityStep('translation', () => proveAdminTextCapability('translation', 'translation'), QUICK_PROOF_TIMEOUT_MS),
-    capabilityStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', { input: 'embedding check', capability: 'embeddings' })),
+    capabilityStep('embeddings', () => proveExecuteCapability('embeddings', 'embeddings', {
+      input: 'embedding check',
+      capability: 'embeddings',
+      metadata: { texts: ['embedding check'] } as Record<string, unknown>,
+    })),
     capabilityStep('rerank_search_relevance', () => proveRerank()),
     mediaCapabilityStep('text_to_image', () => proveExecuteCapability('text-to-image', 'text_to_image', { input: 'A Cape Town skyline at sunrise.', capability: 'image_generation', saveArtifact: true })),
     mediaCapabilityStep('image_editing_source_transform', () => proveExecuteCapability('image editing/source-image transform', 'image_editing_source_transform', { input: 'Edit the image to be warmer.', capability: 'image_edit', files: [PROOF_SOURCE_IMAGE_URL], saveArtifact: true })),
