@@ -150,10 +150,7 @@ const REQUIRED_CAPABILITIES: CapabilityRouterCapability[] = [
 beforeEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
-  delete process.env.HF_ENDPOINT_MUSIC_GENERATION
   delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
-  delete process.env.HF_MODEL_MUSIC_GENERATION
-  delete process.env.HF_SPECIALIST_MODELS_JSON
   mocks.localRecords.clear()
   mocks.createArtifact.mockResolvedValue({ id: 'artifact-1' })
   mocks.getVaultApiKey.mockResolvedValue(null)
@@ -851,7 +848,7 @@ describe('capability router contract', () => {
   })
 
   it('keeps Hugging Face music endpoint audio bytes blocked in production without promotion to launch-ready', async () => {
-    process.env.HF_ENDPOINT_MUSIC_GENERATION = 'https://hf.example/music'
+    process.env.HF_SPECIALIST_ENDPOINTS_JSON = JSON.stringify({ music: 'https://hf.example/music' })
     const audioBytes = Buffer.from('hf-audio-bytes')
     const selected = {
       provider: 'huggingface',

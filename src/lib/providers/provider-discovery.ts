@@ -11,6 +11,10 @@ import {
   ADULT_IMAGE_MODELS,
   ADULT_VIDEO_MODELS,
 } from '@/lib/adult-model-catalog'
+import {
+  getHfSpecialistDefinition,
+  resolveHfSpecialistConfig,
+} from '@/lib/hf-specialist-config'
 import { getProviderKeyWithSource } from '@/lib/provider-config'
 import { sanitizeProviderError } from '@/lib/provider-mesh'
 import { VIDEO_MODEL_CONTRACTS } from '@/lib/video-route-specs'
@@ -149,14 +153,25 @@ const HF_CURATED_MODELS: Array<{
 }> = [
   { id: 'mistralai/Mistral-7B-Instruct-v0.3', task: 'text-generation', capabilities: ['chat', 'reasoning', 'coding'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated core text model.' },
   { id: 'sentence-transformers/all-MiniLM-L6-v2', task: 'feature-extraction', capabilities: ['embeddings'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated embeddings model.' },
+  { id: 'BAAI/bge-small-en-v1.5', task: 'feature-extraction', capabilities: ['embeddings'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated embeddings model aligned to current production truth.' },
   { id: 'cross-encoder/ms-marco-MiniLM-L-6-v2', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated rerank model; specialist endpoint required before execution proof.' },
+  { id: 'BAAI/bge-reranker-base', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated rerank candidate; specialist endpoint required before execution proof.' },
+  { id: 'mixedbread-ai/mxbai-rerank-base-v1', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated rerank candidate; specialist endpoint required before execution proof.' },
+  { id: 'jinaai/jina-reranker-v1-turbo-en', task: 'text-ranking', capabilities: ['rerank'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated rerank candidate; specialist endpoint required before execution proof.' },
   { id: 'stabilityai/stable-diffusion-xl-base-1.0', task: 'text-to-image', capabilities: ['image'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image generation model.' },
   { id: 'timbrooks/instruct-pix2pix', task: 'image-to-image', capabilities: ['image_edit'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated source-image transform model.' },
+  { id: 'black-forest-labs/FLUX.1-Kontext-dev', task: 'image-to-image', capabilities: ['image_edit'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image editing model with public image-to-image task support.' },
+  { id: 'Qwen/Qwen-Image-Edit', task: 'image-to-image', capabilities: ['image_edit'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Qwen image-edit model via Hugging Face only when routed truthfully through Hugging Face.' },
   { id: 'Wan-AI/Wan2.1-T2V-14B', task: 'text-to-video', capabilities: ['video'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated video model; specialist endpoint required before execution.' },
   { id: 'Wan-AI/Wan2.1-I2V-14B-480P', task: 'image-to-video', capabilities: ['image_to_video'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated image-to-video model; specialist endpoint required before execution.' },
   { id: 'facebook/musicgen-small', task: 'text-to-audio', capabilities: ['music'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated music model; specialist endpoint required before execution.' },
+  { id: 'stabilityai/stable-audio-open-1.0', task: 'text-to-audio', capabilities: ['music'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated music candidate; specialist endpoint required before execution proof.' },
+  { id: 'ACE-Step/ACE-Step-v1-3.5B', task: 'text-to-audio', capabilities: ['music'], routeType: 'hf_specialist_endpoint', safetyPolicy: 'standard', safetyNotes: 'Curated music candidate; specialist endpoint required before execution proof.' },
   { id: 'facebook/mms-tts-eng', task: 'text-to-speech', capabilities: ['tts'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated TTS model.' },
+  { id: 'hexgrad/Kokoro-82M', task: 'text-to-speech', capabilities: ['tts'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated TTS candidate with model API support.' },
+  { id: 'parler-tts/parler-tts-mini-v1', task: 'text-to-speech', capabilities: ['tts'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated TTS candidate with model API support.' },
   { id: 'openai/whisper-large-v3', task: 'automatic-speech-recognition', capabilities: ['stt'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated STT model.' },
+  { id: 'nvidia/canary-1b', task: 'automatic-speech-recognition', capabilities: ['stt'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated STT candidate with model API support.' },
   { id: 'Salesforce/blip-image-captioning-base', task: 'image-to-text', capabilities: ['vision', 'ocr'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated image captioning/OCR-adjacent model.' },
   { id: 'Salesforce/blip2-opt-2.7b', task: 'image-text-to-text', capabilities: ['vision'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated vision-language model.' },
   { id: 'impira/layoutlm-document-qa', task: 'document-question-answering', capabilities: ['documents', 'ocr'], routeType: 'hf_inference_model_api', safetyPolicy: 'standard', safetyNotes: 'Curated document QA/OCR model.' },
@@ -673,8 +688,13 @@ function normalizeModel(
   const mimoRuntimeFlagDisabled = provider.id === 'mimo'
     && capabilities.some((capability) => ['tts', 'stt', 'agents'].includes(capability))
     && process.env.MIMO_RUNTIME_API_ENABLED?.trim().toLowerCase() !== 'true'
+  const hfSpecialist = provider.id === 'huggingface'
+    ? capabilities
+      .map((capability) => resolveHfSpecialistConfig(capability))
+      .find((entry) => entry.registryCapability !== null) ?? null
+    : null
   const requiresDedicatedEndpoint = routeType === 'hf_specialist_endpoint'
-    || provider.id === 'huggingface' && capabilities.some((capability) => capability === 'rerank' || capability === 'image_edit' || capability === 'video' || capability === 'image_to_video' || capability === 'music' || capability === 'tts' || capability === 'stt' || capability === 'adult_video')
+    || provider.id === 'huggingface' && hfSpecialist?.endpointRequired === true
     || provider.id === 'together' && capabilities.some((capability) => capability === 'rerank')
   const adapterMissing = provider.id === 'mimo'
     && capabilities.some((capability) => ['image', 'agents'].includes(capability))
@@ -748,13 +768,12 @@ function executionClassificationFor(
 
 function endpointEnvFor(provider: ProviderId, capabilities: CapabilityId[]): string | null {
   if (provider === 'huggingface') {
-    if (capabilities.includes('rerank')) return 'HF_ENDPOINT_RERANK'
-    if (capabilities.includes('image_edit')) return 'HF_ENDPOINT_IMAGE_EDIT'
-    if (capabilities.includes('music')) return 'HF_ENDPOINT_MUSIC_GENERATION'
-    if (capabilities.includes('video') || capabilities.includes('adult_video')) return 'HF_ENDPOINT_TEXT_TO_VIDEO'
-    if (capabilities.includes('image_to_video')) return 'HF_ENDPOINT_IMAGE_TO_VIDEO'
-    if (capabilities.includes('tts')) return 'HF_ENDPOINT_TTS'
-    if (capabilities.includes('stt')) return 'HF_ENDPOINT_STT'
+    const specialist = capabilities
+      .map((capability) => getHfSpecialistDefinition(capability))
+      .find((entry) => Boolean(entry))
+    return specialist?.executionMode === 'specialist_endpoint' || specialist?.adultOnly
+      ? 'HF_SPECIALIST_ENDPOINTS_JSON'
+      : null
   }
   if (provider === 'together' && capabilities.includes('rerank')) {
     return 'TOGETHER_DEDICATED_ENDPOINTS_JSON'

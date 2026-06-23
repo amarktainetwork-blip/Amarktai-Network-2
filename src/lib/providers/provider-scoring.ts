@@ -8,6 +8,7 @@ import type {
   RoutingProfile,
 } from './provider-types'
 import { evaluateProviderCapabilityContract } from './provider-capability-contracts'
+import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 
 export function scoreProviderModel(input: {
   provider: ProviderTruthDefinition
@@ -156,8 +157,7 @@ function requiresRerankEndpoint(provider: string, capability: string) {
     return !process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON?.trim()
   }
   if (provider === 'huggingface') {
-    return !process.env.HF_ENDPOINT_RERANK?.trim()
-      && !process.env.HF_SPECIALIST_ENDPOINTS_JSON?.trim()
+    return resolveHfSpecialistConfig('rerank').endpointSource !== 'specialist_registry'
   }
   return false
 }

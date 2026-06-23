@@ -6,6 +6,7 @@ import type {
   ProviderId,
   ProviderTruthDefinition,
 } from './provider-types'
+import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 
 export type ProviderCapabilityBlockerType =
   | 'missing_credential'
@@ -135,19 +136,8 @@ export function buildProviderCapabilityContracts(input: {
 }
 
 function hfSpecialistConfigured(capability: CapabilityId): boolean {
-  const specialistJson = process.env.HF_SPECIALIST_ENDPOINTS_JSON?.trim()
-  if (specialistJson) return true
-  const envByCapability: Partial<Record<CapabilityId, string[]>> = {
-    rerank: ['HF_ENDPOINT_RERANK'],
-    image_edit: ['HF_ENDPOINT_IMAGE_EDIT'],
-    video: ['HF_ENDPOINT_TEXT_TO_VIDEO'],
-    image_to_video: ['HF_ENDPOINT_IMAGE_TO_VIDEO'],
-    music: ['HF_ENDPOINT_MUSIC_GENERATION'],
-    tts: ['HF_ENDPOINT_TTS'],
-    stt: ['HF_ENDPOINT_STT'],
-    adult_video: ['HF_ENDPOINT_TEXT_TO_VIDEO'],
-  }
-  return (envByCapability[capability] ?? []).some((name) => Boolean(process.env[name]?.trim()))
+  const specialist = resolveHfSpecialistConfig(capability)
+  return specialist.endpointRequired ? specialist.endpointSource === 'specialist_registry' : specialist.configured
 }
 
 function localToolsFor(capability: CapabilityId): string[] {

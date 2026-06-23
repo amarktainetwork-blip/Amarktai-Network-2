@@ -178,7 +178,7 @@ describe('V1 universal AI capability truth', () => {
     expect(proof).toContain('BLOCKED_ON_ROUTE_FAILURE')
     expect(proof).toContain("'rerank_search_relevance'")
     expect(proof).toContain('function hasRerankEndpointConfig')
-    expect(proof).toContain('HF_ENDPOINT_RERANK')
+    expect(proof).toContain('HF_SPECIALIST_ENDPOINTS_JSON')
     expect(proof).toContain('TOGETHER_DEDICATED_ENDPOINTS_JSON')
     expect(proof).toContain("result.providerAttempts?.some((attempt) => attempt.classification === 'endpoint_required')")
     expect(proof).toContain('summarizeProviderAttemptErrors')

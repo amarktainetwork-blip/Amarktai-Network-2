@@ -57,31 +57,35 @@ describe('V1 deployment readiness', () => {
       expect(route.configured || route.endpointRequired || route.endpointSource === 'model_api').toBe(true)
       if (!route.configured) {
         if (route.endpointRequired) {
-          expect(route.requiredEnv.some((name) => name.startsWith('HF_ENDPOINT_'))).toBe(true)
+          expect(route.requiredEnv).toContain('HF_SPECIALIST_ENDPOINTS_JSON')
         }
       }
     }
   })
 
-  it('accepts safe per-capability Hugging Face endpoint and model overrides', () => {
-    process.env.HF_ENDPOINT_ROBOTICS = 'https://robotics-endpoint.us-east-1.aws.endpoints.huggingface.cloud'
-    process.env.HF_MODEL_ROBOTICS = 'organization/private-robotics-planner'
-    const config = resolveHfSpecialistConfig('robotics', { modelIds: ['custom:huggingface-endpoint'] })
+  it('accepts safe Hugging Face specialist registry entries from HF_SPECIALIST_ENDPOINTS_JSON', () => {
+    process.env.HF_SPECIALIST_ENDPOINTS_JSON = JSON.stringify({
+      rerank: 'https://rerank.endpoints.huggingface.cloud',
+      video: 'https://video.endpoints.huggingface.cloud',
+    })
+    const config = resolveHfSpecialistConfig('rerank', { modelIds: ['cross-encoder/ms-marco-MiniLM-L-6-v2'] })
     expect(config).toMatchObject({
       configured: true,
       endpointRequired: true,
-      endpointSource: 'environment',
-      modelSource: 'environment',
-      model: 'organization/private-robotics-planner',
+      endpointSource: 'specialist_registry',
+      modelSource: 'registry',
+      model: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
     })
   })
 
-  it('rejects unsafe or fake Hugging Face endpoint overrides', () => {
-    process.env.HF_ENDPOINT_ROBOTICS = 'http://localhost:8080/fake'
-    const config = resolveHfSpecialistConfig('robotics', { modelIds: ['custom:huggingface-endpoint'] })
+  it('rejects unsafe or fake Hugging Face specialist registry endpoints', () => {
+    process.env.HF_SPECIALIST_ENDPOINTS_JSON = JSON.stringify({
+      rerank: 'http://localhost:8080/fake',
+    })
+    const config = resolveHfSpecialistConfig('rerank', { modelIds: ['cross-encoder/ms-marco-MiniLM-L-6-v2'] })
     expect(config.configured).toBe(false)
     expect(config.endpoint).toBeNull()
-    expect(HF_ENDPOINT_REQUIRED_CAPABILITIES).toContain('robotics')
+    expect(HF_ENDPOINT_REQUIRED_CAPABILITIES).toContain('rerank')
   })
 
   it('reports a connected app ready only when secret, hash, status, and AI scope are valid', () => {

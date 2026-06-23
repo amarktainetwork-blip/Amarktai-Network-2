@@ -1,6 +1,7 @@
 import { decryptVaultKey } from '@/lib/crypto-vault'
 import { prisma } from '@/lib/prisma'
 import { isUsableServiceKey } from '@/lib/service-vault'
+import { getAllHfSpecialistRegistryEntries } from '@/lib/hf-specialist-config'
 import { PROVIDER_TRUTH } from '@/lib/providers/provider-truth'
 import type { ProviderId, ProviderTruthDefinition } from '@/lib/providers/provider-types'
 
@@ -319,15 +320,25 @@ function endpointRequirementsFor(
   env: NodeJS.ProcessEnv,
 ): ProviderEndpointRequirementTruth[] {
   if (provider.id === 'huggingface') {
-    return [
-      endpointRequirement('rerank', 'specialist_endpoint', ['HF_ENDPOINT_RERANK', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('image_edit', 'specialist_endpoint', ['HF_ENDPOINT_IMAGE_EDIT', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('video', 'specialist_endpoint', ['HF_ENDPOINT_TEXT_TO_VIDEO', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('image_to_video', 'specialist_endpoint', ['HF_ENDPOINT_IMAGE_TO_VIDEO', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('music', 'specialist_endpoint', ['HF_ENDPOINT_MUSIC_GENERATION', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('tts', 'specialist_endpoint', ['HF_ENDPOINT_TTS', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-      endpointRequirement('stt', 'specialist_endpoint', ['HF_ENDPOINT_STT', 'HF_SPECIALIST_ENDPOINTS_JSON'], env),
-    ]
+    return getAllHfSpecialistRegistryEntries().map((entry) => ({
+      capability: entry.capability,
+      type: entry.executionMode === 'specialist_endpoint'
+        ? 'specialist_endpoint'
+        : entry.adultOnly
+          ? 'policy'
+          : 'provider_endpoint',
+      envNames: entry.requiredEnv,
+      configured: entry.configured,
+      currentValue: entry.configured ? (entry.endpoint ?? 'model_api') : 'missing',
+      requiredValue: entry.executionMode === 'specialist_endpoint'
+        ? 'configured endpoint/account contract'
+        : entry.adultOnly
+          ? 'adult gate plus configured specialist registry entry'
+          : 'Hugging Face router model API execution',
+      nextAction: entry.configured
+        ? 'No action required for this endpoint requirement.'
+        : `Configure ${entry.requiredEnv.join(' or ')} for ${entry.capability} before routing this provider/model as executable.`,
+    }))
   }
   if (provider.id === 'together') {
     return [

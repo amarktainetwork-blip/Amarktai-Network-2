@@ -270,14 +270,14 @@ async function executeHuggingFace(input: CapabilityAdapterInput): Promise<Capabi
   const model = input.model
   if (!model) return failedResult(provider, '', 'Discovery did not select a Hugging Face model.')
   if (!key) return failedResult(provider, model, 'Hugging Face key not configured.')
-  const endpoint = specialist.endpointSource === 'environment'
+  const endpoint = specialist.endpointSource === 'specialist_registry'
     ? specialist.endpoint
     : !specialist.endpointRequired
       ? `${resolveProviderEndpoint(getProviderTruth(provider)!, 'inference_router')}/hf-inference/models/${model}`
       : null
   if (!endpoint) {
     return result(provider, model, 'needs_configuration', {
-      error: `${input.capability.id} requires a Hugging Face specialist endpoint. Set ${specialist.requiredEnv.join(' or ')}; optional model override HF_MODEL_${input.capability.id.toUpperCase().replace(/[^A-Z0-9]+/g, '_')} or HF_SPECIALIST_MODELS_JSON.`,
+      error: `${input.capability.id} requires a Hugging Face specialist endpoint. Set ${specialist.requiredEnv.join(' or ')}.`,
       errorCategory: 'provider_misconfigured',
       retryable: true,
       diagnostics: {

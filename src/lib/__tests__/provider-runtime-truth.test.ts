@@ -27,7 +27,6 @@ beforeEach(() => {
   process.env = { ...originalEnv }
   delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
   delete process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON
-  delete process.env.HF_ENDPOINT_RERANK
   delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
   delete process.env.MIMO_RUNTIME_API_ENABLED
   delete process.env.GROQ_API_KEY
@@ -182,6 +181,36 @@ describe('provider capability contracts', () => {
     expect(groqImage.blockerType).toBe('unsupported')
     expect(mimoTts.blockerType).toBe('tool_plan_only')
     expect(adultCandidate.blockerType).toBe('policy_blocked')
+  })
+
+  it('treats HF model-api specialists as executable and registry-only specialists as endpoint-gated', () => {
+    const hfImageEdit = evaluateProviderCapabilityContract({
+      provider: provider('huggingface'),
+      model: model({
+        provider: 'huggingface',
+        id: 'timbrooks/instruct-pix2pix',
+        capabilities: ['image_edit'],
+        metadata: { executable: true, routeType: 'hf_inference_model_api' },
+      }),
+      capability: capability('image_edit'),
+      health: healthy('huggingface'),
+    })
+    const hfTts = evaluateProviderCapabilityContract({
+      provider: provider('huggingface'),
+      model: model({
+        provider: 'huggingface',
+        id: 'facebook/mms-tts-eng',
+        capabilities: ['tts'],
+        metadata: { executable: true, routeType: 'hf_inference_model_api' },
+      }),
+      capability: capability('tts'),
+      health: healthy('huggingface'),
+    })
+
+    expect(hfImageEdit.runtimeExecutableNow).toBe(true)
+    expect(hfImageEdit.blockerType).toBeNull()
+    expect(hfTts.runtimeExecutableNow).toBe(true)
+    expect(hfTts.blockerType).toBeNull()
   })
 
   it('keeps large provider catalogs visible while contract truth controls executability', () => {

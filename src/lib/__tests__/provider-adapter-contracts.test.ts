@@ -329,7 +329,6 @@ describe('provider adapter contracts', () => {
   })
 
   it('keeps Hugging Face music visible but requires a specialist endpoint before execution', async () => {
-    delete process.env.HF_ENDPOINT_MUSIC_GENERATION
     delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
     mocks.getVaultApiKey.mockResolvedValue('hf-canonical-saved-key')
 
@@ -349,7 +348,6 @@ describe('provider adapter contracts', () => {
       model: 'facebook/musicgen-small',
       errorCategory: 'provider_misconfigured',
     })
-    expect(result.error).toContain('HF_ENDPOINT_MUSIC_GENERATION')
     expect(result.error).toContain('HF_SPECIALIST_ENDPOINTS_JSON')
     expect(result.error).not.toContain('[redacted]')
   })

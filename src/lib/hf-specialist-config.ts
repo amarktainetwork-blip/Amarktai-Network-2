@@ -1,101 +1,186 @@
 import type { AiCapabilityProviderRoute } from '@/lib/ai-capability-taxonomy'
 
-export const HF_SPECIALIST_DEFAULT_MODELS: Readonly<Record<string, string>> = {
-  chat: 'mistralai/Mistral-7B-Instruct-v0.3',
-  text_generation: 'mistralai/Mistral-7B-Instruct-v0.3',
-  lyrics_generation: 'mistralai/Mistral-7B-Instruct-v0.3',
-  campaign_generation: 'mistralai/Mistral-7B-Instruct-v0.3',
-  brand_aware_content_generation: 'mistralai/Mistral-7B-Instruct-v0.3',
-  text_classification: 'distilbert/distilbert-base-uncased-finetuned-sst-2-english',
-  token_classification: 'dslim/bert-base-NER',
-  zero_shot_classification: 'facebook/bart-large-mnli',
-  translation: 'Helsinki-NLP/opus-mt-en-fr',
-  summarization: 'facebook/bart-large-cnn',
-  question_answering: 'deepset/roberta-base-squad2',
-  table_question_answering: 'google/tapas-base-finetuned-wtq',
-  sentence_similarity: 'sentence-transformers/all-MiniLM-L6-v2',
-  text_ranking: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  feature_extraction: 'sentence-transformers/all-MiniLM-L6-v2',
-  fill_mask: 'google-bert/bert-base-uncased',
-  embeddings: 'sentence-transformers/all-MiniLM-L6-v2',
-  rerank: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
-  document_question_answering: 'impira/layoutlm-document-qa',
-  visual_question_answering: 'dandelin/vilt-b32-finetuned-vqa',
-  image_text_to_text: 'Salesforce/blip2-opt-2.7b',
-  image_to_text: 'Salesforce/blip-image-captioning-base',
-  image_text_to_image: 'timbrooks/instruct-pix2pix',
-  image_to_image: 'timbrooks/instruct-pix2pix',
-  text_to_image: 'stabilityai/stable-diffusion-xl-base-1.0',
-  image_classification: 'google/vit-base-patch16-224',
-  zero_shot_image_classification: 'openai/clip-vit-large-patch14',
-  object_detection: 'facebook/detr-resnet-50',
-  zero_shot_object_detection: 'google/owlvit-base-patch32',
-  image_segmentation: 'facebook/mask2former-swin-large-coco-panoptic',
-  mask_generation: 'facebook/sam-vit-base',
-  depth_estimation: 'Intel/dpt-large',
-  keypoint_detection: 'facebook/detr-resnet-50',
-  image_feature_extraction: 'google/vit-base-patch16-224',
-  video_classification: 'MCG-NJU/videomae-base-finetuned-kinetics',
-  music_generation: 'facebook/musicgen-small',
-  text_to_speech: 'facebook/mms-tts-eng',
-  automatic_speech_recognition: 'openai/whisper-large-v3',
-  audio_classification: 'MIT/ast-finetuned-audioset-10-10-0.4593',
-  voice_activity_detection: 'pyannote/voice-activity-detection',
-  time_series_forecasting: 'amazon/chronos-t5-small',
+export type HfSpecialistCapability =
+  | 'image_edit'
+  | 'rerank'
+  | 'embeddings'
+  | 'music'
+  | 'tts'
+  | 'stt'
+  | 'video'
+  | 'image_to_video'
+  | 'adult_image'
+  | 'adult_video'
+  | 'adult_avatar'
+
+export type HfExecutionMode = 'router_model_api' | 'specialist_endpoint' | 'adult_only'
+
+export interface HfSpecialistDefinition {
+  capability: HfSpecialistCapability
+  canonicalCapabilityIds: string[]
+  model: string
+  task: string
+  executionMode: HfExecutionMode
+  supportsRouterModelApi: boolean
+  adultOnly: boolean
+  notes: string
 }
 
-export const HF_ENDPOINT_REQUIRED_CAPABILITIES = [
-  'rerank',
-  'image_edit',
-  'text_to_speech',
-  'automatic_speech_recognition',
-  'image_to_video',
-  'image_text_to_video',
-  'text_to_video',
-  'video_to_video',
-  'video_text_to_text',
-  'visual_document_retrieval',
-  'text_to_3d',
-  'image_to_3d',
-  'text_to_audio',
-  'audio_to_audio',
-  'music_generation',
-  'avatar_generation',
-  'avatar_video',
-  'voice_clone_or_voice_design',
-  'tabular_classification',
-  'tabular_regression',
-  'reinforcement_learning',
-  'robotics',
-  'any_to_any',
-  'multimodal_generation',
-] as const
+export interface HfSpecialistRegistryEntry extends HfSpecialistDefinition {
+  endpoint: string | null
+  endpointSource: 'specialist_registry' | 'model_api' | 'missing'
+  configured: boolean
+  requiredEnv: string[]
+}
 
 export interface HfSpecialistResolution {
   capability: string
   model: string | null
   endpoint: string | null
-  modelSource: 'environment' | 'default' | 'route' | 'missing'
-  endpointSource: 'environment' | 'model_api' | 'missing'
+  modelSource: 'registry' | 'route' | 'missing'
+  endpointSource: 'specialist_registry' | 'model_api' | 'missing'
   endpointRequired: boolean
   configured: boolean
   requiredEnv: string[]
+  adultOnly: boolean
+  supportsRouterModelApi: boolean
+  registryCapability: HfSpecialistCapability | null
 }
 
-function envSuffix(capability: string): string {
-  return capability.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
-}
+export const HF_SPECIALIST_REGISTRY: readonly HfSpecialistDefinition[] = [
+  {
+    capability: 'embeddings',
+    canonicalCapabilityIds: ['embeddings', 'feature_extraction'],
+    model: 'BAAI/bge-small-en-v1.5',
+    task: 'feature-extraction',
+    executionMode: 'router_model_api',
+    supportsRouterModelApi: true,
+    adultOnly: false,
+    notes: 'Embeddings have a real Hugging Face router/model API path.',
+  },
+  {
+    capability: 'rerank',
+    canonicalCapabilityIds: ['rerank', 'text_ranking'],
+    model: 'cross-encoder/ms-marco-MiniLM-L-6-v2',
+    task: 'text-ranking',
+    executionMode: 'specialist_endpoint',
+    supportsRouterModelApi: false,
+    adultOnly: false,
+    notes: 'Rerank remains specialist-endpoint only in current launch truth.',
+  },
+  {
+    capability: 'image_edit',
+    canonicalCapabilityIds: ['image_edit', 'image_text_to_image', 'image_to_image'],
+    model: 'timbrooks/instruct-pix2pix',
+    task: 'image-to-image',
+    executionMode: 'router_model_api',
+    supportsRouterModelApi: true,
+    adultOnly: false,
+    notes: 'Image-to-image has a real Hugging Face model API path, but launch proof is still incomplete.',
+  },
+  {
+    capability: 'music',
+    canonicalCapabilityIds: ['music_generation', 'text_to_audio'],
+    model: 'facebook/musicgen-small',
+    task: 'text-to-audio',
+    executionMode: 'specialist_endpoint',
+    supportsRouterModelApi: false,
+    adultOnly: false,
+    notes: 'Music remains specialist-endpoint only until provider-safe runtime proof exists.',
+  },
+  {
+    capability: 'tts',
+    canonicalCapabilityIds: ['text_to_speech'],
+    model: 'facebook/mms-tts-eng',
+    task: 'text-to-speech',
+    executionMode: 'router_model_api',
+    supportsRouterModelApi: true,
+    adultOnly: false,
+    notes: 'TTS has a real Hugging Face router/model API path.',
+  },
+  {
+    capability: 'stt',
+    canonicalCapabilityIds: ['automatic_speech_recognition'],
+    model: 'openai/whisper-large-v3',
+    task: 'automatic-speech-recognition',
+    executionMode: 'router_model_api',
+    supportsRouterModelApi: true,
+    adultOnly: false,
+    notes: 'STT has a real Hugging Face router/model API path.',
+  },
+  {
+    capability: 'video',
+    canonicalCapabilityIds: ['text_to_video'],
+    model: 'Wan-AI/Wan2.1-T2V-14B',
+    task: 'text-to-video',
+    executionMode: 'specialist_endpoint',
+    supportsRouterModelApi: false,
+    adultOnly: false,
+    notes: 'Text-to-video remains specialist-endpoint only in current launch truth.',
+  },
+  {
+    capability: 'image_to_video',
+    canonicalCapabilityIds: ['image_to_video', 'image_text_to_video'],
+    model: 'Wan-AI/Wan2.1-I2V-14B-480P',
+    task: 'image-to-video',
+    executionMode: 'specialist_endpoint',
+    supportsRouterModelApi: false,
+    adultOnly: false,
+    notes: 'Image-to-video remains specialist-endpoint only in current launch truth.',
+  },
+  {
+    capability: 'adult_image',
+    canonicalCapabilityIds: ['adult_image', 'text_to_image'],
+    model: 'SG161222/RealVisXL_V4.0',
+    task: 'text-to-image',
+    executionMode: 'adult_only',
+    supportsRouterModelApi: false,
+    adultOnly: true,
+    notes: 'Adult image candidates are policy-gated only and not exposed as public execution routes.',
+  },
+  {
+    capability: 'adult_video',
+    canonicalCapabilityIds: ['adult_video', 'text_to_video'],
+    model: 'NSFW-API/NSFW_Wan_14b',
+    task: 'text-to-video',
+    executionMode: 'adult_only',
+    supportsRouterModelApi: false,
+    adultOnly: true,
+    notes: 'Adult video candidates remain gated and specialist-endpoint dependent.',
+  },
+  {
+    capability: 'adult_avatar',
+    canonicalCapabilityIds: ['adult_avatar', 'avatar_generation'],
+    model: 'SG161222/RealVisXL_V4.0',
+    task: 'text-to-image',
+    executionMode: 'adult_only',
+    supportsRouterModelApi: false,
+    adultOnly: true,
+    notes: 'Adult avatar remains adult-only and not exposed as a public HF runtime lane.',
+  },
+] as const
 
-function parseJsonMap(envName: string): Record<string, string> {
-  const raw = process.env[envName]?.trim()
+export const HF_ENDPOINT_REQUIRED_CAPABILITIES = HF_SPECIALIST_REGISTRY
+  .filter((entry) => entry.executionMode === 'specialist_endpoint')
+  .map((entry) => entry.canonicalCapabilityIds[0] ?? entry.capability) as readonly string[]
+
+const CAPABILITY_ALIAS_MAP: Record<string, HfSpecialistCapability> = Object.fromEntries(
+  HF_SPECIALIST_REGISTRY.flatMap((entry) => [
+    [entry.capability, entry.capability],
+    ...entry.canonicalCapabilityIds.map((id) => [id, entry.capability] as const),
+  ]),
+) as Record<string, HfSpecialistCapability>
+
+function parseRegistryEnv(): Partial<Record<HfSpecialistCapability, string>> {
+  const raw = process.env.HF_SPECIALIST_ENDPOINTS_JSON?.trim()
   if (!raw) return {}
   try {
-    const parsed = JSON.parse(raw) as unknown
+    const parsed = JSON.parse(raw) as Record<string, unknown>
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
     return Object.fromEntries(
-      Object.entries(parsed as Record<string, unknown>)
-        .filter((entry): entry is [string, string] => typeof entry[1] === 'string' && Boolean(entry[1].trim()))
-        .map(([key, value]) => [key, value.trim()]),
+      Object.entries(parsed)
+        .map(([key, value]) => [CAPABILITY_ALIAS_MAP[key], publicHttpsUrl(typeof value === 'string' ? value : null)] as const)
+        .filter((entry): entry is [HfSpecialistCapability, string] => Boolean(entry[0] && entry[1])),
     )
   } catch {
     return {}
@@ -123,35 +208,77 @@ function publicHttpsUrl(raw?: string | null): string | null {
   }
 }
 
+export function getHfSpecialistDefinition(capability: string): HfSpecialistDefinition | null {
+  const key = CAPABILITY_ALIAS_MAP[capability]
+  return HF_SPECIALIST_REGISTRY.find((entry) => entry.capability === key) ?? null
+}
+
+export function getAllHfSpecialistRegistryEntries(): HfSpecialistRegistryEntry[] {
+  const registryEnv = parseRegistryEnv()
+  return HF_SPECIALIST_REGISTRY.map((entry) => {
+    const endpoint = registryEnv[entry.capability] ?? null
+    const configured = entry.supportsRouterModelApi || Boolean(endpoint) || entry.adultOnly
+    return {
+      ...entry,
+      endpoint,
+      endpointSource: endpoint
+        ? 'specialist_registry'
+        : entry.supportsRouterModelApi
+          ? 'model_api'
+          : 'missing',
+      configured,
+      requiredEnv: entry.executionMode === 'specialist_endpoint'
+        ? ['HF_SPECIALIST_ENDPOINTS_JSON']
+        : ['HF_SPECIALIST_ENDPOINTS_JSON'],
+    }
+  })
+}
+
 export function resolveHfSpecialistConfig(
   capability: string,
   route?: Pick<AiCapabilityProviderRoute, 'modelIds'>,
 ): HfSpecialistResolution {
-  const suffix = envSuffix(capability)
-  const endpointEnv = `HF_ENDPOINT_${suffix}`
-  const modelEnv = `HF_MODEL_${suffix}`
-  const endpointMap = parseJsonMap('HF_SPECIALIST_ENDPOINTS_JSON')
-  const modelMap = parseJsonMap('HF_SPECIALIST_MODELS_JSON')
-  const envEndpoint = publicHttpsUrl(process.env[endpointEnv] ?? endpointMap[capability])
-  const envModel = process.env[modelEnv]?.trim() || modelMap[capability]?.trim() || null
-  const defaultModel = HF_SPECIALIST_DEFAULT_MODELS[capability] ?? null
+  const definition = getHfSpecialistDefinition(capability)
   const routeModel = route?.modelIds.find((model) => model && !model.startsWith('custom:') && !model.startsWith('task:')) ?? null
-  const model = envModel || defaultModel || routeModel
-  const endpointRequired = (HF_ENDPOINT_REQUIRED_CAPABILITIES as readonly string[]).includes(capability)
-  const endpoint = envEndpoint ?? (!endpointRequired && model
-    ? `https://router.huggingface.co/hf-inference/models/${model}`
-    : null)
+  if (!definition) {
+    return {
+      capability,
+      model: routeModel,
+      endpoint: routeModel ? `https://router.huggingface.co/hf-inference/models/${routeModel}` : null,
+      modelSource: routeModel ? 'route' : 'missing',
+      endpointSource: routeModel ? 'model_api' : 'missing',
+      endpointRequired: false,
+      configured: Boolean(routeModel),
+      requiredEnv: ['HF_SPECIALIST_ENDPOINTS_JSON'],
+      adultOnly: false,
+      supportsRouterModelApi: Boolean(routeModel),
+      registryCapability: null,
+    }
+  }
 
+  const registryEnv = parseRegistryEnv()
+  const endpoint = registryEnv[definition.capability] ?? null
+  const model = definition.model || routeModel
+  const endpointRequired = definition.executionMode === 'specialist_endpoint'
   return {
     capability,
     model,
-    endpoint,
-    modelSource: envModel ? 'environment' : defaultModel ? 'default' : routeModel ? 'route' : 'missing',
-    endpointSource: envEndpoint ? 'environment' : endpoint ? 'model_api' : 'missing',
+    endpoint: endpointRequired
+      ? endpoint
+      : model
+        ? `https://router.huggingface.co/hf-inference/models/${model}`
+        : null,
+    modelSource: definition.model ? 'registry' : routeModel ? 'route' : 'missing',
+    endpointSource: endpoint
+      ? 'specialist_registry'
+      : endpointRequired
+        ? 'missing'
+        : 'model_api',
     endpointRequired,
-    configured: Boolean(model && endpoint),
-    requiredEnv: endpointRequired
-      ? [endpointEnv, 'HF_SPECIALIST_ENDPOINTS_JSON', modelEnv, 'HF_SPECIALIST_MODELS_JSON']
-      : [modelEnv, endpointEnv, 'HF_SPECIALIST_MODELS_JSON', 'HF_SPECIALIST_ENDPOINTS_JSON'],
+    configured: definition.adultOnly || (!endpointRequired && Boolean(model)) || Boolean(endpoint),
+    requiredEnv: ['HF_SPECIALIST_ENDPOINTS_JSON'],
+    adultOnly: definition.adultOnly,
+    supportsRouterModelApi: definition.supportsRouterModelApi,
+    registryCapability: definition.capability,
   }
 }

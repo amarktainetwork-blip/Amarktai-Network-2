@@ -22,6 +22,7 @@ import { CAPABILITY_REGISTRY } from '@/lib/providers/capability-registry'
 import { getCanonicalProviderHealth } from '@/lib/providers/health'
 import { buildProviderCapabilityContracts } from '@/lib/providers/provider-capability-contracts'
 import { getProviderCapabilityAdapter, providerHasCanonicalPollingContract } from '@/lib/ai-capability-adapters'
+import { resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 import {
   proveAudioBedGeneration,
   proveCaptionsSubtitlesPipeline,
@@ -1258,8 +1259,7 @@ function hasJsonEndpointConfig(raw: string | undefined, keys: string[]): boolean
 
 function hasRerankEndpointConfig(): boolean {
   return Boolean(
-    process.env.HF_ENDPOINT_RERANK?.trim()
-      || hasJsonEndpointConfig(process.env.HF_SPECIALIST_ENDPOINTS_JSON, ['rerank', 'text_ranking', 'text-ranking'])
+    resolveHfSpecialistConfig('rerank').endpointSource === 'specialist_registry'
       || hasJsonEndpointConfig(process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON, ['rerank', 'text_ranking', 'text-ranking']),
   )
 }
@@ -1272,7 +1272,7 @@ async function proveRerank(): Promise<CapabilityProof> {
     'rerank/search relevance',
     'rerank_search_relevance',
     'src/lib/providers/provider-capability-contracts.ts',
-    'Rerank route is source-wired, but live proof requires HF_ENDPOINT_RERANK or HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.',
+    'Rerank route is source-wired, but live proof requires HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.',
   )
 }
 

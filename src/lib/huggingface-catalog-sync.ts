@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { HF_SPECIALIST_DEFAULT_MODELS, resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
+import { HF_SPECIALIST_REGISTRY, resolveHfSpecialistConfig } from '@/lib/hf-specialist-config'
 
 const TASKS = [
   'text-generation',
@@ -126,14 +126,14 @@ function configuredApprovedModels() {
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean)
-  return new Set([...configured, ...Object.values(HF_SPECIALIST_DEFAULT_MODELS)])
+  return new Set([...configured, ...HF_SPECIALIST_REGISTRY.map((entry) => entry.model)])
 }
 
 function specialistEndpointForModel(modelId: string) {
-  for (const capability of Object.keys(HF_SPECIALIST_DEFAULT_MODELS)) {
-    if (HF_SPECIALIST_DEFAULT_MODELS[capability] !== modelId) continue
-    const resolved = resolveHfSpecialistConfig(capability)
-    if (resolved.endpointSource === 'environment') return resolved.endpoint
+  for (const entry of HF_SPECIALIST_REGISTRY) {
+    if (entry.model !== modelId) continue
+    const resolved = resolveHfSpecialistConfig(entry.capability)
+    if (resolved.endpointSource === 'specialist_registry') return resolved.endpoint
   }
   return null
 }

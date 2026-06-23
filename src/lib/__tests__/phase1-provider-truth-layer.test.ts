@@ -58,7 +58,6 @@ describe('Phase 1 provider truth layer', () => {
     })
     delete process.env.HF_PRIVATE_ENDPOINTS_JSON
     delete process.env.HF_DEDICATED_ENDPOINTS_JSON
-    delete process.env.HF_ENDPOINT_RERANK
     delete process.env.HF_SPECIALIST_ENDPOINTS_JSON
     delete process.env.TOGETHER_DEDICATED_ENDPOINTS_JSON
     delete process.env.TOGETHER_VIDEO_RUNTIME_ENABLED
@@ -270,11 +269,11 @@ describe('Phase 1 provider truth layer', () => {
     expect(models.find((model) => model.id === 'org/runtime-rerank')?.metadata).toMatchObject({
       executable: 'REQUIRES_DEDICATED_ENDPOINT',
       executionClassification: 'endpoint_required',
-      endpointEnv: 'HF_ENDPOINT_RERANK',
+      endpointEnv: 'HF_SPECIALIST_ENDPOINTS_JSON',
     })
   })
 
-  it('keeps Hugging Face TTS, STT, and image edit specialist blockers aligned in normalized discovery', () => {
+  it('keeps Hugging Face TTS, STT, and image edit execution truth aligned in normalized discovery', () => {
     const models = normalizeProviderCatalog('huggingface', [
       { id: 'org/runtime-image-edit', pipeline_tag: 'image-to-image', available: true },
       { id: 'org/runtime-tts', pipeline_tag: 'text-to-speech', available: true },
@@ -282,19 +281,19 @@ describe('Phase 1 provider truth layer', () => {
     ])
 
     expect(models.find((model) => model.id === 'org/runtime-image-edit')?.metadata).toMatchObject({
-      executable: 'REQUIRES_DEDICATED_ENDPOINT',
-      executionClassification: 'endpoint_required',
-      endpointEnv: 'HF_ENDPOINT_IMAGE_EDIT',
+      executable: true,
+      executionClassification: 'executable',
+      endpointEnv: null,
     })
     expect(models.find((model) => model.id === 'org/runtime-tts')?.metadata).toMatchObject({
-      executable: 'REQUIRES_DEDICATED_ENDPOINT',
-      executionClassification: 'endpoint_required',
-      endpointEnv: 'HF_ENDPOINT_TTS',
+      executable: true,
+      executionClassification: 'executable',
+      endpointEnv: null,
     })
     expect(models.find((model) => model.id === 'org/runtime-asr')?.metadata).toMatchObject({
-      executable: 'REQUIRES_DEDICATED_ENDPOINT',
-      executionClassification: 'endpoint_required',
-      endpointEnv: 'HF_ENDPOINT_STT',
+      executable: true,
+      executionClassification: 'executable',
+      endpointEnv: null,
     })
   })
 
