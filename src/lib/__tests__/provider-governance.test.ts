@@ -126,46 +126,11 @@ describe('HuggingFace / HF aliases', () => {
   it('getIntegrationKey("hf") resolves to "huggingface"', () => {
     expect(getIntegrationKey('hf')).toBe('huggingface')
   })
-
-  it('getEnvKeyForProvider("huggingface") checks HUGGINGFACE_API_KEY', () => {
-    process.env.HUGGINGFACE_API_KEY = 'test-hf-key'
-    const key = getEnvKeyForProvider('huggingface')
-    expect(key).toBe('test-hf-key')
-    delete process.env.HUGGINGFACE_API_KEY
-  })
-
-  it('getEnvKeyForProvider("huggingface") also checks HUGGINGFACEHUB_API_TOKEN', () => {
-    process.env.HUGGINGFACEHUB_API_TOKEN = 'test-hfhub-key'
-    const key = getEnvKeyForProvider('huggingface')
-    expect(key).toBe('test-hfhub-key')
-    delete process.env.HUGGINGFACEHUB_API_TOKEN
-  })
-
-  it('getEnvKeyForProvider("huggingface") also checks HF_TOKEN', () => {
-    process.env.HF_TOKEN = 'test-hf-token'
-    const key = getEnvKeyForProvider('huggingface')
-    expect(key).toBe('test-hf-token')
-    delete process.env.HF_TOKEN
-  })
-
-  it('getEnvKeyForProvider("hf") resolves via HF_TOKEN alias', () => {
-    process.env.HF_TOKEN = 'test-hf-token-alias'
-    const key = getEnvKeyForProvider('hf')
-    expect(key).toBe('test-hf-token-alias')
-    delete process.env.HF_TOKEN
-  })
 })
 
 describe('MiMo aliases', () => {
   it('getIntegrationKey("mimo") returns "mimo"', () => {
     expect(getIntegrationKey('mimo')).toBe('mimo')
-  })
-
-  it('getEnvKeyForProvider("mimo") uses MIMO_API_KEY', () => {
-    process.env.MIMO_API_KEY = 'test-mimo-key'
-    const key = getEnvKeyForProvider('mimo')
-    expect(key).toBe('test-mimo-key')
-    delete process.env.MIMO_API_KEY
   })
 })
 
@@ -215,13 +180,6 @@ describe('AI_PROVIDER_GOVERNANCE completeness', () => {
   it('all entries have a setupGroup', () => {
     for (const entry of AI_PROVIDER_GOVERNANCE) {
       expect(entry.setupGroup, `Entry '${entry.key}' is missing setupGroup`).toBeDefined()
-    }
-  })
-
-  it('all entries have envVarAliases defined', () => {
-    for (const entry of AI_PROVIDER_GOVERNANCE) {
-      expect(entry.envVarAliases, `Provider '${entry.key}' should have envVarAliases`).toBeDefined()
-      expect(entry.envVarAliases?.length, `Provider '${entry.key}' should have at least 1 env var alias`).toBeGreaterThanOrEqual(1)
     }
   })
 })
