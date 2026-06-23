@@ -12,22 +12,6 @@ interface OpenAICompatibleConfig {
 }
 
 const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
-  qwen: {
-    providerKey: 'qwen',
-    baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-    envVars: ['DASHSCOPE_API_KEY', 'QWEN_API_KEY'],
-    defaultModel: 'qwen-plus',
-    timeoutMs: 25_000,
-    supportsStreaming: true,
-  },
-  deepseek: {
-    providerKey: 'deepseek',
-    baseUrl: 'https://api.deepseek.com/v1',
-    envVars: ['DEEPSEEK_API_KEY'],
-    defaultModel: 'deepseek-chat',
-    timeoutMs: 30_000,
-    supportsStreaming: true,
-  },
   groq: {
     providerKey: 'groq',
     baseUrl: 'https://api.groq.com/openai/v1',
@@ -44,47 +28,11 @@ const OPENAI_COMPATIBLE: Record<string, OpenAICompatibleConfig> = {
     timeoutMs: 30_000,
     supportsStreaming: true,
   },
-  openrouter: {
-    providerKey: 'openrouter',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    envVars: ['OPENROUTER_API_KEY'],
-    defaultModel: 'openai/gpt-4o-mini',
-    timeoutMs: 35_000,
-    supportsStreaming: true,
-    extraHeaders: {
-      'HTTP-Referer': 'https://amarktai.com',
-      'X-Title': 'Amarktai Network',
-    },
-  },
-  moonshot: {
-    providerKey: 'moonshot',
-    baseUrl: 'https://api.moonshot.ai/v1',
-    envVars: ['MOONSHOT_API_KEY'],
-    defaultModel: 'kimi-k2.6',
-    timeoutMs: 45_000,
-    supportsStreaming: true,
-  },
-  zhipu: {
-    providerKey: 'zhipu',
-    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    envVars: ['ZHIPU_API_KEY'],
-    defaultModel: 'glm-5',
-    timeoutMs: 35_000,
-    supportsStreaming: true,
-  },
-  minimax: {
-    providerKey: 'minimax',
-    baseUrl: 'https://api.minimax.io/v1',
-    envVars: ['MINIMAX_API_KEY', 'MIMO_API_KEY'],
-    defaultModel: 'MiniMax-M2.7',
-    timeoutMs: 35_000,
-    supportsStreaming: true,
-  },
   mimo: {
-    providerKey: 'minimax',
-    baseUrl: 'https://api.minimax.io/v1',
-    envVars: ['MIMO_API_KEY', 'MINIMAX_API_KEY'],
-    defaultModel: 'MiniMax-M2.7',
+    providerKey: 'mimo',
+    baseUrl: 'https://api.xiaomimimo.com/v1',
+    envVars: ['MIMO_API_KEY', 'XIAOMI_API_KEY'],
+    defaultModel: 'mimo-v2.5',
     timeoutMs: 35_000,
     supportsStreaming: true,
   },
@@ -135,7 +83,7 @@ export function listUniversalProviders() {
 }
 
 function resolveUniversalConfig(providerKey: string) {
-  return OPENAI_COMPATIBLE[providerKey === 'mimo' ? 'mimo' : providerKey]
+  return OPENAI_COMPATIBLE[providerKey]
 }
 
 function resolveModel(request: UniversalProviderRequest, config: OpenAICompatibleConfig) {

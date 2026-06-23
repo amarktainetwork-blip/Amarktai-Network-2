@@ -32,7 +32,6 @@ export type ProviderCapability =
 export type ProviderMeshId =
   | 'genx'
   | 'huggingface'
-  | 'qwen'
   | 'mimo'
   | 'groq'
   | 'together'
@@ -93,21 +92,6 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     systemVisible: true,
     asyncJobs: false,
     artifactHandling: 'download',
-  },
-  {
-    id: 'qwen',
-    displayName: 'Qwen / DashScope',
-    kind: 'provider',
-    envAliases: ['QWEN_API_KEY', 'DASHSCOPE_API_KEY'],
-    baseUrl: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-    authMethod: 'Bearer token',
-    capabilities: ['text', 'streaming_text', 'reasoning', 'code', 'vision', 'image', 'video', 'audio', 'async_jobs'],
-    testRoute: '/api/admin/settings/test-provider',
-    normalUserVisible: false,
-    settingsVisible: true,
-    systemVisible: true,
-    asyncJobs: true,
-    artifactHandling: 'remote_url',
   },
   {
     id: 'mimo',

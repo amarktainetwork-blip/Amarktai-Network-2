@@ -2,13 +2,10 @@
  * Provider Governance Tests
  *
  * Verifies:
+ *  - Final 5 active AI providers are correctly defined
+ *  - Removed providers are NOT active
  *  - setupGroup grouping functions return correct providers
- *  - Qwen aliases resolve correctly (dashscope → qwen)
- *  - MiniMax/Mimo aliases resolve correctly (mimo → minimax)
  *  - HuggingFace aliases resolve correctly (hf → huggingface)
- *  - xAI/Grok aliases resolve correctly (grok → xai)
- *  - Hidden/backlog providers do not appear in primary or specialist setup lists
- *  - Deprecated providers do not appear in setup lists
  *  - Only supported providers appear in visible lists
  */
 
@@ -26,54 +23,75 @@ import {
 } from '@/lib/ai-provider-governance'
 import { getIntegrationKey, getEnvKeyForProvider } from '@/lib/provider-config'
 
-// ── Grouping helper tests ─────────────────────────────────────────────────────
+// ── Final 5 Active AI Providers ──────────────────────────────────────────────
 
-describe('getPrimarySetupProviders()', () => {
+describe('Final active AI provider policy', () => {
+  it('has exactly 5 active AI providers in primary setup', () => {
+    const primary = getPrimarySetupProviders()
+    expect(primary.length).toBe(5)
+  })
+
+  it('active AI providers are exactly genx, huggingface, mimo, groq, together', () => {
+    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(keys.has('genx')).toBe(true)
+    expect(keys.has('huggingface')).toBe(true)
+    expect(keys.has('mimo')).toBe(true)
+    expect(keys.has('groq')).toBe(true)
+    expect(keys.has('together')).toBe(true)
+    expect(keys.size).toBe(5)
+  })
+
   it('returns providers with setupGroup === primary', () => {
     const primary = getPrimarySetupProviders()
     expect(primary.every(p => p.setupGroup === 'primary')).toBe(true)
   })
+})
 
-  it('includes all required primary providers', () => {
-    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    const required = ['genx', 'github', 'qwen', 'minimax', 'mimo', 'deepseek', 'gemini', 'huggingface', 'groq', 'together', 'local-crawler', 'mem0', 'webdock']
-    for (const key of required) {
-      expect(keys.has(key), `Primary providers should include '${key}'`).toBe(true)
+// ── Removed providers are NOT active ─────────────────────────────────────────
+
+describe('Removed providers are not active', () => {
+  const removedProviders = [
+    'qwen', 'dashscope', 'openai', 'gemini', 'minimax',
+    'moonshot', 'openrouter', 'xai', 'grok', 'deepseek',
+    'anthropic', 'cohere', 'nvidia', 'replicate', 'elevenlabs', 'deepgram',
+    'mistral', 'zhipu', 'github', 'redis', 'qdrant', 'local-crawler',
+    'playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'storage', 'smtp'
+  ]
+
+  it('none of the removed providers appear in primary setup', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    for (const key of removedProviders) {
+      expect(primaryKeys.has(key), `'${key}' should not be in primary setup`).toBe(false)
     }
   })
 
-  it('does NOT include xai/grok in primary (it is advanced)', () => {
-    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    expect(keys.has('xai')).toBe(false)
+  it('Qwen is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('qwen')).toBe(false)
   })
 
-  it('does NOT include openrouter in primary (it is advanced)', () => {
-    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    expect(keys.has('openrouter')).toBe(false)
+  it('MiniMax is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('minimax')).toBe(false)
   })
 
-  it('does NOT include moonshot in primary (it is advanced)', () => {
-    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    expect(keys.has('moonshot')).toBe(false)
+  it('OpenAI is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('openai')).toBe(false)
   })
 
-  it('does NOT include zhipu in primary (it is advanced)', () => {
-    const keys = new Set(getPrimarySetupProviders().map(p => p.key))
-    expect(keys.has('zhipu')).toBe(false)
+  it('Gemini is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('gemini')).toBe(false)
   })
 })
+
+// ── Grouping helper tests ─────────────────────────────────────────────────────
 
 describe('getSpecialistSetupProviders()', () => {
   it('returns providers with setupGroup === specialist', () => {
     const specialist = getSpecialistSetupProviders()
     expect(specialist.every(p => p.setupGroup === 'specialist')).toBe(true)
-  })
-
-  it('includes replicate, elevenlabs, and deepgram', () => {
-    const keys = new Set(getSpecialistSetupProviders().map(p => p.key))
-    expect(keys.has('replicate')).toBe(true)
-    expect(keys.has('elevenlabs')).toBe(true)
-    expect(keys.has('deepgram')).toBe(true)
   })
 })
 
@@ -82,164 +100,23 @@ describe('getAdvancedSetupProviders()', () => {
     const advanced = getAdvancedSetupProviders()
     expect(advanced.every(p => p.setupGroup === 'advanced')).toBe(true)
   })
-
-  it('keeps OpenAI hidden and includes advanced routing providers', () => {
-    const keys = new Set(getAdvancedSetupProviders().map(p => p.key))
-    expect(keys.has('openai')).toBe(false)
-    expect(keys.has('openrouter')).toBe(true)
-    expect(keys.has('xai')).toBe(true)
-    expect(keys.has('moonshot')).toBe(true)
-    expect(keys.has('zhipu')).toBe(true)
-  })
 })
 
 describe('getHiddenProviders()', () => {
-  it('returns providers with setupGroup === hidden', () => {
+  it('returns empty array (no hidden providers in final policy)', () => {
     const hidden = getHiddenProviders()
-    expect(hidden.every(p => p.setupGroup === 'hidden')).toBe(true)
-  })
-
-  it('includes cohere and mistral as hidden', () => {
-    const keys = new Set(getHiddenProviders().map(p => p.key))
-    expect(keys.has('cohere')).toBe(true)
-    expect(keys.has('mistral')).toBe(true)
+    expect(hidden.length).toBe(0)
   })
 })
 
 describe('getBacklogProviders()', () => {
-  it('returns providers with setupGroup === backlog from both sources', () => {
+  it('returns empty array (no backlog providers in final policy)', () => {
     const backlog = getBacklogProviders()
-    expect(backlog.every(p => p.setupGroup === 'backlog')).toBe(true)
-  })
-
-  it('includes suno and udio from main governance backlog', () => {
-    const keys = new Set(getBacklogProviders().map(p => p.key))
-    expect(keys.has('suno')).toBe(true)
-    expect(keys.has('udio')).toBe(true)
-  })
-
-  it('includes perplexity, tavily, jina from PROPOSED_PROVIDER_BACKLOG', () => {
-    const keys = new Set(getBacklogProviders().map(p => p.key))
-    expect(keys.has('perplexity')).toBe(true)
-    expect(keys.has('tavily')).toBe(true)
-    expect(keys.has('jina')).toBe(true)
-  })
-
-  it('includes runpod, fal, fireworks, cerebras from PROPOSED_PROVIDER_BACKLOG', () => {
-    const keys = new Set(getBacklogProviders().map(p => p.key))
-    expect(keys.has('runpod')).toBe(true)
-    expect(keys.has('fal')).toBe(true)
-    expect(keys.has('fireworks')).toBe(true)
-    expect(keys.has('cerebras')).toBe(true)
-  })
-})
-
-// ── Hidden providers do not appear in setup lists ─────────────────────────────
-
-describe('Hidden/backlog/deprecated providers not in primary or specialist lists', () => {
-  const hiddenAndBacklogKeys = new Set([
-    'cohere', 'mistral', 'suno', 'udio',
-    'perplexity', 'tavily', 'jina', 'runpod', 'fal', 'fireworks', 'cerebras',
-  ])
-
-  it('none of the hidden/backlog providers appear in primary setup', () => {
-    const primary = new Set(getPrimarySetupProviders().map(p => p.key))
-    for (const key of hiddenAndBacklogKeys) {
-      expect(primary.has(key), `'${key}' should not be in primary setup`).toBe(false)
-    }
-  })
-
-  it('none of the hidden/backlog providers appear in specialist setup', () => {
-    const specialist = new Set(getSpecialistSetupProviders().map(p => p.key))
-    for (const key of hiddenAndBacklogKeys) {
-      expect(specialist.has(key), `'${key}' should not be in specialist setup`).toBe(false)
-    }
-  })
-
-  it('hidden providers have showInPrimarySetup=false', () => {
-    const hidden = getHiddenProviders()
-    expect(hidden.every(p => p.showInPrimarySetup === false)).toBe(true)
-  })
-
-  it('advanced providers have showInPrimarySetup=false', () => {
-    const advanced = getAdvancedSetupProviders()
-    expect(advanced.every(p => p.showInPrimarySetup === false)).toBe(true)
+    expect(backlog.length).toBe(0)
   })
 })
 
 // ── Alias tests (via provider-config.ts) ──────────────────────────────────────
-
-describe('Qwen / DashScope aliases', () => {
-  it('getIntegrationKey("qwen") returns "qwen"', () => {
-    expect(getIntegrationKey('qwen')).toBe('qwen')
-  })
-
-  it('getIntegrationKey("dashscope") resolves to "qwen"', () => {
-    expect(getIntegrationKey('dashscope')).toBe('qwen')
-  })
-
-  it('getEnvKeyForProvider("qwen") checks QWEN_API_KEY', () => {
-    process.env.QWEN_API_KEY = 'test-qwen-key'
-    const key = getEnvKeyForProvider('qwen')
-    expect(key).toBe('test-qwen-key')
-    delete process.env.QWEN_API_KEY
-  })
-
-  it('getEnvKeyForProvider("dashscope") resolves via DASHSCOPE_API_KEY alias', () => {
-    process.env.DASHSCOPE_API_KEY = 'test-dashscope-key'
-    const key = getEnvKeyForProvider('dashscope')
-    expect(key).toBe('test-dashscope-key')
-    delete process.env.DASHSCOPE_API_KEY
-  })
-})
-
-describe('MiniMax and Xiaomi MiMo providers', () => {
-  it('getIntegrationKey("minimax") returns "minimax"', () => {
-    expect(getIntegrationKey('minimax')).toBe('minimax')
-  })
-
-  it('getIntegrationKey("mimo") remains independent', () => {
-    expect(getIntegrationKey('mimo')).toBe('mimo')
-  })
-
-  it('getEnvKeyForProvider("minimax") checks MINIMAX_API_KEY', () => {
-    process.env.MINIMAX_API_KEY = 'test-minimax-key'
-    const key = getEnvKeyForProvider('minimax')
-    expect(key).toBe('test-minimax-key')
-    delete process.env.MINIMAX_API_KEY
-  })
-
-  it('getEnvKeyForProvider("mimo") uses MIMO_API_KEY', () => {
-    process.env.MIMO_API_KEY = 'test-mimo-key'
-    const key = getEnvKeyForProvider('mimo')
-    expect(key).toBe('test-mimo-key')
-    delete process.env.MIMO_API_KEY
-  })
-})
-
-describe('xAI / Grok aliases', () => {
-  it('getIntegrationKey("xai") returns "xai"', () => {
-    expect(getIntegrationKey('xai')).toBe('xai')
-  })
-
-  it('getIntegrationKey("grok") resolves to "xai"', () => {
-    expect(getIntegrationKey('grok')).toBe('xai')
-  })
-
-  it('getEnvKeyForProvider("xai") checks XAI_API_KEY', () => {
-    process.env.XAI_API_KEY = 'test-xai-key'
-    const key = getEnvKeyForProvider('xai')
-    expect(key).toBe('test-xai-key')
-    delete process.env.XAI_API_KEY
-  })
-
-  it('getEnvKeyForProvider("grok") resolves via GROK_API_KEY alias', () => {
-    process.env.GROK_API_KEY = 'test-grok-key'
-    const key = getEnvKeyForProvider('grok')
-    expect(key).toBe('test-grok-key')
-    delete process.env.GROK_API_KEY
-  })
-})
 
 describe('HuggingFace / HF aliases', () => {
   it('getIntegrationKey("huggingface") returns "huggingface"', () => {
@@ -279,31 +156,27 @@ describe('HuggingFace / HF aliases', () => {
   })
 })
 
-describe('Replicate aliases', () => {
-  it('getEnvKeyForProvider("replicate") checks REPLICATE_API_TOKEN first', () => {
-    process.env.REPLICATE_API_TOKEN = 'test-r8-token'
-    const key = getEnvKeyForProvider('replicate')
-    expect(key).toBe('test-r8-token')
-    delete process.env.REPLICATE_API_TOKEN
+describe('MiMo aliases', () => {
+  it('getIntegrationKey("mimo") returns "mimo"', () => {
+    expect(getIntegrationKey('mimo')).toBe('mimo')
   })
 
-  it('getEnvKeyForProvider("replicate") falls back to REPLICATE_API_KEY', () => {
-    process.env.REPLICATE_API_KEY = 'test-r8-key'
-    const key = getEnvKeyForProvider('replicate')
-    expect(key).toBe('test-r8-key')
-    delete process.env.REPLICATE_API_KEY
+  it('getEnvKeyForProvider("mimo") uses MIMO_API_KEY', () => {
+    process.env.MIMO_API_KEY = 'test-mimo-key'
+    const key = getEnvKeyForProvider('mimo')
+    expect(key).toBe('test-mimo-key')
+    delete process.env.MIMO_API_KEY
   })
 })
 
 // ── Adult specialist providers ────────────────────────────────────────────────
 
 describe('getAdultSpecialistProviderKeys()', () => {
-  it('includes together, huggingface, replicate, xai', () => {
+  it('includes genx, huggingface, together', () => {
     const keys = getAdultSpecialistProviderKeys()
-    expect(keys.has('together')).toBe(true)
+    expect(keys.has('genx')).toBe(true)
     expect(keys.has('huggingface')).toBe(true)
-    expect(keys.has('replicate')).toBe(true)
-    expect(keys.has('xai')).toBe(true)
+    expect(keys.has('together')).toBe(true)
   })
 })
 
@@ -313,7 +186,6 @@ describe('getRuntimeProviderGovernance()', () => {
   it('does not include backlog providers', () => {
     const runtime = getRuntimeProviderGovernance()
     const keys = new Set(runtime.map(p => p.key))
-    // suno and udio are backlog
     expect(keys.has('suno')).toBe(false)
     expect(keys.has('udio')).toBe(false)
   })
@@ -321,22 +193,19 @@ describe('getRuntimeProviderGovernance()', () => {
   it('does not include proposed providers', () => {
     const runtime = getRuntimeProviderGovernance()
     const runtimeSet = new Set(runtime.map(p => p.key))
-    // All PROPOSED_PROVIDER_BACKLOG keys should not appear in runtime
     for (const p of PROPOSED_PROVIDER_BACKLOG) {
       expect(runtimeSet.has(p.key), `Backlog provider '${p.key}' should not be in runtime governance`).toBe(false)
     }
   })
 
-  it('includes active primary and specialist providers', () => {
+  it('includes only active providers', () => {
     const runtime = getRuntimeProviderGovernance()
     const keys = new Set(runtime.map(p => p.key))
     expect(keys.has('genx')).toBe(true)
-    expect(keys.has('qwen')).toBe(true)
-    expect(keys.has('minimax')).toBe(true)
-    expect(keys.has('deepseek')).toBe(true)
-    expect(keys.has('replicate')).toBe(true)
-    expect(keys.has('elevenlabs')).toBe(true)
-    expect(keys.has('deepgram')).toBe(true)
+    expect(keys.has('huggingface')).toBe(true)
+    expect(keys.has('mimo')).toBe(true)
+    expect(keys.has('groq')).toBe(true)
+    expect(keys.has('together')).toBe(true)
   })
 })
 
@@ -349,27 +218,10 @@ describe('AI_PROVIDER_GOVERNANCE completeness', () => {
     }
   })
 
-  it('all entries have envVarAliases defined for aliased providers', () => {
-    const aliasedProviders = ['qwen', 'huggingface', 'xai', 'replicate']
-    for (const key of aliasedProviders) {
-      const entry = AI_PROVIDER_GOVERNANCE.find(p => p.key === key)
-      expect(entry?.envVarAliases, `Provider '${key}' should have envVarAliases`).toBeDefined()
-      expect(entry?.envVarAliases?.length, `Provider '${key}' should have at least 2 env var aliases`).toBeGreaterThanOrEqual(2)
+  it('all entries have envVarAliases defined', () => {
+    for (const entry of AI_PROVIDER_GOVERNANCE) {
+      expect(entry.envVarAliases, `Provider '${entry.key}' should have envVarAliases`).toBeDefined()
+      expect(entry.envVarAliases?.length, `Provider '${entry.key}' should have at least 1 env var alias`).toBeGreaterThanOrEqual(1)
     }
-  })
-
-  it('Qwen notes mentions DASHSCOPE_API_KEY alias', () => {
-    const qwen = AI_PROVIDER_GOVERNANCE.find(p => p.key === 'qwen')
-    expect(qwen?.notes ?? '').toContain('DASHSCOPE_API_KEY')
-  })
-
-  it('MiniMax notes keeps Xiaomi MiMo separate', () => {
-    const mm = AI_PROVIDER_GOVERNANCE.find(p => p.key === 'minimax')
-    expect(mm?.notes ?? '').toContain('Xiaomi MiMo is configured separately')
-  })
-
-  it('HuggingFace notes mentions HUGGINGFACEHUB_API_TOKEN alias', () => {
-    const hf = AI_PROVIDER_GOVERNANCE.find(p => p.key === 'huggingface')
-    expect(hf?.notes ?? '').toContain('HUGGINGFACEHUB_API_TOKEN')
   })
 })

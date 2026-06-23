@@ -77,7 +77,7 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     name: 'Text → Image → Video',
     description: 'Generate a description, create an image from it, then animate to video',
     stages: [
-      { name: 'Enhance Prompt', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-plus', config: { systemPrompt: 'Enhance this text into a detailed visual description for image generation.' } },
+      { name: 'Enhance Prompt', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Enhance this text into a detailed visual description for image generation.' } },
       { name: 'Generate Image', inputModality: 'text', outputModality: 'image', provider: 'together', model: 'black-forest-labs/FLUX.1-schnell', config: { width: 1024, height: 1024 } },
       { name: 'Animate to Video', inputModality: 'image', outputModality: 'video', provider: 'genx', model: 'genx/default-video', config: { duration: 4 } },
     ],
@@ -86,7 +86,7 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     name: 'Text → Code → Review',
     description: 'Generate code from requirements, then review it for quality',
     stages: [
-      { name: 'Generate Code', inputModality: 'text', outputModality: 'code', provider: 'qwen', model: 'qwen-coder-plus', config: {} },
+      { name: 'Generate Code', inputModality: 'text', outputModality: 'code', provider: 'mimo', model: 'mimo-v2.5', config: {} },
       { name: 'Review Code', inputModality: 'code', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Review this code for bugs, security issues, and best practices.' } },
     ],
   },
@@ -95,7 +95,7 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     description: 'Describe an image with vision, then generate an enhanced version',
     stages: [
       { name: 'Describe Image', inputModality: 'image', outputModality: 'text', provider: 'genx', model: 'genx/default-vision', config: { systemPrompt: 'Describe this image in vivid detail.' } },
-      { name: 'Enhance Description', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-max', config: { systemPrompt: 'Enhance this description with more artistic and detailed elements.' } },
+      { name: 'Enhance Description', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Enhance this description with more artistic and detailed elements.' } },
       { name: 'Generate Enhanced', inputModality: 'text', outputModality: 'image', provider: 'together', model: 'black-forest-labs/FLUX.1-schnell', config: {} },
     ],
   },
@@ -111,8 +111,8 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     name: 'Query → Research → Synthesize → Report',
     description: 'Multi-stage research with synthesis',
     stages: [
-      { name: 'Expand Query', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-plus', config: { systemPrompt: 'Break this research question into 3 specific sub-questions.' } },
-      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'mimo', model: 'mimo-v2-pro', config: { systemPrompt: 'Provide thorough research and analysis.' } },
+      { name: 'Expand Query', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Break this research question into 3 specific sub-questions.' } },
+      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'mimo', model: 'mimo-v2.5', config: { systemPrompt: 'Provide thorough research and analysis.' } },
       { name: 'Synthesize Report', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Synthesize into a clear, well-structured research report with sections.' } },
     ],
   },

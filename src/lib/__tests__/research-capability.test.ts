@@ -6,7 +6,14 @@
  *  - deep_research capability is available with backend route
  *  - classification rules map research queries to correct capabilities
  *  - both capabilities appear in detailed status
- *  - provider suggestion lists include OpenAI and Gemini
+ *  - provider suggestion lists include active providers only
+ *
+ * FINAL ACTIVE AI PROVIDERS (5 ONLY):
+ *   - genx
+ *   - huggingface
+ *   - mimo
+ *   - groq
+ *   - together
  */
 
 import { describe, it, expect } from 'vitest'
@@ -35,15 +42,14 @@ describe('Research Capability Backend Truth', () => {
     const map = CAPABILITY_MAP as Record<string, { label?: string; suggestedProviders?: string[] }>
     expect(map.research_search).toBeDefined()
     expect(map.research_search.label).toContain('research')
-    expect(map.research_search.suggestedProviders).toContain('openai')
+    expect(map.research_search.suggestedProviders).toContain('genx')
   })
 
   it('deep_research is in CAPABILITY_MAP', () => {
     const map = CAPABILITY_MAP as Record<string, { label?: string; suggestedProviders?: string[] }>
     expect(map.deep_research).toBeDefined()
     expect(map.deep_research.label).toContain('research')
-    expect(map.deep_research.suggestedProviders).toContain('openai')
-    expect(map.deep_research.suggestedProviders).toContain('gemini')
+    expect(map.deep_research.suggestedProviders).toContain('genx')
   })
 
   it('research capabilities appear in detailed status', () => {

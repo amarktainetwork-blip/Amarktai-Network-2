@@ -90,81 +90,79 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   retrieval: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'retrieval / RAG',
-    suggestedProviders: ['openai', 'huggingface', 'nvidia'],
+    suggestedProviders: ['huggingface', 'together'],
   },
   embeddings: {
     anyCapabilityFlag: ['supports_embeddings'],
     label: 'text embeddings',
-    suggestedProviders: ['openai', 'qwen', 'gemini', 'huggingface'],
+    suggestedProviders: ['huggingface', 'together'],
   },
   reranking: {
     anyCapabilityFlag: ['supports_reranking'],
     label: 'reranking',
-    suggestedProviders: ['nvidia', 'huggingface'],
+    suggestedProviders: ['huggingface', 'together'],
   },
   summarization: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'summarization',
-    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   classification: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'text classification',
-    suggestedProviders: ['openai', 'groq', 'deepseek'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   validation: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'output validation',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   agent_planning: {
     anyCapabilityFlag: ['supports_agent_planning'],
     label: 'agent planning',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   multimodal_understanding: {
     anyCapabilityFlag: ['supports_vision'],
     label: 'multimodal / vision understanding',
-    suggestedProviders: ['openai', 'gemini', 'huggingface'],
+    suggestedProviders: ['genx', 'huggingface', 'mimo'],
   },
   image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image generation',
-    suggestedProviders: ['openai', 'together', 'gemini', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   image_editing: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'image editing',
-    suggestedProviders: ['openai', 'huggingface'],
+    suggestedProviders: ['genx', 'huggingface', 'together'],
   },
   video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'video planning / storyboarding',
-    suggestedProviders: ['gemini', 'groq', 'openai', 'deepseek'],
+    suggestedProviders: ['genx', 'groq', 'together'],
   },
   video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'video generation',
-    // Hugging Face is NOT a valid video generation provider (no async job API).
-    // Gemini Veo 2 requires Vertex AI enterprise tier — not available via standard API key.
-    suggestedProviders: ['genx', 'together', 'qwen'],
+    suggestedProviders: ['genx', 'together'],
   },
   voice_input: {
     anyCapabilityFlag: ['supports_stt', 'supports_voice_interaction'],
     anyRole: ['voice_interaction'],
     label: 'voice / speech input (STT)',
-    suggestedProviders: ['groq', 'openai', 'gemini', 'qwen', 'huggingface'],
+    suggestedProviders: ['groq', 'huggingface', 'genx'],
   },
   voice_output: {
     anyCapabilityFlag: ['supports_tts'],
     anyRole: ['tts'],
     label: 'voice / speech output (TTS)',
-    suggestedProviders: ['groq', 'openai', 'gemini', 'huggingface'],
+    suggestedProviders: ['groq', 'huggingface', 'genx'],
   },
   realtime_voice: {
     anyCapabilityFlag: ['supports_voice_interaction'],
     label: 'realtime voice interaction',
-    suggestedProviders: ['openai'],
+    suggestedProviders: ['genx'],
   },
   adult_18plus_image: {
     anyCapabilityFlag: ['supports_image_generation'],
@@ -174,42 +172,42 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   moderation: {
     anyCapabilityFlag: ['supports_moderation'],
     label: 'content moderation',
-    suggestedProviders: ['openai'],
+    suggestedProviders: ['genx', 'groq', 'together'],
   },
   app_analysis: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'app analysis / crawl',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   research_search: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'research / web search',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   deep_research: {
     anyCapabilityFlag: ['supports_reasoning', 'supports_chat'],
     label: 'deep multi-step research',
-    suggestedProviders: ['openai', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   scraping_extraction: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'web scraping / data extraction',
-    suggestedProviders: ['openai', 'deepseek'],
+    suggestedProviders: ['genx', 'groq', 'together', 'mimo'],
   },
   suggestive_image_generation: {
     anyCapabilityFlag: ['supports_image_generation'],
     label: 'suggestive image generation (non-explicit)',
-    suggestedProviders: ['openai', 'together', 'qwen', 'huggingface'],
+    suggestedProviders: ['genx', 'together', 'huggingface'],
   },
   suggestive_video_planning: {
     anyCapabilityFlag: ['supports_video_planning'],
     label: 'suggestive video planning (non-explicit)',
-    suggestedProviders: ['openai', 'gemini'],
+    suggestedProviders: ['genx', 'together'],
   },
   suggestive_video_generation: {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'suggestive video generation (non-explicit, prompt-guarded)',
-    suggestedProviders: ['genx', 'qwen', 'together'],
+    suggestedProviders: ['genx', 'together'],
   },
 };
 

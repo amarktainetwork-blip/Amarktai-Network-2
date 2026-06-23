@@ -990,22 +990,22 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
     return Boolean(vaultVal)
   }
 
-  const [hasGroq, hasTogether, hasQwen, genxStatus] = await Promise.all([
+  const [hasGroq, hasTogether, hasMimo, genxStatus] = await Promise.all([
     resolveKey('groq'),
     resolveKey('together'),
-    resolveKey('qwen'),
+    resolveKey('mimo'),
     getGenXStatusAsync().catch(() => ({ available: false })),
   ])
 
   const hasGenX = Boolean(genxStatus.available)
-  const hasChatKey = hasGenX || hasGroq || hasTogether || hasQwen
+  const hasChatKey = hasGenX || hasGroq || hasTogether || hasMimo
   const audioProvider: MusicProvider | null = hasGenX ? 'genx' : null
 
   const configuredProviders: string[] = []
   if (hasGenX) configuredProviders.push('genx')
   if (hasGroq) configuredProviders.push('groq')
   if (hasTogether) configuredProviders.push('together')
-  if (hasQwen) configuredProviders.push('qwen')
+  if (hasMimo) configuredProviders.push('mimo')
 
   const note = hasChatKey
     ? audioProvider

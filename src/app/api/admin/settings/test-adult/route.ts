@@ -123,7 +123,6 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     const vaultKeyMap: Record<string, CoreProvider> = {
       together: 'together',
       huggingface: 'huggingface',
-      xai: 'xai',
     }
     // 'custom' has no corresponding vault key — skip vault lookup for it
     if (providerType !== 'custom') {

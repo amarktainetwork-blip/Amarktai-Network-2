@@ -13,7 +13,6 @@ export interface CanonicalProviderEntry {
 const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
   genx: ['chat', 'reasoning', 'code', 'image_generation', 'voice', 'agent_planning'],
   huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings'],
-  qwen: ['chat', 'reasoning', 'code', 'vision', 'image_generation', 'video_generation', 'voice'],
   mimo: ['chat', 'reasoning', 'code', 'vision', 'voice', 'video_understanding', 'tools'],
   groq: ['chat', 'reasoning', 'code', 'voice'],
   together: ['chat', 'code', 'image_generation'],

@@ -138,8 +138,7 @@ const MAX_REFINE_CONTEXT_CHARS = 14_000;
 
 /** Ordered preference for code-generation providers (best quality first). */
 const CODE_PROVIDER_PREFERENCE = [
-  'anthropic', 'openai', 'deepseek', 'groq', 'gemini',
-  'openrouter', 'grok', 'cohere', 'qwen', 'nvidia',
+  'genx', 'mimo', 'groq', 'together', 'huggingface',
 ]
 
 /**

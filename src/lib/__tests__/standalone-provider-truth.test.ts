@@ -40,8 +40,8 @@ describe('standalone provider truth', () => {
     const settings = await getPlatformSettingsTruth()
     const runtime = await getRuntimeProviderStatus()
 
-    expect(settings.providers.find((entry) => entry.key === 'qwen')?.status).toBe('Connected')
-    expect(runtime.find((entry) => entry.key === 'qwen')).toMatchObject({
+    expect(settings.providers.find((entry) => entry.key === 'groq')?.status).toBe('Connected')
+    expect(runtime.find((entry) => entry.key === 'groq')).toMatchObject({
       connected: true,
       status: 'configured_wired',
     })

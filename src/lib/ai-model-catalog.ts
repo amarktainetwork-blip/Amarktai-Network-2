@@ -53,11 +53,6 @@ const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
   huggingface: HUGGING_FACE_TASK_ROUTES.map((route) =>
     model('huggingface', route.id, route.label, 'Hugging Face Tasks', taskModality(route.capability), ['chat'], COST_TO_TIER[route.costMode], 'Task-based route.'),
   ),
-  qwen: [
-    model('qwen', 'qwen-turbo', 'Qwen Turbo', 'Qwen', ['text'], ['chat', 'coding'], 'low', 'Low-cost workbench route.'),
-    model('qwen', 'qwen-plus', 'Qwen Plus', 'Qwen', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Balanced Qwen route.'),
-    model('qwen', 'qwen-max', 'Qwen Max', 'Qwen', ['text'], ['chat', 'reasoning', 'coding'], 'medium', 'Higher quality Qwen route.'),
-  ],
   mimo: [
     model('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'medium', 'OpenAI-compatible reasoning, coding, and multimodal route.'),
     model('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'premium', 'Long-context reasoning and coding route.'),

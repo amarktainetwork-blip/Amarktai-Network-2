@@ -58,7 +58,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     artifactType: 'video',
     providers: [
       { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
-      { provider: 'qwen', model: 'wanx2.1-t2v-turbo' },
     ],
   },
   adult_voice: {
@@ -78,7 +77,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     artifactType: 'image',
     providers: [
       { provider: 'genx', model: GENX_IMAGE_MODELS[0] },
-      { provider: 'qwen', model: 'wanx-v1' },
       { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell-Free' },
       { provider: 'huggingface', model: 'task:text-to-image' },
     ],
@@ -90,7 +88,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     artifactType: 'video',
     providers: [
       { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
-      { provider: 'qwen', model: 'wanx2.1-t2v-turbo' },
     ],
   },
   music_generation: {

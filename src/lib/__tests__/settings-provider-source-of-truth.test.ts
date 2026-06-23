@@ -4,15 +4,18 @@
  * Verifies that Settings is the only place to configure provider/API keys, and
  * that all save/test/read operations use the canonical vault route.
  *
+ * FINAL ACTIVE AI PROVIDERS (5 ONLY):
+ *   - genx
+ *   - huggingface
+ *   - mimo
+ *   - groq
+ *   - together
+ *
  * Tests cover:
- *  - Settings uses /api/admin/providers (canonical) for save/test
- *  - Settings uses /api/admin/settings/integrations (canonical) for integrations
- *  - Provider list shown in Settings matches primary+specialist governance groups
- *  - Deprecated/hidden/backlog providers do NOT appear in Settings provider list
- *  - Qwen appears as "Qwen / DashScope"
- *  - MiniMax appears as "MiniMax / Mimo"
- *  - Advanced providers (xAI, OpenRouter, Moonshot, Zhipu, OpenAI Direct) not in primary
- *  - Cohere/Mistral not shown anywhere in Settings provider UI
+ *  - Active AI providers are exactly the final 5
+ *  - Removed providers (Qwen, MiniMax, OpenAI, Gemini, etc.) are NOT active
+ *  - Provider list shown in Settings matches final provider policy
+ *  - Apps cannot choose provider/model
  */
 
 import { describe, it, expect } from 'vitest'
@@ -24,131 +27,113 @@ import {
   getBacklogProviders,
 } from '@/lib/ai-provider-governance'
 
-// ── Settings is the only provider-key setup surface ──────────────────────────
+// ── Final 5 Active AI Providers ──────────────────────────────────────────────
 
-describe('Settings provider display names', () => {
-  it('Qwen is labeled "Qwen / DashScope"', () => {
+describe('Final active AI provider policy', () => {
+  it('has exactly 5 active AI providers', () => {
     const primary = getPrimarySetupProviders()
-    const qwen = primary.find(p => p.key === 'qwen')
-    expect(qwen).toBeDefined()
-    expect(qwen?.displayName).toBe('Qwen / DashScope')
+    expect(primary.length).toBe(5)
   })
 
-  it('MiniMax and Xiaomi MiMo are separate providers', () => {
-    const primary = getPrimarySetupProviders()
-    const minimax = primary.find(p => p.key === 'minimax')
-    const mimo = primary.find(p => p.key === 'mimo')
-    expect(minimax).toBeDefined()
-    expect(minimax?.displayName).toBe('MiniMax')
-    expect(mimo?.displayName).toBe('Xiaomi MiMo')
+  it('active AI providers are exactly genx, huggingface, mimo, groq, together', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('genx')).toBe(true)
+    expect(primaryKeys.has('huggingface')).toBe(true)
+    expect(primaryKeys.has('mimo')).toBe(true)
+    expect(primaryKeys.has('groq')).toBe(true)
+    expect(primaryKeys.has('together')).toBe(true)
+    expect(primaryKeys.size).toBe(5)
   })
 
-  it('xAI is labeled "xAI / Grok"', () => {
-    const advanced = getAdvancedSetupProviders()
-    const xai = advanced.find(p => p.key === 'xai')
-    expect(xai).toBeDefined()
-    expect(xai?.displayName).toContain('xAI')
-    expect(xai?.displayName).toContain('Grok')
+  it('GenX is in primary group', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('genx')).toBe(true)
   })
 
-  it('Moonshot is labeled "Moonshot / Kimi"', () => {
-    const advanced = getAdvancedSetupProviders()
-    const moonshot = advanced.find(p => p.key === 'moonshot')
-    expect(moonshot).toBeDefined()
-    expect(moonshot?.displayName).toContain('Moonshot')
+  it('Hugging Face is in primary group', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('huggingface')).toBe(true)
   })
 
-  it('OpenAI compatibility fallback remains hidden', () => {
-    const openai = getHiddenProviders().find(p => p.key === 'openai')
-    expect(openai).toBeDefined()
-    expect(openai?.displayName).toContain('compatibility fallback')
+  it('MiMo is in primary group', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('mimo')).toBe(true)
+  })
+
+  it('Groq is in primary group', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('groq')).toBe(true)
+  })
+
+  it('Together is in primary group', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('together')).toBe(true)
   })
 })
 
-// ── Deprecated/hidden providers not in Settings ───────────────────────────────
+// ── Removed providers are NOT active ─────────────────────────────────────────
 
-describe('deprecated and hidden providers do not appear in Settings UI', () => {
-  const doNotShow = ['cohere', 'mistral', 'suno', 'udio', 'perplexity', 'tavily', 'jina', 'runpod', 'fal', 'fireworks', 'cerebras']
+describe('Removed providers are not active', () => {
+  const removedProviders = [
+    'qwen', 'dashscope', 'openai', 'gemini', 'minimax',
+    'moonshot', 'openrouter', 'xai', 'grok', 'deepseek',
+    'anthropic', 'cohere', 'nvidia', 'replicate', 'elevenlabs', 'deepgram',
+    'mistral', 'zhipu'
+  ]
 
-  it('none of the do-not-show providers appear in primary setup', () => {
+  it('none of the removed providers appear in primary setup', () => {
     const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
-    for (const key of doNotShow) {
+    for (const key of removedProviders) {
       expect(primaryKeys.has(key), `'${key}' should not be in primary setup`).toBe(false)
     }
   })
 
-  it('none of the do-not-show providers appear in specialist setup', () => {
+  it('none of the removed providers appear in specialist setup', () => {
     const specialistKeys = new Set(getSpecialistSetupProviders().map(p => p.key))
-    for (const key of doNotShow) {
+    for (const key of removedProviders) {
       expect(specialistKeys.has(key), `'${key}' should not be in specialist setup`).toBe(false)
     }
   })
 
-  it('none of the do-not-show providers appear in advanced setup', () => {
+  it('none of the removed providers appear in advanced setup', () => {
     const advancedKeys = new Set(getAdvancedSetupProviders().map(p => p.key))
-    for (const key of doNotShow) {
+    for (const key of removedProviders) {
       expect(advancedKeys.has(key), `'${key}' should not be in advanced setup`).toBe(false)
     }
   })
 
-  it('cohere is in hidden providers', () => {
-    const hiddenKeys = new Set(getHiddenProviders().map(p => p.key))
-    expect(hiddenKeys.has('cohere')).toBe(true)
+  it('Qwen is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('qwen')).toBe(false)
   })
 
-  it('mistral is in hidden providers', () => {
-    const hiddenKeys = new Set(getHiddenProviders().map(p => p.key))
-    expect(hiddenKeys.has('mistral')).toBe(true)
+  it('MiniMax is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('minimax')).toBe(false)
   })
 
-  it('suno, udio are in backlog providers', () => {
-    const backlogKeys = new Set(getBacklogProviders().map(p => p.key))
-    expect(backlogKeys.has('suno')).toBe(true)
-    expect(backlogKeys.has('udio')).toBe(true)
-  })
-})
-
-// ── Primary provider counts ───────────────────────────────────────────────────
-
-describe('Settings shows exactly the right provider groups', () => {
-  it('has the 13 current primary providers including MiMo and local crawler', () => {
-    expect(getPrimarySetupProviders().length).toBe(13)
+  it('OpenAI is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('openai')).toBe(false)
   })
 
-  it('has exactly 3 specialist providers (replicate, elevenlabs, deepgram)', () => {
-    const specialist = getSpecialistSetupProviders()
-    expect(specialist.length).toBe(3)
-    const keys = new Set(specialist.map(p => p.key))
-    expect(keys.has('replicate')).toBe(true)
-    expect(keys.has('elevenlabs')).toBe(true)
-    expect(keys.has('deepgram')).toBe(true)
-  })
-
-  it('has exactly 4 visible advanced providers', () => {
-    const advanced = getAdvancedSetupProviders()
-    expect(advanced.length).toBe(4)
-    const keys = new Set(advanced.map(p => p.key))
-    expect(keys.has('openai')).toBe(false)
-    expect(keys.has('openrouter')).toBe(true)
-    expect(keys.has('xai')).toBe(true)
-    expect(keys.has('moonshot')).toBe(true)
-    expect(keys.has('zhipu')).toBe(true)
+  it('Gemini is not active', () => {
+    const primaryKeys = new Set(getPrimarySetupProviders().map(p => p.key))
+    expect(primaryKeys.has('gemini')).toBe(false)
   })
 })
 
 // ── Provider env var hints ────────────────────────────────────────────────────
 
 describe('Provider env var alias hints', () => {
-  it('Qwen lists DASHSCOPE_API_KEY as accepted env alias', () => {
-    const qwen = getPrimarySetupProviders().find(p => p.key === 'qwen')
-    expect(qwen?.envVarAliases).toContain('DASHSCOPE_API_KEY')
+  it('GenX uses GENX_API_KEY', () => {
+    const genx = getPrimarySetupProviders().find(p => p.key === 'genx')
+    expect(genx?.envVar).toBe('GENX_API_KEY')
   })
 
-  it('Xiaomi MiMo owns MIMO_API_KEY', () => {
-    const mm = getPrimarySetupProviders().find(p => p.key === 'minimax')
-    const mimo = getPrimarySetupProviders().find(p => p.key === 'mimo')
-    expect(mm?.envVarAliases).not.toContain('MIMO_API_KEY')
-    expect(mimo?.envVar).toBe('MIMO_API_KEY')
+  it('HuggingFace uses HUGGINGFACE_API_KEY', () => {
+    const hf = getPrimarySetupProviders().find(p => p.key === 'huggingface')
+    expect(hf?.envVar).toBe('HUGGINGFACE_API_KEY')
   })
 
   it('HuggingFace lists HUGGINGFACEHUB_API_TOKEN and HF_TOKEN as accepted env aliases', () => {
@@ -157,14 +142,19 @@ describe('Provider env var alias hints', () => {
     expect(hf?.envVarAliases).toContain('HF_TOKEN')
   })
 
-  it('xAI lists GROK_API_KEY as accepted env alias', () => {
-    const xai = getAdvancedSetupProviders().find(p => p.key === 'xai')
-    expect(xai?.envVarAliases).toContain('GROK_API_KEY')
+  it('Xiaomi MiMo uses MIMO_API_KEY', () => {
+    const mimo = getPrimarySetupProviders().find(p => p.key === 'mimo')
+    expect(mimo?.envVar).toBe('MIMO_API_KEY')
   })
 
-  it('Replicate lists REPLICATE_API_TOKEN as accepted env alias', () => {
-    const replicate = getSpecialistSetupProviders().find(p => p.key === 'replicate')
-    expect(replicate?.envVarAliases).toContain('REPLICATE_API_TOKEN')
+  it('Groq uses GROQ_API_KEY', () => {
+    const groq = getPrimarySetupProviders().find(p => p.key === 'groq')
+    expect(groq?.envVar).toBe('GROQ_API_KEY')
+  })
+
+  it('Together uses TOGETHER_API_KEY', () => {
+    const together = getPrimarySetupProviders().find(p => p.key === 'together')
+    expect(together?.envVar).toBe('TOGETHER_API_KEY')
   })
 })
 

@@ -1271,3 +1271,203 @@ model MusicGenerationJob {
   @@index([createdAt])
   @@map("music_generation_jobs")
 }
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 2 — Runtime Registry Foundation
+// ════════════════════════════════════════════════════════════════════════════════
+
+/// Canonical capability registry — single source of truth for all platform capabilities.
+/// Each capability is defined once here and referenced by routing, dashboard, and agents.
+model CapabilityRegistry {
+  id                String   @id @default(cuid())
+  /// Unique capability key (e.g. 'chat', 'image_generation', 'tts')
+  capabilityKey     String   @unique @map("capability_key")
+  /// Human-readable label
+  label             String
+  /// Description of what this capability does
+  description       String   @default("")
+  /// Category grouping (text, image, video, audio, adult, system_ops, etc.)
+  category          String   @default("text")
+  /// JSON array of required feature flags
+  requiredFlags     String   @default("[]") @map("required_flags")
+  /// JSON array of allowed provider keys
+  allowedProviders  String   @default("[]") @map("allowed_providers")
+  /// Whether this capability is enabled for routing
+  enabled           Boolean  @default(true)
+  /// Proof status: LIVE_PROVEN | SOURCE_WIRED | PARTIAL | BLOCKED | SPECULATIVE
+  proofStatus       String   @default("SPECULATIVE") @map("proof_status")
+  /// Source file where this capability is implemented
+  sourceFile        String   @default("") @map("source_file")
+  /// Proof file or test that verifies this capability
+  proofFile         String   @default("") @map("proof_file")
+  /// Known issues or limitations
+  knownIssues       String   @default("") @map("known_issues")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  providerMaps ProviderCapabilityMap[]
+
+  @@index([category])
+  @@index([enabled])
+  @@index([proofStatus])
+  @@map("capability_registry")
+}
+
+/// Maps providers to their supported capabilities with model and endpoint details.
+/// Each row represents a provider's ability to fulfill a specific capability.
+model ProviderCapabilityMap {
+  id              String   @id @default(cuid())
+  /// Provider key (e.g. 'genx', 'huggingface', 'groq')
+  providerKey     String   @map("provider_key")
+  /// Capability key reference
+  capabilityKey   String   @map("capability_key")
+  /// JSON array of model IDs that support this capability
+  models          String   @default("[]")
+  /// JSON array of endpoints for this capability
+  endpoints       String   @default("[]")
+  /// Whether this provider+capability combination is proven working
+  proven          Boolean  @default(false)
+  /// Type of proof: vps_test | source_code | manual_test | inferred
+  proofType       String   @default("inferred") @map("proof_type")
+  /// Source file or test that proves this mapping
+  proofSource     String   @default("") @map("proof_source")
+  /// When this mapping was last verified
+  lastVerified    DateTime? @map("last_verified")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  capability CapabilityRegistry @relation(fields: [capabilityKey], references: [capabilityKey], onDelete: Cascade)
+
+  @@unique([providerKey, capabilityKey], name: "provider_capability_unique")
+  @@index([providerKey])
+  @@index([capabilityKey])
+  @@index([proven])
+  @@map("provider_capability_map")
+}
+
+/// Cache of discovered models from provider APIs.
+/// Used for dynamic model discovery and capability inference.
+model ModelDiscoveryCache {
+  id              String   @id @default(cuid())
+  /// Provider key
+  providerKey     String   @map("provider_key")
+  /// Model ID from provider API
+  modelId         String   @map("model_id")
+  /// JSON array of capability keys this model supports
+  capabilities    String   @default("[]")
+  /// Cost tier: free | very_low | low | medium | high | premium
+  costTier        String   @default("medium") @map("cost_tier")
+  /// Latency tier: ultra_low | low | medium | high
+  latencyTier     String   @default("medium") @map("latency_tier")
+  /// Context window size in tokens
+  contextWindow   Int      @default(4096) @map("context_window")
+  /// Whether this model is enabled for routing
+  enabled         Boolean  @default(true)
+  /// JSON metadata blob for model-specific details
+  metadata        String   @default("{}")
+  /// When this model was last seen from provider API
+  lastSeen        DateTime @default(now()) @map("last_seen")
+  /// When this cache entry expires
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([providerKey, modelId], name: "model_discovery_unique")
+  @@index([providerKey])
+  @@index([enabled])
+  @@index([lastSeen])
+  @@map("model_discovery_cache")
+}
+
+/// Budget profiles define cost/quality/latency preferences for routing decisions.
+/// Apps and workspaces reference these profiles to determine provider selection.
+model BudgetProfile {
+  id                    String   @id @default(cuid())
+  /// Unique profile key (e.g. 'low_cost', 'balanced', 'premium')
+  profileKey            String   @unique @map("profile_key")
+  /// Human-readable display name
+  displayName           String   @map("display_name")
+  /// Cost tier preference: low | medium | high | premium
+  costTier              String   @default("medium") @map("cost_tier")
+  /// Quality preference: low | medium | high | best
+  qualityPreference     String   @default("medium") @map("quality_preference")
+  /// Latency preference: low | medium | high
+  latencyPreference     String   @default("medium") @map("latency_preference")
+  /// Max cost per request in USD cents (0 = unlimited)
+  maxCostPerRequest     Int      @default(0) @map("max_cost_per_request")
+  /// Max fallback depth before giving up
+  maxFallbackDepth      Int      @default(3) @map("max_fallback_depth")
+  /// Whether premium providers are allowed
+  allowPremium          Boolean  @default(false) @map("allow_premium")
+  /// Whether streaming is allowed
+  allowStreaming         Boolean  @default(true) @map("allow_streaming")
+  /// Whether long-running jobs are allowed
+  allowLongRunningJobs  Boolean  @default(true) @map("allow_long_running_jobs")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([costTier])
+  @@map("budget_profiles")
+}
+
+/// Avatar library for AI assistant visual personas.
+/// Stores avatar definitions with provider and style metadata.
+model AvatarLibrary {
+  id           String   @id @default(cuid())
+  /// Unique avatar identifier
+  avatarId     String   @unique @map("avatar_id")
+  /// Human-readable name
+  name         String
+  /// Visual style (e.g. 'realistic', 'cartoon', 'anime', '3d')
+  style        String   @default("realistic")
+  /// Provider that generates this avatar (e.g. 'genx', 'huggingface')
+  provider     String   @default("genx")
+  /// URL to thumbnail image
+  thumbnailUrl String   @default("") @map("thumbnail_url")
+  /// Voice ID for TTS pairing
+  voiceId      String   @default("") @map("voice_id")
+  /// Whether this avatar is enabled
+  enabled      Boolean  @default(true)
+  /// JSON metadata blob for avatar-specific details
+  metadata     String   @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([provider])
+  @@index([enabled])
+  @@map("avatar_library")
+}
+
+/// Voice library for TTS and realtime voice personas.
+/// Stores voice definitions with provider, model, and style metadata.
+model VoiceLibrary {
+  id          String   @id @default(cuid())
+  /// Unique voice identifier
+  voiceId     String   @unique @map("voice_id")
+  /// Human-readable name
+  name        String
+  /// Provider that hosts this voice (e.g. 'genx', 'elevenlabs', 'deepgram')
+  provider    String   @default("genx")
+  /// Model used for this voice
+  model       String   @default("")
+  /// Gender: male | female | neutral
+  gender      String   @default("neutral")
+  /// Accent (e.g. 'american', 'british', 'australian')
+  accent      String   @default("")
+  /// Language code (e.g. 'en', 'es', 'fr')
+  language    String   @default("en")
+  /// Style (e.g. 'warm', 'professional', 'energetic')
+  style       String   @default("neutral")
+  /// URL to preview audio
+  previewUrl  String   @default("") @map("preview_url")
+  /// Whether this voice is enabled
+  enabled     Boolean  @default(true)
+  /// JSON metadata blob for voice-specific details
+  metadata    String   @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([provider])
+  @@index([enabled])
+  @@index([language])
+  @@map("voice_library")
+}

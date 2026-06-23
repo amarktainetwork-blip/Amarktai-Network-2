@@ -2,7 +2,7 @@ import { AI_PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
 
 export type ApprovedProviderKey = Extract<
   ProviderMeshId,
-  'genx' | 'huggingface' | 'qwen' | 'mimo' | 'groq' | 'together'
+  'genx' | 'huggingface' | 'mimo' | 'groq' | 'together'
 >
 
 export type CostMode = 'cheap' | 'balanced' | 'premium'
@@ -30,7 +30,6 @@ export interface ApprovedModel {
 const PROVIDER_NOTES: Record<ApprovedProviderKey, string> = {
   genx: 'Primary OpenAI-compatible routing layer across text, code, media, voice, files, and async jobs.',
   huggingface: 'Model universe for specialist text, embedding, image, video, and speech tasks.',
-  qwen: 'Low-cost text, reasoning, code, multimodal understanding, and DashScope media routes.',
   mimo: 'Xiaomi MiMo V2.5-compatible reasoning, coding, multimodal, voice, and tool workflows.',
   groq: 'Fast text, reasoning, code triage, speech, vision, and tool execution.',
   together: 'OpenAI-compatible text, image, video, vision, embedding, rerank, and tool routes.',
@@ -52,7 +51,6 @@ export const APPROVED_PROVIDER_KEYS = new Set<ApprovedProviderKey>(
 )
 
 export const APPROVED_WORKBENCH_MODELS: readonly ApprovedModel[] = [
-  { provider: 'qwen', id: 'qwen-turbo', label: 'Qwen Turbo', costMode: 'cheap', capability: 'repo_workbench' },
   { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B Versatile', costMode: 'cheap', capability: 'repo_workbench' },
   { provider: 'together', id: 'meta-llama/Llama-3-70b-chat-hf', label: 'Llama 3 70B Chat', costMode: 'balanced', capability: 'repo_workbench' },
   { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Coding Balanced', costMode: 'balanced', capability: 'repo_workbench' },
@@ -62,7 +60,6 @@ export const APPROVED_WORKBENCH_MODELS: readonly ApprovedModel[] = [
 
 export const APPROVED_ASSISTANT_MODELS: readonly ApprovedModel[] = [
   { provider: 'genx', id: 'gpt-5.4-mini', label: 'GenX Assistant Route', costMode: 'balanced', capability: 'assistant' },
-  { provider: 'qwen', id: 'qwen-plus', label: 'Qwen Plus', costMode: 'cheap', capability: 'assistant' },
   { provider: 'groq', id: 'llama-3.3-70b-versatile', label: 'Groq Llama 3.3', costMode: 'cheap', capability: 'assistant' },
   { provider: 'mimo', id: 'mimo-v2.5', label: 'Xiaomi MiMo V2.5', costMode: 'balanced', capability: 'assistant' },
 ] as const

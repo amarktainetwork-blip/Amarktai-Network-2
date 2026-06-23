@@ -129,7 +129,7 @@ const ALL_CONTENT_TYPES: ContentType[] = [
 ]
 
 /** Preferred provider order for creative generation. */
-const CREATIVE_PROVIDER_PREFERENCE = ['openai', 'groq', 'deepseek', 'openrouter', 'together']
+const CREATIVE_PROVIDER_PREFERENCE = ['genx', 'groq', 'together', 'mimo', 'huggingface']
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ function resolveCreativeProvider(appSlug: string): { providerKey: string; model:
   }
 
   // Fallback to first allowed provider (no hardcoded default — requires real configuration)
-  const fallbackProvider = profile.allowed_providers[0] ?? 'openai'
+  const fallbackProvider = profile.allowed_providers[0] ?? 'genx'
   return {
     providerKey: fallbackProvider,
     model: getDefaultModelForProvider(fallbackProvider),
@@ -545,7 +545,7 @@ export async function generateContent(request: MultimodalRequest): Promise<Multi
 const IMAGE_QUALITY_MODELS: Record<QualityMode, { provider: string; model: string }> = {
   cheap: { provider: 'together', model: 'stabilityai/stable-diffusion-xl-base-1.0' },
   balanced: { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell' },
-  premium: { provider: 'openai', model: 'dall-e-3' },
+  premium: { provider: 'genx', model: 'genx/default-image' },
 }
 
 /**

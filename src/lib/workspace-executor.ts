@@ -252,7 +252,7 @@ export async function routeWorkspaceTask(
 
 /**
  * Fallback: attempt to call the first available provider in the vault.
- * Uses openai → groq → anthropic preference order.
+ * Uses groq → together → mimo → huggingface preference order.
  * Only called when GenX is unavailable.
  */
 async function callProviderFallback(
@@ -262,7 +262,7 @@ async function callProviderFallback(
   const systemMsg = messages.find((m) => m.role === 'system')?.content ?? ''
   const userMsg   = messages.filter((m) => m.role !== 'system').map((m) => m.content).join('\n')
 
-  const fallbackChain = ['openai', 'groq', 'anthropic', 'gemini', 'deepseek']
+  const fallbackChain = ['groq', 'together', 'mimo', 'huggingface']
 
   for (const providerKey of fallbackChain) {
     try {

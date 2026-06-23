@@ -52,7 +52,7 @@ export interface AffectiveVoiceConfig {
   confidence: number
 }
 
-export type TTSProvider = 'openai' | 'groq' | 'gemini' | 'huggingface'
+export type TTSProvider = 'genx' | 'groq' | 'huggingface'
 
 // ── Emotion → Prosody Mapping ────────────────────────────────────────────────
 
@@ -176,7 +176,7 @@ const EMOTION_SPEED_MAP: Record<EmotionType, number> = {
 
 // ── Provider SSML support ────────────────────────────────────────────────────
 
-const SSML_CAPABLE_PROVIDERS: Set<TTSProvider> = new Set(['gemini'])
+const SSML_CAPABLE_PROVIDERS: Set<TTSProvider> = new Set(['genx'])
 
 // ── Public API ───────────────────────────────────────────────────────────────
 
@@ -267,12 +267,12 @@ export function getProsodyForEmotion(emotion: EmotionType, confidence: number): 
  */
 export function getVoiceOverride(emotion: EmotionType, provider: TTSProvider): string | null {
   switch (provider) {
-    case 'openai':
-      return OPENAI_EMOTION_VOICE[emotion] ?? null
+    case 'genx':
+      return null
     case 'groq':
       return GROQ_EMOTION_VOICE[emotion] ?? null
-    case 'gemini':
-      return GEMINI_EMOTION_VOICE[emotion] ?? null
+    case 'huggingface':
+      return null
     default:
       return null
   }

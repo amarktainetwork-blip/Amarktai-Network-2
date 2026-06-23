@@ -81,16 +81,12 @@ describe('SSML / Affective Voice Output', () => {
   })
 
   describe('getVoiceOverride', () => {
-    it('returns OpenAI voice for joy → nova', () => {
-      expect(getVoiceOverride('joy', 'openai')).toBe('nova')
+    it('returns null for genx (no emotion voices)', () => {
+      expect(getVoiceOverride('joy', 'genx')).toBeNull()
     })
 
     it('returns Groq voice for sadness → Atlas-PlayAI', () => {
       expect(getVoiceOverride('sadness', 'groq')).toBe('Atlas-PlayAI')
-    })
-
-    it('returns Gemini voice for anger → Charon', () => {
-      expect(getVoiceOverride('anger', 'gemini')).toBe('Charon')
     })
 
     it('returns null for huggingface (no emotion voices)', () => {
@@ -99,11 +95,16 @@ describe('SSML / Affective Voice Output', () => {
 
     it('maps each emotion to a voice for all supported providers', () => {
       const emotions = ['joy', 'sadness', 'anger', 'fear', 'surprise', 'neutral'] as const
-      const providers: TTSProvider[] = ['openai', 'groq', 'gemini']
+      const providers: TTSProvider[] = ['genx', 'groq', 'huggingface']
       for (const provider of providers) {
         for (const emotion of emotions) {
           const voice = getVoiceOverride(emotion, provider)
-          expect(voice).toBeTruthy()
+          // genx and huggingface return null, groq returns a voice
+          if (provider === 'groq') {
+            expect(voice).toBeTruthy()
+          } else {
+            expect(voice).toBeNull()
+          }
         }
       }
     })
@@ -128,34 +129,34 @@ describe('SSML / Affective Voice Output', () => {
   })
 
   describe('buildAffectiveVoiceConfig', () => {
-    it('builds config for OpenAI provider with emotion', () => {
+    it('builds config for GenX provider with emotion', () => {
       const analysis = makeAnalysis('joy', 0.85)
-      const config = buildAffectiveVoiceConfig('Hello!', analysis, 'openai')
+      const config = buildAffectiveVoiceConfig('Hello!', analysis, 'genx')
 
       expect(config.sourceEmotion).toBe('joy')
       expect(config.confidence).toBe(0.85)
-      expect(config.voiceOverride).toBe('nova')
+      expect(config.voiceOverride).toBeNull()
       expect(config.speedOverride).toBe(1.1)
-      expect(config.ssmlSupported).toBe(false)
+      expect(config.ssmlSupported).toBe(true)
       expect(config.ssml).toContain('<speak>')
     })
 
-    it('marks SSML as supported for Gemini', () => {
+    it('marks SSML as supported for GenX', () => {
       const analysis = makeAnalysis('sadness', 0.7)
-      const config = buildAffectiveVoiceConfig('I feel down', analysis, 'gemini')
+      const config = buildAffectiveVoiceConfig('I feel down', analysis, 'genx')
 
       expect(config.ssmlSupported).toBe(true)
-      expect(config.voiceOverride).toBe('Charon')
+      expect(config.voiceOverride).toBeNull()
       expect(config.prosody.pitch).toBe('low')
     })
 
     it('handles neutral emotion gracefully', () => {
       const analysis = makeAnalysis('neutral', 0.5)
-      const config = buildAffectiveVoiceConfig('Normal text', analysis, 'openai')
+      const config = buildAffectiveVoiceConfig('Normal text', analysis, 'genx')
 
       expect(config.sourceEmotion).toBe('neutral')
       expect(config.speedOverride).toBe(1.0)
-      expect(config.voiceOverride).toBe('alloy')
+      expect(config.voiceOverride).toBeNull()
     })
 
     it('returns null voice for HuggingFace', () => {

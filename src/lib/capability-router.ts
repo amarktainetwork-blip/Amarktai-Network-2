@@ -28,6 +28,40 @@ import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlAppWebsite } from '@/lib/firecrawl'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
+import { prisma } from '@/lib/prisma'
+import {
+  getDefaultModelForProvider,
+  getModelRegistry,
+  setProviderHealth,
+  type ProviderHealthStatus,
+} from '@/lib/model-registry'
+import { isProviderWithinBudget } from '@/lib/budget-tracker'
+import { getAppProfileFromDb, runtimeProfileOverrides } from '@/lib/app-profiles'
+import { recordPerformance, loadSmartRouterState } from '@/lib/smart-router'
+
+// ── Orchestration Types (merged from orchestrator.ts) ─────────────────────────
+
+export type TaskComplexity = 'simple' | 'moderate' | 'complex'
+export type ExecutionMode =
+  | 'direct'
+  | 'specialist'
+  | 'review'
+  | 'consensus'
+  | 'retrieval_chain'
+  | 'agent_chain'
+  | 'multimodal_chain'
+  | 'premium_escalation'
+
+export interface ClassificationResult {
+  taskComplexity: TaskComplexity
+  executionMode: ExecutionMode
+  requiresValidation: boolean
+  requiresConsensus: boolean
+  memoryRetrievalNeeded: boolean
+  lowLatencyRequired: boolean
+  appCategory: string
+  taskType: string
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -82,6 +116,20 @@ export interface CapabilityResponse {
   /** Structured error category for adult/specialist routes */
   error_category?: 'missing_key' | 'provider_policy_block' | 'model_not_supported' | 'endpoint_error' | 'guardrail_block' | 'unknown'
   providerAttempts?: Array<{ provider: string; model: string; status: string; error?: string }>
+  /** Heuristic confidence score [0.10, 0.99]. null when not computed. */
+  confidenceScore?: number | null
+  /** Execution mode used for this request. */
+  executionMode?: string
+  /** Whether a validation step was performed (review mode). */
+  validationUsed?: boolean
+  /** Whether consensus synthesis was used. */
+  consensusUsed?: boolean
+  /** Whether memory/retrieval context was injected. */
+  memoryUsed?: boolean
+  /** Task classification result (for observability). */
+  classification?: ClassificationResult
+  /** Human-readable explanation of why this provider/model was chosen. */
+  routingReason?: string
 }
 
 // ── Supported capability set ───────────────────────────────────────────────────
@@ -99,6 +147,178 @@ const ALL_CAPABILITIES = [
 ] as const
 
 type Capability = (typeof ALL_CAPABILITIES)[number]
+
+// ── Orchestration Constants & Pure Functions (merged from orchestrator.ts) ────
+
+const IMAGE_MESSAGE_PATTERNS = [
+  /\b(?:create|generate|make|draw|paint|design|produce|render)\b.*\b(?:image|picture|photo|illustration|artwork|visual|graphic)\b/i,
+  /\b(?:image|picture|photo|illustration|artwork|visual|graphic)\b.*\b(?:of|showing|depicting|with|featuring)\b/i,
+  /\bdall-?e\b/i,
+  /\bimage.?generat/i,
+  /\bgenerate.?(?:an?\s+)?image\b/i,
+]
+
+/**
+ * Specialist profile mapping — app category → system-level instruction.
+ */
+const SPECIALIST_PROFILES: Record<string, string> = {
+  crypto:    'You are a specialist AI assistant for cryptocurrency and digital asset trading. Provide accurate, data-aware responses. Always note that outputs are not financial advice.',
+  finance:   'You are a specialist AI assistant for financial analysis and markets. Provide rigorous, well-reasoned responses. Always note that outputs are not financial advice.',
+  forex:     'You are a specialist AI assistant for forex and currency markets. Provide accurate, data-aware responses. Always note that outputs are not financial advice.',
+  trading:   'You are a specialist AI assistant for trading strategy and market analysis. Provide structured, reasoned responses. Always note that outputs are not financial advice.',
+  equine:    'You are a specialist AI assistant for equine care, horse management, and related lifestyle topics. Provide practical, expert-informed responses.',
+  horse:     'You are a specialist AI assistant for equine care, horse management, and related lifestyle topics. Provide practical, expert-informed responses.',
+  family:    'You are a helpful AI assistant for family lifestyle topics including health, education, and wellbeing. Provide warm, practical, and safe responses.',
+  marketing: 'You are a specialist AI assistant for marketing strategy, brand content, and growth campaigns. Provide creative, structured, and actionable responses.',
+  content:   'You are a specialist AI assistant for content creation, copywriting, and creative strategy. Provide clear, engaging, and audience-aware responses.',
+  generic:   'You are a helpful and knowledgeable AI assistant. Provide clear, accurate, and useful responses.',
+}
+
+/**
+ * Classify a task by complexity and execution mode.
+ *
+ * Complexity:
+ *   simple   → short message (<= 120 chars) AND generic taskType (chat|help|ping)
+ *   complex  → taskType contains analysis|review|audit|forecast|decision|report
+ *              OR category is crypto/finance/forex AND taskType is not 'chat'
+ *   moderate → everything else
+ *
+ * Execution mode:
+ *   direct     → simple tasks
+ *   specialist → moderate tasks
+ *   review     → complex tasks OR financial categories
+ *   consensus  → explicit consensus taskType OR complex + financial
+ */
+function classifyTaskComplexity(
+  appCategory: string,
+  taskType: string,
+  message: string,
+): ClassificationResult {
+  const cat = (appCategory ?? '').toLowerCase()
+  const task = (taskType ?? '').toLowerCase()
+  const msgLen = (message ?? '').length
+
+  const isFinancial = cat.includes('crypto') || cat.includes('finance') || cat.includes('forex') || cat.includes('trading')
+  const isGenericTask = task === 'chat' || task === 'help' || task === 'ping' || task === 'support'
+  const isComplexTask =
+    task.includes('analysis') || task.includes('review') || task.includes('audit') ||
+    task.includes('forecast') || task.includes('decision') || task.includes('report') ||
+    task.includes('strategy') || task.includes('recommendation')
+  const isConsensusTask = task.includes('consensus') || task.includes('compare')
+
+  let taskComplexity: TaskComplexity
+  if (msgLen <= 120 && isGenericTask) {
+    taskComplexity = 'simple'
+  } else if (isComplexTask || (isFinancial && !isGenericTask)) {
+    taskComplexity = 'complex'
+  } else {
+    taskComplexity = 'moderate'
+  }
+
+  let executionMode: ExecutionMode
+  if (taskComplexity === 'simple') {
+    executionMode = 'direct'
+  } else if (isConsensusTask || (taskComplexity === 'complex' && isFinancial)) {
+    executionMode = 'consensus'
+  } else if (taskComplexity === 'complex' || isFinancial) {
+    executionMode = 'review'
+  } else {
+    executionMode = 'specialist'
+  }
+
+  return {
+    taskComplexity,
+    executionMode,
+    requiresValidation: executionMode === 'review' || executionMode === 'consensus',
+    requiresConsensus: executionMode === 'consensus',
+    memoryRetrievalNeeded: false,
+    lowLatencyRequired: executionMode === 'direct',
+    appCategory: cat,
+    taskType: task,
+  }
+}
+
+/**
+ * Compute a heuristic confidence score [0.10, 0.99].
+ *
+ * Base: 0.70 for any routed provider.
+ * +0.15 if provider health is "healthy"
+ * +0.05 if provider health is "configured"
+ * -0.10 if fallback provider was used
+ * -0.10 if validation step failed
+ * -0.05 per warning beyond the first
+ */
+function computeConfidenceScore(opts: {
+  providerHealth?: string
+  fallbackUsed: boolean
+  validationPassed: boolean | null
+  warnings: string[]
+}): number {
+  let score = 0.70
+
+  if (opts.providerHealth === 'healthy') score += 0.15
+  else if (opts.providerHealth === 'configured') score += 0.05
+
+  if (opts.fallbackUsed) score -= 0.10
+
+  if (opts.validationPassed === false) score -= 0.10
+
+  const extraWarnings = Math.max(0, opts.warnings.length - 1)
+  score -= extraWarnings * 0.05
+
+  return Math.min(0.99, Math.max(0.10, Math.round(score * 100) / 100))
+}
+
+// ── Provider Health Sync (merged from orchestrator.ts) ────────────────────────
+
+interface AvailableProvider {
+  providerKey: string
+  model: string
+  healthStatus: string
+  isHealthy: boolean
+}
+
+function defaultModelFor(providerKey: string): string {
+  return getDefaultModelForProvider(providerKey)
+}
+
+async function loadAvailableProviders(): Promise<AvailableProvider[]> {
+  const providers = await prisma.aiProvider.findMany({
+    where: { enabled: true, healthStatus: { notIn: ['disabled', 'error'] } },
+    orderBy: { sortOrder: 'asc' },
+    select: { providerKey: true, defaultModel: true, healthStatus: true, apiKey: true },
+  })
+
+  return providers
+    .filter(p => p.apiKey)
+    .map(p => ({
+      providerKey: p.providerKey,
+      model: p.defaultModel || defaultModelFor(p.providerKey),
+      healthStatus: p.healthStatus,
+      isHealthy: p.healthStatus === 'healthy',
+    }))
+}
+
+function syncProviderHealthCache(available: AvailableProvider[]): void {
+  const configuredKeys = new Set(available.map(p => p.providerKey))
+
+  for (const p of available) {
+    const status: ProviderHealthStatus =
+      p.healthStatus === 'unconfigured' ? 'configured' : (p.healthStatus as ProviderHealthStatus)
+    setProviderHealth(p.providerKey, status)
+  }
+
+  const allProviderKeys = new Set(getModelRegistry().map(m => m.provider))
+  for (const key of Array.from(allProviderKeys)) {
+    if (!configuredKeys.has(key)) {
+      setProviderHealth(key, 'unconfigured')
+    }
+  }
+}
+
+// ── Smart Router Bootstrap ────────────────────────────────────────────────────
+
+loadSmartRouterState().catch(() => {})
 
 // ── Adult content guardrails ──────────────────────────────────────────────────
 
@@ -317,11 +537,10 @@ async function tryGenXMedia(
 const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
 
 const TEXT_FALLBACK_CHAIN: Array<{ key: string; model: string }> = [
-  { key: 'gemini',      model: 'gemini-2.0-flash' },
   { key: 'groq',       model: 'llama-3.3-70b-versatile' },
-  { key: 'openrouter', model: 'openai/gpt-4o-mini' },
-  { key: 'grok',       model: 'grok-2' },
-  { key: 'qwen',       model: 'qwen-plus' },
+  { key: 'together',   model: 'meta-llama/Llama-3-70b-chat-hf' },
+  { key: 'huggingface', model: 'task:text' },
+  { key: 'mimo',       model: 'mimo-v2.5' },
 ]
 
 async function tryFallbackText(
@@ -632,6 +851,47 @@ export async function executeCapability(
   const cap = detectCapability(request.input, request.capability)
   const appSlug = request.appId ?? request.workspaceId ?? '__system__'
   const save = request.saveArtifact ?? false
+
+  // ── Provider health sync (merged from orchestrator) ───────────────────────
+  // Sync the model-registry health cache from DB so that model selection
+  // reflects actual configured state. Wrapped in try/catch — if DB is
+  // unavailable, proceed with static registry defaults.
+  let _availableProviders: AvailableProvider[] = []
+  try {
+    _availableProviders = await loadAvailableProviders()
+    syncProviderHealthCache(_availableProviders)
+  } catch {
+    // DB unavailable — proceed without health sync
+  }
+
+  // ── Budget enforcement (merged from orchestrator) ─────────────────────────
+  // Filter out providers that have exceeded their budget critical threshold.
+  // If ALL are over budget, keep all to avoid total outage.
+  try {
+    if (_availableProviders.length > 0) {
+      const budgetOk = await Promise.all(_availableProviders.map(p => isProviderWithinBudget(p.providerKey)))
+      const withinBudget = _availableProviders.filter((_, i) => budgetOk[i])
+      if (withinBudget.length > 0 && withinBudget.length < _availableProviders.length) {
+        _availableProviders = withinBudget
+      }
+    }
+  } catch {
+    // Budget DB unavailable — proceed with all providers
+  }
+
+  // ── App profile loading (merged from orchestrator) ────────────────────────
+  // Load per-app DB profile so the routing engine picks up DB-configured
+  // allowedProviders, preferredModels, etc.
+  if (appSlug && appSlug !== '__system__' && appSlug !== '__admin_test__') {
+    try {
+      const dbProfile = await getAppProfileFromDb(appSlug)
+      if (dbProfile) {
+        runtimeProfileOverrides.set(appSlug.toLowerCase().trim(), dbProfile)
+      }
+    } catch {
+      // DB lookup failure — routing engine falls back to static default profile
+    }
+  }
 
   // ── App capability permission check ──────────────────────────────────────
   // If a specific appId (not workspace/system) is provided, verify that the
@@ -1490,15 +1750,25 @@ export async function executeCapability(
   }
 
   // ── Chat (default) ────────────────────────────────────────────────────────
+  // Classify the task for complexity and execution mode (merged from orchestrator)
+  const classification = classifyTaskComplexity(
+    request.metadata?.appCategory as string ?? 'generic',
+    cap,
+    request.input,
+  )
+
   const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
+  const warnings: string[] = []
 
   if (!request.providerOverride || request.providerOverride === 'genx') {
     const res = await tryGenXChat(request.input, model)
     if (res.success && res.output) {
       let artifactId: string | undefined
       if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
+      const confidence = computeConfidenceScore({ providerHealth: 'healthy', fallbackUsed: false, validationPassed: null, warnings })
+      try { recordPerformance({ modelId: res.model, provider: 'genx', taskType: cap, success: true, latencyMs: 0, confidence, costEstimate: 0.001, timestamp: Date.now() }) } catch { /* fire-and-forget */ }
       logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'text', output: res.output, artifactId, fallbackUsed: false }
+      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'text', output: res.output, artifactId, fallbackUsed: false, confidenceScore: confidence, executionMode: 'direct', classification, routingReason: `GenX primary — capability: ${cap}` }
     }
   }
 
@@ -1506,10 +1776,14 @@ export async function executeCapability(
   if (fallback.success && fallback.output) {
     let artifactId: string | undefined
     if (save) artifactId = await maybeSaveArtifact(cap, fallback.output, fallback.provider, fallback.model, appSlug, request.traceId)
+    warnings.push('GenX unavailable — used fallback provider')
+    const confidence = computeConfidenceScore({ providerHealth: 'configured', fallbackUsed: true, validationPassed: null, warnings })
+    try { recordPerformance({ modelId: fallback.model ?? 'unknown', provider: fallback.provider ?? 'unknown', taskType: cap, success: true, latencyMs: 0, confidence, costEstimate: 0.001, timestamp: Date.now() }) } catch { /* fire-and-forget */ }
     logExecution(cap, fallback.provider, fallback.model, true, !!artifactId, null)
-    return { success: true, capability: cap, provider: fallback.provider, model: fallback.model, outputType: 'text', output: fallback.output, artifactId, fallbackUsed: true, fallbackReason: 'GenX unavailable' }
+    return { success: true, capability: cap, provider: fallback.provider, model: fallback.model, outputType: 'text', output: fallback.output, artifactId, fallbackUsed: true, fallbackReason: 'GenX unavailable', confidenceScore: confidence, executionMode: 'direct', classification, routingReason: `Fallback — GenX unavailable, used ${fallback.provider}` }
   }
 
+  try { recordPerformance({ modelId: model, provider: 'genx', taskType: cap, success: false, latencyMs: 0, confidence: 0, costEstimate: 0, timestamp: Date.now() }) } catch { /* fire-and-forget */ }
   logExecution(cap, null, null, true, false, 'All providers failed')
   return {
     success: false,
@@ -1520,5 +1794,8 @@ export async function executeCapability(
     output: null,
     fallbackUsed: true,
     error: 'All providers failed. Please configure at least one AI provider (GenX, Gemini, Groq, or OpenRouter).',
+    confidenceScore: null,
+    executionMode: 'direct',
+    classification,
   }
 }

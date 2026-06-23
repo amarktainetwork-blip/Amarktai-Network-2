@@ -3,6 +3,8 @@
  *
  * Server-side only helper functions for AI provider key masking and health checks.
  * This file MUST NOT be imported from client components.
+ *
+ * ACTIVE PROVIDERS ONLY: genx, huggingface, mimo, groq, together
  */
 
 import { decryptVaultKey } from '@/lib/crypto-vault'
@@ -64,6 +66,8 @@ const HF_HEALTHCHECK_MODEL = 'distilbert-base-uncased-finetuned-sst-2-english'
 /**
  * Run a live health check for the given provider.
  * Returns a truthful status — never fakes healthy.
+ *
+ * ACTIVE PROVIDERS: genx, huggingface, mimo, groq, together
  */
 export async function runProviderHealthCheck(
   providerKey: string,
@@ -83,22 +87,16 @@ export async function runProviderHealthCheck(
 
   try {
     switch (providerKey) {
-      case 'openai': {
-        const endpoint = `${baseUrl || 'https://api.openai.com'}/v1/chat/completions`
+      case 'genx': {
+        const endpoint = `${baseUrl || 'https://query.genx.sh'}/v1/models`
         const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${resolvedApiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{ role: 'user', content: 'health check' }],
-            max_tokens: 1,
-          }),
+          headers: { Authorization: `Bearer ${resolvedApiKey}` },
           signal: AbortSignal.timeout(timeout),
         })
-        if (res.ok) return { status: 'healthy', message: 'Connected · chat execution path responding' }
+        if (res.ok) return { status: 'healthy', message: 'Connected · GenX API responding' }
         if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429) · key valid but quota exceeded' }
-        return { status: 'degraded', message: `HTTP ${res.status} from OpenAI chat execution path` }
+        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
+        return { status: 'degraded', message: `HTTP ${res.status} from GenX API` }
       }
 
       case 'groq': {
@@ -119,35 +117,6 @@ export async function runProviderHealthCheck(
         return { status: 'degraded', message: `HTTP ${res.status} from Groq API` }
       }
 
-      case 'deepseek': {
-        const endpoint = `${baseUrl || 'https://api.deepseek.com'}/v1/models`
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${resolvedApiKey}` },
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · DeepSeek API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 402) return { status: 'error', message: 'Insufficient balance (402)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from DeepSeek API` }
-      }
-
-      case 'openrouter': {
-        const endpoint = `${baseUrl || 'https://openrouter.ai/api'}/v1/models`
-        const res = await fetch(endpoint, {
-          headers: {
-            Authorization: `Bearer ${resolvedApiKey}`,
-            'HTTP-Referer': 'https://amarktai.network',
-            'X-Title': 'AmarktAI Network',
-          },
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · OpenRouter API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from OpenRouter API` }
-      }
-
       case 'together': {
         const endpoint = `${baseUrl || 'https://api.together.xyz'}/v1/models`
         const res = await fetch(endpoint, {
@@ -158,29 +127,6 @@ export async function runProviderHealthCheck(
         if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
         if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
         return { status: 'degraded', message: `HTTP ${res.status} from Together AI API` }
-      }
-
-      case 'gemini': {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(resolvedApiKey)}`,
-          { signal: AbortSignal.timeout(timeout) },
-        )
-        if (res.ok) return { status: 'healthy', message: 'Connected · Gemini API responding' }
-        if (res.status === 400 || res.status === 403) return { status: 'error', message: 'Invalid API key' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from Gemini API` }
-      }
-
-      case 'grok': {
-        const endpoint = `${baseUrl || 'https://api.x.ai'}/v1/models`
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${resolvedApiKey}` },
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · xAI API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from xAI API` }
       }
 
       case 'huggingface': {
@@ -232,74 +178,16 @@ export async function runProviderHealthCheck(
         }
       }
 
-      case 'anthropic': {
-        const endpoint = `${baseUrl || 'https://api.anthropic.com'}/v1/messages`
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': resolvedApiKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 1,
-            messages: [{ role: 'user', content: 'hi' }],
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · Anthropic API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from Anthropic API` }
-      }
-
-      case 'cohere': {
-        const endpoint = `${baseUrl || 'https://api.cohere.com'}/v2/chat`
-        const res = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resolvedApiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'command-r',
-            messages: [{ role: 'user', content: 'hi' }],
-          }),
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · Cohere API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from Cohere API` }
-      }
-
-      case 'qwen': {
-        const endpoint = `${baseUrl || 'https://dashscope-intl.aliyuncs.com/compatible-mode'}/v1/models`
+      case 'mimo': {
+        const endpoint = `${baseUrl || 'https://api.xiaomimimo.com'}/v1/models`
         const res = await fetch(endpoint, {
           headers: { Authorization: `Bearer ${resolvedApiKey}` },
           signal: AbortSignal.timeout(timeout),
         })
-        if (res.ok) return { status: 'healthy', message: 'Connected · Qwen/DashScope API responding' }
+        if (res.ok) return { status: 'healthy', message: 'Connected · Xiaomi MiMo API responding' }
         if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
         if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from Qwen/DashScope API` }
-      }
-
-      case 'nvidia':
-        // NVIDIA NIM — key can be validated but models list requires explicit access
-        return { status: 'configured', message: 'Key configured · use Gateway Test to validate live inference' }
-
-      case 'mistral': {
-        const endpoint = `${baseUrl || 'https://api.mistral.ai'}/v1/models`
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${resolvedApiKey}` },
-          signal: AbortSignal.timeout(timeout),
-        })
-        if (res.ok) return { status: 'healthy', message: 'Connected · Mistral AI API responding' }
-        if (res.status === 401) return { status: 'error', message: 'Invalid API key (401 Unauthorized)' }
-        if (res.status === 429) return { status: 'degraded', message: 'Rate limited (429)' }
-        return { status: 'degraded', message: `HTTP ${res.status} from Mistral AI API` }
+        return { status: 'degraded', message: `HTTP ${res.status} from Xiaomi MiMo API` }
       }
 
       default:

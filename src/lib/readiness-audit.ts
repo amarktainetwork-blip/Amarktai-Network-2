@@ -196,12 +196,10 @@ async function checkProvider(
 async function checkCheapRoute(): Promise<AuditCheck> {
   // Check all backbone/budget providers — the platform only needs ONE
   const candidates = [
-    { key: 'deepseek',    label: 'DeepSeek' },
     { key: 'groq',        label: 'Groq' },
     { key: 'together',    label: 'Together AI' },
-    { key: 'openrouter',  label: 'OpenRouter' },
-    { key: 'gemini',      label: 'Gemini' },
     { key: 'huggingface', label: 'Hugging Face' },
+    { key: 'mimo',        label: 'Xiaomi MiMo' },
   ]
 
   const results = await Promise.all(candidates.map(c => queryProvider(c.key)))
@@ -753,7 +751,6 @@ export async function runReadinessAudit(): Promise<ReadinessReport> {
     dbConfig,
     genx,
     huggingface,
-    qwen,
     mimo,
     groq,
     together,
@@ -771,7 +768,6 @@ export async function runReadinessAudit(): Promise<ReadinessReport> {
     checkDbConfig(),
     checkProvider('provider_genx',       'genx',        'GenX',            false),
     checkProvider('provider_huggingface','huggingface', 'Hugging Face',    false),
-    checkProvider('provider_qwen',       'qwen',        'Qwen',            false),
     checkProvider('provider_mimo',       'mimo',        'Xiaomi MiMo',     false),
     checkProvider('provider_groq',       'groq',        'Groq',            false),
     checkProvider('provider_together',   'together',    'Together AI',     false),
@@ -796,7 +792,6 @@ export async function runReadinessAudit(): Promise<ReadinessReport> {
     dbConfig,
     genx,
     huggingface,
-    qwen,
     mimo,
     groq,
     together,

@@ -10,7 +10,6 @@ async function runExistingTest(id: ProviderMeshId, request: NextRequest): Promis
   const forwarded = new NextRequest(request.url, { method: 'POST', headers: request.headers, body: '{}' })
   if (id === 'genx') return (await (await import('@/app/api/admin/settings/test-genx/route')).POST(forwarded)).json()
   if (id === 'huggingface') return (await (await import('@/app/api/admin/settings/test-huggingface/route')).POST(forwarded)).json()
-  if (id === 'qwen') return (await (await import('@/app/api/admin/settings/test-qwen/route')).POST(forwarded)).json()
   if (id === 'groq') return (await (await import('@/app/api/admin/settings/test-groq/route')).POST(forwarded)).json()
   if (id === 'together') return (await (await import('@/app/api/admin/settings/test-together/route')).POST(forwarded)).json()
   if (id === 'github') return (await (await import('@/app/api/admin/settings/test-github/route')).POST(forwarded)).json()

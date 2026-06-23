@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Video' || capability === 'adult_video') {
-      const provider = route.selectedProvider === 'qwen' || route.selectedProvider === 'genx'
+      const provider = route.selectedProvider === 'genx'
         ? route.selectedProvider
         : 'genx'
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {

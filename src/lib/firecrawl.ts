@@ -259,7 +259,7 @@ function analyzeContent(pages: CrawledPage[], url: string): ContentAnalysis {
   const safetyLevel = ['religious', 'health', 'finance', 'education'].includes(bestNiche) ? 'strict' : 'standard'
   const budgetMode = ['finance', 'health'].includes(bestNiche) ? 'best_quality' : 'balanced'
   const providers = ['genx', 'groq']
-  if (capabilities.includes('image_generation')) providers.push('qwen')
+  if (capabilities.includes('image_generation')) providers.push('together')
   if (capabilities.includes('retrieval')) providers.push('huggingface')
 
   const pageCount = pages.length

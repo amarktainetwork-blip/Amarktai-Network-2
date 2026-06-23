@@ -108,11 +108,11 @@ export function chunkText(
 // ── Embedding ────────────────────────────────────────────────────────────────
 
 /**
- * Generate embeddings for text using OpenAI API.
+ * Generate embeddings for text using HuggingFace API.
  * Caches results in Redis to avoid redundant API calls.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const apiKey = await getVaultApiKey('openai')
+  const apiKey = await getVaultApiKey('huggingface')
   if (!apiKey) return null
 
   // Check cache first
@@ -125,29 +125,26 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
   }
 
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
+    const res = await fetch('https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: text.slice(0, 8000), // Limit input size
-        dimensions: EMBEDDING_DIMENSIONS,
+        inputs: text.slice(0, 8000),
       }),
       signal: AbortSignal.timeout(15_000),
     })
 
     if (!res.ok) return null
 
-    const data = await res.json() as { data: Array<{ embedding: number[] }> }
-    const embedding = data.data?.[0]?.embedding
-    if (!embedding) return null
+    const data = await res.json() as number[]
+    if (!Array.isArray(data)) return null
 
     // Cache the embedding
-    await cacheSet(cacheKey, JSON.stringify(embedding), EMBEDDING_CACHE_TTL)
-    return embedding
+    await cacheSet(cacheKey, JSON.stringify(data), EMBEDDING_CACHE_TTL)
+    return data
   } catch {
     return null
   }
@@ -157,32 +154,17 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
  * Generate embeddings for multiple texts in batch.
  */
 export async function generateEmbeddings(texts: string[]): Promise<(number[] | null)[]> {
-  const apiKey = await getVaultApiKey('openai')
+  const apiKey = await getVaultApiKey('huggingface')
   if (!apiKey) return texts.map(() => null)
 
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: texts.map((t) => t.slice(0, 8000)),
-        dimensions: EMBEDDING_DIMENSIONS,
-      }),
-      signal: AbortSignal.timeout(30_000),
-    })
-
-    if (!res.ok) return texts.map(() => null)
-
-    const data = await res.json() as { data: Array<{ embedding: number[]; index: number }> }
-    const result: (number[] | null)[] = texts.map(() => null)
-    for (const item of data.data) {
-      result[item.index] = item.embedding
+    // Process individually since HuggingFace inference API doesn't support batch embedding
+    const results: (number[] | null)[] = []
+    for (const text of texts) {
+      const embedding = await generateEmbedding(text)
+      results.push(embedding)
     }
-    return result
+    return results
   } catch {
     return texts.map(() => null)
   }
@@ -348,7 +330,7 @@ export interface RAGHealthStatus {
 
 export async function getRAGHealth(): Promise<RAGHealthStatus> {
   const vectorStoreHealthy = await isQdrantHealthy()
-  const embeddingAvailable = !!(await getVaultApiKey('openai'))
+  const embeddingAvailable = !!(await getVaultApiKey('huggingface'))
   return {
     vectorStoreHealthy,
     embeddingAvailable,

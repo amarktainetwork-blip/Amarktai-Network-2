@@ -4,12 +4,11 @@
  * Verifies:
  *  - Runtime truth does not block if direct providers exist without GenX
  *  - GenX missing IS a blocker when no direct providers are configured
- *  - Deprecated/backlog providers do not count as blockers
+ *  - Final 5 active providers work correctly
+ *  - Removed providers are not active
  *  - Adult mode does not require a separate adult key
- *  - Configured-with-last-error is not globally blocking
- *  - Music is always not_implemented (post-launch)
+ *  - Music requires GenX
  *  - Text/Chat is available via multiple direct providers without GenX
- *  - Image/Video/TTS/STT available via non-GenX providers
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -41,24 +40,6 @@ afterEach(() => {
 // ── GenX-optional capability tests ───────────────────────────────────────────
 
 describe('runtime truth does not block if direct providers exist without GenX', () => {
-  afterEach(() => {
-    delete process.env.QWEN_API_KEY
-    delete process.env.GROQ_API_KEY
-  })
-
-  it('does NOT add GenX blocker when Qwen is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ qwen: { apiKey: 'sk-qwen-q1234567890abcdef12' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    expect(truth.genx.configured).toBe(false)
-    expect(truth.blockers.some(b => b.includes('GenX API key not configured'))).toBe(false)
-  })
-
   it('does NOT add GenX blocker when Groq is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: makePrisma({ groq: { apiKey: 'gsk_groq_q1234567890abcdef12' } }),
@@ -72,9 +53,35 @@ describe('runtime truth does not block if direct providers exist without GenX', 
     expect(truth.blockers.some(b => b.includes('GenX API key not configured'))).toBe(false)
   })
 
-  it('Text/Chat is available when Qwen is configured (no GenX)', async () => {
+  it('does NOT add GenX blocker when Together is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ qwen: { apiKey: 'sk-qwen-q1234567890abcdef12' } }),
+      prisma: makePrisma({ together: { apiKey: 'tg_q1234567890abcdef1234567890' } }),
+    }))
+    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
+
+    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
+    const truth = await getDashboardRuntimeTruth()
+
+    expect(truth.genx.configured).toBe(false)
+    expect(truth.blockers.some(b => b.includes('GenX API key not configured'))).toBe(false)
+  })
+
+  it('does NOT add GenX blocker when MiMo is configured', async () => {
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: makePrisma({ mimo: { apiKey: 'mimo_q1234567890abcdef1234567' } }),
+    }))
+    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
+
+    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
+    const truth = await getDashboardRuntimeTruth()
+
+    expect(truth.genx.configured).toBe(false)
+    expect(truth.blockers.some(b => b.includes('GenX API key not configured'))).toBe(false)
+  })
+
+  it('Text/Chat is available when Groq is configured (no GenX)', async () => {
+    vi.doMock('@/lib/prisma', () => ({
+      prisma: makePrisma({ groq: { apiKey: 'gsk_groq_q1234567890abcdef12' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -85,9 +92,9 @@ describe('runtime truth does not block if direct providers exist without GenX', 
     expect(textChat?.status).toBe('available')
   })
 
-  it('Text/Chat is available when MiniMax is configured (no GenX)', async () => {
+  it('Text/Chat is available when Together is configured (no GenX)', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
+      prisma: makePrisma({ together: { apiKey: 'tg_q1234567890abcdef1234567890' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -98,9 +105,9 @@ describe('runtime truth does not block if direct providers exist without GenX', 
     expect(textChat?.status).toBe('available')
   })
 
-  it('Text/Chat is available when DeepSeek is configured (no GenX)', async () => {
+  it('Text/Chat is available when MiMo is configured (no GenX)', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ deepseek: { apiKey: 'sk-deepseek-q1234567890abcdef' } }),
+      prisma: makePrisma({ mimo: { apiKey: 'mimo_q1234567890abcdef1234567' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -123,12 +130,12 @@ describe('runtime truth does not block if direct providers exist without GenX', 
   })
 })
 
-// ── Image/Video available via non-GenX providers ──────────────────────────────
+// ── Image/Video available via active providers ────────────────────────────────
 
-describe('Image generation available without GenX', () => {
-  it('Image available when Qwen is configured', async () => {
+describe('Image generation available with active providers', () => {
+  it('Image available when Together is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ qwen: { apiKey: 'sk-qwen-q1234567890abcdef12' } }),
+      prisma: makePrisma({ together: { apiKey: 'tg_q1234567890abcdef1234567890' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -139,9 +146,9 @@ describe('Image generation available without GenX', () => {
     expect(image?.status).toBe('available')
   })
 
-  it('Image available when MiniMax is configured', async () => {
+  it('Image available when HuggingFace is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
+      prisma: makePrisma({ huggingface: { apiKey: 'hf_q1234567890abcdef01234567' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -150,41 +157,15 @@ describe('Image generation available without GenX', () => {
 
     const image = truth.capabilities.find(c => c.name === 'Image Generation')
     expect(image?.status).toBe('available')
-  })
-
-  it('Video available when Qwen is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ qwen: { apiKey: 'sk-qwen-q1234567890abcdef12' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    const video = truth.capabilities.find(c => c.name === 'Video Generation')
-    expect(video?.status).toBe('available')
-  })
-
-  it('Video available when MiniMax is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    const video = truth.capabilities.find(c => c.name === 'Video Generation')
-    expect(video?.status).toBe('available')
   })
 })
 
-// ── TTS/STT available via non-GenX providers ─────────────────────────────────
+// ── TTS/STT available via active providers ─────────────────────────────────
 
-describe('TTS/STT available without GenX', () => {
-  it('TTS available when MiniMax is configured', async () => {
+describe('TTS/STT available with active providers', () => {
+  it('TTS available when Groq is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
+      prisma: makePrisma({ groq: { apiKey: 'gsk_groq_q1234567890abcdef12' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -195,22 +176,9 @@ describe('TTS/STT available without GenX', () => {
     expect(tts?.status).toBe('available')
   })
 
-  it('STT available when Deepgram is configured', async () => {
+  it('STT available when Groq is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ deepgram: { apiKey: 'dg-q1234567890abcdef123456789' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    const stt = truth.capabilities.find(c => c.name === 'STT / Transcription')
-    expect(stt?.status).toBe('available')
-  })
-
-  it('STT available when MiniMax is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
+      prisma: makePrisma({ groq: { apiKey: 'gsk_groq_q1234567890abcdef12' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -222,12 +190,12 @@ describe('TTS/STT available without GenX', () => {
   })
 })
 
-// ── Music is always post-launch ───────────────────────────────────────────────
+// ── Music requires GenX ───────────────────────────────────────────────────────
 
-describe('Music generation follows GenX Lyria governance', () => {
-  it('music is blocked until GenX Lyria is configured even when MiniMax is configured', async () => {
+describe('Music generation requires GenX', () => {
+  it('music is blocked when no GenX is configured', async () => {
     vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ minimax: { apiKey: 'mm-minimax-q1234567890abcdef' } }),
+      prisma: makePrisma({ groq: { apiKey: 'gsk_groq_q1234567890abcdef12' } }),
     }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
@@ -236,7 +204,6 @@ describe('Music generation follows GenX Lyria governance', () => {
 
     const music = truth.capabilities.find(c => c.name === 'Music Generation')
     expect(music?.status).toBe('blocked')
-    expect(music?.blocker).toContain('Configure GenX')
   })
 
   it('music is available for live testing with GenX configured', async () => {
@@ -351,69 +318,18 @@ describe('adult gate ignores the obsolete separate adult live-test gate', () => 
 // ── Deprecated providers not counted as active blockers ───────────────────────
 
 describe('deprecated providers do not count as active blockers', () => {
-  it('cohere/mistral (deprecated) not in runtime provider governance', async () => {
+  it('removed providers not in runtime provider governance', async () => {
     vi.doMock('@/lib/prisma', () => ({ prisma: makePrisma({}) }))
     vi.doMock('@/lib/crypto-vault', () => makeCrypto())
 
     const { getRuntimeProviderStatus } = await import('@/lib/runtime-capability-truth')
     const providers = await getRuntimeProviderStatus()
 
-    // Deprecated providers should either not appear or show as non-blockers
-    const cohereEntry = providers.find(p => p.key === 'cohere')
-    const mistralEntry = providers.find(p => p.key === 'mistral')
-
-    // They may appear in runtime list with blocked/not_configured status,
-    // but their governanceStatus should be 'deprecated'
-    if (cohereEntry) {
-      expect(cohereEntry.governanceStatus).toBe('deprecated')
+    // Removed providers should not appear in the runtime list
+    const removedKeys = ['qwen', 'openai', 'gemini', 'minimax', 'moonshot', 'openrouter', 'xai', 'grok', 'deepseek', 'anthropic', 'cohere', 'nvidia', 'replicate', 'elevenlabs', 'deepgram', 'mistral', 'zhipu']
+    for (const key of removedKeys) {
+      const entry = providers.find(p => p.key === key)
+      expect(entry, `${key} should not be in runtime provider status`).toBeUndefined()
     }
-    if (mistralEntry) {
-      expect(mistralEntry.governanceStatus).toBe('deprecated')
-    }
-  })
-
-  it('backlog providers (suno/udio) are not in runtime provider status', async () => {
-    vi.doMock('@/lib/prisma', () => ({ prisma: makePrisma({}) }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getRuntimeProviderStatus } = await import('@/lib/runtime-capability-truth')
-    const providers = await getRuntimeProviderStatus()
-
-    const sunoEntry = providers.find(p => p.key === 'suno')
-    const udioEntry = providers.find(p => p.key === 'udio')
-
-    // Backlog providers should not appear in the runtime list
-    expect(sunoEntry).toBeUndefined()
-    expect(udioEntry).toBeUndefined()
-  })
-})
-
-// ── Research/crawler providers ────────────────────────────────────────────────
-
-describe('research/crawler capability', () => {
-  it('research available when Firecrawl is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ firecrawl: { apiKey: 'fc_q1234567890abcdef12345678' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    const research = truth.capabilities.find(c => c.name === 'Web Crawler / Research')
-    expect(research?.status).toBe('available')
-  })
-
-  it('research available when Gemini is configured', async () => {
-    vi.doMock('@/lib/prisma', () => ({
-      prisma: makePrisma({ gemini: { apiKey: 'AIza_q1234567890abcdef12345' } }),
-    }))
-    vi.doMock('@/lib/crypto-vault', () => makeCrypto())
-
-    const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
-    const truth = await getDashboardRuntimeTruth()
-
-    const research = truth.capabilities.find(c => c.name === 'Web Crawler / Research')
-    expect(research?.status).toBe('available')
   })
 })

@@ -410,20 +410,11 @@ async function main() {
 
   // ── AI Provider Vault — seeded from canonical provider catalog ────
   const aiProviders = [
-    { providerKey: 'openai',      displayName: 'OpenAI',         sortOrder: 0 },
-    { providerKey: 'groq',        displayName: 'Groq',           sortOrder: 1 },
-    { providerKey: 'grok',        displayName: 'Grok / xAI',     sortOrder: 2 },
-    { providerKey: 'deepseek',    displayName: 'DeepSeek',       sortOrder: 3 },
-    { providerKey: 'gemini',      displayName: 'Google Gemini',  sortOrder: 4 },
-    { providerKey: 'huggingface', displayName: 'Hugging Face',   sortOrder: 5 },
-    { providerKey: 'nvidia',      displayName: 'NVIDIA',         sortOrder: 6 },
-    { providerKey: 'openrouter',  displayName: 'OpenRouter',     sortOrder: 7 },
-    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 8 },
-    { providerKey: 'qwen',        displayName: 'Qwen',           sortOrder: 9 },
-    { providerKey: 'replicate',   displayName: 'Replicate',      sortOrder: 10 },
-    { providerKey: 'anthropic',   displayName: 'Anthropic',      sortOrder: 11 },
-    { providerKey: 'cohere',      displayName: 'Cohere',         sortOrder: 12 },
-    { providerKey: 'mistral',     displayName: 'Mistral AI',     sortOrder: 13 },
+    { providerKey: 'genx',        displayName: 'GenX',           sortOrder: 0 },
+    { providerKey: 'huggingface', displayName: 'Hugging Face',   sortOrder: 1 },
+    { providerKey: 'groq',        displayName: 'Groq',           sortOrder: 2 },
+    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 3 },
+    { providerKey: 'mimo',        displayName: 'Xiaomi MiMo',    sortOrder: 4 },
   ]
   for (const p of aiProviders) {
     await prisma.aiProvider.upsert({
@@ -442,6 +433,91 @@ async function main() {
     })
   }
   console.log('✅ AI provider vault seeded (14 providers · all unconfigured)')
+
+  // ── Runtime Registry — Capability Registry ────────────────────────
+  const capabilities = [
+    { capabilityKey: 'chat', label: 'General Chat', description: 'Conversational AI chat completions', category: 'text', allowedProviders: '["genx","huggingface","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'code', label: 'Code Generation', description: 'Generate and edit code', category: 'code', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'file_analysis', label: 'File Analysis', description: 'Analyze and summarize documents', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'image_generation', label: 'Image Generation', description: 'Generate images from text prompts', category: 'image', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'image_edit', label: 'Image Editing', description: 'Edit existing images', category: 'image', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'video_generation', label: 'Video Generation', description: 'Generate videos from text prompts', category: 'video', allowedProviders: '["genx","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'image_to_video', label: 'Image to Video', description: 'Generate video from image input', category: 'video', allowedProviders: '["genx","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'music_generation', label: 'Music Generation', description: 'Generate music and audio compositions', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'PARTIAL', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Blueprint fallback only when GenX unavailable' },
+    { capabilityKey: 'lyrics_generation', label: 'Lyrics Generation', description: 'Generate song lyrics', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'tts', label: 'Text-to-Speech', description: 'Convert text to speech audio', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'stt', label: 'Speech-to-Text', description: 'Transcribe audio to text', category: 'audio', allowedProviders: '["genx","huggingface","groq"]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Requires multipart audio file input' },
+    { capabilityKey: 'voice_response', label: 'Voice Response', description: 'Generate voice responses', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'research', label: 'Research', description: 'Web research and fact-finding', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'scrape_website', label: 'Website Scraping', description: 'Crawl and extract website content', category: 'system_ops', allowedProviders: '["firecrawl"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'repo_edit', label: 'Repo Editing', description: 'Edit code in repositories', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'app_build', label: 'App Building', description: 'Generate complete applications', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'deploy_plan', label: 'Deploy Planning', description: 'Generate deployment plans', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'adult_text', label: 'Adult Text', description: 'Adult-oriented text generation', category: 'adult', allowedProviders: '["huggingface","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'adult_image', label: 'Adult Image', description: 'Adult-oriented image generation', category: 'adult', allowedProviders: '["huggingface","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'adult_video', label: 'Adult Video', description: 'Adult-oriented video generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'No adult video provider configured' },
+    { capabilityKey: 'suggestive_image', label: 'Suggestive Image', description: 'Non-explicit suggestive image generation', category: 'adult', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'suggestive_video', label: 'Suggestive Video', description: 'Non-explicit suggestive video planning', category: 'adult', allowedProviders: '["genx","together"]', proofStatus: 'PARTIAL', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Returns scene plan only, not actual video' },
+  ]
+
+  for (const cap of capabilities) {
+    await prisma.capabilityRegistry.upsert({
+      where: { capabilityKey: cap.capabilityKey },
+      update: { ...cap },
+      create: { ...cap },
+    })
+  }
+  console.log(`✅ Capability registry seeded (${capabilities.length} capabilities)`)
+
+  // ── Runtime Registry — Budget Profiles ─────────────────────────────
+  const budgetProfiles = [
+    { profileKey: 'low_cost', displayName: 'Low Cost', costTier: 'low', qualityPreference: 'low', latencyPreference: 'low', maxCostPerRequest: 1, maxFallbackDepth: 5, allowPremium: false, allowStreaming: true, allowLongRunningJobs: false },
+    { profileKey: 'balanced', displayName: 'Balanced', costTier: 'medium', qualityPreference: 'medium', latencyPreference: 'medium', maxCostPerRequest: 10, maxFallbackDepth: 3, allowPremium: false, allowStreaming: true, allowLongRunningJobs: true },
+    { profileKey: 'premium', displayName: 'Premium', costTier: 'high', qualityPreference: 'best', latencyPreference: 'high', maxCostPerRequest: 100, maxFallbackDepth: 2, allowPremium: true, allowStreaming: true, allowLongRunningJobs: true },
+    { profileKey: 'custom', displayName: 'Custom', costTier: 'medium', qualityPreference: 'medium', latencyPreference: 'medium', maxCostPerRequest: 0, maxFallbackDepth: 3, allowPremium: false, allowStreaming: true, allowLongRunningJobs: true },
+  ]
+
+  for (const profile of budgetProfiles) {
+    await prisma.budgetProfile.upsert({
+      where: { profileKey: profile.profileKey },
+      update: { ...profile },
+      create: { ...profile },
+    })
+  }
+  console.log(`✅ Budget profiles seeded (${budgetProfiles.length} profiles)`)
+
+  // ── Runtime Registry — Avatar Library ──────────────────────────────
+  const avatars = [
+    { avatarId: 'default-professional', name: 'Professional', style: 'realistic', provider: 'genx', enabled: true },
+    { avatarId: 'default-friendly', name: 'Friendly', style: 'cartoon', provider: 'genx', enabled: true },
+    { avatarId: 'default-anime', name: 'Anime', style: 'anime', provider: 'huggingface', enabled: true },
+  ]
+
+  for (const avatar of avatars) {
+    await prisma.avatarLibrary.upsert({
+      where: { avatarId: avatar.avatarId },
+      update: { ...avatar },
+      create: { ...avatar },
+    })
+  }
+  console.log(`✅ Avatar library seeded (${avatars.length} avatars)`)
+
+  // ── Runtime Registry — Voice Library ───────────────────────────────
+  const voices = [
+    { voiceId: 'default-male-us', name: 'US Male', provider: 'genx', model: 'tts-1', gender: 'male', accent: 'american', language: 'en', style: 'professional', enabled: true },
+    { voiceId: 'default-female-us', name: 'US Female', provider: 'genx', model: 'tts-1', gender: 'female', accent: 'american', language: 'en', style: 'warm', enabled: true },
+    { voiceId: 'default-male-uk', name: 'UK Male', provider: 'genx', model: 'tts-1', gender: 'male', accent: 'british', language: 'en', style: 'authoritative', enabled: true },
+    { voiceId: 'default-female-uk', name: 'UK Female', provider: 'genx', model: 'tts-1', gender: 'female', accent: 'british', language: 'en', style: 'gentle', enabled: true },
+  ]
+
+  for (const voice of voices) {
+    await prisma.voiceLibrary.upsert({
+      where: { voiceId: voice.voiceId },
+      update: { ...voice },
+      create: { ...voice },
+    })
+  }
+  console.log(`✅ Voice library seeded (${voices.length} voices)`)
 
   console.log('\n✨ Seeding complete!')
   console.log('   Admin login: admin@amarktai.com / admin123!')

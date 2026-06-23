@@ -439,7 +439,7 @@ function bestForModel(modelId: string, costTier: string): string {
 
 export function modelTierFor(modelId?: string): 'manual' | 'fast' | 'balanced' | 'premium' | 'recommended' {
   if (!modelId) return 'recommended'
-  if (/nano|mini|flash|lite|groq|qwen/i.test(modelId)) return 'fast'
+  if (/nano|mini|flash|lite|groq/i.test(modelId)) return 'fast'
   if (/gpt|best|reasoning/i.test(modelId)) return 'premium'
   return 'balanced'
 }
