@@ -19,7 +19,7 @@ afterEach(() => {
 describe('Phase 1 backend source of truth', () => {
   it('contains only the approved provider and tool mesh', () => {
     expect(PROVIDER_MESH.map((node) => node.id)).toEqual([
-      'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together',
+      'genx', 'huggingface', 'mimo', 'groq', 'together',
       'github', 'redis', 'qdrant', 'local-crawler', 'playwright', 'scrapy',
       'trafilatura', 'ffmpeg', 'storage', 'smtp',
     ])
@@ -52,7 +52,7 @@ describe('Phase 1 backend source of truth', () => {
 
   it('uses Workspace navigation and keeps Command as compatibility only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Workspace', 'Outputs', 'Memory', 'Settings', 'System',
+      'App Builder', 'Repo Workbench', 'Media Studio / Playground', 'Outputs', 'Settings', 'Advanced Admin',
     ])
     expect(read('app/admin/dashboard/workspace/page.tsx')).toContain('CommandCenter')
     expect(read('app/admin/dashboard/command/page.tsx')).toContain("redirect('/admin/dashboard/workspace')")

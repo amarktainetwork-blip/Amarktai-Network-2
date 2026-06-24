@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { PUBLIC_NAV_ITEMS } from '@/lib/public-nav'
-import { NETWORK_APPS } from '@/lib/network-apps-registry'
+import { NETWORK_APPS, NETWORK_APPS_EMPTY_MESSAGE } from '@/lib/network-apps-registry'
 
 const ROOT = path.resolve(__dirname, '../../')
 const REPO = path.resolve(ROOT, '../')
@@ -43,12 +43,9 @@ describe('final public website', () => {
     }
   })
 
-  it('shows the eleven required connected apps with honest statuses', () => {
-    expect(NETWORK_APPS).toHaveLength(11)
-    expect(new Set(NETWORK_APPS.map((app) => app.status))).toEqual(new Set(['In build', 'Planned']))
-    for (const name of ['Marketing App', 'Crypto / Trading App', 'App Builder', 'Content Studio', 'Research Engine', 'Automation Hub', 'Sales', 'Support', 'Finance', 'Retail / Ecommerce', 'Operations']) {
-      expect(NETWORK_APPS.map((app) => app.displayName)).toContain(name)
-    }
+  it('shows connected apps registry (currently empty until apps are completed)', () => {
+    expect(NETWORK_APPS).toHaveLength(0)
+    expect(NETWORK_APPS_EMPTY_MESSAGE).toContain('No connected apps')
   })
 
   it('removes banned public wording', () => {

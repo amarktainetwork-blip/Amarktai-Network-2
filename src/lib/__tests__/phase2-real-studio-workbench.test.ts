@@ -18,13 +18,12 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
 
   it('keeps the dashboard to the seven final sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Overview',
-      'Command',
-      'Network Apps',
+      'App Builder',
+      'Repo Workbench',
+      'Media Studio / Playground',
       'Outputs',
-      'Memory',
       'Settings',
-      'System',
+      'Advanced Admin',
     ])
   })
 
@@ -60,7 +59,7 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     expect(STUDIO_ROUTE_MAP['Voice / TTS'].route).toBe('/api/admin/studio/execute')
     expect(STUDIO_ROUTE_MAP['STT / Transcription'].route).toBe('/api/admin/studio/stt')
     expect(STUDIO_ROUTE_MAP.Artifacts.route).toBe('/api/admin/artifacts')
-    expect(STUDIO_ROUTE_MAP['Avatar / Talking Video'].status).toBe('missing')
+    expect(STUDIO_ROUTE_MAP['Avatar / Talking Video'].status).toBe('execute')
   })
 
   it('Command routes into real Studio surfaces and persists command jobs', () => {

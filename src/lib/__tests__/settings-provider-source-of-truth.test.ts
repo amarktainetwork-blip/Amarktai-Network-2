@@ -166,9 +166,9 @@ describe('GenX governance role', () => {
     expect(primaryKeys.has('genx')).toBe(true)
   })
 
-  it('GenX notes describes it as gateway infrastructure only', () => {
+  it('GenX notes describes it as compatibility metadata from provider mesh', () => {
     const genx = getPrimarySetupProviders().find(p => p.key === 'genx')
-    expect(genx?.notes ?? '').toContain('gateway infrastructure')
+    expect(genx?.notes ?? '').toContain('provider-mesh')
   })
 
   it('GenX is not in advanced, specialist, hidden, or backlog groups', () => {

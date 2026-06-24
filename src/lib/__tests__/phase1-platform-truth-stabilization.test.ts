@@ -22,22 +22,20 @@ describe('Phase 1 platform truth stabilization', () => {
     delete process.env.AMARKTAI_ALLOW_DEV_STORAGE_FALLBACK
   })
 
-  it('keeps the dashboard to the seven command operating-system sections', () => {
+  it('keeps the dashboard to the six command operating-system sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Overview',
-      'Command',
-      'Network Apps',
+      'App Builder',
+      'Repo Workbench',
+      'Media Studio / Playground',
       'Outputs',
-      'Memory',
       'Settings',
-      'System',
+      'Advanced Admin',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard',
-      '/admin/dashboard/command',
-      '/admin/dashboard/network-apps',
+      '/admin/dashboard/app-builder',
+      '/admin/dashboard/workbench',
+      '/admin/dashboard/studio',
       '/admin/dashboard/outputs',
-      '/admin/dashboard/memory',
       '/admin/dashboard/settings',
       '/admin/dashboard/system',
     ])
@@ -125,7 +123,7 @@ describe('Phase 1 platform truth stabilization', () => {
     ])
     expect(normalizeAdultPolicy('full_adult')).toBe('full_adult_app_mode')
     const runtimeTruth = read('lib/runtime-capability-truth.ts')
-    expect(runtimeTruth).toContain('No approved adult-capable provider key')
+    expect(runtimeTruth).toContain('No connected provider/model route can create and persist adult text, image, video, or voice output.')
     expect(runtimeTruth).not.toContain('ADULT_MODE_ENABLED=true')
   })
 

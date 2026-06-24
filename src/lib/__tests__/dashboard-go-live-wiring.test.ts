@@ -8,11 +8,12 @@ const ROOT = path.resolve(__dirname, '../../')
 const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf8')
 
 describe('final dashboard source-of-truth wiring', () => {
-  it('keeps exactly the five truthful dashboard routes', () => {
+  it('keeps exactly the six truthful dashboard routes', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard/workspace',
+      '/admin/dashboard/app-builder',
+      '/admin/dashboard/workbench',
+      '/admin/dashboard/studio',
       '/admin/dashboard/outputs',
-      '/admin/dashboard/memory',
       '/admin/dashboard/settings',
       '/admin/dashboard/system',
     ])
@@ -22,7 +23,7 @@ describe('final dashboard source-of-truth wiring', () => {
 
   it('uses one provider mesh with all required connections', () => {
     expect(PROVIDER_MESH.map((node) => node.id)).toEqual([
-      'genx', 'huggingface', 'qwen', 'mimo', 'groq', 'together',
+      'genx', 'huggingface', 'mimo', 'groq', 'together',
       'github', 'redis', 'qdrant', 'local-crawler', 'playwright', 'scrapy', 'trafilatura',
       'ffmpeg', 'storage', 'smtp',
     ])
@@ -54,7 +55,7 @@ describe('final dashboard source-of-truth wiring', () => {
     const overview = read('app/admin/dashboard/page.tsx')
     expect(command).not.toContain('model catalog dump')
     expect(overview).not.toContain('JSON.stringify')
-    expect(read('app/admin/dashboard/system/page.tsx')).toContain('Advanced diagnostics')
+    expect(read('app/admin/dashboard/system/page.tsx')).toContain('runtime diagnostics')
   })
 
   it('retains protected repository and system routes behind attached workspaces', () => {

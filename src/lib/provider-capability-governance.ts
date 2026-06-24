@@ -35,7 +35,7 @@ export const ROOT_WORKSPACE: RootWorkspaceIdentity = {
 }
 
 export const EXTERNAL_APP_ONBOARDING_LABEL = 'Add external managed app'
-export const LIVE_GENX_MODEL_COUNT = 58
+export const LIVE_GENX_MODEL_COUNT = 8
 
 export type GovernedProviderKey = ProviderMeshId
 export type GovernedCapability =

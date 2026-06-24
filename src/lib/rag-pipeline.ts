@@ -65,7 +65,7 @@ const DEFAULT_CHUNK_SIZE = 512
 const DEFAULT_CHUNK_OVERLAP = 64
 const DEFAULT_TOP_K = 5
 const EMBEDDING_MODEL = 'text-embedding-3-small'
-const EMBEDDING_DIMENSIONS = 1536
+const _EMBEDDING_DIMENSIONS = 1536
 const EMBEDDING_CACHE_TTL = 3600 // 1 hour
 
 // ── Text Chunking ────────────────────────────────────────────────────────────

@@ -20,7 +20,7 @@ describe('adult and media capability routing', () => {
     const route = getMediaCapabilityRoute('adult_video')
     expect(route?.route).toBe('/api/brain/video-generate')
     expect(route?.execution).toBe('async_job')
-    expect(route?.providers.map((entry) => entry.provider)).toEqual(['genx', 'qwen'])
+    expect(route?.providers.map((entry) => entry.provider)).toEqual(['genx'])
     expect(route?.providers.map((entry) => entry.provider)).not.toContain('together')
   })
 
@@ -28,7 +28,7 @@ describe('adult and media capability routing', () => {
     const route = getMediaCapabilityRoute('adult_voice')
     expect(route?.route).toBe('/api/brain/tts')
     expect(route?.artifactType).toBe('audio')
-    expect(route?.providers.map((entry) => entry.provider)).toEqual(expect.arrayContaining(['genx', 'groq', 'huggingface']))
+    expect(route?.providers.map((entry) => entry.provider)).toEqual(expect.arrayContaining(['genx', 'huggingface']))
   })
 
   it('blocks adult capabilities when policy is disabled', () => {

@@ -76,6 +76,6 @@ describe('backend capability truth', () => {
     expect(response.status).toBe(501)
     expect(data.executed).toBe(false)
     expect(data.generation_available).toBe(false)
-    expect(data.blocker).toContain('No real video generation provider is configured')
+    expect(data.blocker).toContain('No tested approved video provider could')
   })
 })

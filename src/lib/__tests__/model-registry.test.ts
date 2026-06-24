@@ -140,9 +140,9 @@ describe('Model Registry', () => {
   })
 
   describe('getModelsForDomain', () => {
-    it('finds specialist models for finance domain', () => {
-      const financeModels = getModelsForDomain('finance')
-      expect(financeModels.length).toBeGreaterThan(0)
+    it('finds specialist models for coding domain', () => {
+      const codingModels = getModelsForDomain('coding')
+      expect(codingModels.length).toBeGreaterThan(0)
     })
 
     it('returns empty for very niche domain', () => {

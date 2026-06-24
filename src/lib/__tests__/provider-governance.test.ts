@@ -21,7 +21,7 @@ import {
   getAdultSpecialistProviderKeys,
   getRuntimeProviderGovernance,
 } from '@/lib/ai-provider-governance'
-import { getIntegrationKey, getEnvKeyForProvider } from '@/lib/provider-config'
+import { getIntegrationKey } from '@/lib/provider-config'
 
 // ── Final 5 Active AI Providers ──────────────────────────────────────────────
 

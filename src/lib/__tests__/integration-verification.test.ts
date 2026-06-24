@@ -17,20 +17,9 @@ import { computeFreshnessScore, computeKeywordRelevance } from '@/lib/retrieval-
 describe('Integration Verification', () => {
   /** Populate health cache so routing can find eligible models. */
   function seedHealthCache() {
-    setProviderHealth('openai', 'healthy')
     setProviderHealth('groq', 'healthy')
-    setProviderHealth('deepseek', 'configured')
-    setProviderHealth('gemini', 'configured')
     setProviderHealth('together', 'configured')
-    setProviderHealth('openrouter', 'configured')
-    setProviderHealth('grok', 'configured')
     setProviderHealth('huggingface', 'configured')
-    setProviderHealth('nvidia', 'configured')
-    setProviderHealth('replicate', 'configured')
-    setProviderHealth('anthropic', 'configured')
-    setProviderHealth('cohere', 'configured')
-    setProviderHealth('qwen', 'configured')
-    setProviderHealth('mistral', 'configured')
   }
 
   beforeEach(() => {
@@ -38,8 +27,8 @@ describe('Integration Verification', () => {
     seedHealthCache()
   })
   describe('Model Registry as Single Source of Truth', () => {
-    it('model registry provides defaults for all providers used in brain.ts', async () => {
-      const brainProviders = ['openai', 'groq', 'deepseek', 'openrouter', 'together', 'grok', 'huggingface', 'nvidia']
+    it('model registry provides defaults for all active providers', async () => {
+      const brainProviders = ['groq', 'together', 'huggingface']
       for (const p of brainProviders) {
         const model = getDefaultModelForProvider(p)
         expect(model, `Model registry missing default for provider: ${p}`).not.toBe('unknown')
@@ -52,10 +41,10 @@ describe('Integration Verification', () => {
       expect(alwaysHealthy, 'All models falsely report healthy — health_status should reflect real state').toBe(false)
     })
 
-    it('model registry covers all providers in preference order lists', async () => {
+    it('model registry covers all active providers', async () => {
       const registry = getModelRegistry()
       const providers = new Set(registry.map(m => m.provider))
-      const orchestratorProviders = ['openai', 'groq', 'deepseek', 'openrouter', 'together', 'grok', 'huggingface', 'nvidia']
+      const orchestratorProviders = ['groq', 'together', 'huggingface']
       for (const p of orchestratorProviders) {
         expect(providers.has(p), `Registry missing provider: ${p}`).toBe(true)
       }

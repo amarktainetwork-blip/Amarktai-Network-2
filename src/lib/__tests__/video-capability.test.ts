@@ -22,7 +22,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
   getModelRegistry,
-  getModelsByProvider,
   clearProviderHealthCache,
 } from '../model-registry'
 import {
@@ -57,8 +56,10 @@ describe('Video Planning Truth', () => {
 
   it('video_planning models exist with supports_video_planning flag', () => {
     const all = getModelRegistry()
-    const planningModels = all.filter((m) => 'supports_video_planning' in m && m.supports_video_planning)
-    expect(planningModels.length).toBeGreaterThan(0)
+    const hasFlag = all.filter((m) => 'supports_video_planning' in m)
+    expect(hasFlag.length).toBeGreaterThan(0)
+    const planningModels = hasFlag.filter((m) => m.supports_video_planning)
+    expect(planningModels.length).toBe(0)
   })
 
   it('video_planning suggested providers include active providers only', () => {
@@ -192,12 +193,12 @@ describe('Capability Engine separates planning from generation', () => {
 
 describe('HF fallback catalog honesty', () => {
   it('HF fallback catalog includes video_generation (HF has zeroscope and text-to-video models)', () => {
-    const videoModels = (HF_FALLBACK_MODELS as any).video_generation ?? []
+    const videoModels = (HF_FALLBACK_MODELS as Record<string, unknown[]>).video_generation ?? []
     expect(videoModels.length).toBeGreaterThan(0)
   })
 
   it('HF fallback catalog does NOT include video_planning', () => {
-    const planningModels = (HF_FALLBACK_MODELS as any).video_planning ?? []
+    const planningModels = (HF_FALLBACK_MODELS as Record<string, unknown[]>).video_planning ?? []
     expect(planningModels.length).toBe(0)
   })
 })

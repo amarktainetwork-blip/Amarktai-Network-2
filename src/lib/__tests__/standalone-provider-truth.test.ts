@@ -11,9 +11,9 @@ describe('standalone provider truth', () => {
       prisma: {
         integrationConfig: {
           findUnique: vi.fn(async ({ where: { key } }: { where: { key: string } }) => {
-            if (key !== 'qwen') return null
+            if (key !== 'groq') return null
             return {
-              apiKey: 'encrypted-qwen-key',
+              apiKey: 'encrypted-groq-key',
               notes: JSON.stringify({
                 lastTestStatus: 'passed',
                 lastTestPassed: true,

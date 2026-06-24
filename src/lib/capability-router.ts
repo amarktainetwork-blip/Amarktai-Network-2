@@ -150,7 +150,7 @@ type Capability = (typeof ALL_CAPABILITIES)[number]
 
 // ── Orchestration Constants & Pure Functions (merged from orchestrator.ts) ────
 
-const IMAGE_MESSAGE_PATTERNS = [
+const _IMAGE_MESSAGE_PATTERNS = [
   /\b(?:create|generate|make|draw|paint|design|produce|render)\b.*\b(?:image|picture|photo|illustration|artwork|visual|graphic)\b/i,
   /\b(?:image|picture|photo|illustration|artwork|visual|graphic)\b.*\b(?:of|showing|depicting|with|featuring)\b/i,
   /\bdall-?e\b/i,
@@ -161,7 +161,7 @@ const IMAGE_MESSAGE_PATTERNS = [
 /**
  * Specialist profile mapping — app category → system-level instruction.
  */
-const SPECIALIST_PROFILES: Record<string, string> = {
+const _SPECIALIST_PROFILES: Record<string, string> = {
   crypto:    'You are a specialist AI assistant for cryptocurrency and digital asset trading. Provide accurate, data-aware responses. Always note that outputs are not financial advice.',
   finance:   'You are a specialist AI assistant for financial analysis and markets. Provide rigorous, well-reasoned responses. Always note that outputs are not financial advice.',
   forex:     'You are a specialist AI assistant for forex and currency markets. Provide accurate, data-aware responses. Always note that outputs are not financial advice.',

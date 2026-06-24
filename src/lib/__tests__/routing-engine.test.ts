@@ -11,7 +11,7 @@
  *   - groq
  *   - together
  */
-import { describe, it, expect, afterEach, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { routeRequest, type RoutingContext } from '@/lib/routing-engine'
 import {
   setProviderHealth,

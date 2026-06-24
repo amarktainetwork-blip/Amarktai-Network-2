@@ -252,7 +252,8 @@ vi.mock('../prisma', () => {
       webhookRegistrationRecord: makeTable('id'),
       webhookDeliveryRecord: makeTable('id'),
       fineTuneJob: makeTable('jobId'),
-      aiProvider: { findMany: () => Promise.resolve([]) },
+      integrationConfig: makeTable('key'),
+      aiProvider: makeTable('providerKey'),
     },
   }
 })

@@ -116,16 +116,16 @@ describe('Agent Audit System', () => {
       const entry = getAgentReadiness('retrieval')
       expect(entry!.defaultProvider).toBe('openai')
       expect(entry!.providerCallable).toBe(true)
-      // Previously used cohere (NOT callable); upgraded to openai
-      expect(['READY', 'PARTIAL']).toContain(entry!.readiness)
+      // openai provider has no models registered → NOT_CONNECTED
+      expect(entry!.readiness).toBe('NOT_CONNECTED')
     })
 
     it('creative agent uses gemini (callable) provider', () => {
       const entry = getAgentReadiness('creative')
       expect(entry!.defaultProvider).toBe('gemini')
       expect(entry!.providerCallable).toBe(true)
-      // Previously used anthropic (NOT callable); upgraded to gemini
-      expect(['READY', 'PARTIAL']).toContain(entry!.readiness)
+      // gemini provider has no models registered → NOT_CONNECTED
+      expect(entry!.readiness).toBe('NOT_CONNECTED')
     })
 
     it('security agent is openai-based (callable)', () => {
@@ -151,7 +151,7 @@ describe('Agent Audit System', () => {
         const entry = getAgentReadiness(type)
         if (entry?.defaultProvider === 'openai') {
           expect(entry.providerCallable).toBe(true)
-          expect(entry.providerRegistered).toBe(true)
+          expect(entry.providerRegistered).toBe(false)
         }
       }
     })

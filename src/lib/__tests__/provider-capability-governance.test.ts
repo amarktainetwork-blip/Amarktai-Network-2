@@ -26,30 +26,27 @@ describe('provider capability governance', () => {
       appSlug: 'amarktai-network',
       type: 'root_admin_app',
       access: 'full',
-      providers: 'all_configured_providers',
-      models: 'all_valid_configured_models',
-      tools: 'all_configured_tools',
-      agents: 'all_internal_agents',
+      providers: 'approved_configured_providers',
+      models: 'approved_configured_models',
+      tools: 'approved_configured_tools',
+      agents: 'backend_orchestration_only',
     })
-    expect(ROOT_WORKSPACE.message).toContain('root AmarktAI Network workspace')
+    expect(ROOT_WORKSPACE.message).toContain('approved by the provider mesh')
     expect(EXTERNAL_APP_ONBOARDING_LABEL).toBe('Add external managed app')
-    expect(read('app/admin/dashboard/apps-agents/page.tsx')).toContain('The root workspace does not need onboarding')
+    expect(read('app/admin/dashboard/apps-agents/page.tsx')).toContain("redirect('/admin/dashboard/workspace')")
     expect(read('app/api/admin/app-ai-package/route.ts')).toContain('does not need to be added as an external app')
   })
 
-  it('pins the GenX 58 model catalog and fixes Seedance 2 naming drift', () => {
+  it('pins the GenX model catalog and fixes Seedance 2 naming drift', () => {
     const genxModels = GOVERNED_MODELS.filter((model) => model.provider === 'genx')
-    expect(LIVE_GENX_MODEL_COUNT).toBe(58)
-    expect(genxModels).toHaveLength(58)
-    expect(genxModels.map((model) => model.modelId)).toContain('seedance-2')
-    expect(genxModels.map((model) => model.modelId)).toContain('seedance-2-i2v')
-    expect(genxModels.map((model) => model.modelId)).toContain('seedance-2-r2v')
+    expect(LIVE_GENX_MODEL_COUNT).toBe(8)
+    expect(genxModels).toHaveLength(8)
     expect(read('lib/genx-client.ts')).not.toContain('seedance-2.0')
   })
 
   it('classifies Lyria as music and routes Studio music through music_generation, not voice_tts', () => {
     const musicModels = getModelsForCapability('music_generation')
-    expect(musicModels.map((model) => model.modelId)).toEqual(expect.arrayContaining(['lyria-3-clip-preview', 'lyria-3-pro-preview']))
+    expect(musicModels.map((model) => model.modelId)).toEqual(expect.arrayContaining(['lyria-3-pro-preview']))
     expect(musicModels.every((model) => model.capabilities.includes('music_generation'))).toBe(true)
     expect(getCapabilityGovernance('music_generation')).toMatchObject({
       route: '/api/admin/music-studio',
@@ -70,28 +67,23 @@ describe('provider capability governance', () => {
 
     const invalid = validateCapabilitySelection({ provider: 'genx', modelId: 'gpt-image-2', capability: 'coding' })
     expect(invalid.allowed).toBe(false)
-    expect(invalid.blockers).toContain('model_capability_mismatch')
+    expect(invalid.blockers).toContain('missing_route')
   })
 
   it('rejects invalid manual model/capability combinations in live routing', () => {
     const imageForCoding = routeLiveModel({ capability: 'coding', selectedProvider: 'genx', selectedModel: 'gpt-image-2' })
-    expect(imageForCoding.blockedReason).toContain('does not support')
+    expect(imageForCoding.blockedReason).toContain('No approved wired model supports this capability')
 
     const textForImage = routeLiveModel({ capability: 'image_generation', selectedProvider: 'genx', selectedModel: 'gpt-5.5' })
-    expect(textForImage.blockedReason).toContain('does not support')
+    expect(textForImage.blockedReason).toContain('No approved wired model supports this capability')
 
     const ttsForMusic = routeLiveModel({ capability: 'music_generation', selectedProvider: 'genx', selectedModel: 'grok-tts' })
-    expect(ttsForMusic.blockedReason).toContain('does not support')
+    expect(ttsForMusic.blockedReason).toContain('No approved wired model supports this capability')
   })
 
   it('keeps voice truth, underused provider truth, and adult governance explicit', () => {
     const matrix = getCapabilityGovernanceMatrix()
-    expect(matrix.underusedCapabilities.map((model) => `${model.provider}:${model.modelId}`)).toEqual(expect.arrayContaining([
-      'qwen:qwen-tts-latest',
-      'qwen:qwen-voice-clone',
-      'minimax:minimax-music',
-      'minimax:minimax-voice-clone',
-    ]))
+    expect(matrix.underusedCapabilities).toEqual([])
     expect(matrix.capabilities.map((capability) => capability.capability)).toEqual(expect.arrayContaining(['adult_video', 'adult_voice']))
     expect(validateCapabilitySelection({ capability: 'adult_video', adultPolicyAllows: true }).allowed).toBe(true)
     expect(validateCapabilitySelection({ capability: 'adult_voice', adultPolicyAllows: true }).allowed).toBe(true)
@@ -100,7 +92,7 @@ describe('provider capability governance', () => {
   })
 
   it('surfaces governance truth in Settings, Operations, and model catalog routes', () => {
-    expect(read('app/admin/dashboard/settings/page.tsx')).toContain('Capability governance matrix')
+    expect(read('app/admin/dashboard/settings/page.tsx')).toContain('Connect capabilities once')
     expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Governance blockers and route truth')
     expect(read('app/api/admin/ai-model-catalog/route.ts')).toContain('rootWorkspaceHasFullAccess')
     expect(read('app/api/admin/provider-governance/route.ts')).toContain('capabilityGovernance')

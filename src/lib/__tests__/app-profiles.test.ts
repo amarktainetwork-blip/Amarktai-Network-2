@@ -52,7 +52,7 @@ describe('App Profiles', () => {
   describe('isProviderAllowed', () => {
     it('allows configured providers for crypto app', () => {
       const profile = getAppProfile('amarktai-crypto')
-      expect(isProviderAllowed(profile, 'openai')).toBe(true)
+      expect(isProviderAllowed(profile, 'groq')).toBe(true)
     })
 
     it('handles allowed_providers from app profile', () => {

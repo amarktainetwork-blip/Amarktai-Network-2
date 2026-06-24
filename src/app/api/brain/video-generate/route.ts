@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { getVaultApiKey, callProvider } from '@/lib/brain'
+import { callProvider } from '@/lib/brain'
 import { callGenXMedia, GENX_VIDEO_MODELS } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'

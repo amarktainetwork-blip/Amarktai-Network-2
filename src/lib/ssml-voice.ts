@@ -98,7 +98,7 @@ const EMOTION_PROSODY_MAP: Record<EmotionType, SSMLProsody> = {
  * - echo:    calm / measured / male
  * - fable:   expressive / storytelling
  */
-const OPENAI_EMOTION_VOICE: Record<EmotionType, string> = {
+const _OPENAI_EMOTION_VOICE: Record<EmotionType, string> = {
   joy:          'nova',
   excitement:   'fable',
   sadness:      'shimmer',
@@ -134,7 +134,7 @@ const GROQ_EMOTION_VOICE: Record<EmotionType, string> = {
 }
 
 /** Gemini voice mapping by emotion. */
-const GEMINI_EMOTION_VOICE: Record<EmotionType, string> = {
+const _GEMINI_EMOTION_VOICE: Record<EmotionType, string> = {
   joy:          'Kore',
   excitement:   'Kore',
   sadness:      'Charon',
