@@ -143,6 +143,8 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     outputType: 'video',
     providers: [
       { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX video quota' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together video API short clips' },
+      { provider: 'huggingface', models: ['tencent/HunyuanVideo', 'Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B', 'THUDM/CogVideoX-5b', 'ByteDance/AnimateDiff-Lightning'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF video models; full-quality requires configured endpoint' },
     ],
   },
   image_to_video: {
@@ -153,6 +155,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     outputType: 'video',
     providers: [
       { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX video quota' },
+      { provider: 'huggingface', models: ['Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF image-to-video; requires configured endpoint' },
     ],
   },
   music_generation: {

@@ -17,6 +17,8 @@ import {
   callGenXChat,
   callGenXMedia,
   GENX_AUDIO_MODELS,
+  GENX_VIDEO_MODELS,
+  GENX_I2V_MODELS,
 } from '@/lib/genx-client'
 import {
   validateMusicPayload,
@@ -24,6 +26,17 @@ import {
   executeHFMusicGeneration,
   type MusicCapabilityPayload,
 } from '@/lib/music-capability'
+import {
+  validateVideoPayload,
+  buildVideoProviderPrompt,
+  executeHFVideoGeneration,
+  executeTogetherVideoGeneration,
+  resolveVideoProviderOrder,
+  type VideoCapabilityPayload,
+  type VideoMode,
+  type VideoStyle,
+  type BudgetMode,
+} from '@/lib/video-capability'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlAppWebsite } from '@/lib/firecrawl'
 import { createArtifact } from '@/lib/artifact-store'
@@ -1439,63 +1452,169 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'video', output: null, fallbackUsed: false, error: 'No text provider available for suggestive video planning.' }
   }
 
-  // ── Video generation (registry-driven) ─────────────────────────────────────
+  // ── Video generation — GenX + Together + HuggingFace multi-provider ──────────
+  // Success = real video URL, data URL, or async job id.
+  // Storyboard/plan alone is never success for video_generation.
+  // Provider order is driven by budget setting, not hardcoded.
   if (cap === 'video_generation' || cap === 'image_to_video') {
-    // Resolve best model from registry
-    const resolvedModel = await resolveBestModel({
-      capability: cap,
-      provider: request.providerOverride,
-    })
+    // Parse video payload from metadata
+    const meta = request.metadata ?? {}
+    const rawMode: VideoMode = cap === 'image_to_video' ? 'image_to_video'
+      : typeof meta.mode === 'string' ? (meta.mode as VideoMode) : 'text_to_video'
+    const videoPayload: VideoCapabilityPayload = {
+      prompt: (typeof meta.prompt === 'string' && meta.prompt.trim()) ? meta.prompt.trim() : request.input,
+      mode: rawMode,
+      style: typeof meta.style === 'string' ? meta.style as VideoStyle : undefined,
+      aspectRatio: typeof meta.aspectRatio === 'string' ? meta.aspectRatio as VideoCapabilityPayload['aspectRatio'] : '16:9',
+      duration: typeof meta.duration === 'number' ? meta.duration : 10,
+      fps: typeof meta.fps === 'number' ? meta.fps as 24 | 30 | 60 : undefined,
+      resolution: typeof meta.resolution === 'string' ? meta.resolution as VideoCapabilityPayload['resolution'] : '720p',
+      budget: typeof meta.budget === 'string' ? meta.budget as BudgetMode : 'balanced',
+      imageInput: typeof meta.imageInput === 'string' ? meta.imageInput : undefined,
+      videoInput: typeof meta.videoInput === 'string' ? meta.videoInput : undefined,
+      mood: typeof meta.mood === 'string' ? meta.mood : undefined,
+      targetAudience: typeof meta.targetAudience === 'string' ? meta.targetAudience : undefined,
+      voiceover: typeof meta.voiceover === 'boolean' ? meta.voiceover : false,
+      captions: typeof meta.captions === 'boolean' ? meta.captions : false,
+      music: typeof meta.music === 'boolean' ? meta.music : false,
+      characters: Array.isArray(meta.characters) ? meta.characters as VideoCapabilityPayload['characters'] : undefined,
+      scenes: Array.isArray(meta.scenes) ? meta.scenes as VideoCapabilityPayload['scenes'] : undefined,
+      series: meta.series ? meta.series as VideoCapabilityPayload['series'] : undefined,
+      narration: typeof meta.narration === 'string' ? meta.narration : undefined,
+    }
 
-    if (!resolvedModel || resolvedModel.providerKey !== 'genx') {
-      logExecution(cap, null, null, true, false, 'No video provider available')
+    // Validate before any provider call
+    const videoValidationError = validateVideoPayload(videoPayload)
+    if (videoValidationError) {
+      logExecution(cap, null, null, false, false, videoValidationError)
+      return { success: false, capability: cap, provider: null, model: null, outputType: 'video', output: null, fallbackUsed: false, error: videoValidationError }
+    }
+
+    // Build prompt and determine generationMode
+    const videoPrompt = buildVideoProviderPrompt(videoPayload)
+
+    // Long-form / cartoon_episode returns orchestration plan without real video
+    if (videoPrompt.generationMode === 'orchestration_plan' || videoPrompt.generationMode === 'long_form_plan') {
+      const plan = videoPrompt.orchestrationPlan
+      logExecution(cap, null, null, false, false, null)
       return {
-        success: false,
+        success: true,
         capability: cap,
         provider: null,
         model: null,
         outputType: 'video',
-        output: null,
-        fallbackUsed: true,
-        error: 'No real video generation provider returned a job. Use video_planning explicitly if you want a storyboard instead.',
-        error_category: 'endpoint_error',
-      }
-    }
-
-    const res = await tryGenXMedia(request.input, 'video', resolvedModel.modelId)
-    if (res.success && res.url) {
-      let artifactId: string | undefined
-      if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
-      logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'video', output: res.url, artifactId, fallbackUsed: false }
-    }
-    if (res.success && res.jobId) {
-      logExecution(cap, 'genx', res.model, false, false, null)
-      return {
-        success: true,
-        capability: cap,
-        provider: 'genx',
-        model: res.model,
-        outputType: 'video',
-        output: null,
-        jobId: res.jobId,
-        status: res.status,
+        output: JSON.stringify(plan),
         fallbackUsed: false,
+        warning: 'Long-form video: orchestration plan returned. Real video clips require per-scene generation.',
+        metadata: {
+          generationMode: videoPrompt.generationMode,
+          requestedDuration: videoPrompt.duration,
+          mode: videoPrompt.mode,
+          sceneCount: plan?.scenes.length ?? 0,
+          assetRequirements: plan?.assetRequirements ?? [],
+        },
       }
     }
 
-    logExecution(cap, null, null, true, false, 'No video provider available')
-    return {
-      success: false,
-      capability: cap,
-      provider: null,
-      model: null,
-      outputType: 'video',
-      output: null,
-      fallbackUsed: true,
-      error: 'No real video generation provider returned a job. Use video_planning explicitly if you want a storyboard instead.',
-      error_category: 'endpoint_error',
+    // Shared video metadata builder
+    const videoMeta = (genMode: string, provider: string, model: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+      provider, model, generationMode: genMode,
+      requestedDuration: videoPrompt.duration,
+      mode: videoPrompt.mode,
+      aspectRatio: videoPrompt.aspectRatio,
+      style: videoPrompt.style,
+      ...extra,
+    })
+
+    const budget = videoPayload.budget ?? 'balanced'
+    const providerOrder = resolveVideoProviderOrder(budget, rawMode, videoPrompt.duration)
+    const orderedProviders = [providerOrder.primary, ...providerOrder.fallbacks]
+
+    // ── GenX video helper
+    const tryVideoGenX = async (fallbackUsed: boolean): Promise<CapabilityResponse | null> => {
+      const isI2V = rawMode === 'image_to_video'
+      const videoModel = isI2V ? GENX_I2V_MODELS[0] : GENX_VIDEO_MODELS[0]
+      const res = await tryGenXMedia(videoPrompt.prompt, 'video', videoModel, {
+        duration: videoPrompt.duration,
+        ...(videoPayload.imageInput ? { image_url: videoPayload.imageInput } : {}),
+      })
+      if (res.success && res.url) {
+        let artifactId: string | undefined
+        if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
+        logExecution(cap, 'genx', res.model, fallbackUsed, !!artifactId, null)
+        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'video', output: res.url, artifactId, fallbackUsed, metadata: videoMeta('clip', 'genx', res.model) }
+      }
+      if (res.success && res.jobId) {
+        logExecution(cap, 'genx', res.model, fallbackUsed, false, null)
+        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'video', output: null, jobId: res.jobId, status: res.status, fallbackUsed, metadata: videoMeta('clip', 'genx', res.model) }
+      }
+      return null
     }
+
+    // ── Together video helper
+    const tryVideoTogether = async (fallbackUsed: boolean): Promise<CapabilityResponse | null> => {
+      const togetherKey = await getVaultApiKey('together')
+      if (!togetherKey) return null
+      const tRes = await executeTogetherVideoGeneration(videoPrompt.prompt, videoPrompt.duration, togetherKey, rawMode, videoPayload.imageInput)
+      if (!tRes.success) return null
+      const output = tRes.videoUrl
+      if (output) {
+        let artifactId: string | undefined
+        if (save) artifactId = await maybeSaveArtifact(cap, output, 'together', tRes.model, appSlug, request.traceId)
+        logExecution(cap, 'together', tRes.model, fallbackUsed, !!artifactId, null)
+        return { success: true, capability: cap, provider: 'together', model: tRes.model, outputType: 'video', output, artifactId, fallbackUsed, metadata: videoMeta(tRes.generationMode, 'together', tRes.model) }
+      }
+      if (tRes.jobId) {
+        logExecution(cap, 'together', tRes.model, fallbackUsed, false, null)
+        return { success: true, capability: cap, provider: 'together', model: tRes.model, outputType: 'video', output: null, jobId: tRes.jobId, status: (tRes.status ?? 'processing') as CapabilityResponse['status'], fallbackUsed, metadata: videoMeta(tRes.generationMode, 'together', tRes.model) }
+      }
+      return null
+    }
+
+    // ── HF video helper
+    const tryVideoHF = async (fallbackUsed: boolean): Promise<CapabilityResponse | null> => {
+      const hfKey = await getVaultApiKey('huggingface')
+      if (!hfKey) return null
+      const hfRes = await executeHFVideoGeneration(videoPrompt.prompt, videoPrompt.duration, hfKey, rawMode, videoPayload.style, videoPayload.imageInput, budget)
+      if (!hfRes.success) return null
+      const output = hfRes.videoDataUrl ?? hfRes.videoUrl
+      if (output) {
+        let artifactId: string | undefined
+        if (save) artifactId = await maybeSaveArtifact(cap, output, 'huggingface', hfRes.model, appSlug, request.traceId)
+        logExecution(cap, 'huggingface', hfRes.model, fallbackUsed, !!artifactId, null)
+        return { success: true, capability: cap, provider: 'huggingface', model: hfRes.model, outputType: 'video', output, artifactId, fallbackUsed, metadata: videoMeta(hfRes.generationMode, 'huggingface', hfRes.model) }
+      }
+      if (hfRes.jobId) {
+        logExecution(cap, 'huggingface', hfRes.model, fallbackUsed, false, null)
+        return { success: true, capability: cap, provider: 'huggingface', model: hfRes.model, outputType: 'video', output: null, jobId: hfRes.jobId, status: 'processing', fallbackUsed, metadata: videoMeta(hfRes.generationMode, 'huggingface', hfRes.model) }
+      }
+      return null
+    }
+
+    const providerFns: Record<string, (fallback: boolean) => Promise<CapabilityResponse | null>> = {
+      genx: tryVideoGenX,
+      together: tryVideoTogether,
+      huggingface: tryVideoHF,
+    }
+
+    let videoResult: CapabilityResponse | null = null
+    const errors: string[] = []
+    let isFirst = true
+
+    for (const provider of orderedProviders) {
+      const fn = providerFns[provider]
+      if (!fn) continue
+      videoResult = await fn(!isFirst)
+      if (videoResult) break
+      errors.push(`${provider} video failed`)
+      isFirst = false
+    }
+
+    if (videoResult) return videoResult
+
+    const finalError = errors.join('; ') || 'No video provider could generate a clip. Configure GenX, Together, or HuggingFace video endpoints.'
+    logExecution(cap, null, null, false, false, finalError)
+    return { success: false, capability: cap, provider: null, model: null, outputType: 'video', output: null, fallbackUsed: false, error: finalError }
   }
 
   // ── Music generation — GenX (Lyria) + HuggingFace (full-song/segment) ────────
