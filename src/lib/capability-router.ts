@@ -37,6 +37,26 @@ import {
   type VideoStyle,
   type BudgetMode,
 } from '@/lib/video-capability'
+import {
+  checkAdultPermission,
+  checkAdultLegalSafety,
+  buildAdultTextBody,
+  buildAdultImageBody,
+  buildAdultVideoBody,
+  buildAdultAvatarBody,
+  validateAdultAvatarPayload,
+  executeHFAdultGenerationChain,
+  executeAvatarVoice,
+  checkVoiceCloneRules,
+  type AdultTextPayload,
+  type AdultImagePayload,
+  type AdultVideoPayload,
+  type AdultAvatarPayload,
+  type AvatarVoicePayload,
+  type AvatarStyle,
+  type AvatarMode,
+  type AdultCapabilityType,
+} from '@/lib/adult-capability'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlAppWebsite } from '@/lib/firecrawl'
 import { createArtifact } from '@/lib/artifact-store'
@@ -173,7 +193,7 @@ const ALL_CAPABILITIES = [
   'video_generation', 'image_to_video',
   'music_generation', 'lyrics_generation',
   'tts', 'stt', 'voice_response',
-  'adult_text', 'adult_image', 'adult_video',
+  'adult_text', 'adult_image', 'adult_video', 'adult_avatar',
   'suggestive_image', 'suggestive_video',
   'repo_edit', 'app_build', 'deploy_plan',
   'research', 'scrape_website',
@@ -524,6 +544,7 @@ function outputTypeForCapability(cap: string): string {
     case 'image_generation':
     case 'image_edit':
     case 'adult_image':   return 'image'
+    case 'adult_avatar':  return 'image'
     case 'suggestive_image': return 'image'
     case 'video_generation':
     case 'image_to_video':
@@ -989,15 +1010,16 @@ export async function executeCapability(
     }
   }
 
-  // ── Adult content gating ──────────────────────────────────────────────────
-  if (cap === 'adult_text' || cap === 'adult_image' || cap === 'adult_video') {
-    const blockReason = checkAdultGuardrails(
-      request.input,
-      request.adultMode ?? false,
-      request.safeMode ?? false,
-    )
-    if (blockReason) {
-      logExecution(cap, null, null, false, false, blockReason)
+  // ── Adult permission + legal safety gate ─────────────────────────────────
+  if (cap === 'adult_text' || cap === 'adult_image' || cap === 'adult_video' || cap === 'adult_avatar') {
+    // 1. Permission check (adultMode + !safeMode)
+    const permission = checkAdultPermission({
+      adultMode: request.adultMode ?? false,
+      safeMode: request.safeMode ?? false,
+      appId: request.appId,
+    })
+    if (!permission.granted) {
+      logExecution(cap, null, null, false, false, permission.reason ?? 'adult permission denied')
       return {
         success: false,
         capability: cap,
@@ -1006,7 +1028,39 @@ export async function executeCapability(
         outputType: outputTypeForCapability(cap),
         output: null,
         fallbackUsed: false,
-        error: blockReason,
+        error: permission.reason ?? 'Adult mode is not enabled',
+        error_category: 'guardrail_block',
+      }
+    }
+    // 2. Legal safety check
+    const safety = checkAdultLegalSafety(request.input)
+    if (!safety.allowed) {
+      logExecution(cap, null, null, false, false, safety.reason ?? 'adult safety block')
+      return {
+        success: false,
+        capability: cap,
+        provider: null,
+        model: null,
+        outputType: outputTypeForCapability(cap),
+        output: null,
+        fallbackUsed: false,
+        error: safety.reason ?? 'Content blocked by adult legal safety check',
+        error_category: 'guardrail_block',
+      }
+    }
+    // Legacy guardrail (degrading terms on input) still applies
+    const legacyBlock = checkAdultGuardrails(request.input, request.adultMode ?? false, request.safeMode ?? false)
+    if (legacyBlock) {
+      logExecution(cap, null, null, false, false, legacyBlock)
+      return {
+        success: false,
+        capability: cap,
+        provider: null,
+        model: null,
+        outputType: outputTypeForCapability(cap),
+        output: null,
+        fallbackUsed: false,
+        error: legacyBlock,
         error_category: 'guardrail_block',
       }
     }
@@ -1140,243 +1194,218 @@ export async function executeCapability(
     }
   }
 
-  // ── Adult text / conversation (specialist adult providers only) ────────────
-  // adult_text MUST NOT fall back to GenX/default safe chat. Provider order:
-  // Hugging Face private/local endpoint -> Together AI.
-  if (cap === 'adult_text') {
-    if (hasAdultTextDegradingTerms(request.input)) {
-      logExecution(cap, null, null, false, false, 'Degrading adult text refused')
-      return {
-        success: false,
-        capability: cap,
-        provider: null,
-        model: null,
-        outputType: 'text',
-        output: null,
-        fallbackUsed: false,
-        error: 'Degrading, coercive, or dehumanizing adult content is not allowed.',
-        error_category: 'guardrail_block',
-      }
+  // ── Adult capabilities — HuggingFace dedicated endpoints ONLY ───────────────
+  // GenX, Together, Groq, MiMo must NEVER be used for adult generation.
+  // Primary endpoint tried first; fallback endpoint tried if primary fails/missing.
+  // Permission and legal safety already checked above.
+  if (cap === 'adult_text' || cap === 'adult_image' || cap === 'adult_video' || cap === 'adult_avatar') {
+    const adultCap = cap as AdultCapabilityType
+
+    const hfKey = await getVaultApiKey('huggingface')
+    if (!hfKey) {
+      logExecution(cap, null, null, false, false, 'HF key missing for adult capability')
+      return { success: false, capability: cap, provider: null, model: null, outputType: outputTypeForCapability(cap), output: null, fallbackUsed: false, error: 'HuggingFace API key is required for adult capabilities. Configure it in Admin → AI Providers → HuggingFace.', error_category: 'missing_key' }
     }
 
-    const requestedProvider = (request.providerOverride ?? 'auto').toLowerCase()
-    const endpoint = metadataString(request.metadata, 'endpoint')
-    const customKey = metadataString(request.metadata, 'apiKey') ?? null
-    const defaultHfModel = getDefaultAdultTextModel().id
-    const requestedModel = request.modelOverride?.trim()
-    const hfModel = requestedModel ?? defaultHfModel
-    const attempts: Array<{ provider: string; model: string; status: string; error?: string }> = []
+    // Build request body based on capability
+    const meta = request.metadata ?? {}
+    let body: Record<string, unknown>
+    let adultOutputType: 'text' | 'image' | 'video' = 'image'
 
-    const chain: Array<() => Promise<{ output: string | null; attempt: { provider: string; model: string; status: string; error?: string } }>> = []
-
-    if (requestedProvider === 'custom') {
-      chain.push(() => tryAdultTextProvider({
-        provider: 'custom',
-        input: request.input,
-        model: requestedModel ?? 'default',
-        endpoint,
-        apiKey: customKey,
-      }))
+    if (adultCap === 'adult_text') {
+      adultOutputType = 'text'
+      const textPayload: AdultTextPayload = {
+        userPrompt: request.input,
+        characterName: typeof meta.characterName === 'string' ? meta.characterName : undefined,
+        characterDescription: typeof meta.characterDescription === 'string' ? meta.characterDescription : undefined,
+        relationship: typeof meta.relationship === 'string' ? meta.relationship : undefined,
+        tone: typeof meta.tone === 'string' ? meta.tone : undefined,
+        boundaries: typeof meta.boundaries === 'string' ? meta.boundaries : undefined,
+        memoryHints: Array.isArray(meta.memoryHints) ? meta.memoryHints as string[] : undefined,
+        language: typeof meta.language === 'string' ? meta.language : undefined,
+      }
+      body = buildAdultTextBody(textPayload)
+    } else if (adultCap === 'adult_image') {
+      adultOutputType = 'image'
+      const imagePayload: AdultImagePayload = {
+        prompt: request.input,
+        style: typeof meta.style === 'string' ? meta.style : undefined,
+        negativePrompt: typeof meta.negativePrompt === 'string' ? meta.negativePrompt : undefined,
+        width: typeof meta.width === 'number' ? meta.width : undefined,
+        height: typeof meta.height === 'number' ? meta.height : undefined,
+        steps: typeof meta.steps === 'number' ? meta.steps : undefined,
+        guidanceScale: typeof meta.guidanceScale === 'number' ? meta.guidanceScale : undefined,
+      }
+      body = buildAdultImageBody(imagePayload)
+    } else if (adultCap === 'adult_video') {
+      adultOutputType = 'video'
+      const videoPayload: AdultVideoPayload = {
+        prompt: request.input,
+        sourceImageUrl: typeof meta.sourceImageUrl === 'string' ? meta.sourceImageUrl : undefined,
+        duration: typeof meta.duration === 'number' ? meta.duration : undefined,
+        style: typeof meta.style === 'string' ? meta.style : undefined,
+        motionNotes: typeof meta.motionNotes === 'string' ? meta.motionNotes : undefined,
+      }
+      body = buildAdultVideoBody(videoPayload)
     } else {
-      if (requestedProvider === 'auto' || requestedProvider === 'huggingface') {
-        const hfKey = await getVaultApiKey('huggingface')
-        chain.push(() => tryAdultTextProvider({
-          provider: 'huggingface',
-          input: request.input,
-          model: hfModel,
-          endpoint,
-          apiKey: hfKey,
-        }))
+      // adult_avatar — enhanced payload with style/mode/appearance/voice
+      adultOutputType = 'image'
+      const voiceRaw = meta.voice as Record<string, unknown> | undefined
+      const voicePayload: AvatarVoicePayload | undefined = voiceRaw ? {
+        voiceMode: typeof voiceRaw.voiceMode === 'string' ? voiceRaw.voiceMode as AvatarVoicePayload['voiceMode'] : 'none',
+        voiceProvider: 'huggingface',
+        referenceAudioUrl: typeof voiceRaw.referenceAudioUrl === 'string' ? voiceRaw.referenceAudioUrl : undefined,
+        consentConfirmed: typeof voiceRaw.consentConfirmed === 'boolean' ? voiceRaw.consentConfirmed : false,
+        rightsConfirmed: typeof voiceRaw.rightsConfirmed === 'boolean' ? voiceRaw.rightsConfirmed : false,
+        voiceStyle: typeof voiceRaw.voiceStyle === 'string' ? voiceRaw.voiceStyle : undefined,
+        language: typeof voiceRaw.language === 'string' ? voiceRaw.language : undefined,
+        accent: typeof voiceRaw.accent === 'string' ? voiceRaw.accent : undefined,
+        emotion: typeof voiceRaw.emotion === 'string' ? voiceRaw.emotion : undefined,
+        speakingRate: typeof voiceRaw.speakingRate === 'number' ? voiceRaw.speakingRate : undefined,
+        pitch: typeof voiceRaw.pitch === 'number' ? voiceRaw.pitch : undefined,
+        sampleText: typeof voiceRaw.sampleText === 'string' ? voiceRaw.sampleText : undefined,
+      } : undefined
+
+      // If cloned_voice is required but has consent issues, block before image generation
+      if (voicePayload?.voiceMode === 'cloned_voice') {
+        const voiceDescription = `${request.input} ${meta.appearance ?? ''}`
+        const voiceBlockReason = checkVoiceCloneRules(voicePayload, voiceDescription)
+        if (voiceBlockReason) {
+          logExecution(cap, null, null, false, false, voiceBlockReason)
+          return { success: false, capability: cap, provider: null, model: null, outputType: 'image', output: null, fallbackUsed: false, error: voiceBlockReason, error_category: 'guardrail_block' }
+        }
       }
-      if (requestedProvider === 'auto' || requestedProvider === 'together') {
-        const togetherKey = await getVaultApiKey('together')
-        chain.push(() => tryAdultTextProvider({
-          provider: 'together',
-          input: request.input,
-          model: requestedProvider === 'together' && requestedModel ? requestedModel : DEFAULT_TOGETHER_ADULT_TEXT_MODEL,
-          apiKey: togetherKey,
-        }))
+
+      const avatarPayload: AdultAvatarPayload = {
+        characterProfile: request.input,
+        appearance: typeof meta.appearance === 'string' ? meta.appearance : request.input,
+        ageConfirmation: 'adult',
+        gender: typeof meta.gender === 'string' ? meta.gender : undefined,
+        style: typeof meta.style === 'string' ? meta.style as AvatarStyle : undefined,
+        outfit: typeof meta.outfit === 'string' ? meta.outfit : undefined,
+        pose: typeof meta.pose === 'string' ? meta.pose : undefined,
+        background: typeof meta.background === 'string' ? meta.background : undefined,
+        aspectRatio: typeof meta.aspectRatio === 'string' ? meta.aspectRatio as AdultAvatarPayload['aspectRatio'] : undefined,
+        mode: typeof meta.mode === 'string' ? meta.mode as AvatarMode : undefined,
+        personalityNotes: typeof meta.personalityNotes === 'string' ? meta.personalityNotes : undefined,
+        consistencySeed: typeof meta.consistencySeed === 'number' ? meta.consistencySeed : undefined,
+        referenceImageUrl: typeof meta.referenceImageUrl === 'string' ? meta.referenceImageUrl : undefined,
+        width: typeof meta.width === 'number' ? meta.width : undefined,
+        height: typeof meta.height === 'number' ? meta.height : undefined,
+        voice: voicePayload,
       }
+      const avatarError = validateAdultAvatarPayload(avatarPayload)
+      if (avatarError) {
+        logExecution(cap, null, null, false, false, avatarError)
+        return { success: false, capability: cap, provider: null, model: null, outputType: 'image', output: null, fallbackUsed: false, error: avatarError }
+      }
+      body = buildAdultAvatarBody(avatarPayload)
     }
 
-    if (chain.length === 0) {
-      return {
-        success: false,
-        capability: cap,
-        provider: null,
-        model: null,
-        outputType: 'text',
-        output: null,
-        fallbackUsed: false,
-        error: `Adult text provider "${request.providerOverride}" is not supported. Use auto, huggingface, together, or custom.`,
-        error_category: 'model_not_supported',
-      }
+    // Execute image generation across all configured HF candidates (primary → fallback)
+    const hfResult = await executeHFAdultGenerationChain(adultCap, hfKey, body)
+
+    // Handle cloned_voice-only requests where image is not the primary ask
+    // (if image fails AND voice was the primary request mode, propagate failure)
+    const voiceMeta = adultCap === 'adult_avatar' ? (meta.voice as Record<string, unknown> | undefined) : undefined
+    const voiceRequired = voiceMeta?.voiceMode === 'cloned_voice' && voiceMeta?.requiresVoice === true
+
+    if (!hfResult.success && voiceRequired) {
+      logExecution(cap, null, null, false, false, hfResult.error)
+      return { success: false, capability: cap, provider: null, model: null, outputType: adultOutputType, output: null, fallbackUsed: false, error: hfResult.error ?? 'Avatar image generation failed', error_category: 'endpoint_error', metadata: { providerAttempts: hfResult.providerAttempts } }
     }
 
-    for (const run of chain) {
-      const result = await run()
-      attempts.push(result.attempt)
-      if (result.output) {
-        if (hasAdultTextDegradingTerms(result.output)) {
-          logExecution(cap, result.attempt.provider, result.attempt.model, false, false, 'Adult text output refused')
+    if (hfResult.success && (hfResult.output || hfResult.jobId)) {
+      const usedFallback = hfResult.providerAttempts.some(a => a.priority === 'primary' && a.status === 'failed')
+      let artifactId: string | undefined
+      if (save && hfResult.output) artifactId = await maybeSaveArtifact(cap, hfResult.output, 'huggingface', hfResult.model, appSlug, request.traceId)
+      logExecution(cap, 'huggingface', hfResult.model, usedFallback, !!artifactId, null)
+
+      // Execute voice if avatar succeeded and voice is requested
+      let voiceResult: import('@/lib/adult-capability').AvatarVoiceResult | undefined
+      if (adultCap === 'adult_avatar' && voiceMeta) {
+        const voicePayloadForExec: AvatarVoicePayload = {
+          voiceMode: (voiceMeta.voiceMode as AvatarVoicePayload['voiceMode']) ?? 'none',
+          voiceProvider: 'huggingface',
+          referenceAudioUrl: typeof voiceMeta.referenceAudioUrl === 'string' ? voiceMeta.referenceAudioUrl : undefined,
+          consentConfirmed: typeof voiceMeta.consentConfirmed === 'boolean' ? voiceMeta.consentConfirmed : false,
+          rightsConfirmed: typeof voiceMeta.rightsConfirmed === 'boolean' ? voiceMeta.rightsConfirmed : false,
+          sampleText: typeof voiceMeta.sampleText === 'string' ? voiceMeta.sampleText : undefined,
+          voiceStyle: typeof voiceMeta.voiceStyle === 'string' ? voiceMeta.voiceStyle : undefined,
+          language: typeof voiceMeta.language === 'string' ? voiceMeta.language : undefined,
+          emotion: typeof voiceMeta.emotion === 'string' ? voiceMeta.emotion : undefined,
+          speakingRate: typeof voiceMeta.speakingRate === 'number' ? voiceMeta.speakingRate : undefined,
+          pitch: typeof voiceMeta.pitch === 'number' ? voiceMeta.pitch : undefined,
+        }
+        voiceResult = await executeAvatarVoice(voicePayloadForExec, hfKey, request.input)
+
+        // If cloned_voice was required but endpoint missing, that is a failure
+        if (voicePayloadForExec.voiceMode === 'cloned_voice' && voiceResult.voiceStatus === 'not_configured') {
+          logExecution(cap, 'huggingface', hfResult.model, usedFallback, !!artifactId, 'voice endpoint missing')
           return {
             success: false,
             capability: cap,
-            provider: result.attempt.provider,
-            model: result.attempt.model,
-            outputType: 'text',
-            output: null,
-            fallbackUsed: false,
-            error: 'Model output was blocked because it contained degrading or dehumanizing content.',
-            error_category: 'guardrail_block',
-            providerAttempts: attempts,
+            provider: 'huggingface',
+            model: hfResult.model,
+            outputType: adultOutputType,
+            output: hfResult.output,
+            artifactId,
+            fallbackUsed: usedFallback,
+            error: voiceResult.error ?? 'Cloned voice endpoint not configured. Set HF_ADULT_VOICE_ENDPOINT.',
+            error_category: 'endpoint_error',
+            metadata: {
+              capability: adultCap,
+              generationMode: hfResult.generationMode,
+              permissionStatus: hfResult.permissionStatus,
+              safetyStatus: hfResult.safetyStatus,
+              endpointKey: hfResult.endpointKey,
+              providerAttempts: hfResult.providerAttempts,
+              voiceStatus: voiceResult.voiceStatus,
+            },
           }
         }
-        let artifactId: string | undefined
-        if (save) artifactId = await maybeSaveArtifact(cap, result.output, result.attempt.provider, result.attempt.model, appSlug, request.traceId)
-        logExecution(cap, result.attempt.provider, result.attempt.model, false, !!artifactId, null)
-        return {
-          success: true,
-          capability: cap,
-          provider: result.attempt.provider,
-          model: result.attempt.model,
-          outputType: 'text',
-          output: result.output,
-          artifactId,
-          fallbackUsed: false,
-          providerAttempts: attempts,
-        }
+      }
+
+      return {
+        success: true,
+        capability: cap,
+        provider: 'huggingface',
+        model: hfResult.model,
+        outputType: adultOutputType,
+        output: hfResult.output,
+        ...(hfResult.jobId ? { jobId: hfResult.jobId, status: hfResult.status as CapabilityResponse['status'] } : {}),
+        artifactId,
+        fallbackUsed: usedFallback,
+        fallbackReason: usedFallback ? 'Primary HF adult endpoint failed or unavailable' : undefined,
+        metadata: {
+          capability: adultCap,
+          generationMode: hfResult.generationMode,
+          permissionStatus: hfResult.permissionStatus,
+          safetyStatus: hfResult.safetyStatus,
+          endpointKey: hfResult.endpointKey,
+          providerAttempts: hfResult.providerAttempts,
+          ...(voiceResult ? {
+            voiceStatus: voiceResult.voiceStatus,
+            voiceUrl: voiceResult.voiceUrl,
+            voiceJobId: voiceResult.voiceJobId,
+            voiceModel: voiceResult.voiceModel,
+          } : {}),
+        },
       }
     }
 
-    logExecution(cap, null, null, false, false, 'Adult text providers need setup')
-    const needsKey = attempts.some((attempt) => attempt.status === 'needs_key')
-    const needsEndpoint = attempts.some((attempt) => attempt.status === 'needs_endpoint')
+    logExecution(cap, 'huggingface', hfResult.model, false, false, hfResult.error)
     return {
       success: false,
       capability: cap,
       provider: null,
       model: null,
-      outputType: 'text',
+      outputType: adultOutputType,
       output: null,
       fallbackUsed: false,
-      error: needsEndpoint
-        ? 'Adult text needs a Hugging Face private/local endpoint or Together key/model.'
-        : 'Adult text providers were reached in order, but no provider returned text.',
-      error_category: needsKey ? 'missing_key' : 'endpoint_error',
-      providerAttempts: attempts,
-    }
-  }
-
-  // ── Adult image generation (adult-capable providers only — no safe fallback) ─
-  // adult_image MUST NOT fall back to normal image providers.
-  // Provider order: Together AI (disable_safety_checker) → HuggingFace
-  if (cap === 'adult_image') {
-    // Guardrails already checked above. Proceed to adult-capable providers only.
-
-    // ── Provider 1: Together AI with disable_safety_checker ─────────────
-    const togetherKeyAdult = await getVaultApiKey('together')
-    if (togetherKeyAdult && (!request.providerOverride || request.providerOverride === 'together')) {
-      const adultModels = [
-        { model: 'black-forest-labs/FLUX.1-schnell-Free', steps: 4 },
-        { model: 'black-forest-labs/FLUX.1-schnell', steps: 4 },
-        { model: 'stabilityai/stable-diffusion-xl-base-1.0', steps: 30 },
-      ]
-      for (const { model: adultModel, steps } of adultModels) {
-        try {
-          const res = await fetch('https://api.together.xyz/v1/images/generations', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${togetherKeyAdult}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: adultModel, prompt: request.input, n: 1, steps, width: 768, height: 768, disable_safety_checker: true }),
-            signal: AbortSignal.timeout(60_000),
-          })
-          if (res.ok) {
-            const data = await res.json() as { data?: Array<{ url?: string }> }
-            const url = data.data?.[0]?.url ?? null
-            if (url) {
-              let artifactId: string | undefined
-              if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', adultModel, appSlug, request.traceId)
-              logExecution(cap, 'together', adultModel, true, !!artifactId, null)
-              return { success: true, capability: cap, provider: 'together', model: adultModel, outputType: 'image', output: url, artifactId, fallbackUsed: false }
-            }
-          } else if (res.status === 422) {
-            console.warn(`[capability-router] Together adult image model ${adultModel} blocked (422)`)
-            continue
-          }
-        } catch (err) { console.warn(`[capability-router] Together adult image (${adultModel}) failed:`, err instanceof Error ? err.message : err) }
-      }
-    }
-
-    // ── Provider 2: HuggingFace adult models ─────────────────────────────
-    const hfKeyAdult = await getVaultApiKey('huggingface')
-    if (hfKeyAdult && (!request.providerOverride || request.providerOverride === 'huggingface')) {
-      const hfAdultModels = [
-        'SG161222/RealVisXL_V4.0',
-        'Lykon/dreamshaper-8',
-        'stabilityai/stable-diffusion-xl-base-1.0',
-      ]
-      for (const hfAdultModel of hfAdultModels) {
-        try {
-          const res = await fetch(`https://api-inference.huggingface.co/models/${hfAdultModel}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${hfKeyAdult}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inputs: request.input, parameters: { num_inference_steps: 28, guidance_scale: 7.0, width: 768, height: 768 } }),
-            signal: AbortSignal.timeout(120_000),
-          })
-          if (res.ok) {
-            const contentType = res.headers.get('content-type') ?? 'image/png'
-            if (contentType.startsWith('image/') || contentType === 'application/octet-stream') {
-              const buffer = await res.arrayBuffer()
-              if (buffer.byteLength > 0) {
-                const output = `data:${contentType.startsWith('image/') ? contentType : 'image/png'};base64,${Buffer.from(buffer).toString('base64')}`
-                let artifactId: string | undefined
-                if (save) artifactId = await maybeSaveArtifact(cap, output, 'huggingface', hfAdultModel, appSlug, request.traceId)
-                logExecution(cap, 'huggingface', hfAdultModel, true, !!artifactId, null)
-                return { success: true, capability: cap, provider: 'huggingface', model: hfAdultModel, outputType: 'image', output, artifactId, fallbackUsed: true, fallbackReason: 'Together unavailable' }
-              }
-            }
-          } else if (res.status === 503) {
-            continue
-          }
-        } catch (err) { console.warn(`[capability-router] HuggingFace adult image (${hfAdultModel}) failed:`, err instanceof Error ? err.message : err) }
-      }
-    }
-
-    const adultMissingKeys: string[] = []
-    if (!togetherKeyAdult) adultMissingKeys.push('Together AI key missing (Admin → AI Providers → Together AI)')
-    if (!hfKeyAdult) adultMissingKeys.push('HuggingFace key missing (Admin → AI Providers → HuggingFace)')
-
-    logExecution(cap, null, null, false, false, 'No adult image provider available')
-    return {
-      success: false,
-      capability: cap,
-      provider: null,
-      model: null,
-      outputType: 'image',
-      output: null,
-      fallbackUsed: false,
-      error: adultMissingKeys.length === 2
-        ? `Adult image generation requires at least one provider key. ${adultMissingKeys.join('; ')}`
-        : 'All adult image providers failed. Configure Together AI or HuggingFace with adult-capable models.',
-      error_category: adultMissingKeys.length === 2 ? 'missing_key' : 'provider_policy_block',
-    }
-  }
-
-  // ── Adult video generation ────────────────────────────────────────────────
-  // adult_video MUST NOT fall back to normal video or storyboard providers.
-  // No adult video provider is wired yet — return structured UNAVAILABLE error.
-  if (cap === 'adult_video') {
-    logExecution(cap, null, null, false, false, 'No adult video provider available')
-    return {
-      success: false,
-      capability: cap,
-      provider: null,
-      model: null,
-      outputType: 'video',
-      output: null,
-      fallbackUsed: false,
-      error: 'Adult video generation is not yet available. No adult-capable video provider is configured. Do not fall back to normal video or storyboard routes.',
-      error_category: 'model_not_supported',
+      error: hfResult.error ?? `HF adult ${adultCap} returned no output`,
+      error_category: 'endpoint_error',
+      metadata: { providerAttempts: hfResult.providerAttempts },
     }
   }
 

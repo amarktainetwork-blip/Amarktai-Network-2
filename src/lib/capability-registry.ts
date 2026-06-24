@@ -28,6 +28,8 @@ export type CapabilityKey =
   | 'avatar_generation'
   | 'adult_text'
   | 'adult_image'
+  | 'adult_video'
+  | 'adult_avatar'
 
 export type ProviderKey = 'genx' | 'huggingface' | 'together' | 'groq' | 'mimo'
 
@@ -238,14 +240,13 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
   adult_text: {
     key: 'adult_text',
     label: 'Adult Text',
-    description: 'Adult-oriented text generation',
+    description: 'Adult-oriented text generation and roleplay',
     category: 'text',
     outputType: 'text',
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'huggingface', models: ['custom'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL', notes: 'Requires adult-capable endpoint' },
-      { provider: 'together', models: ['NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL' },
+      { provider: 'huggingface', models: ['custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_TEXT_ENDPOINT. Fallback: HF_ADULT_TEXT_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
   adult_image: {
@@ -257,8 +258,31 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires disable_safety_checker' },
-      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL' },
+      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_IMAGE_ENDPOINT. Fallback: HF_ADULT_IMAGE_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
+    ],
+  },
+  adult_video: {
+    key: 'adult_video',
+    label: 'Adult Video',
+    description: 'Adult-oriented video generation',
+    category: 'video',
+    outputType: 'video',
+    requiresAdultMode: true,
+    requiresSafeModeOff: true,
+    providers: [
+      { provider: 'huggingface', models: ['NSFW-API/NSFW_Wan_14b', 'custom'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_VIDEO_ENDPOINT. Fallback: HF_ADULT_VIDEO_ENDPOINT_FALLBACK. Experimental. GenX, Together, Groq, MiMo must not be used.' },
+    ],
+  },
+  adult_avatar: {
+    key: 'adult_avatar',
+    label: 'Adult Avatar',
+    description: 'Adult-oriented avatar and character image generation',
+    category: 'image',
+    outputType: 'image',
+    requiresAdultMode: true,
+    requiresSafeModeOff: true,
+    providers: [
+      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_AVATAR_ENDPOINT. Fallback: HF_ADULT_AVATAR_ENDPOINT_FALLBACK. Supports realistic, anime, 3D, cartoon, fantasy styles. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
 }
