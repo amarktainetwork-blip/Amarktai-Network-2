@@ -46,11 +46,8 @@ interface RequestBody {
 // Ordered list of chat-capable providers to try when provider='auto'
 const CHAT_PROVIDER_PRIORITY = [
   { key: 'groq',      baseUrl: 'https://api.groq.com/openai', defaultModel: 'llama-3.3-70b-versatile' },
-  { key: 'openai',    baseUrl: 'https://api.openai.com',      defaultModel: 'gpt-4o-mini' },
-  { key: 'gemini',    baseUrl: null,                          defaultModel: 'gemini-2.0-flash' },
   { key: 'together',  baseUrl: 'https://api.together.xyz',    defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo' },
-  { key: 'deepseek',  baseUrl: 'https://api.deepseek.com',    defaultModel: 'deepseek-chat' },
-  { key: 'mistral',   baseUrl: 'https://api.mistral.ai',      defaultModel: 'mistral-small-latest' },
+  { key: 'mimo',      baseUrl: 'https://api.xiaomimimo.com',  defaultModel: 'mimo-v2.5' },
 ] as const
 
 type ProviderKey = typeof CHAT_PROVIDER_PRIORITY[number]['key']
@@ -63,33 +60,8 @@ async function callChatProvider(
   systemPrompt: string,
   messages: ChatMessage[],
 ): Promise<string | null> {
-  if (providerKey === 'gemini') {
-    // Gemini uses a different API shape
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
-    // Map conversation history to Gemini contents format
-    const contents = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    }))
-    const body: Record<string, unknown> = { contents }
-    if (systemPrompt.trim()) {
-      body.systemInstruction = { parts: [{ text: systemPrompt }] }
-    }
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    })
-    if (!res.ok) return null
-    const data = await res.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
-    }
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null
-  }
-
-  // OpenAI-compatible providers (Groq, OpenAI, Together, DeepSeek, Mistral)
-  const base = baseUrl ?? 'https://api.openai.com'
+  // OpenAI-compatible providers (Groq, Together, MiMo)
+  const base = baseUrl ?? 'https://api.groq.com/openai'
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,
     'Content-Type': 'application/json',

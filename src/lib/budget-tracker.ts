@@ -29,35 +29,10 @@ const COST_RATES: Record<string, { input: number; output: number }> = {
   'llama-3.1-8b-instant':    { input: 0.00005, output: 0.00008 },
   'mixtral-8x7b-32768':      { input: 0.00024, output: 0.00024 },
   'whisper-large-v3-turbo':  { input: 0.00011, output: 0.00011 },
-  // Gemini
-  'gemini-2.0-flash':        { input: 0.00010, output: 0.00040 },
-  'gemini-1.5-flash':        { input: 0.00008, output: 0.00030 },
-  'gemini-1.5-pro':          { input: 0.00125, output: 0.00500 },
-  'gemini-2.5-pro':          { input: 0.00150, output: 0.00600 },
-  'gemini-2.5-flash':        { input: 0.00015, output: 0.00060 },
-  // Grok
-  'grok-2-latest':           { input: 0.002,  output: 0.010 },
-  'grok-3-mini-beta':        { input: 0.0003, output: 0.0005 },
-  // NVIDIA NIM
-  'nvidia/llama-3.1-nemotron-70b-instruct': { input: 0.00035, output: 0.00040 },
   // Together AI
   'meta-llama/Llama-3-70b-chat-hf': { input: 0.00090, output: 0.00090 },
-  // OpenRouter
-  'openai/gpt-4o-mini':      { input: 0.00015, output: 0.0006 },
-  // Replicate (per-second pricing approximation)
-  'wan-ai/wan2.1-t2v-480p':  { input: 0.0032, output: 0.0032 },
   // HuggingFace (mostly free inference)
   'meta-llama/Llama-3.3-70B-Instruct': { input: 0.00059, output: 0.00079 },
-  // Anthropic
-  'claude-3.5-sonnet':       { input: 0.003, output: 0.015 },
-  'claude-3-opus':           { input: 0.015, output: 0.075 },
-  'claude-3-haiku':          { input: 0.00025, output: 0.00125 },
-  'claude-sonnet-4':         { input: 0.003, output: 0.015 },
-  // Cohere
-  'command-r-plus':          { input: 0.003, output: 0.015 },
-  'command-r':               { input: 0.0005, output: 0.0015 },
-  'embed-english-v3.0':     { input: 0.0001, output: 0.0001 },
-  'rerank-english-v3.0':    { input: 0.002, output: 0.002 },
   // Fallback
   'default':                 { input: 0.001,  output: 0.002 },
 }

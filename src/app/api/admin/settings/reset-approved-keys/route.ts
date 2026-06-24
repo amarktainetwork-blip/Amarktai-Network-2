@@ -23,12 +23,10 @@ const APPROVED_RESET_KEYS = [
   'webdock',
   'firecrawl',
   'storage_config',
-  'minimax',
-  'gemini',
   'groq',
   'together',
   'huggingface',
-  'xai',
+  'mimo',
 ]
 
 export async function POST(req: NextRequest) {
