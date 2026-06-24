@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getAppSafetyConfig, setAppSafetyConfig, loadAppSafetyConfigFromDB } from '@/lib/content-filter'
+import {
+  getAdultAppCapabilityProfile,
+  updateAdultAppCapabilityProfile,
+} from '@/lib/adult-app-capabilities'
 
 /**
  * GET /api/admin/app-safety?appSlug=<slug> — returns safety config for an app.
@@ -31,11 +35,13 @@ export async function GET(request: NextRequest) {
   // Hydrate from DB first so the response always reflects the persisted state,
   // not just whatever is currently in the in-memory cache.
   const config = await loadAppSafetyConfigFromDB(appSlug)
+  const adultCapabilities = await getAdultAppCapabilityProfile(appSlug)
   return NextResponse.json({
     appSlug,
     safeMode:       config.safeMode,
     adultMode:      config.adultMode,
     suggestiveMode: config.suggestiveMode,
+    adultCapabilities,
     note: 'CSAM, violence, and self-harm content is ALWAYS blocked regardless of adult mode setting.',
   })
 }
@@ -46,7 +52,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let body: { appSlug?: string; safeMode?: boolean; adultMode?: boolean; suggestiveMode?: boolean }
+  let body: {
+    appSlug?: string
+    safeMode?: boolean
+    adultMode?: boolean
+    suggestiveMode?: boolean
+    adultCapabilities?: Record<string, boolean>
+    adultCategories?: string[]
+    adultApprovedProviders?: string[]
+    adultApprovedModels?: string[]
+    adultSafetyRules?: string[]
+    adultAuditLogging?: boolean
+  }
   try {
     body = await request.json()
   } catch {
@@ -99,12 +116,25 @@ export async function POST(request: NextRequest) {
     ...(typeof adultMode === 'boolean' ? { adultMode } : {}),
     ...(typeof suggestiveMode === 'boolean' ? { suggestiveMode } : {}),
   })
+  if (adultMode !== undefined || body.adultCapabilities) {
+    await updateAdultAppCapabilityProfile(appSlug, {
+      adultModeEnabled: adultMode,
+      categoriesAllowed: body.adultCategories,
+      capabilities: body.adultCapabilities,
+      approvedProviders: body.adultApprovedProviders,
+      approvedModels: body.adultApprovedModels,
+      safetyRules: body.adultSafetyRules,
+      auditLogging: body.adultAuditLogging,
+    })
+  }
+  const adultCapabilities = await getAdultAppCapabilityProfile(appSlug)
 
   return NextResponse.json({
     appSlug,
     safeMode: updated.safeMode,
     adultMode: updated.adultMode,
     suggestiveMode: updated.suggestiveMode,
+    adultCapabilities,
     note: 'CSAM, violence, and self-harm content is ALWAYS blocked regardless of adult mode setting.',
   })
 }

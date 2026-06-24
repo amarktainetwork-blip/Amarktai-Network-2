@@ -1,0 +1,146 @@
+import type { RoutingQualityTier } from '@/lib/capability-routing-policy'
+
+export const CAPABILITY_ROUTER_CAPABILITIES = [
+  'chat',
+  'reasoning',
+  'code',
+  'file_analysis',
+  'image_generation',
+  'image_edit',
+  'video_generation',
+  'image_to_video',
+  'music_generation',
+  'lyrics_generation',
+  'tts',
+  'stt',
+  'voice_response',
+  'adult_text',
+  'adult_image',
+  'adult_video',
+  'adult_voice',
+  'adult_avatar',
+  'avatar_generation',
+  'avatar_video',
+  'voice_clone',
+  'voice_design',
+  'ocr',
+  'vision',
+  'documents',
+  'embeddings',
+  'rerank',
+  'translation',
+  'agents',
+  'memory',
+  'artifacts',
+  'suggestive_image',
+  'suggestive_video',
+  'repo_edit',
+  'app_build',
+  'deploy_plan',
+  'research',
+  'scrape_website',
+] as const
+
+export type CapabilityRouterCapability =
+  (typeof CAPABILITY_ROUTER_CAPABILITIES)[number]
+
+export type CapabilityExecutionState =
+  | 'READY'
+  | 'NEEDS_INPUT'
+  | 'NEEDS_CONFIGURATION'
+  | 'BLOCKED'
+  | 'UNAVAILABLE'
+
+export interface CapabilityRequest {
+  input: string
+  capability?: CapabilityRouterCapability | string
+  files?: string[]
+  appId?: string
+  workspaceId?: string
+  providerOverride?: string
+  modelOverride?: string
+  provider?: string
+  model?: string
+  adultMode?: boolean
+  safeMode?: boolean
+  suggestiveMode?: boolean
+  saveArtifact?: boolean
+  traceId?: string
+  metadata?: Record<string, unknown>
+  qualityTier?: RoutingQualityTier
+}
+
+export interface ProviderAttempt {
+  provider: string
+  model: string
+  adapter?: string
+  outputType?: string
+  status: string
+  classification?:
+    | 'executable'
+    | 'needs_configuration'
+    | 'endpoint_required'
+    | 'adapter_missing'
+    | 'provider_error'
+    | 'unsupported_by_contract'
+    | 'blocked_by_policy'
+    | 'rate_limited'
+    | 'duration_limited'
+  latencyMs?: number
+  errorCategory?: string
+  retryable?: boolean
+  error?: string
+  requestedDurationSeconds?: number | null
+  providerLimitSeconds?: number | null
+  actualDurationSeconds?: number | null
+  artifactPersisted?: boolean
+  previewDownloadAvailable?: boolean
+  diagnostics?: Record<string, unknown>
+}
+
+export interface CapabilityResponse {
+  success: boolean
+  capability: CapabilityRouterCapability
+  readiness: CapabilityExecutionState
+  provider: string | null
+  model: string | null
+  outputType: string
+  output: string | null
+  artifactUrl?: string | null
+  previewUrl?: string | null
+  downloadUrl?: string | null
+  providerJobId?: string | null
+  jobId?: string
+  pollUrl?: string | null
+  storageUrl?: string | null
+  mediaUrl?: string | null
+  status?: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'
+  artifactId?: string
+  fallbackUsed: boolean
+  fallbackReason?: string
+  warning?: string
+  error?: string
+  error_category?:
+    | 'missing_key'
+    | 'invalid_key'
+    | 'provider_policy_block'
+    | 'model_not_supported'
+    | 'region_mismatch'
+    | 'provider_misconfigured'
+    | 'provider_busy'
+    | 'rate_limited'
+    | 'timeout'
+    | 'server_error'
+    | 'endpoint_error'
+    | 'malformed_response'
+    | 'unsupported_endpoint'
+    | 'duration_limited'
+    | 'artifact_error'
+    | 'guardrail_block'
+    | 'no_route_found'
+    | 'unknown'
+  nextActions?: string[]
+  providerAttempts?: ProviderAttempt[]
+  diagnostics?: Record<string, unknown>
+  code?: 'NO_ROUTE_FOUND' | 'ROUTE_FOUND'
+}

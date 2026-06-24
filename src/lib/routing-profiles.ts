@@ -90,11 +90,9 @@ const LOW_COST_PROFILE: RoutingProfile = {
   maxLatencyTier: 'high', // latency not a concern in low_cost mode
   providerTiers: [
     { provider: 'groq', tier: 'primary', maxCostTier: 'low' },
-    { provider: 'deepseek', tier: 'primary', maxCostTier: 'low' },
     { provider: 'together', tier: 'primary', maxCostTier: 'low' },
-    { provider: 'openrouter', tier: 'primary', maxCostTier: 'low' },
     { provider: 'huggingface', tier: 'fallback', maxCostTier: 'free' },
-    { provider: 'openai', tier: 'emergency', maxCostTier: 'medium' },
+    { provider: 'genx', tier: 'emergency', maxCostTier: 'medium' },
   ],
   retryPolicy: {
     maxRetries: 2,
@@ -119,12 +117,11 @@ const BALANCED_PROFILE: RoutingProfile = {
   maxCostTier: 'medium',
   maxLatencyTier: 'medium',
   providerTiers: [
-    { provider: 'openai', tier: 'primary', maxCostTier: 'medium' },
+    // genx routes to GPT-4o, Claude, Gemini etc. as model labels
+    { provider: 'genx', tier: 'primary', maxCostTier: 'medium' },
     { provider: 'groq', tier: 'primary', maxCostTier: 'low' },
     { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
-    { provider: 'deepseek', tier: 'fallback', maxCostTier: 'low' },
-    { provider: 'anthropic', tier: 'fallback', maxCostTier: 'medium' },
-    { provider: 'openrouter', tier: 'emergency', maxCostTier: 'medium' },
+    { provider: 'huggingface', tier: 'emergency', maxCostTier: 'free' },
   ],
   retryPolicy: {
     maxRetries: 3,
@@ -146,12 +143,11 @@ const PREMIUM_PROFILE: RoutingProfile = {
   maxCostTier: 'premium',
   maxLatencyTier: 'high',
   providerTiers: [
-    { provider: 'openai', tier: 'primary', maxCostTier: 'premium' },
-    { provider: 'anthropic', tier: 'primary', maxCostTier: 'premium' },
-    { provider: 'gemini', tier: 'primary', maxCostTier: 'premium' },
-    { provider: 'grok', tier: 'fallback', maxCostTier: 'high' },
-    { provider: 'openrouter', tier: 'fallback', maxCostTier: 'premium' },
-    { provider: 'together', tier: 'emergency', maxCostTier: 'medium' },
+    // genx routes to GPT-4o, Claude-3.5-Sonnet, Gemini-2.5-Pro etc. as model labels
+    { provider: 'genx', tier: 'primary', maxCostTier: 'premium' },
+    { provider: 'mimo', tier: 'primary', maxCostTier: 'high' },
+    { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
+    { provider: 'groq', tier: 'emergency', maxCostTier: 'low' },
   ],
   retryPolicy: {
     maxRetries: 3,
@@ -177,15 +173,12 @@ const ULTRA_RESILIENT_PROFILE: RoutingProfile = {
   maxCostTier: 'premium',
   maxLatencyTier: 'high',
   providerTiers: [
-    { provider: 'openai', tier: 'primary', maxCostTier: 'medium' },
+    // genx routes to GPT-4o, Claude, Gemini etc. as model labels
+    { provider: 'genx', tier: 'primary', maxCostTier: 'medium' },
     { provider: 'groq', tier: 'primary', maxCostTier: 'low' },
-    { provider: 'anthropic', tier: 'primary', maxCostTier: 'medium' },
+    { provider: 'mimo', tier: 'primary', maxCostTier: 'medium' },
     { provider: 'together', tier: 'fallback', maxCostTier: 'medium' },
-    { provider: 'deepseek', tier: 'fallback', maxCostTier: 'low' },
-    { provider: 'openrouter', tier: 'fallback', maxCostTier: 'high' },
-    { provider: 'gemini', tier: 'fallback', maxCostTier: 'high' },
     { provider: 'huggingface', tier: 'emergency', maxCostTier: 'free' },
-    { provider: 'nvidia', tier: 'emergency', maxCostTier: 'medium' },
   ],
   retryPolicy: {
     maxRetries: 5,

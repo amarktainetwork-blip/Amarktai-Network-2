@@ -3,7 +3,7 @@
  *
  * GenX is the primary AI execution layer for the AmarktAI Network.
  * All AI requests are routed through GenX by default. Direct provider
- * routing (openai/groq/gemini/etc.) is only used as a fallback when
+ * routing through the approved direct-provider mesh is only used as a fallback when
  * GenX is unavailable or returns an error.
  *
  * Endpoints:
@@ -121,12 +121,15 @@ export interface GenXMediaResponse {
   jobId?: string    // present when generation is async
   status: 'completed' | 'pending' | 'processing' | 'queued' | 'failed'
   error?: string
+  mimeType?: string
 }
 
 export interface GenXJobStatus {
   id: string
   status: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'
   resultUrl?: string | null
+  bytes?: Buffer | null
+  contentType?: string | null
   result?: GenXMediaResponse
   error?: string
   createdAt: string
@@ -151,6 +154,8 @@ export interface GenXMediaResult {
   model: string
   latencyMs: number
   error: string | null
+  bytes: Buffer | null
+  contentType: string | null
 }
 
 export interface GenXStatus {
@@ -159,6 +164,13 @@ export interface GenXStatus {
   apiUrl: string | null
   error: string | null
   modelCount?: number
+}
+
+export interface GenXCatalogDiagnostics {
+  endpoint: string | null
+  attempted: string[]
+  lastStatus: number | null
+  lastBody: string | null
 }
 
 // ── Known GenX model catalog (static fallback when live catalog unavailable) ──
@@ -231,6 +243,7 @@ const GENX_DEFAULT_MODELS: Record<GenXOperationType, string> = {
 
 const GENX_TIMEOUT  = 60_000 // 60 s
 const PROBE_TIMEOUT = 10_000 // 10 s — fast probe only
+const NO_AUDIO_RESULT_ERROR = 'Provider returned no audio bytes, audio URL, or pollable audio job.'
 const ENDPOINT_PROFILE_TTL_MS = 5 * 60 * 1000 // 5 min
 
 /**
@@ -296,6 +309,10 @@ export async function resolveGenXConfig(): Promise<{ apiUrl: string; apiKey: str
   return { apiUrl: normalizedUrl, apiKey: normalizedKey, configured: !!normalizedKey }
 }
 
+export function normalizeGenXBaseUrl(raw: string): string | null {
+  return normaliseBaseUrl(raw)
+}
+
 /**
  * Normalise a raw URL to a clean base URL (no trailing slash, no
  * well-known path suffixes).  Returns null when the URL is invalid.
@@ -315,6 +332,7 @@ function normaliseBaseUrl(raw: string): string | null {
   const clean = url.pathname
     .replace(/\/api\/v1\/models\/?$/, '')
     .replace(/\/v1\/models\/?$/, '')
+    .replace(/\/v1\/chat\/completions\/?$/, '')
     .replace(/\/api\/v1\/?$/, '')
     .replace(/\/v1\/?$/, '')
     .replace(/\/api\/?$/, '')
@@ -480,6 +498,12 @@ export async function getGenXStatusAsync(): Promise<GenXStatus> {
 let _modelCache: GenXModel[] | null = null
 let _modelCacheAge = 0
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000
+let _catalogDiagnostics: GenXCatalogDiagnostics = {
+  endpoint: null,
+  attempted: [],
+  lastStatus: null,
+  lastBody: null,
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -500,6 +524,87 @@ function normaliseStatus(status: unknown): GenXMediaResult['status'] {
   if (raw === 'failed' || raw === 'error' || raw === 'cancelled' || raw === 'canceled') return 'failed'
   if (raw === 'processing' || raw === 'running' || raw === 'in_progress') return 'processing'
   return 'pending'
+}
+
+const MEDIA_URL_KEYS = [
+  'result_url',
+  'resultUrl',
+  'url',
+  'output_url',
+  'outputUrl',
+  'file_url',
+  'fileUrl',
+  'audio_url',
+  'audioUrl',
+  'music_url',
+  'musicUrl',
+  'mediaUrl',
+  'downloadUrl',
+  'download_url',
+  'previewUrl',
+  'preview_url',
+  'playbackUrl',
+  'playback_url',
+]
+
+const MEDIA_BASE64_KEYS = [
+  'audioBase64',
+  'audio_base64',
+  'base64',
+  'b64_json',
+  'bytesBase64Encoded',
+  'data',
+]
+
+function collectRecords(value: unknown, depth = 0): Record<string, unknown>[] {
+  if (depth > 8) return []
+  if (Array.isArray(value)) return value.flatMap((item) => collectRecords(item, depth + 1))
+  if (!isRecord(value)) return []
+  return [
+    value,
+    ...Object.values(value).flatMap((item) => collectRecords(item, depth + 1)),
+  ]
+}
+
+function firstNestedString(value: unknown, keys: readonly string[]): string | null {
+  for (const record of collectRecords(value)) {
+    for (const key of keys) {
+      const found = asString(record[key])
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function normalizeBase64(value: string | null): string | null {
+  if (!value) return null
+  const dataUri = value.match(/^data:([^;]+);base64,([\s\S]+)$/)
+  const candidate = (dataUri?.[2] ?? value).replace(/\s/g, '')
+  if (/^[A-Za-z0-9+/=]+$/.test(candidate) && candidate.length >= 16) return candidate
+  return null
+}
+
+function mediaContentType(value: unknown, base64Source?: string | null): string | null {
+  const dataUriType = base64Source?.match(/^data:([^;]+);base64,/)?.[1] ?? null
+  return firstNestedString(value, ['mimeType', 'mime_type', 'contentType', 'content_type', 'mediaType'])
+    ?? dataUriType
+}
+
+function mediaBytes(value: unknown): { bytes: Buffer | null; contentType: string | null } {
+  const rawBase64 = firstNestedString(value, MEDIA_BASE64_KEYS)
+  const normalized = normalizeBase64(rawBase64)
+  return {
+    bytes: normalized ? Buffer.from(normalized, 'base64') : null,
+    contentType: mediaContentType(value, rawBase64),
+  }
+}
+
+function mediaUrl(value: unknown): string | null {
+  return firstNestedString(value, MEDIA_URL_KEYS)
+}
+
+function providerMessage(value: unknown): string | null {
+  return firstNestedString(value, ['error', 'message', 'detail', 'reason'])
 }
 
 function inferCapabilities(raw: Record<string, unknown>, id: string): GenXCapability[] {
@@ -541,8 +646,21 @@ function inferCapabilities(raw: Record<string, unknown>, id: string): GenXCapabi
 }
 
 function normaliseModel(raw: unknown): GenXModel | null {
+  if (typeof raw === 'string') {
+    const id = raw.trim()
+    if (!id) return null
+    return {
+      id,
+      name: id,
+      capabilities: inferCapabilities({ id }, id),
+      costTier: 'medium',
+      latencyTier: 'medium',
+      contextWindow: 0,
+      supportsAdult: false,
+    }
+  }
   if (!isRecord(raw)) return null
-  const id = asString(raw.id) ?? asString(raw.model) ?? asString(raw.model_id) ?? asString(raw.slug)
+  const id = asString(raw.id) ?? asString(raw.model) ?? asString(raw.model_id) ?? asString(raw.modelId) ?? asString(raw.slug) ?? asString(raw.name)
   if (!id) return null
   const provider = asString(raw.provider)
   const category = asString(raw.category) ?? asString(raw.type)
@@ -568,14 +686,25 @@ export interface GenXStreamEvent {
   model?: string
 }
 
-function extractModelList(data: unknown): unknown[] {
-  if (Array.isArray(data)) return data
+function extractModelList(data: unknown, inherited: Record<string, unknown> = {}): unknown[] {
+  if (typeof data === 'string') return [{ ...inherited, id: data }]
+  if (Array.isArray(data)) return data.flatMap((entry) => extractModelList(entry, inherited))
   if (!isRecord(data)) return []
-  const candidates = [data.models, data.data, data.items, data.results]
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) return candidate
+  if (asString(data.id) || asString(data.model) || asString(data.model_id) || asString(data.modelId) || asString(data.slug) || asString(data.name)) {
+    return [{ ...inherited, ...data }]
   }
-  return []
+  const values: unknown[] = []
+  for (const [key, value] of Object.entries(data)) {
+    if (!['data', 'models', 'items', 'results', 'catalog', 'catalogue', 'available_models'].includes(key)
+      && !['text', 'chat', 'reasoning', 'code', 'coding', 'image', 'images', 'video', 'videos', 'image_to_video', 'voice', 'voices', 'audio', 'music', 'transcription', 'tts', 'stt'].includes(key.toLowerCase())) {
+      continue
+    }
+    const nextInherited = ['text', 'chat', 'reasoning', 'code', 'coding', 'image', 'images', 'video', 'videos', 'image_to_video', 'voice', 'voices', 'audio', 'music', 'transcription', 'tts', 'stt'].includes(key.toLowerCase())
+      ? { ...inherited, category: inherited.category ?? key }
+      : inherited
+    values.push(...extractModelList(value, nextInherited))
+  }
+  return values
 }
 
 /** Fetch the GenX model catalog using the discovered catalog endpoint. */
@@ -587,21 +716,47 @@ export async function listGenXModels(): Promise<GenXModel[]> {
   if (_modelCache && now - _modelCacheAge < MODEL_CACHE_TTL_MS) return _modelCache
 
   try {
-    const res = await fetch(`${profile.baseUrl}${profile.catalogPath}`, {
-      headers: await buildHeaders(),
-      signal: AbortSignal.timeout(GENX_TIMEOUT),
-    })
-    if (!res.ok) return _modelCache ?? []
-    const data = await res.json() as unknown
-    const models = extractModelList(data)
-      .map(normaliseModel)
-      .filter((model): model is GenXModel => model !== null)
+    const headers = await buildHeaders()
+    const attempts = [
+      `${profile.baseUrl}${profile.catalogPath}`,
+      ...['text', 'image', 'video', 'voice', 'audio', 'transcription'].map(
+        (category) => `${profile.baseUrl}${profile.catalogPath}?category=${encodeURIComponent(category)}`,
+      ),
+    ]
+    const combined = new Map<string, GenXModel>()
+    _catalogDiagnostics = {
+      endpoint: `${profile.baseUrl}${profile.catalogPath}`,
+      attempted: attempts,
+      lastStatus: null,
+      lastBody: null,
+    }
+    for (const url of attempts) {
+      const res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(GENX_TIMEOUT),
+      })
+      const bodyText = await res.text().catch(() => '')
+      _catalogDiagnostics.lastStatus = res.status
+      _catalogDiagnostics.lastBody = bodyText.slice(0, 1000) || null
+      if (!res.ok) continue
+      const data = JSON.parse(bodyText) as unknown
+      for (const model of extractModelList(data)
+        .map(normaliseModel)
+        .filter((entry): entry is GenXModel => entry !== null)) {
+        combined.set(model.id, model)
+      }
+    }
+    const models = [...combined.values()]
     _modelCache = models
     _modelCacheAge = now
     return models
   } catch {
     return _modelCache ?? []
   }
+}
+
+export function getGenXCatalogDiagnostics(): GenXCatalogDiagnostics {
+  return _catalogDiagnostics
 }
 
 // ── Policy-Driven Model Selection ─────────────────────────────────────────────
@@ -870,6 +1025,8 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       success: false, url: null, jobId: null, status: 'failed',
       model: resolvedRequest.model, latencyMs: 0,
       error: 'GenX API key is not configured',
+      bytes: null,
+      contentType: null,
     }
   }
 
@@ -915,7 +1072,17 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       const error = typeof errBody.error === 'string'
         ? errBody.error
         : errBody.error?.message ?? errBody.message ?? `GenX HTTP ${res.status}`
-      return { success: false, url: null, jobId: null, status: 'failed' as const, model: resolvedRequest.model, latencyMs, error }
+      return {
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed' as const,
+        model: resolvedRequest.model,
+        latencyMs,
+        error,
+        bytes: null,
+        contentType: null,
+      }
     }
 
     const data = await res.json() as Record<string, unknown>
@@ -923,13 +1090,28 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
     const jobId = asString(data.job_id) ?? asString(data.jobId) ?? (
       status === 'pending' || status === 'processing' ? asString(data.id) : undefined
     )
-    const url = asString(data.result_url)
-      ?? asString(data.resultUrl)
-      ?? asString(data.url)
-      ?? asString(data.output_url)
-      ?? asString(data.file_url)
+    const url = mediaUrl(data)
+    const audio = mediaBytes(data)
     const model = asString(data.model) ?? resolvedRequest.model
-    const error = asString(data.error) ?? (isRecord(data.error) ? asString(data.error.message) : undefined)
+    const error = providerMessage(data)
+    const missingAudioOutput = resolvedRequest.type === 'audio'
+      && status !== 'failed'
+      && !url
+      && !audio.bytes
+      && !jobId
+    if (missingAudioOutput) {
+      return {
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed',
+        model,
+        latencyMs,
+        error: error ? `${NO_AUDIO_RESULT_ERROR} Provider message: ${error}` : NO_AUDIO_RESULT_ERROR,
+        bytes: null,
+        contentType: null,
+      }
+    }
 
     return {
       success: status !== 'failed',
@@ -939,12 +1121,16 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
       model,
       latencyMs,
       error: error ?? null,
+      bytes: audio.bytes,
+      contentType: audio.contentType,
     }
   } catch (err) {
     return {
       success: false, url: null, jobId: null, status: 'failed',
       model: resolvedRequest.model, latencyMs: Date.now() - start,
       error: `GenX media request failed: ${err instanceof Error ? err.message : 'unknown error'}`,
+      bytes: null,
+      contentType: null,
     }
   }
 }
@@ -967,26 +1153,38 @@ export async function getGenXJobStatus(jobId: string): Promise<GenXJobStatus | n
     const data = await res.json() as Record<string, unknown>
     const status = normaliseStatus(data.status)
     const id = asString(data.id) ?? asString(data.job_id) ?? jobId
-    const resultUrl = asString(data.result_url)
-      ?? asString(data.resultUrl)
-      ?? asString(data.url)
-      ?? asString(data.output_url)
-      ?? null
-    const error = asString(data.error) ?? (isRecord(data.error) ? asString(data.error.message) : undefined)
+    const resultUrl = mediaUrl(data)
+    const audio = mediaBytes(data)
+    const error = providerMessage(data)
     const model = asString(data.model) ?? 'unknown'
+    const type = asString(data.type) === 'audio'
+      ? 'audio'
+      : asString(data.type) === 'video'
+        ? 'video'
+        : 'image'
     return {
       id,
       status: status === 'completed' ? 'completed' : status,
       resultUrl,
+      bytes: audio.bytes,
+      contentType: audio.contentType,
       result: resultUrl ? {
         id,
         model,
-        type: 'image',
+        type,
         url: resultUrl,
         result_url: resultUrl,
         status: 'completed',
+        mimeType: audio.contentType ?? undefined,
+      } : audio.bytes ? {
+        id,
+        model,
+        type,
+        base64: audio.bytes.toString('base64'),
+        mimeType: audio.contentType ?? undefined,
+        status: 'completed',
       } : undefined,
-      error,
+      error: error ?? undefined,
       createdAt: asString(data.created_at) ?? asString(data.createdAt) ?? '',
       updatedAt: asString(data.updated_at) ?? asString(data.updatedAt) ?? '',
     }
@@ -1034,7 +1232,7 @@ export function getAdultCapabilityStatus(): {
 }
 
 export interface AdultProviderReadiness {
-  provider: 'together' | 'huggingface' | 'xai'
+  provider: 'together' | 'huggingface' | 'genx'
   configured: boolean
 }
 
@@ -1068,8 +1266,7 @@ export interface AdultCapabilityReadiness {
 
 /**
  * Adult/suggestive generation is intentionally separate from the normal GenX
- * safe model chain. It may only use explicit adult-capable provider keys:
- * Together AI, Hugging Face, and xAI/Grok.
+ * safe model chain. It may only use approved direct provider keys.
  */
 export async function getAdultCapabilityStatusAsync(): Promise<AdultCapabilityReadiness> {
   const {
@@ -1087,18 +1284,18 @@ export async function getAdultCapabilityStatusAsync(): Promise<AdultCapabilityRe
   const providers: AdultProviderReadiness[] = [
     { provider: 'together', configured: false },
     { provider: 'huggingface', configured: false },
-    { provider: 'xai', configured: false },
+    { provider: 'genx', configured: false },
   ]
 
   try {
     const { getVaultApiKey } = await import('@/lib/brain')
     providers[0].configured = Boolean(await getVaultApiKey('together'))
     providers[1].configured = Boolean(await getVaultApiKey('huggingface'))
-    providers[2].configured = Boolean(await getVaultApiKey('xai') || await getVaultApiKey('grok'))
+    providers[2].configured = Boolean(await getVaultApiKey('genx'))
   } catch {
     providers[0].configured = Boolean(process.env.TOGETHER_API_KEY)
     providers[1].configured = Boolean(process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN)
-    providers[2].configured = Boolean(process.env.XAI_API_KEY || process.env.GROK_API_KEY)
+    providers[2].configured = Boolean(process.env.GENX_API_KEY)
   }
 
   let hfAdultEndpointConfigured = false

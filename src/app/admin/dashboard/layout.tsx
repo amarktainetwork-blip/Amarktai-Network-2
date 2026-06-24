@@ -24,10 +24,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     fetch('/api/admin/settings/status').then((res) => res.json()).catch(() => null).then((response) => {
       if (!mounted) return
       const truth = response?.truth
-      const connected = Number(truth?.connectedCount ?? 0)
-      const storageConnected = Boolean(truth?.storage?.connected)
+      const readiness = truth?.systemReadiness
       setStatus({
-        appStatus: storageConnected ? `${connected} connections ready` : 'Storage needs setup',
+        appStatus: readiness?.ready
+          ? 'Core system ready'
+          : readiness?.storageReady === false
+            ? 'Storage needs setup'
+            : readiness?.providersReady === false
+              ? 'Provider setup incomplete'
+              : 'Creative smoke test required',
       })
       setPulse(true)
     })
@@ -66,7 +71,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div>
               <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Command OS</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Creative OS</p>
             </div>
           </div>
         </Link>

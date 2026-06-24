@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
+import CommandCenter from '@/components/dashboard/CommandCenter'
 
 export default function CommandPage() {
-  redirect('/admin/dashboard/workspace')
+  return <CommandCenter />
 }

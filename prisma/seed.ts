@@ -399,7 +399,7 @@ async function main() {
 
   // ── API Keys ───────────────────────────────────────────────────────
   const apiKeys = [
-    { provider: 'Anthropic', label: 'Claude API', apiKey: 'sk-ant-••••••••••••••••', isActive: true },
+    { provider: 'GitHub', label: 'Repository API', apiKey: 'ghp_••••••••••••••••', isActive: false },
     { provider: 'Coinbase', label: 'Crypto Data Feed', apiKey: 'cb_••••••••••••••••••••', isActive: false },
   ]
   for (const k of apiKeys) {
@@ -410,20 +410,12 @@ async function main() {
 
   // ── AI Provider Vault — seeded from canonical provider catalog ────
   const aiProviders = [
-    { providerKey: 'openai',      displayName: 'OpenAI',         sortOrder: 0 },
-    { providerKey: 'groq',        displayName: 'Groq',           sortOrder: 1 },
-    { providerKey: 'grok',        displayName: 'Grok / xAI',     sortOrder: 2 },
-    { providerKey: 'deepseek',    displayName: 'DeepSeek',       sortOrder: 3 },
-    { providerKey: 'gemini',      displayName: 'Google Gemini',  sortOrder: 4 },
-    { providerKey: 'huggingface', displayName: 'Hugging Face',   sortOrder: 5 },
-    { providerKey: 'nvidia',      displayName: 'NVIDIA',         sortOrder: 6 },
-    { providerKey: 'openrouter',  displayName: 'OpenRouter',     sortOrder: 7 },
-    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 8 },
-    { providerKey: 'qwen',        displayName: 'Qwen',           sortOrder: 9 },
-    { providerKey: 'replicate',   displayName: 'Replicate',      sortOrder: 10 },
-    { providerKey: 'anthropic',   displayName: 'Anthropic',      sortOrder: 11 },
-    { providerKey: 'cohere',      displayName: 'Cohere',         sortOrder: 12 },
-    { providerKey: 'mistral',     displayName: 'Mistral AI',     sortOrder: 13 },
+    { providerKey: 'genx',        displayName: 'GenX',           sortOrder: 0 },
+    { providerKey: 'huggingface', displayName: 'Hugging Face',   sortOrder: 1 },
+    { providerKey: 'qwen',        displayName: 'Qwen / DashScope', sortOrder: 2 },
+    { providerKey: 'mimo',        displayName: 'Xiaomi MiMo',    sortOrder: 3 },
+    { providerKey: 'groq',        displayName: 'Groq',           sortOrder: 4 },
+    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 5 },
   ]
   for (const p of aiProviders) {
     await prisma.aiProvider.upsert({

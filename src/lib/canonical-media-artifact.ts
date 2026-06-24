@@ -21,6 +21,8 @@ export interface PersistMediaResultInput {
   model: string
   traceId?: string
   metadata?: JsonRecord
+  executionId?: string
+  jobId?: string
 }
 
 const URL_KEYS = [
@@ -32,9 +34,22 @@ const URL_KEYS = [
   'videoUrl',
   'resultUrl',
   'outputUrl',
+  'previewUrl',
+  'downloadUrl',
+  'playbackUrl',
+  'assetUrl',
+  'asset_url',
+  'fileUrl',
+  'file_url',
+  'download_url',
+  'preview_url',
+  'video_url',
+  'image_url',
+  'audio_url',
+  'music_url',
   'url',
 ]
-const BASE64_KEYS = ['imageBase64', 'audioBase64', 'videoBase64', 'base64', 'b64_json', 'bytesBase64Encoded']
+const BASE64_KEYS = ['imageBase64', 'audioBase64', 'videoBase64', 'image_base64', 'audio_base64', 'video_base64', 'base64', 'b64_json', 'bytesBase64Encoded']
 const JOB_KEYS = ['jobId', 'taskId', 'predictionId', 'providerJobId']
 
 function asRecord(value: unknown): JsonRecord | null {
@@ -123,6 +138,10 @@ export async function persistCanonicalMediaResult(input: PersistMediaResultInput
 
   const artifact = await createArtifact({
     appSlug: input.appSlug,
+    executionId: input.executionId ?? (
+      typeof input.metadata?.executionId === 'string' ? input.metadata.executionId : undefined
+    ),
+    jobId: input.jobId,
     type: input.type,
     subType: input.subType,
     title: input.title,
@@ -132,7 +151,6 @@ export async function persistCanonicalMediaResult(input: PersistMediaResultInput
     traceId: input.traceId,
     content: normalized.base64 ?? undefined,
     contentUrl: normalized.mediaUrl ?? undefined,
-    allowRemoteReference: true,
     mimeType: normalized.mimeType ?? undefined,
     metadata: {
       ...(input.metadata ?? {}),

@@ -3,14 +3,37 @@ import { getSession } from '@/lib/session'
 import { getProviderMeshNode, sanitizeProviderError, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential, recordMeshTestResult } from '@/lib/provider-mesh-status'
 import { testLocalTool } from '@/lib/local-tools'
+import { discoverProvider, resolveProviderEndpoint } from '@/lib/providers/provider-discovery'
+import { modelsForCapability } from '@/lib/providers/model-discovery'
+import { getProviderTruth } from '@/lib/providers/registry'
 
 type TestPayload = { success?: boolean; error?: string; detail?: string; note?: string; connected?: boolean; [key: string]: unknown }
+
+function classifyProof(result: TestPayload) {
+  const proofType = typeof result.proofType === 'string' ? result.proofType : 'unknown'
+  const capabilityExecutionProven = result.capabilityExecutionProven === true
+  if (capabilityExecutionProven) {
+    return {
+      proofKind: 'live_capability_execution_proof' as const,
+      proofSummary: 'This test executed a real capability path for the selected provider.',
+    }
+  }
+  if (proofType.includes('catalog') || proofType.includes('probe') || proofType.includes('models')) {
+    return {
+      proofKind: 'catalog_discovery_test' as const,
+      proofSummary: 'This test verified credentials plus catalog or discovery reachability only. It did not prove a product capability route.',
+    }
+  }
+  return {
+    proofKind: 'credential_test_only' as const,
+    proofSummary: 'This test verified credentials or account access only. It did not prove a product capability route.',
+  }
+}
 
 async function runExistingTest(id: ProviderMeshId, request: NextRequest): Promise<TestPayload | null> {
   const forwarded = new NextRequest(request.url, { method: 'POST', headers: request.headers, body: '{}' })
   if (id === 'genx') return (await (await import('@/app/api/admin/settings/test-genx/route')).POST(forwarded)).json()
   if (id === 'huggingface') return (await (await import('@/app/api/admin/settings/test-huggingface/route')).POST(forwarded)).json()
-  if (id === 'qwen') return (await (await import('@/app/api/admin/settings/test-qwen/route')).POST(forwarded)).json()
   if (id === 'groq') return (await (await import('@/app/api/admin/settings/test-groq/route')).POST(forwarded)).json()
   if (id === 'together') return (await (await import('@/app/api/admin/settings/test-together/route')).POST(forwarded)).json()
   if (id === 'github') return (await (await import('@/app/api/admin/settings/test-github/route')).POST(forwarded)).json()
@@ -29,13 +52,32 @@ async function runNewTest(id: ProviderMeshId): Promise<TestPayload> {
   if (!credential) return { success: false, error: 'Key not present' }
 
   if (id === 'mimo') {
-    const response = await fetch(`${process.env.MIMO_BASE_URL || 'https://api.xiaomimimo.com/v1'}/chat/completions`, {
+    const discovery = await discoverProvider('mimo', {
+      force: true,
+      credential,
+      keySource: 'stored',
+    })
+    const chatModel = modelsForCapability(discovery, 'chat')[0]
+    if (!chatModel) {
+      return {
+        success: false,
+        error: discovery.error || 'MiMo catalog returned no chat-capable model.',
+      }
+    }
+    const baseUrl = resolveProviderEndpoint(getProviderTruth('mimo')!, 'token_plan')
+    const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${credential}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.MIMO_TEST_MODEL || 'mimo-v2.5', messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
+      headers: { 'api-key': credential, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: chatModel.id, messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 4 }),
       signal: AbortSignal.timeout(20_000),
     })
-    return response.ok ? { success: true, detail: 'OpenAI-compatible chat passed.' } : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
+    return response.ok
+      ? {
+          success: true,
+          detail: `OpenAI-compatible chat passed with a dynamically discovered ${chatModel.capabilityEvidence} model.`,
+          model: chatModel.id,
+        }
+      : { success: false, error: `Xiaomi MiMo returned HTTP ${response.status}` }
   }
 
   if (id === 'qdrant') {
@@ -72,28 +114,74 @@ export async function POST(request: NextRequest) {
   const startedAt = Date.now()
   try {
     const result = await runExistingTest(node.id, request) ?? await runNewTest(node.id)
-    const success = result.success === true && (node.id !== 'redis' || result.connected === true)
+    const capabilityExecutionProven = result.capabilityExecutionProven === true
+    const proof = classifyProof(result)
+    const success = result.success === true
+      && (node.id !== 'redis' || result.connected === true)
     const error = success ? '' : sanitizeProviderError(result.error || result.detail || result.note || 'Live test failed')
-    await recordMeshTestResult({
-      id: node.id,
-      success,
-      capabilities: node.capabilities,
-      detail: String(result.detail || result.note || ''),
-      error,
-      metadata: { latencyMs: Date.now() - startedAt },
-    })
+    const detail = success
+      ? String(result.detail || result.note || `${node.displayName} live test passed.`)
+      : node.id === 'huggingface' && result.success === true
+        ? String(result.detail || result.note || 'Token/account check passed, but capability execution is not proven by this test.')
+        : error
+    try {
+      await recordMeshTestResult({
+        id: node.id,
+        success,
+        capabilities: node.capabilities,
+        detail,
+        error,
+        metadata: {
+          latencyMs: Date.now() - startedAt,
+          capabilityExecutionProven,
+          proofKind: proof.proofKind,
+          proofSummary: proof.proofSummary,
+        },
+      })
+    } catch (persistenceError) {
+      console.error(`[settings/test-provider] Failed to persist ${node.id} live-test status:`, persistenceError)
+      return NextResponse.json({
+        success: false,
+        connected: false,
+        providerTestPassed: success,
+        error: `The ${node.displayName} live test completed, but its status could not be saved.`,
+        latencyMs: Date.now() - startedAt,
+      }, { status: 500 })
+    }
     return NextResponse.json({
       success,
       connected: success,
       capabilities: success ? node.capabilities : [],
+      capabilityExecutionProven,
+      proofKind: proof.proofKind,
+      proofSummary: proof.proofSummary,
       lastTestedAt: new Date().toISOString(),
-      detail: success ? String(result.detail || result.note || 'Live test passed.') : undefined,
+      detail: success ? detail : undefined,
       error: success ? undefined : error,
+      note: !success && node.id === 'huggingface' && result.success === true
+        ? 'Hugging Face account-token check passed, but no capability execution route was proven.'
+        : undefined,
       latencyMs: Date.now() - startedAt,
     })
   } catch (error) {
     const sanitized = sanitizeProviderError(error)
-    await recordMeshTestResult({ id: node.id, success: false, capabilities: [], error: sanitized })
+    try {
+      await recordMeshTestResult({
+        id: node.id,
+        success: false,
+        capabilities: node.capabilities,
+        detail: sanitized,
+        error: sanitized,
+      })
+    } catch (persistenceError) {
+      console.error(`[settings/test-provider] Failed to persist ${node.id} live-test failure:`, persistenceError)
+      return NextResponse.json({
+        success: false,
+        connected: false,
+        error: `${sanitized} The failed status could not be saved.`,
+        latencyMs: Date.now() - startedAt,
+      }, { status: 500 })
+    }
     return NextResponse.json({ success: false, connected: false, error: sanitized, latencyMs: Date.now() - startedAt })
   }
 }

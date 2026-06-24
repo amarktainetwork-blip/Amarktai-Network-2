@@ -35,6 +35,16 @@ export async function getQdrantClientAsync(): Promise<QdrantClient | null> {
 }
 
 /**
+ * Returns true when Qdrant has a configured URL from either the DB vault or env.
+ * This lets proof surfaces distinguish "configured but unreachable" from
+ * "not wired/configured" without exposing the actual endpoint value.
+ */
+export async function isQdrantConfigured(): Promise<boolean> {
+  const url = await getServiceConfigField('qdrant', 'url', 'QDRANT_URL')
+  return Boolean(url?.trim())
+}
+
+/**
  * Returns the shared Qdrant client, or `null` if QDRANT_URL is not set.
  * Sync version — reads env var only (used for sync callers).
  * Prefer getQdrantClientAsync() in async contexts.

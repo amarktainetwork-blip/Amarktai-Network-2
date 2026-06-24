@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-BASE_URL="${BASE_URL:-https://amarktai.com}"
+BASE_URL="${BASE_URL:-https://amarktai.co.za}"
 COOKIE_FILE="${COOKIE_FILE:-}"
 TIMEOUT="${TIMEOUT:-25}"
 
@@ -100,7 +100,7 @@ check_admin_json "/api/admin/AmarktAI Assistant/action-execute?days=7" "AmarktAI
 section "Next.js static assets"
 # Discover built CSS/JS/font assets from the standalone static directory and
 # verify each returns HTTP 200 through the public BASE_URL.
-STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/repo}/.next/standalone/.next/static"
+STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/platform}/.next/standalone/.next/static"
 
 _proof_css=""
 _proof_js=""
@@ -135,11 +135,11 @@ if command -v systemctl >/dev/null 2>&1; then
   systemctl is-active --quiet amarktai-web && ok "amarktai-web service active" || warn "amarktai-web service not active or not present"
 fi
 
-if [[ -d /var/www/amarktai/repo ]]; then
-  ok "Repo directory exists: /var/www/amarktai/repo"
-  sudo find /var/www/amarktai/repo/public/generated-artifacts -type f 2>/dev/null | tail -5 || true
+if [[ -d /var/www/amarktai/platform ]]; then
+  ok "Repo directory exists: /var/www/amarktai/platform"
+  sudo find /var/www/amarktai/platform/public/generated-artifacts -type f 2>/dev/null | tail -5 || true
 else
-  warn "Repo directory /var/www/amarktai/repo not found on this machine"
+  warn "Repo directory /var/www/amarktai/platform not found on this machine"
 fi
 
 section "Summary"

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const findFirst = vi.fn()
 const findUnique = vi.fn()
@@ -26,27 +26,36 @@ vi.mock('@/lib/artifact-store', () => ({
   createArtifact,
 }))
 
+let getVideoJob: typeof import('@/app/api/brain/video-generate/[jobId]/route').GET
+
+beforeAll(async () => {
+  const route = await import('@/app/api/brain/video-generate/[jobId]/route')
+  getVideoJob = route.GET
+})
+
 describe('/api/brain/video-generate/[jobId] artifact linkage', () => {
   it('persists a completed video job result as an artifact', async () => {
     findFirst.mockResolvedValue(null)
     findUnique.mockResolvedValue({
       id: 'video_job_1',
       appSlug: 'demo-app',
-      provider: 'replicate',
+      provider: 'qwen',
       modelId: 'wan-video',
       prompt: 'cinematic product reveal',
       status: 'succeeded',
       providerJobId: 'provider_job_1',
-      resultUrl: 'https://replicate.delivery/output.mp4',
+      resultUrl: 'https://dashscope.example/output.mp4',
       resultMeta: null,
       errorMessage: null,
       createdAt: new Date('2026-01-01T00:00:00.000Z'),
       updatedAt: new Date('2026-01-01T00:00:05.000Z'),
     })
-    createArtifact.mockResolvedValue({ id: 'artifact_video_1' })
+    createArtifact.mockResolvedValue({
+      id: 'artifact_video_1',
+      storageUrl: '/api/artifacts/file/artifacts/demo-app/video/output.mp4',
+    })
 
-    const { GET } = await import('@/app/api/brain/video-generate/[jobId]/route')
-    const response = await GET(new Request('http://test.local/api/brain/video-generate/video_job_1'), {
+    const response = await getVideoJob(new Request('http://test.local/api/brain/video-generate/video_job_1'), {
       params: Promise.resolve({ jobId: 'video_job_1' }),
     })
     const data = await response.json()
@@ -58,8 +67,9 @@ describe('/api/brain/video-generate/[jobId] artifact linkage', () => {
       type: 'video',
       subType: 'video_generation',
       traceId: 'video-job-video_job_1',
-      contentUrl: 'https://replicate.delivery/output.mp4',
+      contentUrl: 'https://dashscope.example/output.mp4',
       metadata: expect.objectContaining({ jobId: 'video_job_1' }),
     }))
+    expect(createArtifact.mock.calls[0][0].allowRemoteReference).toBeUndefined()
   })
 })

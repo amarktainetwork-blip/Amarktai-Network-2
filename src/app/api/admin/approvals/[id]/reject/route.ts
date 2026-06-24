@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
 import { findRecord, updateRecord, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import { resolveExecutionApproval } from '@/lib/execution'
 
 interface LocalApproval {
   id: string
@@ -85,6 +86,7 @@ export async function POST(
         { action: 'rejected', by: 'admin', at: now, note: reason || undefined },
       ],
     })
+    const execution = resolveExecutionApproval(id, 'rejected')
 
     return NextResponse.json({
       success: true,
@@ -93,6 +95,7 @@ export async function POST(
       resolvedAt: now,
       driver: 'local_vps',
       approval: updated,
+      execution,
     })
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to reject' }, { status: 500 })

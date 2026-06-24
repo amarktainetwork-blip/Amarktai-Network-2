@@ -2,19 +2,19 @@
 # ─── AmarktAI Network — Canonical VPS Deploy Script ─────────────────────────
 #
 # Usage (run as root or with sudo):
-#   sudo bash /var/www/amarktai/repo/scripts/deploy_vps.sh
+#   sudo bash /var/www/amarktai/platform/scripts/deploy_vps.sh
 #
 # Requirements:
-#   - Service user must own /var/www/amarktai/repo  (or at least the .next/ subdir)
+#   - Service user must own /var/www/amarktai/platform (or at least the .next/ subdir)
 #   - Service name on this VPS: amarktai-web
 #   - Node.js and npm must be on PATH
-#   - DATABASE_URL must be set in /var/www/amarktai/repo/.env
+#   - DATABASE_URL must be set in /var/www/amarktai/platform/.env
 #
 # What this script does:
 #   1. Pull latest code from git
 #   2. Install all dependencies (including devDeps needed at build time)
 #   3. Generate Prisma client
-#   4. Push schema to DB (prisma db push — safe for SQLite / non-migration workflow)
+#   4. Push the Prisma schema to MariaDB
 #   5. Build the Next.js standalone app
 #   6. Copy .next/static and public/ into the standalone directory
 #   7. Fix ownership of the BUILD OUTPUT only (not the whole repo)
@@ -29,7 +29,7 @@
 
 set -euo pipefail
 
-APP_DIR="/var/www/amarktai/repo"
+APP_DIR="/var/www/amarktai/platform"
 SERVICE_NAME="amarktai-web"
 SERVICE_USER="www-data"
 NODE_BIN="$(command -v node)"
@@ -47,6 +47,12 @@ warn() { echo "[deploy] WARNING: $*" >&2; }
 [[ -f "$APP_DIR/.env" ]]     || warn ".env not found — service will rely on system environment."
 
 cd "$APP_DIR"
+
+install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 0750 \
+  /var/www/amarktai/apps \
+  /var/www/amarktai/storage/{artifacts,uploads,repos,workspaces,logs} \
+  /var/www/amarktai/logs \
+  /var/www/amarktai/backups
 
 # ── 1. Pull latest code ───────────────────────────────────────────────────────
 log "Fetching latest code..."
@@ -76,9 +82,8 @@ log "Installing dependencies..."
 log "Generating Prisma client..."
 "$NPM_BIN" exec -- prisma generate
 
-# ── 6. Push schema to DB ──────────────────────────────────────────────────────
-# prisma db push is preferred over migrate deploy for SQLite / prototype setups.
-# Replace with `prisma migrate deploy` if using a migration-based workflow.
+# ── 6. Push schema to MariaDB ─────────────────────────────────────────────────
+# V1 uses db push because this repository has no checked-in migration history.
 log "Pushing Prisma schema to database..."
 "$NPM_BIN" exec -- prisma db push
 

@@ -2,7 +2,9 @@
  * GET  /api/admin/settings/integrations — Return primary system integration config
  * PATCH /api/admin/settings/integrations — Save primary system integration config
  *
- * Covers: GenX, GitHub, Artifact Storage, Adult Mode
+ * Covers: GenX compatibility settings, GitHub, Artifact Storage, Adult Mode,
+ * assistant settings, and service integrations. Full six-provider AI key truth
+ * lives under `/api/admin/integration-keys` and `/api/admin/settings/test-provider`.
  * All secrets are encrypted at rest via crypto-vault.
  * Raw keys are never returned — only masked previews.
  */
@@ -222,7 +224,7 @@ const patchSchema = z.object({
   }).optional(),
   adult: z.object({
     mode: z.enum(['specialist', 'disabled']).optional(),
-    providerType: z.enum(['together', 'huggingface', 'xai', 'custom']).optional(),
+    providerType: z.enum(['together', 'huggingface']).optional(),
     specialistEndpoint: z.string().optional(),
     specialistKey: z.string().optional(),
     providerModel: z.string().optional(),

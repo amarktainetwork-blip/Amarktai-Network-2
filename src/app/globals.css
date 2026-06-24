@@ -7,6 +7,7 @@
 :root {
   --amarkt-obsidian: #03050a;
   --amarkt-black: #05070c;
+  --amarkt-ink: #060b14;
   --amarkt-graphite: #0b111a;
   --amarkt-panel: #0e1520;
   --amarkt-line: rgba(226, 233, 247, 0.1);
@@ -120,6 +121,79 @@ select {
   background: linear-gradient(180deg, rgba(14, 21, 32, 0.86), rgba(7, 11, 18, 0.92));
 }
 
+.public-site {
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 24%),
+    radial-gradient(circle at 85% 20%, rgba(100, 167, 255, 0.08), transparent 22%),
+    linear-gradient(180deg, #050914 0%, #07111f 48%, #04080f 100%);
+}
+
+.public-grid-glow {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 92%);
+  opacity: 0.35;
+}
+
+.public-orbit {
+  background:
+    radial-gradient(circle at center, rgba(125, 211, 252, 0.22), rgba(59, 130, 246, 0.08) 45%, transparent 72%);
+  filter: blur(24px);
+  opacity: 0.75;
+}
+
+.public-orbit-one {
+  animation: publicFloat 18s ease-in-out infinite;
+}
+
+.public-orbit-two {
+  animation: publicFloatAlt 22s ease-in-out infinite;
+}
+
+.public-preview-panel {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02)),
+    linear-gradient(180deg, rgba(4, 10, 20, 0.94), rgba(8, 15, 26, 0.98));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes publicFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(32px, -18px, 0) scale(1.05);
+  }
+}
+
+@keyframes publicFloatAlt {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-26px, 22px, 0) scale(1.08);
+  }
+}
+
 .text-balance {
   text-wrap: balance;
 }
@@ -136,5 +210,11 @@ select {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .public-orbit-one,
+  .public-orbit-two,
+  .animate-fade-in-up {
+    animation: none !important;
   }
 }

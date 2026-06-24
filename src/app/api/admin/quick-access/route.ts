@@ -11,12 +11,14 @@ const schema = z.object({
 
 /** Timing-safe string comparison to prevent timing attacks */
 function secureEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Keep timing consistent by running a same-size comparison before returning
-    crypto.timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(a, 'utf8'))
-    return false
-  }
-  return crypto.timingSafeEqual(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'))
+  // Pad both buffers to the same length so timingSafeEqual never throws,
+  // and so the comparison time does not leak the length of either string.
+  const maxLen = Math.max(a.length, b.length)
+  const bufA = Buffer.alloc(maxLen)
+  const bufB = Buffer.alloc(maxLen)
+  bufA.write(a, 'utf8')
+  bufB.write(b, 'utf8')
+  return crypto.timingSafeEqual(bufA, bufB)
 }
 
 export async function POST(request: NextRequest) {

@@ -4,7 +4,6 @@ import { promisify } from 'util'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
-import { appendRecord, checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 const execFileAsync = promisify(execFile)
 type CrawlResult = { url: string; title: string; content: string; method: string }
@@ -12,7 +11,16 @@ type CrawlResult = { url: string; title: string; content: string; method: string
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const body = await request.json().catch(() => ({})) as { url?: string; appSlug?: string; notes?: string; tags?: string[] }
+  const body = await request.json().catch(() => ({})) as {
+    url?: string
+    appSlug?: string
+    notes?: string
+    tags?: string[]
+    capability?: string
+    provider?: string
+    model?: string
+    endpoint?: string
+  }
   if (!body.url?.trim()) return NextResponse.json({ error: 'url is required' }, { status: 400 })
 
   let parsed: URL
@@ -25,6 +33,9 @@ export async function POST(request: NextRequest) {
 
   let crawl: CrawlResult | null = null
   let warning = ''
+  const ignoredProviderPreference = typeof body.provider === 'string' ? body.provider : null
+  const ignoredModelPreference = typeof body.model === 'string' ? body.model : null
+  const ignoredEndpointPreference = typeof body.endpoint === 'string' ? body.endpoint : null
   const script = path.join(process.cwd(), 'services', 'crawler', 'crawl.py')
   for (const python of ['python', 'python3']) {
     try {
@@ -50,26 +61,49 @@ export async function POST(request: NextRequest) {
   }
 
   const content = crawl.content || body.notes || ''
-  let artifact = null
   try {
-    artifact = await createArtifact({
+    const artifact = await createArtifact({
       appSlug: body.appSlug || 'research-engine',
-      type: 'document',
+      type: 'research_result',
       subType: 'research_source',
+      capability: 'scrape_website',
       title: crawl.title,
       description: `Local research source: ${parsed.toString()}`,
       provider: 'local-crawler',
       content,
-      metadata: { sourceUrl: parsed.toString(), method: crawl.method, tags: body.tags || [], notes: body.notes || '', warning },
+      metadata: {
+        sourceUrl: parsed.toString(),
+        method: crawl.method,
+        tags: body.tags || [],
+        notes: body.notes || '',
+        warning,
+        ignoredProviderPreference,
+        ignoredModelPreference,
+        ignoredEndpointPreference,
+      },
     })
-  } catch {
-    if (checkWritable(LOCAL_STORE_FILES.research).writable) {
-      appendRecord(LOCAL_STORE_FILES.research, {
-        url: parsed.toString(), appSlug: body.appSlug || 'research-engine', title: crawl.title,
-        notes: body.notes || '', tags: body.tags || [], scrapedMethod: crawl.method,
-        content, status: 'completed', createdAt: new Date().toISOString(), warning,
-      })
-    }
+    return NextResponse.json({
+      success: true,
+      capability: 'scrape_website',
+      artifact,
+      artifactId: artifact.id,
+      artifactUrl: artifact.downloadUrl,
+      crawl,
+      warning: warning || null,
+      ignoredProviderPreference,
+      ignoredModelPreference,
+      ignoredEndpointPreference,
+    })
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      capability: 'scrape_website',
+      error: `Research completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`,
+      ignoredProviderPreference,
+      ignoredModelPreference,
+      ignoredEndpointPreference,
+    }, { status: 503 })
   }
-  return NextResponse.json({ success: true, artifact, crawl, warning: warning || null })
 }

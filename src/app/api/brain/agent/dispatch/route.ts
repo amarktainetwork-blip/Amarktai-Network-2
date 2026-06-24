@@ -12,7 +12,7 @@
  *   - async      (boolean?, optional) — if true and Redis available, queue and return taskId
  *
  * Response (sync):  { taskId, status, output, agentType, latencyMs }
- * Response (async): { taskId, status: 'queued', agentType, pollUrl }
+ * Response (async): { taskId, status: 'queued', agentType, queueJobId }
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -26,6 +26,12 @@ import {
 } from '@/lib/agent-runtime'
 import { getAgentReadiness } from '@/lib/agent-audit'
 import { enqueueJob } from '@/lib/job-queue'
+import { createArtifact } from '@/lib/artifact-store'
+import {
+  createExecution,
+  recordExecutionResponse,
+  startExecution,
+} from '@/lib/execution'
 
 const AGENT_TYPES: AgentType[] = [
   'planner', 'router', 'validator', 'memory', 'retrieval',
@@ -82,6 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         executed: false,
         agentType,
         readiness: audit.readiness,
+        readinessKind: 'diagnostic_registration_check',
         error: audit.reasons[0] ?? `Agent ${agentType} requires a provider that is not configured`,
         requiredProvider: audit.defaultProvider,
       },
@@ -90,14 +97,43 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const definition = getAgentDefinition(agentType as AgentType)
+  const execution = createExecution({
+    appSlug: appId,
+    actor: { type: 'agent', id: agentType, label: definition.name },
+    requestedCapability: capabilityForAgent(agentType as AgentType),
+    prompt: message,
+    action: 'generate',
+    metadata: { agentType, context: context ?? {}, async: runAsync },
+  })
+  if (execution.status === 'blocked' || execution.status === 'awaiting_approval') {
+    return NextResponse.json({
+      executed: false,
+      agentType,
+      error: execution.error ?? execution.approval.reason,
+      executionId: execution.executionId,
+      execution,
+    }, { status: execution.status === 'awaiting_approval' ? 202 : 409 })
+  }
+  startExecution(execution.executionId)
 
   // Create agent task
   let task
   try {
     task = createAgentTask(agentType as AgentType, appId, { message, context })
   } catch (err: unknown) {
+    const payload = {
+      success: false,
+      executed: false,
+      error: err instanceof Error ? err.message : 'Failed to create agent task',
+      status: 'failed',
+      jobStatus: 'failed',
+      agentType,
+      agentName: definition.name,
+      executionId: execution.executionId,
+    }
+    const executionResult = recordExecutionResponse(execution.executionId, payload)
     return NextResponse.json(
-      { executed: false, error: err instanceof Error ? err.message : 'Failed to create agent task' },
+      { ...payload, execution: executionResult },
       { status: 403 },
     )
   }
@@ -107,18 +143,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const queueId = await enqueueJob({
       type: 'agent_task',
       appSlug: appId,
-      data: { taskId: task.id, agentType, message, context: context ?? {} },
+      data: {
+        taskId: task.id,
+        agentType,
+        message,
+        context: context ?? {},
+        executionId: execution.executionId,
+      },
     })
 
     if (queueId) {
-      return NextResponse.json({
+      const payload = {
+        success: true,
         executed: true,
         taskId: task.id,
+        jobId: String(queueId),
+        providerJobId: String(queueId),
         queueJobId: queueId,
         status: 'queued',
+        jobStatus: 'queued',
         agentType,
         agentName: definition.name,
-      }, { status: 202 })
+        executionId: execution.executionId,
+      }
+      const executionResult = recordExecutionResponse(execution.executionId, payload)
+      return NextResponse.json({ ...payload, execution: executionResult }, { status: 202 })
     }
     // Queue unavailable — fall through to synchronous
   }
@@ -128,27 +177,85 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const latencyMs = Date.now() - start
 
   if (completed.status === 'failed') {
+    const payload = {
+      success: false,
+      executed: false,
+      taskId: completed.id,
+      jobId: completed.id,
+      status: completed.status,
+      jobStatus: completed.status,
+      agentType,
+      agentName: definition.name,
+      error: completed.error ?? 'Agent execution failed',
+      latencyMs,
+      executionId: execution.executionId,
+    }
+    const executionResult = recordExecutionResponse(execution.executionId, payload)
     return NextResponse.json(
-      {
-        executed: false,
-        taskId: completed.id,
-        status: completed.status,
-        agentType,
-        agentName: definition.name,
-        error: completed.error ?? 'Agent execution failed',
-        latencyMs,
-      },
+      { ...payload, execution: executionResult },
       { status: 502 },
     )
   }
 
-  return NextResponse.json({
+  let artifact
+  try {
+    artifact = await createArtifact({
+      appSlug: appId,
+      executionId: execution.executionId,
+      jobId: completed.id,
+      type: 'document',
+      subType: 'agent_result',
+      capability: capabilityForAgent(agentType as AgentType),
+      title: `${definition.name}: ${message.slice(0, 80)}`,
+      description: `Completed ${agentType} agent output`,
+      provider: execution.providerPlan.provider ?? undefined,
+      model: execution.modelPlan.model ?? undefined,
+      traceId: `agent-task-${completed.id}`,
+      content: JSON.stringify(completed.output ?? null, null, 2),
+      mimeType: 'application/json',
+      metadata: { agentType, taskId: completed.id, executionId: execution.executionId },
+    })
+  } catch (error) {
+    const payload = {
+      success: false,
+      executed: false,
+      taskId: completed.id,
+      jobId: completed.id,
+      status: 'failed',
+      jobStatus: 'failed',
+      agentType,
+      agentName: definition.name,
+      error: `Agent completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      executionId: execution.executionId,
+    }
+    const executionResult = recordExecutionResponse(execution.executionId, payload)
+    return NextResponse.json({ ...payload, execution: executionResult }, { status: 500 })
+  }
+
+  const payload = {
+    success: true,
     executed: true,
     taskId: completed.id,
+    jobId: completed.id,
     status: completed.status,
+    jobStatus: completed.status,
     agentType,
     agentName: definition.name,
     output: completed.output,
     latencyMs: completed.latencyMs ?? latencyMs,
-  })
+    artifactId: artifact.id,
+    storageUrl: artifact.storageUrl,
+    executionId: execution.executionId,
+  }
+  const executionResult = recordExecutionResponse(execution.executionId, payload)
+  return NextResponse.json({ ...payload, execution: executionResult })
+}
+
+function capabilityForAgent(agentType: AgentType) {
+  if (agentType === 'developer') return 'code'
+  if (agentType === 'retrieval' || agentType === 'travel_planner' || agentType === 'trading_analyst') {
+    return 'research'
+  }
+  if (agentType === 'voice') return 'voice_response'
+  return 'chat'
 }

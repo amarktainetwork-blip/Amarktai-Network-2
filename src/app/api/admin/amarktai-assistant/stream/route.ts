@@ -1,8 +1,6 @@
 import { NextRequest } from 'next/server'
+import { executeCapability } from '@/lib/capability-router'
 import { getSession } from '@/lib/session'
-import { streamGenXChat } from '@/lib/genx-client'
-import { routeLiveModel } from '@/lib/live-ai-routing'
-import { recordEstimatedCost } from '@/lib/cost-tracking'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,67 +16,52 @@ export async function POST(request: NextRequest) {
     costMode?: 'cheap' | 'balanced' | 'premium'
     metadata?: Record<string, unknown>
   }
-  if (!body.message?.trim()) return Response.json({ error: 'message is required' }, { status: 400 })
-
-  const route = routeLiveModel({
-    capability: normalizeCapability(body.capability),
-    appSlug: String(body.metadata?.appSlug ?? 'studio'),
-    selectedProvider: body.providerOverride,
-    selectedModel: body.modelOverride,
-    costMode: body.costMode ?? 'balanced',
-    adultPolicy: String(body.metadata?.adultPolicy ?? 'full_adult_app_mode') as never,
-  })
-  if (route.blockedReason || !route.selectedProvider || !route.selectedModel) {
-    return Response.json({ success: false, error: route.blockedReason ?? 'No approved route is available', route }, { status: 409 })
+  if (!body.message?.trim()) {
+    return Response.json({ error: 'message is required' }, { status: 400 })
   }
-  const selectedProvider = route.selectedProvider
-  const selectedModel = route.selectedModel
+
+  const result = await executeCapability({
+    input: body.message,
+    capability: body.capability || 'chat',
+    qualityTier: body.costMode,
+    metadata: {
+      ...body.metadata,
+      streaming: true,
+      source: 'amarktai_assistant',
+      ignoredProviderPreference: body.providerOverride ?? null,
+      ignoredModelPreference: body.modelOverride ?? null,
+    },
+  })
+  if (!result.success) {
+    return Response.json({
+      success: false,
+      error: result.error,
+      code: result.code,
+      providerAttempts: result.providerAttempts ?? [],
+    }, { status: result.readiness === 'BLOCKED' ? 403 : 503 })
+  }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream({
-    async start(controller) {
-      function send(payload: Record<string, unknown>) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`))
-      }
-      send({ status: 'Routing', route })
-      try {
-        if (selectedProvider === 'genx') {
-          await streamGenXChat({
-            model: selectedModel,
-            messages: [
-              { role: 'system', content: 'You are the AmarktAI Network operations assistant. Use dashboard, app, memory, artifact, and Workbench context when helpful. Follow safety policy.' },
-              { role: 'user', content: body.message! },
-            ],
-            stream: true,
-            metadata: body.metadata,
-          }, (event) => {
-            if (event.type === 'chunk') send({ content: event.content })
-            if (event.type === 'error') send({ status: event.error })
-            if (event.type === 'done') send({ status: 'Done' })
-          }, request.signal)
-        } else {
-          send({
-            status: 'Selected provider streaming pending',
-            route: { selectedProvider, selectedModel },
-            blocker: 'This Studio streaming route currently streams through GenX only. Phase 2 should wire this provider to its real protected execution route before showing streamed output.',
-          })
-        }
-        await recordEstimatedCost({
-          provider: selectedProvider,
-          model: selectedModel,
-          appSlug: String(body.metadata?.appSlug ?? 'studio'),
-          agentId: 'amarktai-assistant',
-          capability: body.capability ?? 'chat',
-          runType: 'studio-stream',
-          costMode: route.costMode,
-          estimatedCostUsd: route.estimatedCostUsd,
-        }).catch(() => null)
-        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-      } catch (error) {
-        send({ status: error instanceof Error ? error.message : 'Studio stream failed' })
-      } finally {
-        controller.close()
-      }
+    start(controller) {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+        type: 'route',
+        provider: result.provider,
+        model: result.model,
+        mode: 'buffered_canonical_execution',
+      })}\n\n`))
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+        type: 'chunk',
+        content: result.output,
+      })}\n\n`))
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+        type: 'done',
+        provider: result.provider,
+        model: result.model,
+        artifactId: result.artifactId ?? null,
+      })}\n\n`))
+      controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+      controller.close()
     },
   })
 
@@ -87,17 +70,7 @@ export async function POST(request: NextRequest) {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      'X-Stream-Mode': 'buffered-canonical-execution',
     },
   })
-}
-
-function normalizeCapability(value?: string) {
-  if (value === 'code') return 'coding'
-  if (value === 'image_generation') return 'image'
-  if (value === 'video_generation') return 'video'
-  if (value === 'tts') return 'voice_tts'
-  if (value === 'stt') return 'voice_stt'
-  if (value === 'scrape_website') return 'research'
-  if (value === 'adult_text') return 'adult_text'
-  return 'chat'
 }

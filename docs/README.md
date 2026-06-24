@@ -1,91 +1,40 @@
-# AmarktAI Network — Documentation
+# AmarktAI V1 Documentation
 
-## Table of Contents
+AmarktAI is a capability-first AI runtime.
 
-1. [Adding a New Provider](./adding-a-provider.md)
-2. [Registering New Models](./registering-models.md)
-3. [Configuring App Profiles](./configuring-app-profiles.md)
-4. [Brain API Reference](./brain-api.md)
-5. [Budget Management](./budget-management.md)
-6. [Health Monitoring](./health-monitoring.md)
-7. [Safety & Content Policies](./safety-policies.md)
-8. [Developer Guide — SDK & Integration](./developer-guide.md)
+`User or connected app -> capability request -> Brain runtime -> provider discovery/routing -> provider adapter -> job/artifact/result`
 
----
+## Current Truth Documents
 
-## Quick Start
+- `../RUNTIME_SOURCE_OF_TRUTH.md`
+- `../ACTIVE_PROVIDER_CONTRACTS.md`
+- `../ACTIVE_CAPABILITY_MATRIX.md`
+- `../ACTIVE_OPEN_SOURCE_STACK.md`
+- `../INCOMPLETE_AND_BLOCKED.md`
+- `../DELETE_REVIEW_REQUIRED.md`
 
-The AmarktAI Network is an AI Operating System that orchestrates multiple
-AI providers, manages per-app routing, budgets, and self-healing across
-a connected ecosystem of applications.
+## Canonical Runtime Owners
 
-### Prerequisites
+| Area | File |
+|---|---|
+| Provider contracts | `src/lib/providers/provider-truth.ts` |
+| Provider/model discovery | `src/lib/providers/provider-discovery.ts`, `src/lib/providers/model-discovery.ts` |
+| Compact capability registry | `src/lib/providers/capability-registry.ts` |
+| V1 product matrix | `src/lib/brain/v1-capability-matrix.ts` |
+| Execution/fallback/artifacts/jobs | `src/lib/orchestrator.ts` |
+| Provider adapters | `src/lib/ai-capability-adapters.ts` |
+| Dashboard readiness | `src/lib/runtime-capability-truth.ts` |
+| Proof report | `scripts/v1-25-capability-proof.ts` |
 
-- Node.js ≥ 18
-- PostgreSQL database
-- At least one AI provider API key (e.g. OpenAI)
+## Stale Docs Warning
 
-### Setup
+Older docs in this folder may mention `MODEL_REGISTRY`, OpenAI examples, provider/model overrides, or old provider marketplaces. Those are not active runtime truth unless the current truth documents above say so.
 
-```bash
-# Clone the repository
-git clone <repo-url> && cd Amarktai-Network
+## Verification
 
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your DATABASE_URL, SESSION_SECRET, and provider keys
-
-# Push database schema
-npx prisma db push
-
-# Seed initial data (optional)
-npm run db:seed
-
-# Start development server
-npm run dev
+```powershell
+npm test -- --run
+npm run build
+npx.cmd tsx scripts/v1-25-capability-proof.ts
+git diff --check
 ```
-
-### Key URLs
-
-| URL                       | Description               |
-| ------------------------- | ------------------------- |
-| `/`                       | Public marketing site     |
-| `/admin/login`            | Admin authentication      |
-| `/admin/dashboard`        | Admin dashboard           |
-| `/api/brain/request`      | Brain API gateway         |
-| `/api/brain/tts`          | Text-to-Speech endpoint   |
-| `/api/brain/stt`          | Speech-to-Text endpoint   |
-
----
-
-## Architecture Overview
-
-```
-┌─────────────┐   ┌──────────────┐   ┌──────────────────┐
-│  App / UI   │──▶│  Brain API   │──▶│   Orchestrator   │
-└─────────────┘   └──────────────┘   └──────┬───────────┘
-                                            │
-                       ┌────────────────────┼───────────────┐
-                       ▼                    ▼               ▼
-               ┌──────────────┐   ┌─────────────┐   ┌────────────┐
-               │ Routing Eng. │   │ Memory/RAG  │   │  Agents    │
-               └──────┬───────┘   └─────────────┘   └────────────┘
-                      ▼
-          ┌───────────────────────┐
-          │  Provider Selection   │
-          │ (OpenAI, Groq, etc.)  │
-          └───────────────────────┘
-```
-
-The system processes every request through:
-
-1. **Authentication** — Validates app credentials
-2. **Profile Lookup** — Loads the app's routing preferences
-3. **Task Classification** — Determines complexity and type
-4. **Routing Decision** — Selects provider, model, and execution mode
-5. **Execution** — Calls the chosen provider
-6. **Memory** — Stores the outcome for future learning
-7. **Content Filter** — Scans output for policy violations

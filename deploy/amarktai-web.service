@@ -1,7 +1,7 @@
 # ─── AmarktAI Network — systemd service unit ────────────────────────────────
 #
 # Install:
-#   cp /var/www/amarktai/repo/deploy/amarktai-web.service /etc/systemd/system/
+#   cp /var/www/amarktai/platform/deploy/amarktai-web.service /etc/systemd/system/
 #   systemctl daemon-reload
 #   systemctl enable amarktai-web
 #   systemctl start amarktai-web
@@ -29,10 +29,10 @@ Group=www-data
 
 # The standalone server.js must be run from within the standalone directory
 # so that it can locate its bundled node_modules and .next/static correctly.
-WorkingDirectory=/var/www/amarktai/repo/.next/standalone
+WorkingDirectory=/var/www/amarktai/platform/.next/standalone
 
 # Run the standalone server built by `next build` (output: 'standalone')
-ExecStart=/usr/bin/node /var/www/amarktai/repo/.next/standalone/server.js
+ExecStart=/usr/bin/node /var/www/amarktai/platform/.next/standalone/server.js
 
 # Graceful stop: send SIGTERM and wait up to 30s before SIGKILL
 KillMode=mixed
@@ -53,7 +53,7 @@ Environment=NEXT_TELEMETRY_DISABLED=1
 
 # Load runtime secrets from the .env file in the repo root.
 # Each KEY=value line in the file becomes an environment variable.
-EnvironmentFile=-/var/www/amarktai/repo/.env
+EnvironmentFile=-/var/www/amarktai/platform/.env
 
 # Filesystem hardening
 ProtectSystem=strict
@@ -61,7 +61,7 @@ ProtectHome=true
 # The runtime writes to .next/server/app during request handling.
 # The prisma path is needed only for the migration runner in deploy.sh
 # (not the runtime itself), so we scope it to just the generated client directory.
-ReadWritePaths=/var/www/amarktai/repo/.next /tmp
+ReadWritePaths=/var/www/amarktai/platform/.next /var/www/amarktai/storage /var/www/amarktai/logs /tmp
 PrivateTmp=true
 NoNewPrivileges=true
 

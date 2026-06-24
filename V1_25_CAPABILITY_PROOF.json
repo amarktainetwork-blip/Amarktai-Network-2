@@ -1,0 +1,2216 @@
+{
+  "generatedAt": "2026-06-23T08:14:21.341Z",
+  "environment": {
+    "hasDatabaseUrl": true,
+    "appSlug": "amarktai-network",
+    "connectedAppSecretPresent": false,
+    "envLoader": "scripts/load-repo-env.ts",
+    "envFilesLoaded": [
+      ".env"
+    ],
+    "envDiagnostics": {
+      "cwd": "/var/www/amarktai/platform",
+      "repoRoot": "/var/www/amarktai/platform",
+      "searchedEnvPaths": [
+        "/var/www/amarktai/platform/.env.production.local",
+        "/var/www/amarktai/platform/.env.local",
+        "/var/www/amarktai/platform/.env.production",
+        "/var/www/amarktai/platform/.env",
+        "/var/www/amarktai/platform/prisma/.env.production.local",
+        "/var/www/amarktai/platform/prisma/.env.local",
+        "/var/www/amarktai/platform/prisma/.env.production",
+        "/var/www/amarktai/platform/prisma/.env",
+        "/var/www/amarktai/.env.production.local",
+        "/var/www/amarktai/.env.local",
+        "/var/www/amarktai/.env.production",
+        "/var/www/amarktai/.env",
+        "/var/www/.env.production.local",
+        "/var/www/.env.local",
+        "/var/www/.env.production",
+        "/var/www/.env",
+        "/var/.env.production.local",
+        "/var/.env.local",
+        "/var/.env.production",
+        "/var/.env"
+      ],
+      "foundEnvPaths": [
+        "/var/www/amarktai/platform/.env"
+      ],
+      "loadedEnvPaths": [
+        ".env"
+      ]
+    },
+    "providerKeyPresent": {
+      "genx": true,
+      "huggingface": true,
+      "mimo": true,
+      "groq": true,
+      "together": true
+    },
+    "dbCheck": {
+      "attempted": true,
+      "available": true,
+      "error": null
+    }
+  },
+  "providerKeyPath": [
+    {
+      "provider": "genx",
+      "configured": true,
+      "masked": "gnxk...5dea",
+      "error": null
+    },
+    {
+      "provider": "huggingface",
+      "configured": true,
+      "masked": "hf_E...oTeP",
+      "error": null
+    },
+    {
+      "provider": "mimo",
+      "configured": true,
+      "masked": "tp-s...ync9",
+      "error": null
+    },
+    {
+      "provider": "groq",
+      "configured": true,
+      "masked": "gsk_...xJ9r",
+      "error": null
+    },
+    {
+      "provider": "together",
+      "configured": true,
+      "masked": "tgp_...EPgU",
+      "error": null
+    }
+  ],
+  "providerConfigTruth": [
+    {
+      "provider": "huggingface",
+      "displayName": "Hugging Face",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "hf_E...oTeP",
+        "aliasesChecked": [
+          "HUGGINGFACE_API_KEY",
+          "HUGGINGFACEHUB_API_TOKEN",
+          "HF_TOKEN"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "hub",
+          "currentValue": "https://router.huggingface.co",
+          "defaultValue": "https://huggingface.co",
+          "envName": null,
+          "source": "ai_provider"
+        },
+        {
+          "family": "inference_router",
+          "currentValue": "https://router.huggingface.co",
+          "defaultValue": "https://router.huggingface.co",
+          "envName": "HUGGINGFACE_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [
+        {
+          "capability": "embeddings",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "rerank",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_edit",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "music",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable."
+        },
+        {
+          "capability": "tts",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "stt",
+          "type": "provider_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "Hugging Face router model API execution",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "video",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "specialist_endpoint",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
+        },
+        {
+          "capability": "adult_image",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "adult_video",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
+        },
+        {
+          "capability": "adult_avatar",
+          "type": "policy",
+          "envNames": [
+            "HF_SPECIALIST_ENDPOINTS_JSON"
+          ],
+          "configured": true,
+          "currentValue": "model_api",
+          "requiredValue": "adult gate plus configured specialist registry entry",
+          "nextAction": "No action required for this endpoint requirement."
+        }
+      ],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Inference Provider and curated model API routes are distinct from specialist endpoints.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "rerank requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "music requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "video requires HF_SPECIALIST_ENDPOINTS_JSON.",
+        "image_to_video requires HF_SPECIALIST_ENDPOINTS_JSON."
+      ],
+      "nextActions": [
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for music before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for video before routing this provider/model as executable.",
+        "Configure HF_SPECIALIST_ENDPOINTS_JSON for image_to_video before routing this provider/model as executable."
+      ]
+    },
+    {
+      "provider": "together",
+      "displayName": "Together AI",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "tgp_...EPgU",
+        "aliasesChecked": [
+          "TOGETHER_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "openai_compatible",
+          "currentValue": "https://api.together.ai/v1",
+          "defaultValue": "https://api.together.ai/v1",
+          "envName": "TOGETHER_BASE_URL",
+          "source": "ai_provider"
+        },
+        {
+          "family": "video",
+          "currentValue": "https://api.together.ai/v1",
+          "defaultValue": "https://api.together.ai/v1",
+          "envName": "TOGETHER_VIDEO_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [
+        {
+          "name": "TOGETHER_VIDEO_RUNTIME_ENABLED",
+          "currentValue": "false",
+          "requiredValue": "true",
+          "source": "default",
+          "blocking": true,
+          "usedBy": [
+            "video",
+            "image_to_video",
+            "adult_video"
+          ],
+          "nextAction": "Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404."
+        }
+      ],
+      "endpointRequirements": [
+        {
+          "capability": "rerank",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_DEDICATED_ENDPOINTS_JSON"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_DEDICATED_ENDPOINTS_JSON for rerank before routing this provider/model as executable."
+        },
+        {
+          "capability": "video",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_VIDEO_RUNTIME_ENABLED",
+            "TOGETHER_VIDEO_BASE_URL"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for video before routing this provider/model as executable."
+        },
+        {
+          "capability": "image_to_video",
+          "type": "dedicated_endpoint",
+          "envNames": [
+            "TOGETHER_VIDEO_RUNTIME_ENABLED",
+            "TOGETHER_VIDEO_BASE_URL"
+          ],
+          "configured": false,
+          "currentValue": "missing",
+          "requiredValue": "configured endpoint/account contract",
+          "nextAction": "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for image_to_video before routing this provider/model as executable."
+        }
+      ],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Catalog models remain visible; video/rerank execution requires endpoint proof/config.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "TOGETHER_VIDEO_RUNTIME_ENABLED=false; required true.",
+        "rerank requires TOGETHER_DEDICATED_ENDPOINTS_JSON.",
+        "video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL.",
+        "image_to_video requires TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL."
+      ],
+      "nextActions": [
+        "Set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after /videos endpoint proof succeeds; current VPS proof saw HTTP 404.",
+        "Configure TOGETHER_DEDICATED_ENDPOINTS_JSON for rerank before routing this provider/model as executable.",
+        "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for video before routing this provider/model as executable.",
+        "Configure TOGETHER_VIDEO_RUNTIME_ENABLED or TOGETHER_VIDEO_BASE_URL for image_to_video before routing this provider/model as executable."
+      ]
+    },
+    {
+      "provider": "groq",
+      "displayName": "Groq",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "gsk_...xJ9r",
+        "aliasesChecked": [
+          "GROQ_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "openai_compatible",
+          "currentValue": "https://api.groq.com/openai/v1",
+          "defaultValue": "https://api.groq.com/openai/v1",
+          "envName": "GROQ_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Account policy is provider default.",
+      "dashboardDisplayStatus": "ready",
+      "runtimeExecutableStatus": "executable_possible",
+      "blockers": [],
+      "nextActions": []
+    },
+    {
+      "provider": "genx",
+      "displayName": "GenX",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "gnxk...5dea",
+        "aliasesChecked": [
+          "GENX_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "async_generation",
+          "currentValue": "https://query.genx.sh/api/v1",
+          "defaultValue": "https://query.genx.sh/api/v1",
+          "envName": "GENX_BASE_URL",
+          "source": "ai_provider"
+        },
+        {
+          "family": "streaming_text",
+          "currentValue": "https://query.genx.sh/api/v1",
+          "defaultValue": "https://query.genx.sh/v1",
+          "envName": "GENX_TEXT_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Account policy is provider default.",
+      "dashboardDisplayStatus": "ready",
+      "runtimeExecutableStatus": "executable_possible",
+      "blockers": [],
+      "nextActions": []
+    },
+    {
+      "provider": "mimo",
+      "displayName": "Xiaomi MiMo",
+      "credential": {
+        "present": true,
+        "source": "integration_config",
+        "masked": "tp-s...ync9",
+        "aliasesChecked": [
+          "MIMO_API_KEY",
+          "XIAOMI_API_KEY"
+        ]
+      },
+      "baseUrls": [
+        {
+          "family": "token_plan",
+          "currentValue": "https://token-plan-sgp.xiaomimimo.com/v1",
+          "defaultValue": "https://token-plan-sgp.xiaomimimo.com/v1",
+          "envName": "MIMO_BASE_URL",
+          "source": "ai_provider"
+        }
+      ],
+      "runtimeFlags": [
+        {
+          "name": "MIMO_RUNTIME_API_ENABLED",
+          "currentValue": "false",
+          "requiredValue": "true",
+          "source": "default",
+          "blocking": true,
+          "usedBy": [
+            "tts",
+            "stt",
+            "agents"
+          ],
+          "nextAction": "Set MIMO_RUNTIME_API_ENABLED=true only when Xiaomi MiMo backend runtime API access is confirmed beyond token-plan catalog access."
+        }
+      ],
+      "endpointRequirements": [],
+      "db": {
+        "integrationConfigPresent": true,
+        "aiProviderPresent": true,
+        "integrationConfigEnabled": true,
+        "aiProviderEnabled": true,
+        "aiProviderHealth": "healthy",
+        "warnings": []
+      },
+      "accountPolicy": "Token-plan/catalog access only; backend runtime execution is blocked for non-proven specialist routes.",
+      "dashboardDisplayStatus": "blocked",
+      "runtimeExecutableStatus": "blocked",
+      "blockers": [
+        "MIMO_RUNTIME_API_ENABLED=false; required true."
+      ],
+      "nextActions": [
+        "Set MIMO_RUNTIME_API_ENABLED=true only when Xiaomi MiMo backend runtime API access is confirmed beyond token-plan catalog access."
+      ]
+    }
+  ],
+  "providerDiscovery": [
+    {
+      "provider": "mimo",
+      "credentialEnvNames": [
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY"
+      ],
+      "catalogEndpoint": "https://token-plan-sgp.xiaomimimo.com/v1/models",
+      "status": "ready",
+      "discoverySource": "live_authenticated",
+      "rawCatalogCount": 9,
+      "modelCount": 9,
+      "executableCandidateCount": 9,
+      "executableModels": 4,
+      "catalogOnlyModels": 5,
+      "requiresDedicatedEndpointModels": 0,
+      "adultGatedModels": 0,
+      "chatModels": 4,
+      "reasoningModels": 4,
+      "codingModels": 4,
+      "liveAuthenticatedModels": 9,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 0,
+      "imageEditModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 4,
+      "sttModels": 1,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "musicModels": 0,
+      "avatarModels": 0,
+      "adultImageModels": 0,
+      "executableBlocker": null,
+      "error": null,
+      "endpoint": "https://token-plan-sgp.xiaomimimo.com/v1/models"
+    },
+    {
+      "provider": "genx",
+      "credentialEnvNames": [
+        "GENX_API_KEY"
+      ],
+      "catalogEndpoint": "https://query.genx.sh/api/v1/models",
+      "status": "ready",
+      "discoverySource": "live_authenticated",
+      "rawCatalogCount": 60,
+      "modelCount": 60,
+      "executableCandidateCount": 59,
+      "executableModels": 60,
+      "catalogOnlyModels": 0,
+      "requiresDedicatedEndpointModels": 0,
+      "adultGatedModels": 0,
+      "chatModels": 20,
+      "reasoningModels": 1,
+      "codingModels": 1,
+      "liveAuthenticatedModels": 60,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 15,
+      "imageEditModels": 0,
+      "videoModels": 19,
+      "imageToVideoModels": 7,
+      "ttsModels": 3,
+      "sttModels": 1,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "musicModels": 2,
+      "avatarModels": 6,
+      "adultImageModels": 15,
+      "executableBlocker": null,
+      "error": null,
+      "endpoint": "https://query.genx.sh/api/v1/models"
+    },
+    {
+      "provider": "huggingface",
+      "credentialEnvNames": [
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "catalogEndpoint": "https://huggingface.co/api/models?limit=100&full=true",
+      "status": "ready",
+      "discoverySource": "live_authenticated",
+      "rawCatalogCount": 100,
+      "modelCount": 109,
+      "executableCandidateCount": 103,
+      "executableModels": 86,
+      "catalogOnlyModels": 13,
+      "requiresDedicatedEndpointModels": 10,
+      "adultGatedModels": 13,
+      "chatModels": 41,
+      "reasoningModels": 27,
+      "codingModels": 26,
+      "liveAuthenticatedModels": 109,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 31,
+      "imageEditModels": 3,
+      "videoModels": 6,
+      "imageToVideoModels": 1,
+      "ttsModels": 4,
+      "sttModels": 8,
+      "embeddingsModels": 24,
+      "rerankModels": 6,
+      "musicModels": 3,
+      "avatarModels": 31,
+      "adultImageModels": 10,
+      "executableBlocker": null,
+      "error": null,
+      "endpoint": "https://huggingface.co/api/models?limit=100&full=true"
+    },
+    {
+      "provider": "together",
+      "credentialEnvNames": [
+        "TOGETHER_API_KEY"
+      ],
+      "catalogEndpoint": "https://api.together.ai/v1/models",
+      "status": "ready",
+      "discoverySource": "live_authenticated",
+      "rawCatalogCount": 275,
+      "modelCount": 277,
+      "executableCandidateCount": 265,
+      "executableModels": 275,
+      "catalogOnlyModels": 0,
+      "requiresDedicatedEndpointModels": 2,
+      "adultGatedModels": 0,
+      "chatModels": 187,
+      "reasoningModels": 7,
+      "codingModels": 7,
+      "liveAuthenticatedModels": 277,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 29,
+      "imageEditModels": 0,
+      "videoModels": 39,
+      "imageToVideoModels": 3,
+      "ttsModels": 3,
+      "sttModels": 7,
+      "embeddingsModels": 2,
+      "rerankModels": 2,
+      "musicModels": 0,
+      "avatarModels": 29,
+      "adultImageModels": 29,
+      "executableBlocker": null,
+      "error": null,
+      "endpoint": "https://api.together.ai/v1/models"
+    },
+    {
+      "provider": "groq",
+      "credentialEnvNames": [
+        "GROQ_API_KEY"
+      ],
+      "catalogEndpoint": "https://api.groq.com/openai/v1/models",
+      "status": "ready",
+      "discoverySource": "live_authenticated",
+      "rawCatalogCount": 17,
+      "modelCount": 17,
+      "executableCandidateCount": 11,
+      "executableModels": 17,
+      "catalogOnlyModels": 0,
+      "requiresDedicatedEndpointModels": 0,
+      "adultGatedModels": 0,
+      "chatModels": 7,
+      "reasoningModels": 7,
+      "codingModels": 7,
+      "liveAuthenticatedModels": 17,
+      "publicCatalogModels": 0,
+      "staticFallbackModels": 0,
+      "catalogDerivedModels": 0,
+      "imageModels": 0,
+      "imageEditModels": 0,
+      "videoModels": 0,
+      "imageToVideoModels": 0,
+      "ttsModels": 2,
+      "sttModels": 2,
+      "embeddingsModels": 0,
+      "rerankModels": 0,
+      "musicModels": 0,
+      "avatarModels": 0,
+      "adultImageModels": 0,
+      "executableBlocker": null,
+      "error": null,
+      "endpoint": "https://api.groq.com/openai/v1/models"
+    }
+  ],
+  "providerRuntimeContracts": [
+    {
+      "provider": "mimo",
+      "authDetection": "wired: MIMO_API_KEY or XIAOMI_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
+      "modelDiscovery": "wired: https://token-plan-sgp.xiaomimimo.com/v1/models; current status=ready",
+      "capabilityMapping": "wired: chat, reasoning, coding, vision, tts, stt, agents",
+      "requestExecutionPath": "wired: mimo_capability_adapter; categories=text, multimodal, video, audio, agents_or_planning",
+      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
+      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
+      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=4"
+    },
+    {
+      "provider": "genx",
+      "authDetection": "wired: GENX_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
+      "modelDiscovery": "wired: https://query.genx.sh/api/v1/models; current status=ready",
+      "capabilityMapping": "wired: chat, reasoning, coding, image, image_edit, video, image_to_video, avatar, music, tts, stt",
+      "requestExecutionPath": "wired: genx_capability_adapter; categories=text, multimodal, computer_vision, video, audio, music, avatar_voice, agents_or_planning",
+      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
+      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
+      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; wired: canonical async polling contract present; executableNow=75"
+    },
+    {
+      "provider": "huggingface",
+      "authDetection": "wired: HUGGINGFACE_API_KEY or HUGGINGFACEHUB_API_TOKEN or HF_TOKEN plus integrationConfig/aiProvider key path; current source=integration_config",
+      "modelDiscovery": "wired: https://huggingface.co/api/models?limit=100&full=true; current status=ready",
+      "capabilityMapping": "wired: chat, reasoning, coding, vision, ocr, image, image_edit, video, music, tts, stt, embeddings, rerank, documents, translation, avatar, adult_image, adult_video",
+      "requestExecutionPath": "wired: huggingface_capability_adapter; categories=text, multimodal, computer_vision, video, audio, music, avatar_voice, tabular, experimental",
+      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
+      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
+      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=192"
+    },
+    {
+      "provider": "together",
+      "authDetection": "wired: TOGETHER_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
+      "modelDiscovery": "wired: https://api.together.ai/v1/models; current status=ready",
+      "capabilityMapping": "wired: chat, reasoning, coding, image, image_edit, video, image_to_video, avatar, tts, stt, vision, embeddings, rerank, agents, adult_image, adult_video",
+      "requestExecutionPath": "wired: together_capability_adapter; categories=text, multimodal, computer_vision, video, audio, agents_or_planning",
+      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
+      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
+      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; wired: canonical async polling contract present; executableNow=249"
+    },
+    {
+      "provider": "groq",
+      "authDetection": "wired: GROQ_API_KEY plus integrationConfig/aiProvider key path; current source=integration_config",
+      "modelDiscovery": "wired: https://api.groq.com/openai/v1/models; current status=ready",
+      "capabilityMapping": "wired: chat, reasoning, coding, vision, tts, stt",
+      "requestExecutionPath": "wired: groq_capability_adapter; categories=text, multimodal, audio, agents_or_planning",
+      "responseParsing": "wired: adapter normalizes completed/processing/needs_configuration/blocked/failed results",
+      "artifactPersistence": "wired: durable artifact persistence handled centrally after adapter bytes/mediaUrl output",
+      "errorClassification": "wired: classifyProviderError/sanitizeProviderError normalize provider failures without secrets",
+      "fallbackBehavior": "wired: Brain route planner returns rejected candidates and fallback chain; not_required: synchronous adapter path; executableNow=11"
+    }
+  ],
+  "providerContractSummary": [
+    {
+      "provider": "mimo",
+      "contracts": 63,
+      "executableNow": 4,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 27,
+      "toolPlanOnly": 27,
+      "blockedByPolicy": 35,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
+        "Select a provider/model that supports stt, or add a truthful contract.",
+        "Select a provider/model that supports vision, or add a truthful contract.",
+        "Select a provider/model that supports agents, or add a truthful contract.",
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Set MIMO_RUNTIME_API_ENABLED=true only after MiMo backend runtime API access is confirmed."
+      ]
+    },
+    {
+      "provider": "genx",
+      "contracts": 661,
+      "executableNow": 75,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports image_to_video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "huggingface",
+      "contracts": 1964,
+      "executableNow": 192,
+      "liveProven": 0,
+      "endpointRequired": 181,
+      "specialistRequired": 400,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 426,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract.",
+        "Select a provider/model that supports music, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "together",
+      "contracts": 4434,
+      "executableNow": 249,
+      "liveProven": 0,
+      "endpointRequired": 307,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 831,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 554,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports image, or add a truthful contract.",
+        "Select a provider/model that supports image_edit, or add a truthful contract.",
+        "Select a provider/model that supports video, or add a truthful contract.",
+        "Select a provider/model that supports image_to_video, or add a truthful contract.",
+        "Select a provider/model that supports avatar, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract."
+      ]
+    },
+    {
+      "provider": "groq",
+      "contracts": 104,
+      "executableNow": 11,
+      "liveProven": 0,
+      "endpointRequired": 0,
+      "specialistRequired": 0,
+      "adapterMissing": 0,
+      "runtimeFlagDisabled": 0,
+      "toolPlanOnly": 0,
+      "blockedByPolicy": 0,
+      "missingCredential": 0,
+      "nextActions": [
+        "Select a provider/model that supports chat, or add a truthful contract.",
+        "Select a provider/model that supports reasoning, or add a truthful contract.",
+        "Select a provider/model that supports coding, or add a truthful contract.",
+        "Select a provider/model that supports tts, or add a truthful contract.",
+        "Select a provider/model that supports stt, or add a truthful contract.",
+        "Select a provider/model that supports vision, or add a truthful contract.",
+        "Select a provider/model that supports agents, or add a truthful contract."
+      ]
+    }
+  ],
+  "modelSmokeProofs": [
+    {
+      "provider": "genx",
+      "capability": "chat",
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": true,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
+      "artifactPersisted": false,
+      "previewReachable": false,
+      "providerSelected": "genx",
+      "modelSelected": "gpt-5.4-mini",
+      "artifactId": null,
+      "error": "All eligible provider/model attempts failed."
+    },
+    {
+      "provider": "huggingface",
+      "capability": "chat",
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": true,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
+      "artifactPersisted": false,
+      "previewReachable": false,
+      "providerSelected": "huggingface",
+      "modelSelected": "mistralai/Mistral-7B-Instruct-v0.3",
+      "artifactId": null,
+      "error": "All eligible provider/model attempts failed."
+    },
+    {
+      "provider": "mimo",
+      "capability": "chat",
+      "modelStatus": "FAILED_PROVIDER",
+      "credentialPresent": true,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": false,
+      "capabilityRoutePassed": false,
+      "artifactPersisted": false,
+      "previewReachable": false,
+      "providerSelected": "mimo",
+      "modelSelected": null,
+      "artifactId": null,
+      "error": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract."
+    },
+    {
+      "provider": "groq",
+      "capability": "chat",
+      "modelStatus": "EXECUTABLE",
+      "credentialPresent": true,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": true,
+      "capabilityRoutePassed": true,
+      "artifactPersisted": false,
+      "previewReachable": false,
+      "providerSelected": "groq",
+      "modelSelected": "llama-3.3-70b-versatile",
+      "artifactId": null,
+      "error": null
+    },
+    {
+      "provider": "together",
+      "capability": "chat",
+      "modelStatus": "EXECUTABLE",
+      "credentialPresent": true,
+      "catalogReachable": true,
+      "providerSmokePassed": true,
+      "modelExecutionPassed": true,
+      "capabilityRoutePassed": true,
+      "artifactPersisted": false,
+      "previewReachable": false,
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "artifactId": null,
+      "error": null
+    }
+  ],
+  "toolReadiness": [
+    {
+      "id": "redis_bullmq",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "worker_job_retry_and_polling_completion",
+        "async media jobs"
+      ],
+      "setupCommand": "sudo apt-get install -y redis-server && sudo systemctl enable --now redis-server; export REDIS_URL=redis://127.0.0.1:6379",
+      "blocker": null,
+      "detail": "Redis ping passed."
+    },
+    {
+      "id": "qdrant",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "research",
+        "memory",
+        "RAG"
+      ],
+      "setupCommand": "docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v /var/www/amarktai/qdrant:/qdrant/storage qdrant/qdrant:latest; add QDRANT_URL=http://127.0.0.1:6333 to the VPS .env or qdrant service config",
+      "blocker": null,
+      "detail": "Qdrant health passed."
+    },
+    {
+      "id": "playwright",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "web_research",
+        "scrape_website"
+      ],
+      "setupCommand": "npx playwright install --with-deps chromium",
+      "blocker": null,
+      "detail": "Playwright available"
+    },
+    {
+      "id": "scrapy",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "web_research",
+        "scrape_website"
+      ],
+      "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
+      "blocker": null,
+      "detail": "Scrapy available via /var/www/amarktai/.venv/bin/python"
+    },
+    {
+      "id": "trafilatura",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "web_research",
+        "scrape_website"
+      ],
+      "setupCommand": "python3 -m venv /var/www/amarktai/.venv && /var/www/amarktai/.venv/bin/pip install scrapy trafilatura && export AMARKTAI_PYTHON_BIN=/var/www/amarktai/.venv/bin/python",
+      "blocker": null,
+      "detail": "Trafilatura available via /var/www/amarktai/.venv/bin/python"
+    },
+    {
+      "id": "ffmpeg",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "long_form_multi_scene_video_assembly",
+        "video_generation",
+        "music_duration_probe"
+      ],
+      "setupCommand": "sudo apt-get install -y ffmpeg",
+      "blocker": null,
+      "detail": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+    },
+    {
+      "id": "ffprobe",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "long_form_multi_scene_video_assembly",
+        "video_generation",
+        "music_duration_probe"
+      ],
+      "setupCommand": "sudo apt-get install -y ffmpeg",
+      "blocker": null,
+      "detail": "ffprobe version 6.1.1-3ubuntu5 Copyright (c) 2007-2023 the FFmpeg developers"
+    },
+    {
+      "id": "rhubarb",
+      "installed": false,
+      "wired": false,
+      "usedBy": [
+        "talking_avatar_video"
+      ],
+      "setupCommand": "Install Rhubarb Lip Sync for the VPS architecture, then set RHUBARB_PATH=/var/www/amarktai/tools/rhubarb/rhubarb or LIPSYNC_SERVICE_URL=http://127.0.0.1:<port>",
+      "blocker": "LIPSYNC_SERVICE_REQUIRED: set RHUBARB_PATH to the Rhubarb binary or LIPSYNC_SERVICE_URL to a reachable lip-sync service before proving talking_avatar_video.",
+      "detail": "LIPSYNC_SERVICE_REQUIRED: set RHUBARB_PATH to the Rhubarb binary or LIPSYNC_SERVICE_URL to a reachable lip-sync service before proving talking_avatar_video."
+    },
+    {
+      "id": "storage",
+      "installed": true,
+      "wired": true,
+      "usedBy": [
+        "artifact persistence",
+        "preview/download"
+      ],
+      "setupCommand": "Ensure AMARKTAI_STORAGE_ROOT exists and is writable by the app user.",
+      "blocker": null,
+      "detail": "Artifact storage is writable at /var/www/amarktai/storage."
+    }
+  ],
+  "capabilities": [
+    {
+      "capabilityId": "chat_text_generation",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "routeOrAdapter": "executeCapability:chat",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "reasoning",
+      "providerSelected": "groq",
+      "modelSelected": "llama-3.3-70b-versatile",
+      "routeOrAdapter": "executeCapability:reasoning",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Reasoning",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "coding_assistant",
+      "providerSelected": "groq",
+      "modelSelected": "llama-3.3-70b-versatile",
+      "routeOrAdapter": "executeCapability:code",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Text Generation",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "web_research",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "routeOrAdapter": "researchRuntime.execute",
+      "status": "LIVE_PROVEN",
+      "artifactId": "7a53dcc2-6b27-4d66-8f92-6c97f594ca48",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "diagnostics": {
+        "researchRuntimeStatus": "LIVE_RAG",
+        "runtimeSummaryCapability": "chat",
+        "sourceUrl": "https://example.com/",
+        "extractionMethod": "trafilatura",
+        "documentId": "research-0fe2558733f8caa57a882554",
+        "qdrantCollection": "amarktai_memory",
+        "vectorIds": [
+          "2438ca0f-c0c4-4c1b-a189-7b336a5fd160"
+        ],
+        "retrievedVectorIds": [
+          "3c51557f-0c95-485d-9226-2e04ea8ae8fc",
+          "2438ca0f-c0c4-4c1b-a189-7b336a5fd160",
+          "f67ec8a0-572e-44d6-9964-ccf038f4a1a4",
+          "d8256f99-45ca-4a0a-8c3b-96a819ef7e7b",
+          "ce162f70-d58f-42a4-9948-1c1c8d7138a5"
+        ],
+        "artifactId": "7a53dcc2-6b27-4d66-8f92-6c97f594ca48"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Research",
+      "routeFile": "src/lib/research-runtime.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "Playwright",
+        "Scrapy",
+        "Trafilatura"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: 7a53dcc2-6b27-4d66-8f92-6c97f594ca48.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "summarization",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Summarization",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "translation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "A dedicated connected-app request schema and normalized result contract are not wired.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Translation",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "embeddings",
+      "providerSelected": "huggingface",
+      "modelSelected": "BAAI/bge-small-en-v1.5",
+      "routeOrAdapter": "executeCapability:embeddings",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Embeddings",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:text-embedding-3-large",
+        "huggingface:sentence-transformers/all-MiniLM-L6-v2"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "rerank_search_relevance",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "rerank/search relevance",
+      "status": "BLOCKED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Rerank route is source-wired, but live proof requires HF_SPECIALIST_ENDPOINTS_JSON for a Hugging Face specialist rerank endpoint, or TOGETHER_DEDICATED_ENDPOINTS_JSON for a Together dedicated rerank endpoint.",
+      "sourceFileResponsible": "src/lib/providers/provider-capability-contracts.ts",
+      "capabilityName": "Rerank",
+      "routeFile": "src/lib/providers/provider-capability-contracts.ts",
+      "providerCandidates": [
+        "huggingface:cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "together:provider-discovery"
+      ],
+      "requiredKeys": [
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "text_to_image",
+      "providerSelected": "together",
+      "modelSelected": "black-forest-labs/FLUX.1-schnell",
+      "routeOrAdapter": "executeCapability:image_generation",
+      "status": "LIVE_PROVEN",
+      "artifactId": "a8a7b22b-5fe9-40ac-90b8-a2e0360dfd08",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Image",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gemini-2.5-pro,gpt-image-1",
+        "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
+        "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional artifact persisted: a8a7b22b-5fe9-40ac-90b8-a2e0360dfd08.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "image_editing_source_transform",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:image_edit",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract. | Attempts: huggingface/lllyasviel/control_v11p_sd15_normalbae: failed: no_route_found: No model pool candidate for image_text_to_image.; together/unselected: needs_configuration: no_route_found: Provider discovery returned no executable model for this capability.; genx/unselected: needs_configuration: no_route_found: Provider discovery returned no executable model for this capability.",
+      "diagnostics": {
+        "providerAttempts": [
+          {
+            "provider": "huggingface",
+            "model": "lllyasviel/control_v11p_sd15_softedge",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "huggingface",
+            "model": "ModelsLab/FLUX.2-klein-9B",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "huggingface",
+            "model": "lllyasviel/control_v11p_sd15_normalbae",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_text_to_image.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "together",
+            "model": "unselected",
+            "status": "needs_configuration",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "no_route_found",
+            "error": "Provider discovery returned no executable model for this capability.",
+            "diagnostics": null
+          },
+          {
+            "provider": "genx",
+            "model": "unselected",
+            "status": "needs_configuration",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "no_route_found",
+            "error": "Provider discovery returned no executable model for this capability.",
+            "diagnostics": null
+          }
+        ]
+      },
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Image and Text to Image",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gemini-2.5-pro,gpt-image-1",
+        "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
+        "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "text_to_video_short_clip",
+      "providerSelected": "genx",
+      "modelSelected": "grok-imagine-video",
+      "routeOrAdapter": "executeCapability:video_generation",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": "2aed707d-4a6d-41e2-a764-090f07b08525",
+      "pollUrl": "/api/brain/media-jobs/2aed707d-4a6d-41e2-a764-090f07b08525",
+      "exactError": null,
+      "diagnostics": {
+        "controlPlaneJobId": "b0232886-44e2-4818-be47-9cc5ccd92103",
+        "controlPlaneAttemptId": "cb5609f8-8078-4abe-9450-5f28c3c0f6a7",
+        "queueStatus": "queued",
+        "requestedDurationSeconds": null,
+        "providerLimitSeconds": null
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Video",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "together:Wan-AI/Wan2.1-T2V-14B"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job tracked as 2aed707d-4a6d-41e2-a764-090f07b08525 via /api/brain/media-jobs/2aed707d-4a6d-41e2-a764-090f07b08525."
+    },
+    {
+      "capabilityId": "text_to_speech",
+      "providerSelected": "groq",
+      "modelSelected": "canopylabs/orpheus-v1-english",
+      "routeOrAdapter": "executeCapability:tts",
+      "status": "LIVE_PROVEN",
+      "artifactId": "c505699b-b6ed-4421-b3bd-2558878c69b0",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Speech",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "mimo:mimo-tts-1",
+        "together:provider-discovery",
+        "groq:canopylabs/orpheus-v1-english",
+        "genx:gpt-4o-mini-tts",
+        "huggingface:facebook/mms-tts-eng"
+      ],
+      "requiredKeys": [
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "TOGETHER_API_KEY",
+        "GROQ_API_KEY",
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional artifact persisted: c505699b-b6ed-4421-b3bd-2558878c69b0.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "speech_to_text",
+      "providerSelected": "groq",
+      "modelSelected": "whisper-large-v3-turbo",
+      "routeOrAdapter": "executeCapability:stt",
+      "status": "BLOCKED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "All eligible provider/model attempts failed. | Attempts: groq/whisper-large-v3-turbo: blocked: Speech recognition requires audio bytes or a public HTTPS audio reference.",
+      "diagnostics": {
+        "providerAttempts": [
+          {
+            "provider": "groq",
+            "model": "whisper-large-v3-turbo",
+            "status": "blocked",
+            "classification": "blocked_by_policy",
+            "errorCategory": null,
+            "error": "Speech recognition requires audio bytes or a public HTTPS audio reference.",
+            "diagnostics": {
+              "modelExecutionClassification": "executable",
+              "endpointEnv": null
+            }
+          }
+        ]
+      },
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Automatic Speech Recognition",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:gpt-4o-transcribe",
+        "groq:whisper-large-v3-turbo",
+        "together:provider-discovery",
+        "huggingface:openai/whisper-large-v3",
+        "mimo:mimo-v2.5-asr"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "agent_request_execution",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/brain/agent-request",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Agent request route is wired through the Brain/runtime, but AMARKTAI_CONNECTED_APP_SECRET or AMARKTAI_APP_SECRET_AMARKTAI_NETWORK is required for local live proof.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/app/api/brain/agent-request/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "connected_app_capability_execution",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeConnectedAppCapability",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Connected-app runtime execution is wired, but live proof requires an active signed app registry entry and signing secret env for that app; this harness does not fabricate HMAC identity.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/connected-app-capability-engine.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "image_to_video",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:image_to_video",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "NO_ROUTE_FOUND: balanced selected the highest-scoring discovered model using model metadata or a provider capability contract. | Attempts: together/Wan-AI/Wan2.2-I2V-A14B: needs_configuration: provider_misconfigured: together/Wan-AI/Wan2.2-I2V-A14B is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.; together/Wan-AI/wan2.7-i2v: needs_configuration: provider_misconfigured: together/Wan-AI/wan2.7-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.; together/alibaba/happyhorse-1.0-i2v: needs_configuration: provider_misconfigured: together/alibaba/happyhorse-1.0-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+      "diagnostics": {
+        "providerAttempts": [
+          {
+            "provider": "genx",
+            "model": "seedance-2-i2v",
+            "status": "failed",
+            "classification": "unsupported_by_contract",
+            "errorCategory": "provider_misconfigured",
+            "error": "Contract missing for image_to_video.",
+            "diagnostics": {
+              "poolReason": "contract missing",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "genx",
+            "model": "seedance-v1-fast-i2v",
+            "status": "failed",
+            "classification": "blocked_by_policy",
+            "errorCategory": "no_route_found",
+            "error": "No model pool candidate for image_to_video.",
+            "diagnostics": {
+              "poolReason": "no model pool candidate",
+              "executionMode": "proof"
+            }
+          },
+          {
+            "provider": "together",
+            "model": "Wan-AI/Wan2.2-I2V-A14B",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/Wan-AI/Wan2.2-I2V-A14B is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
+          },
+          {
+            "provider": "together",
+            "model": "Wan-AI/wan2.7-i2v",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/Wan-AI/wan2.7-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
+          },
+          {
+            "provider": "together",
+            "model": "alibaba/happyhorse-1.0-i2v",
+            "status": "needs_configuration",
+            "classification": "endpoint_required",
+            "errorCategory": "provider_misconfigured",
+            "error": "together/alibaba/happyhorse-1.0-i2v is blocked by a runtime flag for image_to_video. Next action: Together /videos returned HTTP 404 in VPS proof; set TOGETHER_VIDEO_RUNTIME_ENABLED=true only after endpoint proof succeeds.",
+            "diagnostics": null
+          }
+        ]
+      },
+      "sourceFileResponsible": "src/lib/providers/execution.ts",
+      "capabilityName": "Image to Video",
+      "routeFile": "src/lib/providers/execution.ts",
+      "providerCandidates": [
+        "genx:provider-discovery"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
+    },
+    {
+      "capabilityId": "long_form_multi_scene_video_assembly",
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.long_form_assembly",
+      "status": "LIVE_PROVEN",
+      "artifactId": "72c7801a-085d-4af1-87dc-0a5c274e0003",
+      "jobId": "14120d6a-c2ff-4fbe-9a11-19dddc8d178d",
+      "pollUrl": null,
+      "exactError": "Technical assembly proof only: ffmpeg assembled provided/local proof clips and persisted an artifact; provider-native long-form generation, coherent advert quality, pronunciation, and voice/video sync are not proven.",
+      "diagnostics": {
+        "sourceClipCount": 2,
+        "generatedProviderClip": false,
+        "finalDurationSeconds": 2.020996,
+        "artifactId": "72c7801a-085d-4af1-87dc-0a5c274e0003",
+        "jobId": "14120d6a-c2ff-4fbe-9a11-19dddc8d178d"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Video",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "together:Wan-AI/Wan2.1-T2V-14B"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "ffmpeg",
+        "ffprobe",
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: 72c7801a-085d-4af1-87dc-0a5c274e0003.",
+      "jobBehavior": "Async job tracked as 14120d6a-c2ff-4fbe-9a11-19dddc8d178d."
+    },
+    {
+      "capabilityId": "music_audio_bed_generation",
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.audio_bed",
+      "status": "LIVE_PROVEN",
+      "artifactId": "4c705f71-348e-489f-940a-008285a4acbc",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "diagnostics": {
+        "productContract": "audio_bed_assembly",
+        "providerMusicGeneration": false,
+        "durationSeconds": 2,
+        "artifactId": "4c705f71-348e-489f-940a-008285a4acbc"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Audio",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
+      "providerCandidates": [],
+      "requiredKeys": [],
+      "requiredLocalTools": [
+        "ffmpeg",
+        "ffprobe",
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: 4c705f71-348e-489f-940a-008285a4acbc.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
+    },
+    {
+      "capabilityId": "captions_subtitles_pipeline",
+      "providerSelected": "local",
+      "modelSelected": "ffmpeg/subtitle_formatter",
+      "routeOrAdapter": "media_workflow_foundation.captions",
+      "status": "LIVE_PROVEN",
+      "artifactId": "6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6",
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "diagnostics": {
+        "sourceMedia": "V1 proof generated transcript",
+        "cueCount": 2,
+        "formats": [
+          "vtt",
+          "srt"
+        ],
+        "artifactId": "6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6"
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Automatic Speech Recognition",
+      "routeFile": "src/lib/media-workflow-foundation.ts",
+      "providerCandidates": [
+        "genx:gpt-4o-transcribe",
+        "groq:whisper-large-v3-turbo",
+        "together:provider-discovery",
+        "huggingface:openai/whisper-large-v3",
+        "mimo:mimo-v2.5-asr"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional artifact persisted: 6d3737f1-6a30-4edd-b5ff-0c94a3c44ae6.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "avatar_library_avatar_image_generation",
+      "providerSelected": "genx",
+      "modelSelected": "gpt-image-2",
+      "routeOrAdapter": "executeCapability:avatar_generation",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": "eeaa8575-0ea0-4f7b-b329-279b7fa88d38",
+      "pollUrl": "/api/brain/media-jobs/eeaa8575-0ea0-4f7b-b329-279b7fa88d38",
+      "exactError": null,
+      "diagnostics": {
+        "controlPlaneJobId": "5d3126c0-8a39-4459-8f77-9a590661e951",
+        "controlPlaneAttemptId": "c0f21243-f307-4325-b6cb-399668a1b9a3",
+        "queueStatus": "queued",
+        "requestedDurationSeconds": null,
+        "providerLimitSeconds": null
+      },
+      "sourceFileResponsible": null,
+      "capabilityName": "Avatar Generation",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job tracked as eeaa8575-0ea0-4f7b-b329-279b7fa88d38 via /api/brain/media-jobs/eeaa8575-0ea0-4f7b-b329-279b7fa88d38."
+    },
+    {
+      "capabilityId": "talking_avatar_video",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "talking-avatar video",
+      "status": "BLOCKED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "src/app/api/brain/avatar-video/route.ts delegates to avatar_video, but the runtime has no approved Rhubarb/lip-sync binary/service adapter configured. Install/configure a lip-sync adapter and expose its executable path/service URL before live proof can run.",
+      "sourceFileResponsible": "src/lib/orchestrator.ts",
+      "capabilityName": "Avatar Video",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [],
+      "requiredKeys": [],
+      "requiredLocalTools": [
+        "ffmpeg",
+        "Rhubarb/lip-sync adapter"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
+    },
+    {
+      "capabilityId": "adult_media_policy_gated_generation",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapability:adult_image",
+      "status": "BLOCKED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "No adult provider is approved for this app. Configure and test one in the app adult capability profile.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Image",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gemini-2.5-pro,gpt-image-1",
+        "together:black-forest-labs/FLUX.1-schnell,black-forest-labs/FLUX.1.1-pro",
+        "huggingface:stabilityai/stable-diffusion-xl-base-1.0"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "provider_auto_selection",
+      "providerSelected": "together",
+      "modelSelected": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "routeOrAdapter": "executeCapability:chat",
+      "status": "LIVE_PROVEN",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": null,
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "provider_fallback",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "executeCapabilityOrchestration fallback loop",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Fallback proof requires a controlled first-provider failure and second-provider success in the target runtime environment; this harness does not inject failures into live providers.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "strict_provider_proof_mode",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/admin/provider-capability-test",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Strict provider proof mode is represented by single-provider admin proof surfaces; live proof requires authenticated server-side invocation in the target environment.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/app/api/admin/provider-capability-test/route.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "route_outcome_logging",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "logRouteOutcome/capability-tracing",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Outcome logging is wired in source, but live proof requires a DB-backed runtime request and persisted trace/log row inspection in the target environment.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Chat",
+      "routeFile": "src/lib/orchestrator.ts",
+      "providerCandidates": [
+        "genx:gpt-5.4-mini,gpt-5.3-codex,claude-sonnet-4.5,gemini-2.5-pro",
+        "mimo:mimo-v2.5,mimo-v2.5-pro",
+        "groq:llama-3.3-70b-versatile",
+        "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "huggingface:mistralai/Mistral-7B-Instruct-v0.3"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "MIMO_API_KEY",
+        "XIAOMI_API_KEY",
+        "GROQ_API_KEY",
+        "TOGETHER_API_KEY",
+        "HUGGINGFACE_API_KEY",
+        "HUGGINGFACEHUB_API_TOKEN",
+        "HF_TOKEN"
+      ],
+      "requiredLocalTools": [],
+      "artifactBehavior": "No artifact by default; normal chat/text response remains transient unless explicitly requested.",
+      "jobBehavior": "Synchronous completion expected; no durable job required."
+    },
+    {
+      "capabilityId": "worker_job_retry_and_polling_completion",
+      "providerSelected": null,
+      "modelSelected": null,
+      "routeOrAdapter": "/api/brain/media-jobs/[jobId] + control-plane-jobs",
+      "status": "SOURCE_WIRED",
+      "artifactId": null,
+      "jobId": null,
+      "pollUrl": null,
+      "exactError": "Polling and retry code is wired, but live proof requires an actual queued async provider job plus Redis/BullMQ and media job persistence in the target environment.",
+      "sourceFileResponsible": null,
+      "capabilityName": "Text to Video",
+      "routeFile": "src/lib/control-plane-jobs.ts",
+      "providerCandidates": [
+        "genx:veo-3.1",
+        "together:Wan-AI/Wan2.1-T2V-14B"
+      ],
+      "requiredKeys": [
+        "GENX_API_KEY",
+        "TOGETHER_API_KEY"
+      ],
+      "requiredLocalTools": [
+        "Redis/BullMQ worker",
+        "local storage"
+      ],
+      "artifactBehavior": "Intentional output should persist an artifact when execution succeeds.",
+      "jobBehavior": "Async job/polling expected when provider returns processing."
+    }
+  ],
+  "summary": {
+    "liveProven": 13,
+    "sourceWired": 10,
+    "providerAvailable": 0,
+    "blocked": 4,
+    "notWired": 0
+  },
+  "proofState": {
+    "partial": false,
+    "activePhase": "CAPABILITY_PROOF_DONE",
+    "activeCapability": null,
+    "lastCompletedCapability": "worker_job_retry_and_polling_completion",
+    "capabilityStartedAt": null,
+    "capabilityTimeoutMs": null,
+    "completedPhases": [
+      "DB_CHECK_START",
+      "DB_CHECK_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "PROVIDER_KEY_RESOLUTION_START",
+      "PROVIDER_KEY_RESOLUTION_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "PROVIDER_DISCOVERY_START",
+      "PROVIDER_DISCOVERY_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "MODEL_SMOKE_START",
+      "MODEL_SMOKE_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "CAPABILITY_PROOF_START",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "WRITE_PROOF_START",
+      "WRITE_PROOF_DONE",
+      "CAPABILITY_PROOF_DONE"
+    ],
+    "failure": null,
+    "activeHandleTypes": [
+      "Socket",
+      "WriteStream"
+    ]
+  },
+  "nextVpsCommand": null
+}

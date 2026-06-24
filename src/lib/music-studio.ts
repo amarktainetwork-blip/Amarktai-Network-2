@@ -46,6 +46,7 @@ function usableKey(raw: string | null | undefined): string | null {
 export type MusicGenre =
   | 'pop'
   | 'rock'
+  | 'folk'
   | 'hip_hop'
   | 'edm'
   | 'gospel'
@@ -131,7 +132,10 @@ export interface MusicCreationRequest {
    */
   generateCoverArt?: boolean
   /** Quality tier for model selection. */
-  qualityTier?: 'standard' | 'high' | 'premium'
+  qualityTier?: 'cheap' | 'balanced' | 'premium' | 'auto'
+  /** Backend-selected infrastructure route. Not exposed as the primary Studio UX. */
+  provider?: 'genx' | 'huggingface'
+  model?: string
 }
 
 /** Resolve the primary genre from a request (handles both legacy and new multi-genre field). */
@@ -253,14 +257,14 @@ async function _saveMusicArtifactToDB(artifact: MusicArtifact): Promise<void> {
         description: `${artifact.genre} Ã¢â‚¬Â¢ ${artifact.vocalStyle} Ã¢â‚¬Â¢ ${artifact.theme}`,
         provider: artifact.musicProvider,
         model: artifact.lyricsModel,
-        storageDriver: 'url',
+        storageDriver: 'local_vps',
         storagePath: '',
         storageUrl: artifact.audioUrl ?? '',
         mimeType: artifact.audioMimeType ?? '',
         fileSizeBytes: 0,
         previewable: true,
-        downloadable: !!artifact.audioUrl,
-        status: artifact.artifactType === 'generated_audio' ? 'completed' : 'completed',
+        downloadable: false,
+        status: artifact.artifactType === 'generated_audio' ? 'failed' : 'completed',
         metadata: JSON.stringify({
           genre: artifact.genre,
           vocalStyle: artifact.vocalStyle,
@@ -325,6 +329,7 @@ async function loadMusicArtifactsFromDB(appSlug?: string, limit = 50): Promise<M
 const GENRE_DISPLAY: Record<MusicGenre, string> = {
   pop: 'Pop',
   rock: 'Rock',
+  folk: 'Folk',
   hip_hop: 'Hip Hop',
   edm: 'EDM',
   gospel: 'Gospel',
@@ -358,6 +363,7 @@ interface GenreDefaults {
 const GENRE_DEFAULTS: Record<string, GenreDefaults> = {
   pop:        { typicalBpm: 120, typicalKey: 'C major', timeSignature: '4/4', productionStyle: 'polished, hooky, radio-ready' },
   rock:       { typicalBpm: 140, typicalKey: 'G major', timeSignature: '4/4', productionStyle: 'electric guitars, powerful drums, driven mix' },
+  folk:       { typicalBpm: 105, typicalKey: 'G major', timeSignature: '4/4', productionStyle: 'acoustic guitar, organic percussion, close vocal harmonies' },
   hip_hop:    { typicalBpm: 90,  typicalKey: 'D minor', timeSignature: '4/4', productionStyle: 'boom-bap or trap drums, sub bass, sampled chops' },
   edm:        { typicalBpm: 128, typicalKey: 'A minor', timeSignature: '4/4', productionStyle: 'synthesizer leads, sidechain compression, drop builds' },
   gospel:     { typicalBpm: 80,  typicalKey: 'F major', timeSignature: '4/4', productionStyle: 'organ, choir harmonies, uplifting key changes' },
@@ -615,7 +621,6 @@ async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<stri
       provider: artifact.musicProvider,
       model: artifact.lyricsModel,
       contentUrl: artifact.audioUrl,
-      allowRemoteReference: true,
       mimeType: artifact.audioMimeType ?? 'audio/mpeg',
       metadata,
     })
@@ -640,16 +645,13 @@ async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<stri
  * Generate lyrics by calling the platform's internal chat API.
  *
  * Provider resolution order:
- * 1. OpenAI key from DB vault (set via Admin Ã¢â€ â€™ AI Providers UI)
- * 2. OPENAI_API_KEY environment variable fallback (local dev / CI)
- * 3. Groq fallback via vault Ã¢â€ â€™ env (cheap, fast, supports long output)
- * 4. Template fallback when no key is available anywhere
+ * 1. Groq via vault/env (cheap, fast, supports long output)
+ * 2. Template fallback when no approved text key is available
  */
 async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
-  // Try OpenAI first (vault Ã¢â€ â€™ env)
-  // Groq fallback (vault Ã¢â€ â€™ env) Ã¢â‚¬â€ fast and cost-effective for text generation
+  // Groq fallback via vault/env is fast and cost-effective for text generation.
   const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
   if (groqKey) {
     const prompt = buildLyricsPrompt(request)

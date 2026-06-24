@@ -11,6 +11,8 @@ import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { getQueue, isJobQueueHealthy } from '@/lib/job-queue'
 import { prisma } from '@/lib/prisma'
+import { listExecutions } from '@/lib/execution'
+import { listControlPlaneJobs } from '@/lib/control-plane-jobs'
 
 export async function GET() {
   const session = await getSession()
@@ -82,6 +84,7 @@ export async function GET() {
       // DB may not have learning tables yet
     }
 
+    const controlPlaneJobs = await listControlPlaneJobs(100)
     return NextResponse.json({
       queue: {
         healthy: queueHealthy,
@@ -91,6 +94,8 @@ export async function GET() {
       batch: batchStats,
       video: videoStats,
       learning: learningStats,
+      executions: listExecutions({ limit: 100 }),
+      controlPlane: controlPlaneJobs,
       timestamp: new Date().toISOString(),
     })
   } catch (err) {

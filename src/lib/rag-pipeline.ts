@@ -2,7 +2,7 @@
  * RAG Pipeline — Retrieval-Augmented Generation
  *
  * Complete pipeline: Document chunking → Embedding → Storage → Retrieval → Context injection.
- * Uses Qdrant vector store for semantic search and OpenAI embeddings for vectorization.
+ * Uses Qdrant vector store for semantic search and Brain-selected embeddings.
  *
  * Truthful: Only returns results that actually exist in the vector store.
  * Gracefully degrades when infrastructure (Qdrant, embedding API) is unavailable.
@@ -12,6 +12,7 @@ import { searchVectors, upsertVectors, ensureCollection, isQdrantHealthy } from 
 import { cacheGet, cacheSet } from './redis'
 import { getVaultApiKey } from './brain'
 import { randomUUID } from 'crypto'
+import { executeCapability } from '@/lib/capability-router'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export interface Chunk {
 }
 
 export interface RetrievalResult {
+  vectorId: string
   content: string
   score: number
   documentId: string
@@ -55,8 +57,11 @@ export interface IngestResult {
   documentId: string
   chunksCreated: number
   embeddingsGenerated: number
+  vectorIds: string[]
+  collection: string
   success: boolean
   error?: string
+  diagnostics?: Record<string, unknown>
 }
 
 // ── Configuration ────────────────────────────────────────────────────────────
@@ -64,9 +69,28 @@ export interface IngestResult {
 const DEFAULT_CHUNK_SIZE = 512
 const DEFAULT_CHUNK_OVERLAP = 64
 const DEFAULT_TOP_K = 5
-const EMBEDDING_MODEL = 'text-embedding-3-small'
-const EMBEDDING_DIMENSIONS = 1536
+const EMBEDDING_MODEL = 'text-embedding-v3'
 const EMBEDDING_CACHE_TTL = 3600 // 1 hour
+
+type ProviderEmbeddingPayload = {
+  output?: unknown
+  data?: Array<{ embedding?: unknown; index?: number }>
+  embedding?: unknown
+  embeddings?: unknown
+  vector?: unknown
+  vectors?: unknown
+}
+
+type EmbeddingRuntimeDiagnostics = {
+  provider: string | null
+  model: string | null
+  resultStatus: string | null
+  success: boolean
+  responseShape: string
+  vectorLengths: number[]
+  expectedCount: number
+  error?: string
+}
 
 // ── Text Chunking ────────────────────────────────────────────────────────────
 
@@ -108,13 +132,10 @@ export function chunkText(
 // ── Embedding ────────────────────────────────────────────────────────────────
 
 /**
- * Generate embeddings for text using OpenAI API.
+ * Generate embeddings for text through the central Brain/runtime capability.
  * Caches results in Redis to avoid redundant API calls.
  */
 export async function generateEmbedding(text: string): Promise<number[] | null> {
-  const apiKey = await getVaultApiKey('openai')
-  if (!apiKey) return null
-
   // Check cache first
   const cacheKey = `emb:${Buffer.from(text.slice(0, 200)).toString('base64').slice(0, 40)}`
   const cached = await cacheGet(cacheKey)
@@ -124,68 +145,174 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
     } catch { /* cache miss */ }
   }
 
-  try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: text.slice(0, 8000), // Limit input size
-        dimensions: EMBEDDING_DIMENSIONS,
-      }),
-      signal: AbortSignal.timeout(15_000),
-    })
-
-    if (!res.ok) return null
-
-    const data = await res.json() as { data: Array<{ embedding: number[] }> }
-    const embedding = data.data?.[0]?.embedding
-    if (!embedding) return null
-
-    // Cache the embedding
-    await cacheSet(cacheKey, JSON.stringify(embedding), EMBEDDING_CACHE_TTL)
-    return embedding
-  } catch {
-    return null
-  }
+  const [embedding] = await generateEmbeddings([text])
+  if (!embedding) return null
+  await cacheSet(cacheKey, JSON.stringify(embedding), EMBEDDING_CACHE_TTL)
+  return embedding
 }
 
 /**
  * Generate embeddings for multiple texts in batch.
  */
 export async function generateEmbeddings(texts: string[]): Promise<(number[] | null)[]> {
-  const apiKey = await getVaultApiKey('openai')
-  if (!apiKey) return texts.map(() => null)
+  const result = await generateEmbeddingsWithDiagnostics(texts)
+  return result.embeddings
+}
 
+async function generateEmbeddingsWithDiagnostics(texts: string[]): Promise<{
+  embeddings: (number[] | null)[]
+  diagnostics: EmbeddingRuntimeDiagnostics
+}> {
   try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+    const result = await executeCapability({
+      input: texts.length === 1 ? texts[0] : `Generate embeddings for ${texts.length} RAG chunks.`,
+      capability: 'embeddings',
+      saveArtifact: false,
+      metadata: {
+        input: texts.map((text) => text.slice(0, 8000)),
+        embeddingPurpose: 'rag_pipeline',
       },
-      body: JSON.stringify({
-        model: EMBEDDING_MODEL,
-        input: texts.map((t) => t.slice(0, 8000)),
-        dimensions: EMBEDDING_DIMENSIONS,
-      }),
-      signal: AbortSignal.timeout(30_000),
     })
-
-    if (!res.ok) return texts.map(() => null)
-
-    const data = await res.json() as { data: Array<{ embedding: number[]; index: number }> }
-    const result: (number[] | null)[] = texts.map(() => null)
-    for (const item of data.data) {
-      result[item.index] = item.embedding
+    const embeddings = result.success && result.output
+      ? normalizeEmbeddingResponse(result.output, texts.length)
+      : texts.map(() => null)
+    return {
+      embeddings,
+      diagnostics: {
+        provider: result.provider ?? null,
+        model: result.model ?? null,
+        resultStatus: result.status ?? result.readiness ?? null,
+        success: result.success,
+        responseShape: describeEmbeddingShape(result.output),
+        vectorLengths: embeddings.map((embedding) => embedding?.length ?? 0),
+        expectedCount: texts.length,
+        ...(result.error ? { error: result.error } : {}),
+      },
     }
-    return result
   } catch {
-    return texts.map(() => null)
+    return {
+      embeddings: texts.map(() => null),
+      diagnostics: {
+        provider: null,
+        model: null,
+        resultStatus: 'exception',
+        success: false,
+        responseShape: 'unavailable',
+        vectorLengths: texts.map(() => 0),
+        expectedCount: texts.length,
+        error: 'Embedding runtime threw before returning a result.',
+      },
+    }
   }
+}
+
+export function normalizeEmbeddingResponse(output: unknown, expectedCount = 1): (number[] | null)[] {
+  const empty = (): (number[] | null)[] => Array.from({ length: expectedCount }, () => null)
+  const parsed = parseEmbeddingPayload(output)
+  if (parsed === null) return empty()
+  return normalizeEmbeddingValue(parsed, expectedCount)
+}
+
+function normalizeEmbeddingValue(value: unknown, expectedCount: number): (number[] | null)[] {
+  const empty = (): (number[] | null)[] => Array.from({ length: expectedCount }, () => null)
+  if (typeof value === 'string') {
+    const parsed = parseEmbeddingPayload(value)
+    return parsed === null ? empty() : normalizeEmbeddingValue(parsed, expectedCount)
+  }
+  const direct = numericVector(value)
+  if (direct) {
+    return [direct, ...Array.from({ length: Math.max(0, expectedCount - 1) }, () => null)]
+  }
+
+  if (Array.isArray(value)) {
+    if (value.every(Array.isArray)) {
+      if (expectedCount === 1) {
+        const single = value.length === 1 ? numericVector(value[0]) : averageVectors(value)
+        return single ? [single] : empty()
+      }
+      return empty().map((_, index) => numericVector(value[index]))
+    }
+    return empty()
+  }
+
+  const payload = value as ProviderEmbeddingPayload
+  const data = Array.isArray(payload.data) ? payload.data : null
+  if (data) {
+    const results = empty()
+    for (const [position, item] of data.entries()) {
+      const index = Number.isInteger(item.index) ? item.index! : position
+      if (index >= 0 && index < results.length) {
+        results[index] = numericVector(item.embedding)
+      }
+    }
+    return results
+  }
+
+  const vectors = payload.embeddings ?? payload.vectors
+  if (Array.isArray(vectors) && vectors.every(Array.isArray)) {
+    if (expectedCount === 1) {
+      const single = vectors.length === 1 ? numericVector(vectors[0]) : averageVectors(vectors)
+      return single ? [single] : empty()
+    }
+    return empty().map((_, index) => numericVector(vectors[index]))
+  }
+
+  if (payload.output !== undefined) return normalizeEmbeddingValue(payload.output, expectedCount)
+
+  const single = numericVector(payload.embedding ?? payload.vector)
+  return single ? [single, ...Array.from({ length: Math.max(0, expectedCount - 1) }, () => null)] : empty()
+}
+
+function parseEmbeddingPayload(output: unknown): unknown | null {
+  if (typeof output === 'string') {
+    try {
+      return JSON.parse(output) as unknown
+    } catch {
+      return null
+    }
+  }
+  if (output !== null && output !== undefined) return output
+  return null
+}
+
+function numericVector(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null
+  const vector = value.map((entry) => typeof entry === 'number' ? entry : Number(entry))
+  return vector.length > 0 && vector.every(Number.isFinite) ? vector : null
+}
+
+function averageVectors(value: unknown[]): number[] | null {
+  const vectors = value.map((entry) => numericVector(entry)).filter((entry): entry is number[] => Boolean(entry))
+  if (vectors.length === 0) return null
+  const width = vectors[0].length
+  if (!width || vectors.some((vector) => vector.length !== width)) return null
+  return vectors[0].map((_, index) =>
+    vectors.reduce((sum, vector) => sum + vector[index], 0) / vectors.length
+  )
+}
+
+function describeEmbeddingShape(output: unknown): string {
+  const parsed = parseEmbeddingPayload(output)
+  if (parsed === null) {
+    return typeof output === 'string'
+      ? `string(non_json,length=${output.length})`
+      : `${typeof output}(empty)`
+  }
+  return describeShape(parsed)
+}
+
+function describeShape(value: unknown, depth = 0): string {
+  if (depth > 3) return '...'
+  if (Array.isArray(value)) {
+    const first = value[0]
+    return `array(length=${value.length},item=${describeShape(first, depth + 1)})`
+  }
+  if (value && typeof value === 'object') {
+    const keys = Object.keys(value as Record<string, unknown>).sort()
+    const preview = keys.slice(0, 8).join(',')
+    return `object(keys=${preview}${keys.length > 8 ? ',...' : ''})`
+  }
+  return value === null ? 'null' : typeof value
 }
 
 // ── Document Ingestion ───────────────────────────────────────────────────────
@@ -197,17 +324,15 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
   const _start = Date.now()
 
   try {
-    // Ensure vector collection exists
-    await ensureCollection()
-
     // Chunk the document
     const textChunks = chunkText(doc.content)
     if (textChunks.length === 0) {
-      return { documentId: doc.id, chunksCreated: 0, embeddingsGenerated: 0, success: true }
+      return { documentId: doc.id, chunksCreated: 0, embeddingsGenerated: 0, vectorIds: [], collection: 'amarktai_memory', success: true }
     }
 
     // Generate embeddings in batch
-    const embeddings = await generateEmbeddings(textChunks)
+    const embeddingResult = await generateEmbeddingsWithDiagnostics(textChunks)
+    const embeddings = embeddingResult.embeddings
     const validPairs: Array<{ chunk: string; embedding: number[]; index: number }> = []
     for (let i = 0; i < textChunks.length; i++) {
       if (embeddings[i]) {
@@ -220,8 +345,32 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
         documentId: doc.id,
         chunksCreated: textChunks.length,
         embeddingsGenerated: 0,
+        vectorIds: [],
+        collection: 'amarktai_memory',
         success: false,
-        error: 'Failed to generate any embeddings',
+        error: [
+          'Failed to generate any embeddings',
+          `provider=${embeddingResult.diagnostics.provider ?? 'none'}`,
+          `model=${embeddingResult.diagnostics.model ?? 'none'}`,
+          `status=${embeddingResult.diagnostics.resultStatus ?? 'unknown'}`,
+          `shape=${embeddingResult.diagnostics.responseShape}`,
+          `vectorLengths=${embeddingResult.diagnostics.vectorLengths.join(',') || 'none'}`,
+        ].join('; '),
+        diagnostics: { embedding: embeddingResult.diagnostics },
+      }
+    }
+
+    const collectionReady = await ensureCollection('amarktai_memory', validPairs[0].embedding.length)
+    if (!collectionReady) {
+      return {
+        documentId: doc.id,
+        chunksCreated: textChunks.length,
+        embeddingsGenerated: validPairs.length,
+        vectorIds: [],
+        collection: 'amarktai_memory',
+        success: false,
+        error: 'Qdrant collection is not reachable or could not be prepared',
+        diagnostics: { embedding: embeddingResult.diagnostics },
       }
     }
 
@@ -240,12 +389,26 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
       },
     }))
 
-    await upsertVectors(points)
+    const stored = await upsertVectors(points)
+    if (!stored) {
+      return {
+        documentId: doc.id,
+        chunksCreated: textChunks.length,
+        embeddingsGenerated: validPairs.length,
+        vectorIds: points.map((point) => point.id),
+        collection: 'amarktai_memory',
+        success: false,
+        error: 'Qdrant vector upsert failed',
+        diagnostics: { embedding: embeddingResult.diagnostics },
+      }
+    }
 
     return {
       documentId: doc.id,
       chunksCreated: textChunks.length,
       embeddingsGenerated: validPairs.length,
+      vectorIds: points.map((point) => point.id),
+      collection: 'amarktai_memory',
       success: true,
     }
   } catch (err) {
@@ -253,6 +416,8 @@ export async function ingestDocument(doc: Document): Promise<IngestResult> {
       documentId: doc.id,
       chunksCreated: 0,
       embeddingsGenerated: 0,
+      vectorIds: [],
+      collection: 'amarktai_memory',
       success: false,
       error: err instanceof Error ? err.message : 'Unknown ingestion error',
     }
@@ -297,6 +462,7 @@ export async function retrieve(
 
   // Map to retrieval results
   const results: RetrievalResult[] = topResults.map((r) => ({
+    vectorId: String(r.id),
     content: String(r.payload?.content ?? ''),
     score: r.score,
     documentId: String(r.payload?.documentId ?? ''),
@@ -348,7 +514,7 @@ export interface RAGHealthStatus {
 
 export async function getRAGHealth(): Promise<RAGHealthStatus> {
   const vectorStoreHealthy = await isQdrantHealthy()
-  const embeddingAvailable = !!(await getVaultApiKey('openai'))
+  const embeddingAvailable = !!(await getVaultApiKey('huggingface')) || !!(await getVaultApiKey('genx'))
   return {
     vectorStoreHealthy,
     embeddingAvailable,

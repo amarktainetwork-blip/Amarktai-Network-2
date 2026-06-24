@@ -168,8 +168,9 @@ export async function POST(req: NextRequest) {
     // Save deploy log as artifact
     const artifact = await createArtifact({
       appSlug,
-      type: 'document',
+      type: 'deployment_plan',
       subType: 'deploy_log',
+      capability: 'deploy_plan',
       title: `Deploy: ${appSlug} → ${branch}`,
       description: `Direct VPS deploy attempt for ${repo}@${branch} to ${deployPath}`,
       mimeType: 'text/plain',
@@ -268,11 +269,11 @@ function buildDeployScript(opts: {
   if (setupNginx && subdomain) {
     lines.push(
       `echo "[5/5] Updating nginx config…"`,
-      `NGINX_CONF="/etc/nginx/sites-available/${subdomain}.amarktai.com"`,
+      `NGINX_CONF="/etc/nginx/sites-available/${subdomain}.amarktai.co.za"`,
       `cat > "$NGINX_CONF" << 'NGINX_EOF'`,
       `server {`,
       `    listen 80;`,
-      `    server_name ${subdomain}.amarktai.com;`,
+      `    server_name ${subdomain}.amarktai.co.za;`,
       `    location / {`,
       `        proxy_pass http://127.0.0.1:3000;`,
       `        proxy_http_version 1.1;`,

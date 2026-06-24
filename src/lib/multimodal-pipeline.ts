@@ -112,7 +112,7 @@ export const PIPELINE_TEMPLATES: Record<string, { name: string; description: str
     description: 'Multi-stage research with synthesis',
     stages: [
       { name: 'Expand Query', inputModality: 'text', outputModality: 'text', provider: 'qwen', model: 'qwen-plus', config: { systemPrompt: 'Break this research question into 3 specific sub-questions.' } },
-      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'mimo', model: 'mimo-v2-pro', config: { systemPrompt: 'Provide thorough research and analysis.' } },
+      { name: 'Deep Research', inputModality: 'text', outputModality: 'text', provider: 'mimo', model: 'mimo-v2.5-pro', config: { systemPrompt: 'Provide thorough research and analysis.' } },
       { name: 'Synthesize Report', inputModality: 'text', outputModality: 'text', provider: 'groq', model: 'llama-3.3-70b-versatile', config: { systemPrompt: 'Synthesize into a clear, well-structured research report with sections.' } },
     ],
   },

@@ -34,28 +34,20 @@ async function checkProvider(
   baseUrl: string | null,
 ): Promise<{ status: string; message: string }> {
   const ENDPOINTS: Record<string, string> = {
-    openai:     'https://api.openai.com/v1/models',
+    genx:       'https://query.genx.sh/api/v1/models',
+    huggingface:'https://huggingface.co/api/whoami-v2',
+    qwen:       'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models',
+    mimo:       'https://token-plan-sgp.xiaomimimo.com/v1/models',
     groq:       'https://api.groq.com/openai/v1/models',
-    deepseek:   'https://api.deepseek.com/v1/models',
-    openrouter: 'https://openrouter.ai/api/v1/models',
-    together:   'https://api.together.xyz/v1/models',
-    gemini:     'https://generativelanguage.googleapis.com/v1beta/models',
-    xai:        'https://api.x.ai/v1/models',
-    huggingface:'https://api-inference.huggingface.co/models',
-    nvidia:     'https://integrate.api.nvidia.com/v1/models',
+    together:   'https://api.together.ai/v1/models',
   }
 
   const endpoint = baseUrl ?? ENDPOINTS[providerKey]
   if (!endpoint) return { status: 'unconfigured', message: 'No endpoint for this provider' }
 
   try {
-    const headers: Record<string, string> = providerKey === 'gemini'
-      ? {}
-      : { Authorization: `Bearer ${apiKey}` }
-
-    const url = providerKey === 'gemini'
-      ? `${endpoint}?key=${apiKey}`
-      : endpoint
+    const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` }
+    const url = endpoint
 
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)

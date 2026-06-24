@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "canonical_capabilities": [
+    "chat",
+    "reasoning",
+    "coding",
+    "research",
+    "image",
+    "image_edit",
+    "video",
+    "image_to_video",
+    "avatar",
+    "music",
+    "tts",
+    "stt",
+    "voice_clone",
+    "ocr",
+    "vision",
+    "embeddings",
+    "rerank",
+    "translation",
+    "documents",
+    "agents",
+    "adult_text",
+    "adult_image",
+    "adult_video"
+  ],
+  "policy": {
+    "selection_flow": [
+      "capability",
+      "provider_discovery",
+      "model_discovery",
+      "score",
+      "execute"
+    ],
+    "apps_call_providers_directly": false,
+    "adult_is_provider": false
+  },
+  "pr118_runtime_truth": {
+    "proof_environment": {
+      "production_credentials_available": false,
+      "live_provider_execution_run": false,
+      "statement": "Repository tests prove routing and adapter contracts. Production provider/model latency and artifact IDs require an authenticated VPS smoke run."
+    },
+    "providers": {
+      "huggingface": {
+        "status": "partial",
+        "detail": "Task-filtered Hub discovery and router.huggingface.co execution are wired; live task-family proof is pending."
+      },
+      "together": {
+        "status": "partial",
+        "detail": "Dynamic catalog, chat, image, video job, TTS, STT, embeddings, and rerank paths are wired; live execution proof is pending."
+      },
+      "groq": {
+        "status": "partial",
+        "detail": "Dynamic catalog, text, streaming intent, TTS, and STT paths are wired; live execution proof is pending."
+      },
+      "genx": {
+        "status": "partial",
+        "detail": "Dynamic catalog-selected chat, media generation, streaming contract, async jobs, polling, and artifacts are wired; live proof is pending."
+      },
+      "qwen": {
+        "status": "partial",
+        "detail": "DashScope International discovery-selected chat, multimodal, image, video, embeddings, streaming intent, and job polling are wired; live proof is pending."
+      },
+      "mimo": {
+        "status": "partial",
+        "detail": "Token Plan discovery-selected chat and TTS are wired through MIMO_BASE_URL; STT, voice clone, voice design, and omni remain unproven."
+      }
+    },
+    "capability_proof": {
+      "chat": "partial",
+      "streaming": "partial",
+      "image": "partial",
+      "video": "partial",
+      "tts": "partial",
+      "stt": "partial",
+      "embeddings": "partial",
+      "rerank": "partial",
+      "moderation": "working",
+      "avatar": "partial",
+      "adult": "partial"
+    }
+  }
+}

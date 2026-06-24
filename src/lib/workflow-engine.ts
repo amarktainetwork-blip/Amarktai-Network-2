@@ -245,7 +245,7 @@ const stepExecutors: Record<StepType, StepExecutor> = {
   input: async (_step, input) => input,
 
   ai_completion: async (step, input) => {
-    const provider = step.config.provider as string ?? 'openai'
+    const provider = step.config.provider as string ?? 'genx'
     // Empty model string is intentional: callProvider resolves it from the
     // vault's defaultModel for the configured provider, so omitting it here
     // lets the admin's provider configuration control the default model.

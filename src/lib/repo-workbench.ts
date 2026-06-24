@@ -719,6 +719,7 @@ async function saveRepoArtifact(input: {
   workspaceId: string
   taskId?: string
   patchId?: string
+  executionId?: string
   type: 'report' | 'code'
   subType: string
   title: string
@@ -730,8 +731,12 @@ async function saveRepoArtifact(input: {
 }) {
   return createArtifact({
     appSlug: 'repo-workbench',
-    type: input.type,
+    workspaceId: input.workspaceId,
+    jobId: input.taskId,
+    executionId: input.executionId,
+    type: repoArtifactType(input.type, input.subType),
     subType: input.subType,
+    capability: input.subType.includes('patch') || input.subType.includes('diff') ? 'repo_edit' : 'code',
     title: input.title,
     description: input.description,
     provider: input.provider ?? 'amarktai-coding-agent',
@@ -745,6 +750,12 @@ async function saveRepoArtifact(input: {
       repoPatchId: input.patchId ?? null,
     },
   })
+}
+
+function repoArtifactType(type: 'report' | 'code', subType: string) {
+  if (subType.includes('patch')) return 'repo_patch' as const
+  if (subType.includes('diff')) return 'repo_diff' as const
+  return type
 }
 
 export async function runRepoAiTask(input: {
@@ -885,6 +896,7 @@ export async function createPlanTask(input: {
   scope: string
   agentMode: AgentMode
   modelId?: string
+  executionId?: string
 }) {
   const workspace = await getWorkspace(input.workspaceId)
   const task = await prisma.repoTask.create({
@@ -902,6 +914,7 @@ export async function createPlanTask(input: {
   const artifact = await saveRepoArtifact({
     workspaceId: input.workspaceId,
     taskId: task.id,
+    executionId: input.executionId,
     type: 'report',
     subType: 'implementation_plan',
     title: `Implementation plan: ${workspace.owner}/${workspace.repo}`,

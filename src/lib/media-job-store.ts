@@ -1,4 +1,9 @@
 import { getGenXJobStatus } from '@/lib/genx-client'
+import { getCapabilityDefinition } from '@/lib/ai-capability-taxonomy'
+import {
+  getProviderCapabilityAdapter,
+  providerHasCanonicalPollingContract,
+} from '@/lib/ai-capability-adapters'
 import {
   appendRecord,
   findRecord,
@@ -86,39 +91,49 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
   if (!job || job.status === 'completed' || job.status === 'failed') return job
 
   if (Date.now() - new Date(job.createdAt).getTime() > MAX_PROCESSING_MS) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Media provider did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
-  if (job.provider !== 'genx') {
-    return saveJob(job, {
+  if (!providerHasCanonicalPollingContract(job.provider as 'genx' | 'together')) {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Provider "${job.provider}" does not have a local media polling contract.`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
-  const providerResult = await getGenXJobStatus(job.providerJobId)
+  const providerResult = job.provider === 'genx'
+    ? await getGenXJobStatus(job.providerJobId)
+    : await togetherJobStatus(job)
   if (!providerResult) return job
   if (providerResult.status === 'failed') {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: providerResult.error ?? 'Media provider job failed.',
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
   if (!['completed', 'succeeded'].includes(providerResult.status)) {
     return saveJob(job, { status: 'processing', error: null })
   }
   if (!providerResult.resultUrl) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: 'Media provider reported completion without a usable media URL.',
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 
   try {
@@ -136,13 +151,14 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
       provider: job.provider,
       model: job.model,
       traceId: `media-job-${job.id}`,
+      jobId: job.id,
       metadata: {
         ...job.metadata,
         capability: job.capability,
         localJobId: job.id,
       },
     })
-    return saveJob(job, {
+    const completed = saveJob(job, {
       status: 'completed',
       artifactId: persisted.artifactId,
       storageUrl: persisted.storageUrl,
@@ -150,19 +166,68 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
       error: null,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(completed)
+    return completed
   } catch (error) {
-    return saveJob(job, {
+    const failed = saveJob(job, {
       status: 'failed',
       error: `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
       completedAt: new Date().toISOString(),
     })
+    void reconcileExecution(failed)
+    return failed
   }
 }
 
+async function togetherJobStatus(job: LocalMediaJob) {
+  const adapter = getProviderCapabilityAdapter('together')
+  const capability = getCapabilityDefinition('text_to_video')
+  const route = capability?.providerRoutes.find((entry) => entry.provider === 'together')
+  if (!adapter?.poll || !capability || !route) {
+    return { status: 'failed', resultUrl: null, error: 'Together local media polling is not available.' }
+  }
+
+  const result = await adapter.poll(job.providerJobId, {
+    capability,
+    route,
+    prompt: job.prompt,
+    text: job.prompt,
+    inputs: job.metadata,
+    references: [],
+    context: {
+      appId: job.appSlug,
+    },
+    model: job.model,
+  })
+  return {
+    status: result.status === 'completed'
+      ? 'completed'
+      : result.status === 'failed'
+        ? 'failed'
+        : 'processing',
+    resultUrl: result.mediaUrl,
+    error: result.error,
+  }
+}
+
+async function reconcileExecution(job: LocalMediaJob | null) {
+  const executionId = typeof job?.metadata.executionId === 'string'
+    ? job.metadata.executionId
+    : null
+  if (!job || !executionId || !['completed', 'failed'].includes(job.status)) return
+  const { recordExecutionResponse } = await import('@/lib/execution')
+  recordExecutionResponse(executionId, localMediaJobResponse(job))
+}
+
 export function localMediaJobResponse(job: LocalMediaJob) {
-  const completed = job.status === 'completed' && Boolean(job.artifactId && (job.storageUrl || job.mediaUrl))
+  const completed = job.status === 'completed'
+    && Boolean(job.artifactId && job.storageUrl?.startsWith('/api/artifacts/file/'))
   const trackable = job.status === 'queued' || job.status === 'processing'
   const pollUrl = `/api/brain/media-jobs/${job.id}`
+  const artifactUrl = job.artifactId ? `/api/admin/artifacts/${encodeURIComponent(job.artifactId)}/download` : null
+  const previewUrl = completed ? artifactUrl : null
+  const downloadUrl = completed ? artifactUrl : null
+  const playableUrl = completed ? artifactUrl : null
   return {
     success: completed || trackable,
     executed: completed || trackable,
@@ -175,12 +240,15 @@ export function localMediaJobResponse(job: LocalMediaJob) {
     providerJobId: job.providerJobId,
     pollUrl,
     artifactId: job.artifactId,
+    artifactUrl,
+    previewUrl,
+    downloadUrl,
     storageUrl: job.storageUrl,
-    mediaUrl: job.mediaUrl,
-    imageUrl: job.type === 'image' ? job.mediaUrl : null,
-    audioUrl: job.type === 'audio' || job.type === 'music' ? job.mediaUrl : null,
-    musicUrl: job.type === 'music' ? job.mediaUrl : null,
-    videoUrl: job.type === 'video' ? job.mediaUrl : null,
+    mediaUrl: playableUrl,
+    imageUrl: job.type === 'image' ? playableUrl : null,
+    audioUrl: job.type === 'audio' || job.type === 'music' ? playableUrl : null,
+    musicUrl: job.type === 'music' ? playableUrl : null,
+    videoUrl: job.type === 'video' ? playableUrl : null,
     error: job.error,
     blocker: job.error,
     createdAt: job.createdAt,

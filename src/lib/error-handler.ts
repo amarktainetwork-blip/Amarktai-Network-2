@@ -61,7 +61,7 @@ export interface StructuredError {
 const PROVIDER_ERROR_PATTERNS = [
   /api.?key/i, /unauthorized/i, /forbidden/i, /rate.?limit/i,
   /quota.?exceeded/i, /model.?not.?found/i, /timeout/i,
-  /openai/i, /anthropic/i, /groq/i, /gemini/i, /grok/i,
+  /genx/i, /hugging.?face/i, /qwen/i, /mimo/i, /groq/i, /together/i,
   /500\s+internal/i, /502\s+bad/i, /503\s+service/i, /504\s+gateway/i,
 ]
 

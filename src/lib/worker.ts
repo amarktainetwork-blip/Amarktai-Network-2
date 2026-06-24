@@ -64,6 +64,143 @@ const processors: Record<string, JobProcessor> = {
 
   agent_task: async (payload) => {
     console.log(`[worker] Processing agent_task for ${payload.appSlug ?? 'platform'}`)
+    const {
+      agentType,
+      message,
+      context,
+      executionId,
+    } = payload.data as {
+      agentType?: string
+      message?: string
+      context?: Record<string, unknown>
+      executionId?: string
+    }
+    if (!payload.appSlug || !agentType || !message || !executionId) {
+      throw new Error('Agent task payload is missing appSlug, agentType, message, or executionId.')
+    }
+
+    const [
+      { createAgentTask, executeAgent, getAgentDefinition },
+      { createArtifact },
+      { recordExecutionResponse },
+    ] = await Promise.all([
+      import('@/lib/agent-runtime'),
+      import('@/lib/artifact-store'),
+      import('@/lib/execution'),
+    ])
+
+    const definition = getAgentDefinition(agentType as Parameters<typeof getAgentDefinition>[0])
+    const task = createAgentTask(
+      agentType as Parameters<typeof createAgentTask>[0],
+      payload.appSlug,
+      { message, context },
+    )
+    const completed = await executeAgent(task)
+    if (completed.status === 'failed') {
+      const error = completed.error ?? 'Agent execution failed.'
+      recordExecutionResponse(executionId, {
+        success: false,
+        executed: false,
+        status: 'failed',
+        jobStatus: 'failed',
+        taskId: completed.id,
+        error,
+      })
+      throw new Error(error)
+    }
+
+    try {
+      const artifact = await createArtifact({
+        appSlug: payload.appSlug,
+        executionId,
+        jobId: completed.id,
+        type: 'document',
+        subType: 'agent_result',
+        capability: agentType === 'developer' ? 'code' : agentType === 'voice' ? 'voice_response' : 'chat',
+        title: `${definition.name}: ${message.slice(0, 80)}`,
+        description: `Completed ${agentType} agent output`,
+        traceId: `agent-task-${completed.id}`,
+        content: JSON.stringify(completed.output ?? null, null, 2),
+        mimeType: 'application/json',
+        metadata: { agentType, taskId: completed.id, executionId },
+      })
+      recordExecutionResponse(executionId, {
+        success: true,
+        executed: true,
+        status: 'completed',
+        jobStatus: 'completed',
+        taskId: completed.id,
+        artifactId: artifact.id,
+        storageUrl: artifact.storageUrl,
+        output: completed.output,
+      })
+    } catch (error) {
+      const message = `Agent completed but artifact persistence failed: ${
+        error instanceof Error ? error.message : 'unknown error'
+      }`
+      recordExecutionResponse(executionId, {
+        success: false,
+        executed: false,
+        status: 'failed',
+        jobStatus: 'failed',
+        taskId: completed.id,
+        error: message,
+      })
+      throw new Error(message)
+    }
+  },
+
+  long_form_video: async (payload) => {
+    const { videoProjectId, controlPlaneJobId } = payload.data as {
+      videoProjectId?: string
+      controlPlaneJobId?: string
+    }
+    if (!videoProjectId) throw new Error('long_form_video requires videoProjectId')
+    const { advanceVideoProject } = await import('@/lib/long-form-video')
+    const { prisma } = await import('@/lib/prisma')
+    for (let cycle = 0; cycle < 120; cycle += 1) {
+      const cancelled = controlPlaneJobId
+        ? await prisma.controlPlaneJob.findUnique({
+            where: { id: controlPlaneJobId },
+            select: { cancelRequested: true },
+          })
+        : null
+      if (cancelled?.cancelRequested) return
+      const project = await advanceVideoProject(videoProjectId)
+      if (!project) throw new Error(`Video project ${videoProjectId} no longer exists.`)
+      if (['completed', 'failed', 'blocked'].includes(project.status)) {
+        if (project.status !== 'completed') throw new Error(project.error ?? project.blocker ?? 'Long-form video failed.')
+        return
+      }
+      await sleep(10_000)
+    }
+    throw new Error('Long-form video exceeded the worker polling window.')
+  },
+
+  adult_media: async (payload) => {
+    const { videoProjectId } = payload.data as { videoProjectId?: string }
+    if (!videoProjectId) {
+      console.log('[worker] Adult media job is awaiting a provider-specific processor.')
+      return
+    }
+    return processors.long_form_video(payload)
+  },
+
+  external_provider_poll: async (payload) => {
+    const { videoGenerationJobId } = payload.data as { videoGenerationJobId?: string }
+    if (!videoGenerationJobId) {
+      console.log('[worker] External provider poll has no video job id; dashboard polling remains available.')
+      return
+    }
+    console.log(`[worker] Provider job ${videoGenerationJobId} is durable and available through its canonical poll URL.`)
+  },
+
+  avatar_video: async () => {
+    console.log('[worker] Avatar video requires an approved provider adapter; storyboard fallback remains available.')
+  },
+
+  image_batch: async (payload) => {
+    console.log(`[worker] Image batch queued for ${payload.appSlug ?? 'platform'}.`)
   },
 
   daily_learning: async (payload) => {
@@ -136,7 +273,7 @@ const processors: Record<string, JobProcessor> = {
 export function startWorker(): ReturnType<typeof createJobQueueWorker> {
   console.log('[worker] Starting AmarktAI background worker...')
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { createWorker } = require('@/lib/job-queue') as typeof import('@/lib/job-queue')
+  const { createWorker, withConcurrencyLease } = require('@/lib/job-queue') as typeof import('@/lib/job-queue')
 
   const worker = createWorker(async (job) => {
     const payload = job.data
@@ -149,7 +286,11 @@ export function startWorker(): ReturnType<typeof createJobQueueWorker> {
 
     const start = Date.now()
     try {
-      await processor(payload)
+      await withConcurrencyLease({
+        provider: typeof payload.data.provider === 'string' ? payload.data.provider : undefined,
+        appSlug: payload.appSlug,
+        capability: typeof payload.data.capability === 'string' ? payload.data.capability : payload.type,
+      }, () => processor(payload))
       console.log(`[worker] ${payload.type} completed in ${Date.now() - start}ms`)
     } catch (err) {
       console.error(`[worker] ${payload.type} failed after ${Date.now() - start}ms:`, err)
@@ -191,3 +332,12 @@ export type ExtendedJobType =
   | 'music_generation'
   | 'artifact_processing'
   | 'manager_check'
+  | 'long_form_video'
+  | 'avatar_video'
+  | 'adult_media'
+  | 'image_batch'
+  | 'external_provider_poll'
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}

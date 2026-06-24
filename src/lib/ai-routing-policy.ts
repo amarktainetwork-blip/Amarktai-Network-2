@@ -71,10 +71,10 @@ const COST_ORDER: Record<CostPreference, Array<CostTier | 'genx'>> = {
 }
 
 const PROVIDER_PRIORITY: Record<CostPreference, string[]> = {
-  free_first: ['huggingface', 'qwen', 'deepseek', 'groq', 'minimax', 'together', 'openrouter', 'genx', 'gemini', 'moonshot', 'zhipu', 'openai', 'xai'],
-  cheap: ['qwen', 'deepseek', 'groq', 'minimax', 'together', 'huggingface', 'openrouter', 'gemini', 'genx', 'moonshot', 'zhipu', 'openai', 'xai'],
-  balanced: ['genx', 'qwen', 'deepseek', 'gemini', 'minimax', 'groq', 'together', 'moonshot', 'zhipu', 'openrouter', 'huggingface', 'openai', 'xai'],
-  premium: ['genx', 'gemini', 'moonshot', 'zhipu', 'openai', 'xai', 'qwen', 'minimax', 'deepseek', 'openrouter', 'groq', 'together', 'huggingface'],
+  free_first: ['huggingface', 'groq', 'together', 'mimo', 'genx'],
+  cheap: ['groq', 'together', 'huggingface', 'mimo', 'genx'],
+  balanced: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
+  premium: ['genx', 'mimo', 'groq', 'together', 'huggingface'],
 }
 
 const ROLE_BY_CAPABILITY: Partial<Record<AiCapability, ModelRole[]>> = {
@@ -119,21 +119,13 @@ const GENX_BY_CAPABILITY: Partial<Record<AiCapability, AiRouteCandidate[]>> = {
 }
 
 const CHEAP_TEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'qwen', model: 'qwen-plus', displayName: 'Qwen Plus', costTier: 'very_low', reason: 'Cheap capable multilingual/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'qwen', model: 'qwen-turbo', displayName: 'Qwen Turbo', costTier: 'very_low', reason: 'Very low-cost fast chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'deepseek', model: 'deepseek-chat', displayName: 'DeepSeek Chat', costTier: 'very_low', reason: 'Very low-cost chat/coding fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'deepseek', model: 'deepseek-reasoner', displayName: 'DeepSeek Reasoner', costTier: 'very_low', reason: 'Very low-cost reasoning/coding fallback.', enabled: true, configured: false, blocked: false, blocker: null },
   { provider: 'groq', model: 'llama-3.3-70b-versatile', displayName: 'Groq Llama 3.3 70B', costTier: 'low', reason: 'Fast low-cost open model for chat and coding support.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'minimax', model: 'MiniMax-M2.7', displayName: 'MiniMax/Mimo M2.7', costTier: 'low', reason: 'Low-cost multimodal app/chat/coding route.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'gemini', model: 'gemini-2.5-flash', displayName: 'Gemini 2.5 Flash', costTier: 'low', reason: 'Low-cost multimodal reasoning/chat fallback.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'together', model: 'meta-llama/Llama-3-70b-chat-hf', displayName: 'Together Llama 3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'huggingface', model: 'meta-llama/Llama-3.1-8B-Instruct', displayName: 'HF Llama 3.1 8B', costTier: 'free', reason: 'Hugging Face serverless/custom-model fallback.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'mimo', model: 'mimo-v2.5', displayName: 'MiMo V2.5', costTier: 'low', reason: 'Low-cost MiMo chat/coding route when generic text execution is available.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'together', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', displayName: 'Together Llama 3.3 70B', costTier: 'low', reason: 'Open model fallback for text and creative tasks.', enabled: true, configured: false, blocked: false, blocker: null },
+  { provider: 'huggingface', model: 'mistralai/Mistral-7B-Instruct-v0.3', displayName: 'HF Mistral 7B Instruct', costTier: 'free', reason: 'Hugging Face router-model fallback with canonical text metadata.', enabled: true, configured: false, blocked: false, blocker: null },
 ]
 
-const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = [
-  { provider: 'moonshot', model: 'kimi-k2.6', displayName: 'Kimi K2.6', costTier: 'medium', reason: 'Long-context/coding route for massive datasets and leads.', enabled: true, configured: false, blocked: false, blocker: null },
-  { provider: 'qwen', model: 'qwen-long', displayName: 'Qwen Long', costTier: 'low', reason: 'Long-context route when enabled on DashScope.', enabled: true, configured: false, blocked: false, blocker: null },
-]
+const LONG_CONTEXT_FALLBACKS: AiRouteCandidate[] = []
 
 function supportsCapability(model: ModelEntry, capability: AiCapability, requireStructuredOutput: boolean): boolean {
   if (!model.enabled) return false
@@ -152,8 +144,8 @@ function supportsCapability(model: ModelEntry, capability: AiCapability, require
     case 'embeddings': return model.supports_embeddings
     case 'moderation': return model.supports_moderation === true
     case 'research': return model.supports_reasoning || model.supports_agent_planning || model.supports_tool_use
-    case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'xai', 'qwen', 'minimax'].includes(model.provider)
-    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface', 'qwen'].includes(model.provider)
+    case 'adult_text': return model.supports_chat && ['together', 'huggingface', 'mimo'].includes(model.provider)
+    case 'adult_image': return model.supports_image_generation && ['together', 'huggingface'].includes(model.provider)
     default: return false
   }
 }
@@ -224,17 +216,13 @@ export async function planAiRoute(request: AiRouteRequest): Promise<AiRoutePlan>
   const truth = await getDashboardRuntimeTruth()
   const configuredProviders = new Set(truth.providers.filter((provider) => provider.configured).map((provider) => provider.key))
   if (truth.genx.configured) configuredProviders.add('genx')
-  if (configuredProviders.has('xai')) configuredProviders.add('grok')
-  if (configuredProviders.has('grok')) configuredProviders.add('xai')
-  if (configuredProviders.has('minimax')) configuredProviders.add('mimo')
-  if (configuredProviders.has('mimo')) configuredProviders.add('minimax')
 
   const blockers: string[] = []
   const safety = safetyBlocker(request)
   if (safety) blockers.push(safety)
 
   if (request.capability === 'adult_image' || request.capability === 'adult_text') {
-    if (truth.adultGate.status !== 'ready') {
+    if (truth.adultGate.status !== 'READY') {
       blockers.push(truth.adultGate.blocker ?? `Adult gate is ${truth.adultGate.status}.`)
     }
   }
@@ -255,7 +243,7 @@ export async function planAiRoute(request: AiRouteRequest): Promise<AiRoutePlan>
     .map((candidate) => {
       const configured = configuredProviders.has(candidate.provider)
       const providerBlocked = configured ? null : `Provider "${candidate.provider}" is not configured in Settings.`
-      const capabilityBlocked = request.capability === 'video_generation' && candidate.provider === 'genx' && !truth.capabilities.some((capability) => capability.name === 'Video Generation' && capability.status === 'available')
+      const capabilityBlocked = request.capability === 'video_generation' && candidate.provider === 'genx' && !truth.capabilities.some((capability) => capability.name === 'Video Generation' && capability.status === 'READY')
         ? 'Video generation remains disabled until GenX video route/quota is verified.'
         : null
       const blocked = !configured || !!capabilityBlocked || !!safety

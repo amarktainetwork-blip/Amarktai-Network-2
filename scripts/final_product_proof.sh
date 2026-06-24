@@ -51,7 +51,7 @@ check_json() {
 printf 'Amarktai final product proof\nBASE_URL=%s\n\n' "$BASE_URL"
 
 # ── Static asset checks ───────────────────────────────────────────────────────
-STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/repo}/.next/standalone/.next/static"
+STANDALONE_STATIC="${REPO_DIR:-/var/www/amarktai/platform}/.next/standalone/.next/static"
 
 check_static() {
   local label="$1"

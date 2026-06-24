@@ -1,3 +1,4 @@
+import { getProviderKey } from '@/lib/provider-config'
 import { getServiceKey } from '@/lib/service-vault'
 
 export interface SpecialistResult {
@@ -58,7 +59,8 @@ export async function runHuggingFaceInference(params: {
   timeoutMs?: number
 }): Promise<SpecialistResult> {
   const startedAt = Date.now()
-  const key = await firstKey('huggingface', ['HUGGINGFACE_API_KEY'])
+  const key = (await getProviderKey('huggingface'))?.trim().replace(/^Bearer\s+/i, '')
+    ?? await firstKey('huggingface', ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'])
   const model = params.modelId ?? 'custom:huggingface-model'
   if (!key) {
     return { ok: false, executed: false, provider: 'huggingface', model, capability: params.capability, latencyMs: Date.now() - startedAt, error: 'Hugging Face key not configured.' }
@@ -66,7 +68,7 @@ export async function runHuggingFaceInference(params: {
 
   const url = params.endpointUrl?.trim()
     ? params.endpointUrl.trim()
-    : `https://api-inference.huggingface.co/models/${encodeURIComponent(model)}`
+    : `https://router.huggingface.co/hf-inference/models/${encodeURIComponent(model)}`
 
   try {
     const response = await fetch(url, {
@@ -115,62 +117,3 @@ export async function runQwenWanxImage(params: {
   }
 }
 
-export async function runMiniMaxTts(params: {
-  text: string
-  model?: string
-  voiceId?: string
-  timeoutMs?: number
-}): Promise<SpecialistResult> {
-  const startedAt = Date.now()
-  const key = await firstKey('minimax', ['MINIMAX_API_KEY', 'MIMO_API_KEY'])
-  const groupId = process.env.MINIMAX_GROUP_ID || process.env.MIMO_GROUP_ID || ''
-  const model = params.model ?? 'speech-2.6-turbo'
-  if (!key) {
-    return { ok: false, executed: false, provider: 'minimax', model, capability: 'text_to_speech', latencyMs: Date.now() - startedAt, error: 'MiniMax/Mimo key not configured.' }
-  }
-
-  const url = groupId
-    ? `https://api.minimax.io/v1/t2a_v2?GroupId=${encodeURIComponent(groupId)}`
-    : 'https://api.minimax.io/v1/t2a_v2'
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        text: params.text,
-        stream: false,
-        voice_setting: {
-          voice_id: params.voiceId ?? 'male-qn-qingse',
-          speed: 1,
-          vol: 1,
-          pitch: 0,
-        },
-        audio_setting: {
-          sample_rate: 32000,
-          bitrate: 128000,
-          format: 'mp3',
-          channel: 1,
-        },
-      }),
-      signal: AbortSignal.timeout(params.timeoutMs ?? 45_000),
-    })
-
-    const latencyMs = Date.now() - startedAt
-    const contentType = response.headers.get('content-type') ?? 'application/json'
-    if (!response.ok) {
-      return { ok: false, executed: true, provider: 'minimax', model, capability: 'text_to_speech', latencyMs, contentType, error: `MiniMax HTTP ${response.status}: ${(await response.text().catch(() => '')).slice(0, 800)}` }
-    }
-
-    const json = await response.json().catch(() => null) as { data?: { audio?: string }; base_resp?: { status_msg?: string } } | null
-    const hexAudio = json?.data?.audio
-    if (!hexAudio) {
-      return { ok: false, executed: true, provider: 'minimax', model, capability: 'text_to_speech', latencyMs, contentType, json, error: json?.base_resp?.status_msg ?? 'MiniMax returned no audio payload.' }
-    }
-    const bytes = Buffer.from(hexAudio, 'hex').buffer
-    return { ok: true, executed: true, provider: 'minimax', model, capability: 'text_to_speech', latencyMs, contentType: 'audio/mpeg', bytes, json }
-  } catch (error) {
-    return { ok: false, executed: true, provider: 'minimax', model, capability: 'text_to_speech', latencyMs: Date.now() - startedAt, error: error instanceof Error ? error.message : 'MiniMax TTS failed' }
-  }
-}

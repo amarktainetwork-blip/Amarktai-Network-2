@@ -39,10 +39,10 @@ export async function GET() {
     research,
     system,
     voice: [
-      { provider: 'minimax', label: 'MiniMax/Mimo voice', status: process.env.MINIMAX_API_KEY || process.env.MIMO_API_KEY ? 'Configured' : 'Needs key/test' },
+      { provider: 'mimo', label: 'Xiaomi MiMo voice', status: process.env.MIMO_API_KEY || process.env.XIAOMI_API_KEY ? 'Configured' : 'Needs key/test' },
       { provider: 'genx', label: 'GenX voice', status: process.env.GENX_API_KEY ? 'Configured' : 'Needs key/test' },
       { provider: 'groq', label: 'Groq speech', status: process.env.GROQ_API_KEY ? 'Configured' : 'Needs key/test' },
-      { provider: 'openai', label: 'OpenAI TTS', status: process.env.OPENAI_API_KEY ? 'Configured' : 'Needs key/test' },
+      { provider: 'huggingface', label: 'Hugging Face speech', status: process.env.HUGGINGFACE_API_KEY || process.env.HF_TOKEN ? 'Configured' : 'Needs key/test' },
     ],
   })
 }

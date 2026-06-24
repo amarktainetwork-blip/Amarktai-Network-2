@@ -4,8 +4,8 @@
 
 set -uo pipefail
 
-BASE_URL="${BASE_URL:-https://amarktai.com}"
-REPO_DIR="${REPO_DIR:-/var/www/amarktai/repo}"
+BASE_URL="${BASE_URL:-https://amarktai.co.za}"
+REPO_DIR="${REPO_DIR:-/var/www/amarktai/platform}"
 COOKIE_FILE="${COOKIE_FILE:-}"
 FAIL=0
 WARN=0
