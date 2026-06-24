@@ -12,11 +12,6 @@
 import {
   callGenXChat,
   callGenXMedia,
-  GENX_TEXT_MODELS,
-  GENX_IMAGE_MODELS,
-  GENX_VIDEO_MODELS,
-  GENX_AUDIO_MODELS,
-  GENX_TTS_MODELS,
 } from '@/lib/genx-client'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlAppWebsite } from '@/lib/firecrawl'
@@ -40,6 +35,7 @@ import {
   getBudgetProfile,
   isWithinBudget,
 } from '@/lib/runtime-registry'
+import { resolveBestModel, type ResolvedModel } from '@/lib/model-resolver'
 
 // ── Orchestration Types (merged from orchestrator.ts) ─────────────────────────
 
@@ -1022,14 +1018,30 @@ export async function executeCapability(
 
   // ── Image generation (registry-driven) ─────────────────────────────────────
   if (cap === 'image_generation' || cap === 'image_edit') {
-    // Get allowed providers from registry
-    const allowedProviders = await getAllowedProviders(cap)
-    const imageProviders = allowedProviders.filter(p => p !== 'genx')
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+      excludeModels: [],
+    })
+
+    if (!resolvedModel) {
+      logExecution(cap, null, null, true, false, 'No image model resolved')
+      return {
+        success: false,
+        capability: cap,
+        provider: null,
+        model: null,
+        outputType: 'image',
+        output: null,
+        fallbackUsed: true,
+        error: 'No image generation provider is configured. Configure GenX or Together AI.',
+      }
+    }
 
     // Try GenX first (primary)
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const preferredModel = request.modelOverride ?? GENX_IMAGE_MODELS[0]
-      const res = await tryGenXMedia(request.input, 'image', preferredModel)
+    if (resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXMedia(request.input, 'image', resolvedModel.modelId)
       if (res.success && res.url) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
@@ -1052,15 +1064,15 @@ export async function executeCapability(
       }
     }
 
-    // Fallback: Together AI FLUX
-    if (imageProviders.includes('together') && (!request.providerOverride || request.providerOverride === 'together')) {
+    // Fallback: Together AI
+    if (resolvedModel.providerKey === 'together') {
       const togetherKey = await getVaultApiKey('together')
       if (togetherKey) {
         try {
           const res = await fetch('https://api.together.xyz/v1/images/generations', {
             method: 'POST',
             headers: { Authorization: `Bearer ${togetherKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell-Free', prompt: request.input, n: 1, steps: 4, width: 1024, height: 1024 }),
+            body: JSON.stringify({ model: resolvedModel.modelId, prompt: request.input, n: 1, steps: 4, width: 1024, height: 1024 }),
             signal: AbortSignal.timeout(60_000),
           })
           if (res.ok) {
@@ -1068,9 +1080,9 @@ export async function executeCapability(
             const url = data.data?.[0]?.url ?? null
             if (url) {
               let artifactId: string | undefined
-              if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', 'FLUX.1-schnell-Free', appSlug, request.traceId)
-              logExecution(cap, 'together', 'FLUX.1-schnell-Free', true, !!artifactId, null)
-              return { success: true, capability: cap, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'GenX image unavailable' }
+              if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', resolvedModel.modelId, appSlug, request.traceId)
+              logExecution(cap, 'together', resolvedModel.modelId, true, !!artifactId, null)
+              return { success: true, capability: cap, provider: 'together', model: resolvedModel.modelId, outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'GenX image unavailable' }
             }
           }
         } catch (err) { console.warn('[capability-router] Together AI image failed:', err instanceof Error ? err.message : err) }
@@ -1402,31 +1414,48 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'video', output: null, fallbackUsed: false, error: 'No text provider available for suggestive video planning.' }
   }
 
-  // ── Video generation (normal — safe mode only) ────────────────────────────
+  // ── Video generation (registry-driven) ─────────────────────────────────────
   if (cap === 'video_generation' || cap === 'image_to_video') {
-    const preferredModel = request.modelOverride ?? GENX_VIDEO_MODELS[0]
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXMedia(request.input, 'video', preferredModel)
-      if (res.success && res.url) {
-        let artifactId: string | undefined
-        if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
-        logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'video', output: res.url, artifactId, fallbackUsed: false }
+    if (!resolvedModel || resolvedModel.providerKey !== 'genx') {
+      logExecution(cap, null, null, true, false, 'No video provider available')
+      return {
+        success: false,
+        capability: cap,
+        provider: null,
+        model: null,
+        outputType: 'video',
+        output: null,
+        fallbackUsed: true,
+        error: 'No real video generation provider returned a job. Use video_planning explicitly if you want a storyboard instead.',
+        error_category: 'endpoint_error',
       }
-      if (res.success && res.jobId) {
-        logExecution(cap, 'genx', res.model, false, false, null)
-        return {
-          success: true,
-          capability: cap,
-          provider: 'genx',
-          model: res.model,
-          outputType: 'video',
-          output: null,
-          jobId: res.jobId,
-          status: res.status,
-          fallbackUsed: false,
-        }
+    }
+
+    const res = await tryGenXMedia(request.input, 'video', resolvedModel.modelId)
+    if (res.success && res.url) {
+      let artifactId: string | undefined
+      if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
+      logExecution(cap, 'genx', res.model, false, !!artifactId, null)
+      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'video', output: res.url, artifactId, fallbackUsed: false }
+    }
+    if (res.success && res.jobId) {
+      logExecution(cap, 'genx', res.model, false, false, null)
+      return {
+        success: true,
+        capability: cap,
+        provider: 'genx',
+        model: res.model,
+        outputType: 'video',
+        output: null,
+        jobId: res.jobId,
+        status: res.status,
+        fallbackUsed: false,
       }
     }
 
@@ -1444,32 +1473,60 @@ export async function executeCapability(
     }
   }
 
-  // Music generation. GenX audio models create real async jobs; the text
-  // blueprint is only a planning fallback and never masquerades as audio.
+  // Music generation (registry-driven)
   if (cap === 'music_generation') {
-    const preferredModel = request.modelOverride ?? GENX_AUDIO_MODELS[0]
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXMedia(request.input, 'audio', preferredModel)
-      if (res.success && res.url) {
+    if (!resolvedModel || resolvedModel.providerKey !== 'genx') {
+      const blueprintResult = await tryFallbackText(
+        `Generate a complete music blueprint for: "${request.input}". ` +
+        `Include: song title, genre, BPM, key, full verse/chorus/bridge structure, ` +
+        `full lyrics, and production notes.`,
+      )
+      if (blueprintResult.success && blueprintResult.output) {
         let artifactId: string | undefined
-        if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
-        logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'audio', output: res.url, artifactId, fallbackUsed: false }
-      }
-      if (res.success && res.jobId) {
-        logExecution(cap, 'genx', res.model, false, false, null)
+        if (save) artifactId = await maybeSaveArtifact(cap, blueprintResult.output, blueprintResult.provider, blueprintResult.model, appSlug, request.traceId)
+        logExecution(cap, blueprintResult.provider, blueprintResult.model, true, !!artifactId, null)
         return {
           success: true,
           capability: cap,
-          provider: 'genx',
-          model: res.model,
-          outputType: 'audio',
-          output: null,
-          jobId: res.jobId,
-          status: res.status,
-          fallbackUsed: false,
+          provider: blueprintResult.provider,
+          model: blueprintResult.model,
+          outputType: 'music_blueprint',
+          output: blueprintResult.output,
+          artifactId,
+          fallbackUsed: true,
+          fallbackReason: 'GenX music job unavailable',
+          warning: 'Generated a music blueprint only. No audio job was created.',
         }
+      }
+      logExecution(cap, null, null, true, false, 'Music generation failed')
+      return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: true, error: 'No music generation provider is configured.' }
+    }
+
+    const res = await tryGenXMedia(request.input, 'audio', resolvedModel.modelId)
+    if (res.success && res.url) {
+      let artifactId: string | undefined
+      if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
+      logExecution(cap, 'genx', res.model, false, !!artifactId, null)
+      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'audio', output: res.url, artifactId, fallbackUsed: false }
+    }
+    if (res.success && res.jobId) {
+      logExecution(cap, 'genx', res.model, false, false, null)
+      return {
+        success: true,
+        capability: cap,
+        provider: 'genx',
+        model: res.model,
+        outputType: 'audio',
+        output: null,
+        jobId: res.jobId,
+        status: res.status,
+        fallbackUsed: false,
       }
     }
 
@@ -1499,13 +1556,18 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: true, error: 'No music generation provider is configured.' }
   }
 
-  // ── Lyrics generation ─────────────────────────────────────────────────────
+  // ── Lyrics generation (registry-driven) ─────────────────────────────────────
   if (cap === 'lyrics_generation') {
     const systemPrompt = 'You are a professional songwriter. Generate creative, original song lyrics with verse/chorus/bridge structure.'
-    const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXChat(request.input, model, systemPrompt)
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
+
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXChat(request.input, resolvedModel.modelId, systemPrompt)
       if (res.success && res.output) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1525,12 +1587,16 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'text', output: null, fallbackUsed: true, error: 'All providers failed for lyrics generation.' }
   }
 
-  // ── TTS / voice response ──────────────────────────────────────────────────
+  // ── TTS / voice response (registry-driven) ────────────────────────────────
   if (cap === 'tts' || cap === 'voice_response') {
-    const model = request.modelOverride ?? GENX_TTS_MODELS[0]
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXMedia(request.input, 'audio', model)
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXMedia(request.input, 'audio', resolvedModel.modelId)
       if (res.success && res.url) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
@@ -1562,7 +1628,7 @@ export async function executeCapability(
       outputType: 'audio',
       output: null,
       fallbackUsed: false,
-      error: 'TTS via the capability router requires GenX. Use /api/brain/tts for the full provider chain (ElevenLabs, OpenAI, Gemini, Qwen).',
+      error: 'TTS via the capability router requires GenX. Use /api/brain/tts for the full provider chain.',
     }
   }
 
@@ -1581,13 +1647,18 @@ export async function executeCapability(
     }
   }
 
-  // ── Research ──────────────────────────────────────────────────────────────
+  // ── Research (registry-driven) ──────────────────────────────────────────────
   if (cap === 'research') {
     const systemPrompt = 'You are a research assistant. Provide comprehensive, factual, well-structured research.'
-    const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXChat(request.input, model, systemPrompt)
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
+
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXChat(request.input, resolvedModel.modelId, systemPrompt)
       if (res.success && res.output) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1607,16 +1678,21 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'text', output: null, fallbackUsed: true, error: 'All providers failed for research.' }
   }
 
-  // ── Code / repo_edit / app_build ──────────────────────────────────────────
+  // ── Code / repo_edit / app_build (registry-driven) ─────────────────────────
   if (cap === 'code' || cap === 'repo_edit' || cap === 'app_build') {
-    const model = request.modelOverride ?? 'gpt-5.3-codex'
     const systemPrompt =
       cap === 'repo_edit' ? 'You are an expert software engineer. Provide precise code edits and file diffs.'
       : cap === 'app_build' ? 'You are a full-stack app builder. Generate complete, production-ready application code.'
       : 'You are an expert software engineer. Write clean, well-documented code.'
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXChat(request.input, model, systemPrompt)
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
+
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXChat(request.input, resolvedModel.modelId, systemPrompt)
       if (res.success && res.output) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1636,13 +1712,18 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'code', output: null, fallbackUsed: true, error: 'All providers failed for code generation.' }
   }
 
-  // ── Deploy plan ───────────────────────────────────────────────────────────
+  // ── Deploy plan (registry-driven) ──────────────────────────────────────────
   if (cap === 'deploy_plan') {
     const systemPrompt = 'You are a DevOps architect. Generate a detailed deployment plan with infrastructure specs, environment setup, and rollout steps.'
-    const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXChat(request.input, model, systemPrompt)
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
+
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXChat(request.input, resolvedModel.modelId, systemPrompt)
       if (res.success && res.output) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1662,16 +1743,21 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'text', output: null, fallbackUsed: true, error: 'All providers failed for deploy plan generation.' }
   }
 
-  // ── File analysis ─────────────────────────────────────────────────────────
+  // ── File analysis (registry-driven) ────────────────────────────────────────
   if (cap === 'file_analysis') {
     const systemPrompt = 'You are a document analyst. Analyze and summarize the provided content, extracting key insights.'
-    const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
     const inputWithFiles = request.files?.length
       ? `${request.input}\n\nFiles: ${request.files.join(', ')}`
       : request.input
 
-    if (!request.providerOverride || request.providerOverride === 'genx') {
-      const res = await tryGenXChat(inputWithFiles, model, systemPrompt)
+    // Resolve best model from registry
+    const resolvedModel = await resolveBestModel({
+      capability: cap,
+      provider: request.providerOverride,
+    })
+
+    if (resolvedModel && resolvedModel.providerKey === 'genx') {
+      const res = await tryGenXChat(inputWithFiles, resolvedModel.modelId, systemPrompt)
       if (res.success && res.output) {
         let artifactId: string | undefined
         if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1691,7 +1777,7 @@ export async function executeCapability(
     return { success: false, capability: cap, provider: null, model: null, outputType: 'text', output: null, fallbackUsed: true, error: 'All providers failed for file analysis.' }
   }
 
-  // ── Chat (default) ────────────────────────────────────────────────────────
+  // ── Chat (default, registry-driven) ───────────────────────────────────────
   // Classify the task for complexity and execution mode (merged from orchestrator)
   const classification = classifyTaskComplexity(
     request.metadata?.appCategory as string ?? 'generic',
@@ -1699,11 +1785,16 @@ export async function executeCapability(
     request.input,
   )
 
-  const model = request.modelOverride ?? GENX_TEXT_MODELS[0]
   const warnings: string[] = []
 
-  if (!request.providerOverride || request.providerOverride === 'genx') {
-    const res = await tryGenXChat(request.input, model)
+  // Resolve best model from registry
+  const resolvedModel = await resolveBestModel({
+    capability: cap,
+    provider: request.providerOverride,
+  })
+
+  if (resolvedModel && resolvedModel.providerKey === 'genx') {
+    const res = await tryGenXChat(request.input, resolvedModel.modelId)
     if (res.success && res.output) {
       let artifactId: string | undefined
       if (save) artifactId = await maybeSaveArtifact(cap, res.output, 'genx', res.model, appSlug, request.traceId)
@@ -1725,7 +1816,7 @@ export async function executeCapability(
     return { success: true, capability: cap, provider: fallback.provider, model: fallback.model, outputType: 'text', output: fallback.output, artifactId, fallbackUsed: true, fallbackReason: 'GenX unavailable', confidenceScore: confidence, executionMode: 'direct', classification, routingReason: `Fallback — GenX unavailable, used ${fallback.provider}` }
   }
 
-  try { recordPerformance({ modelId: model, provider: 'genx', taskType: cap, success: false, latencyMs: 0, confidence: 0, costEstimate: 0, timestamp: Date.now() }) } catch { /* fire-and-forget */ }
+  try { recordPerformance({ modelId: resolvedModel?.modelId ?? 'unknown', provider: 'genx', taskType: cap, success: false, latencyMs: 0, confidence: 0, costEstimate: 0, timestamp: Date.now() }) } catch { /* fire-and-forget */ }
   logExecution(cap, null, null, true, false, 'All providers failed')
   return {
     success: false,
@@ -1735,7 +1826,7 @@ export async function executeCapability(
     outputType: 'text',
     output: null,
     fallbackUsed: true,
-    error: 'All providers failed. Please configure at least one AI provider (GenX, Gemini, Groq, or OpenRouter).',
+    error: 'All providers failed. Please configure at least one AI provider (GenX, Groq, Together, HuggingFace, or MiMo).',
     confidenceScore: null,
     executionMode: 'direct',
     classification,
