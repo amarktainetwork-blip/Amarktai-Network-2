@@ -1,16 +1,10 @@
 /**
  * @module capability-router
- * @description Central capability router for the AmarktAI Network — PHASE 1.
+ * @description Central capability router for the AmarktAI Network.
  *
- * Routes AI capability requests to the best available provider, always trying
- * GenX first, then falling back to cheap alternatives (Gemini, Groq,
- * OpenRouter, Grok, Qwen).
- *
- * Capabilities supported:
- *   chat, code, file_analysis, image_generation, image_edit,
- *   video_generation, image_to_video, music_generation, lyrics_generation,
- *   tts, stt, voice_response, adult_text, adult_image, adult_video,
- *   repo_edit, app_build, deploy_plan, research, scrape_website
+ * Routes AI capability requests to the best available provider using the
+ * Runtime Registry as the single source of truth for capabilities,
+ * provider mappings, and model selection.
  *
  * Server-side only. Never import from client components.
  */
@@ -38,6 +32,14 @@ import {
 import { isProviderWithinBudget } from '@/lib/budget-tracker'
 import { getAppProfileFromDb, runtimeProfileOverrides } from '@/lib/app-profiles'
 import { recordPerformance, loadSmartRouterState } from '@/lib/smart-router'
+import {
+  getCapability,
+  getAllCapabilities,
+  getAllowedProviders,
+  getBestProvider,
+  getBudgetProfile,
+  isWithinBudget,
+} from '@/lib/runtime-registry'
 
 // ── Orchestration Types (merged from orchestrator.ts) ─────────────────────────
 
@@ -532,25 +534,45 @@ async function tryGenXMedia(
   return { success: result.success, url: result.url, jobId: result.jobId, status: result.status, model: result.model, error: result.error }
 }
 
-// ── Fallback text chain ───────────────────────────────────────────────────────
+// ── Fallback text chain (registry-driven) ────────────────────────────────────
 
 const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
 
-const TEXT_FALLBACK_CHAIN: Array<{ key: string; model: string }> = [
-  { key: 'groq',       model: 'llama-3.3-70b-versatile' },
-  { key: 'together',   model: 'meta-llama/Llama-3-70b-chat-hf' },
-  { key: 'huggingface', model: 'task:text' },
-  { key: 'mimo',       model: 'mimo-v2.5' },
-]
+/**
+ * Build a fallback chain from the Runtime Registry.
+ * Uses the 'chat' capability's allowed providers to determine fallback order.
+ */
+async function buildTextFallbackChain(): Promise<Array<{ key: string; model: string }>> {
+  try {
+    const allowedProviders = await getAllowedProviders('chat')
+    if (allowedProviders.length > 0) {
+      return allowedProviders.map(key => ({
+        key,
+        model: getDefaultModelForProvider(key),
+      }))
+    }
+  } catch {
+    // Registry unavailable — fall through to static fallback
+  }
+
+  // Static fallback when registry is unavailable
+  return [
+    { key: 'groq', model: 'llama-3.3-70b-versatile' },
+    { key: 'together', model: 'meta-llama/Llama-3-70b-chat-hf' },
+    { key: 'huggingface', model: 'task:text' },
+    { key: 'mimo', model: 'mimo-v2.5' },
+  ]
+}
 
 async function tryFallbackText(
   input: string,
-  chain = TEXT_FALLBACK_CHAIN,
 ): Promise<{ success: boolean; output: string | null; provider: string | null; model: string | null; error: string | null }> {
   // In test runtime, skip provider network calls for deterministic behaviour.
   if (IS_TEST_RUNTIME) {
     return { success: false, output: null, provider: null, model: null, error: 'Fallback providers disabled in test runtime' }
   }
+
+  const chain = await buildTextFallbackChain()
   for (const { key, model } of chain) {
     try {
       const result = await callProvider(key, model, input, undefined)
@@ -998,11 +1020,15 @@ export async function executeCapability(
     }
   }
 
-  // ── Image generation (normal — safe mode only) ────────────────────────────
+  // ── Image generation (registry-driven) ─────────────────────────────────────
   if (cap === 'image_generation' || cap === 'image_edit') {
-    const preferredModel = request.modelOverride ?? GENX_IMAGE_MODELS[0]
+    // Get allowed providers from registry
+    const allowedProviders = await getAllowedProviders(cap)
+    const imageProviders = allowedProviders.filter(p => p !== 'genx')
 
+    // Try GenX first (primary)
     if (!request.providerOverride || request.providerOverride === 'genx') {
+      const preferredModel = request.modelOverride ?? GENX_IMAGE_MODELS[0]
       const res = await tryGenXMedia(request.input, 'image', preferredModel)
       if (res.success && res.url) {
         let artifactId: string | undefined
@@ -1026,52 +1052,29 @@ export async function executeCapability(
       }
     }
 
-    // Fallback: OpenAI
-    const openaiKey = await getVaultApiKey('openai')
-    if (openaiKey && (!request.providerOverride || request.providerOverride === 'openai')) {
-      try {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'dall-e-3', prompt: request.input, n: 1, size: '1024x1024' }),
-          signal: AbortSignal.timeout(60_000),
-        })
-        if (res.ok) {
-          const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> }
-          const url = data.data?.[0]?.url ?? null
-          const b64 = data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null
-          const output = url ?? b64
-          if (output) {
-            let artifactId: string | undefined
-            if (save) artifactId = await maybeSaveArtifact(cap, output, 'openai', 'dall-e-3', appSlug, request.traceId)
-            logExecution(cap, 'openai', 'dall-e-3', true, !!artifactId, null)
-            return { success: true, capability: cap, provider: 'openai', model: 'dall-e-3', outputType: 'image', output, artifactId, fallbackUsed: true, fallbackReason: 'GenX image unavailable' }
-          }
-        }
-      } catch (err) { console.warn('[capability-router] OpenAI image failed:', err instanceof Error ? err.message : err) }
-    }
-
     // Fallback: Together AI FLUX
-    const togetherKey = await getVaultApiKey('together')
-    if (togetherKey && (!request.providerOverride || request.providerOverride === 'together')) {
-      try {
-        const res = await fetch('https://api.together.xyz/v1/images/generations', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${togetherKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell-Free', prompt: request.input, n: 1, steps: 4, width: 1024, height: 1024 }),
-          signal: AbortSignal.timeout(60_000),
-        })
-        if (res.ok) {
-          const data = await res.json() as { data?: Array<{ url?: string }> }
-          const url = data.data?.[0]?.url ?? null
-          if (url) {
-            let artifactId: string | undefined
-            if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', 'FLUX.1-schnell-Free', appSlug, request.traceId)
-            logExecution(cap, 'together', 'FLUX.1-schnell-Free', true, !!artifactId, null)
-            return { success: true, capability: cap, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'GenX image unavailable' }
+    if (imageProviders.includes('together') && (!request.providerOverride || request.providerOverride === 'together')) {
+      const togetherKey = await getVaultApiKey('together')
+      if (togetherKey) {
+        try {
+          const res = await fetch('https://api.together.xyz/v1/images/generations', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${togetherKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: 'black-forest-labs/FLUX.1-schnell-Free', prompt: request.input, n: 1, steps: 4, width: 1024, height: 1024 }),
+            signal: AbortSignal.timeout(60_000),
+          })
+          if (res.ok) {
+            const data = await res.json() as { data?: Array<{ url?: string }> }
+            const url = data.data?.[0]?.url ?? null
+            if (url) {
+              let artifactId: string | undefined
+              if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', 'FLUX.1-schnell-Free', appSlug, request.traceId)
+              logExecution(cap, 'together', 'FLUX.1-schnell-Free', true, !!artifactId, null)
+              return { success: true, capability: cap, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'GenX image unavailable' }
+            }
           }
-        }
-      } catch (err) { console.warn('[capability-router] Together AI image failed:', err instanceof Error ? err.message : err) }
+        } catch (err) { console.warn('[capability-router] Together AI image failed:', err instanceof Error ? err.message : err) }
+      }
     }
 
     logExecution(cap, null, null, true, false, 'No image provider available')
@@ -1083,13 +1086,13 @@ export async function executeCapability(
       outputType: 'image',
       output: null,
       fallbackUsed: true,
-      error: 'No image generation provider is configured. Configure GenX, OpenAI, or Together AI.',
+      error: 'No image generation provider is configured. Configure GenX or Together AI.',
     }
   }
 
   // ── Adult text / conversation (specialist adult providers only) ────────────
   // adult_text MUST NOT fall back to GenX/default safe chat. Provider order:
-  // Hugging Face private/local endpoint -> Together AI -> xAI/Grok.
+  // Hugging Face private/local endpoint -> Together AI.
   if (cap === 'adult_text') {
     if (hasAdultTextDegradingTerms(request.input)) {
       logExecution(cap, null, null, false, false, 'Degrading adult text refused')
@@ -1144,15 +1147,6 @@ export async function executeCapability(
           apiKey: togetherKey,
         }))
       }
-      if (requestedProvider === 'auto' || requestedProvider === 'xai' || requestedProvider === 'grok') {
-        const xaiKey = await getVaultApiKey('xai') || await getVaultApiKey('grok')
-        chain.push(() => tryAdultTextProvider({
-          provider: 'xai',
-          input: request.input,
-          model: (requestedProvider === 'xai' || requestedProvider === 'grok') && requestedModel ? requestedModel : DEFAULT_XAI_ADULT_TEXT_MODEL,
-          apiKey: xaiKey,
-        }))
-      }
     }
 
     if (chain.length === 0) {
@@ -1164,7 +1158,7 @@ export async function executeCapability(
         outputType: 'text',
         output: null,
         fallbackUsed: false,
-        error: `Adult text provider "${request.providerOverride}" is not supported. Use auto, huggingface, together, xai, grok, or custom.`,
+        error: `Adult text provider "${request.providerOverride}" is not supported. Use auto, huggingface, together, or custom.`,
         error_category: 'model_not_supported',
       }
     }
@@ -1217,7 +1211,7 @@ export async function executeCapability(
       output: null,
       fallbackUsed: false,
       error: needsEndpoint
-        ? 'Adult text needs a Hugging Face private/local endpoint, Together key/model, or xAI/Grok key/model.'
+        ? 'Adult text needs a Hugging Face private/local endpoint or Together key/model.'
         : 'Adult text providers were reached in order, but no provider returned text.',
       error_category: needsKey ? 'missing_key' : 'endpoint_error',
       providerAttempts: attempts,
@@ -1225,39 +1219,12 @@ export async function executeCapability(
   }
 
   // ── Adult image generation (adult-capable providers only — no safe fallback) ─
-  // adult_image MUST NOT fall back to normal image providers (OpenAI DALL-E,
-  // safe GenX image route). Only providers that explicitly support adult content.
-  // Provider order: xAI/Grok → Together AI (disable_safety_checker) → HuggingFace
+  // adult_image MUST NOT fall back to normal image providers.
+  // Provider order: Together AI (disable_safety_checker) → HuggingFace
   if (cap === 'adult_image') {
     // Guardrails already checked above. Proceed to adult-capable providers only.
 
-    // ── Provider 1: xAI / Grok image generation ─────────────────────────
-    const grokKey = await getVaultApiKey('grok')
-    if (grokKey && (!request.providerOverride || request.providerOverride === 'xai' || request.providerOverride === 'grok')) {
-      try {
-        const xaiModel = request.modelOverride ?? 'grok-2-image'
-        const res = await fetch('https://api.x.ai/v1/images/generations', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${grokKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: xaiModel, prompt: request.input, n: 1 }),
-          signal: AbortSignal.timeout(60_000),
-        })
-        if (res.ok) {
-          const data = await res.json() as { data?: Array<{ url?: string; b64_json?: string }> }
-          const url = data.data?.[0]?.url ?? null
-          const b64 = data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : null
-          const output = url ?? b64
-          if (output) {
-            let artifactId: string | undefined
-            if (save) artifactId = await maybeSaveArtifact(cap, output, 'xai', xaiModel, appSlug, request.traceId)
-            logExecution(cap, 'xai', xaiModel, false, !!artifactId, null)
-            return { success: true, capability: cap, provider: 'xai', model: xaiModel, outputType: 'image', output, artifactId, fallbackUsed: false }
-          }
-        }
-      } catch (err) { console.warn('[capability-router] xAI adult image failed:', err instanceof Error ? err.message : err) }
-    }
-
-    // ── Provider 2: Together AI with disable_safety_checker ─────────────
+    // ── Provider 1: Together AI with disable_safety_checker ─────────────
     const togetherKeyAdult = await getVaultApiKey('together')
     if (togetherKeyAdult && (!request.providerOverride || request.providerOverride === 'together')) {
       const adultModels = [
@@ -1280,10 +1247,9 @@ export async function executeCapability(
               let artifactId: string | undefined
               if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', adultModel, appSlug, request.traceId)
               logExecution(cap, 'together', adultModel, true, !!artifactId, null)
-              return { success: true, capability: cap, provider: 'together', model: adultModel, outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'xAI unavailable' }
+              return { success: true, capability: cap, provider: 'together', model: adultModel, outputType: 'image', output: url, artifactId, fallbackUsed: false }
             }
           } else if (res.status === 422) {
-            // Safety checker triggered or model not supported — try next model
             console.warn(`[capability-router] Together adult image model ${adultModel} blocked (422)`)
             continue
           }
@@ -1291,7 +1257,7 @@ export async function executeCapability(
       }
     }
 
-    // ── Provider 3: HuggingFace adult models ─────────────────────────────
+    // ── Provider 2: HuggingFace adult models ─────────────────────────────
     const hfKeyAdult = await getVaultApiKey('huggingface')
     if (hfKeyAdult && (!request.providerOverride || request.providerOverride === 'huggingface')) {
       const hfAdultModels = [
@@ -1316,18 +1282,17 @@ export async function executeCapability(
                 let artifactId: string | undefined
                 if (save) artifactId = await maybeSaveArtifact(cap, output, 'huggingface', hfAdultModel, appSlug, request.traceId)
                 logExecution(cap, 'huggingface', hfAdultModel, true, !!artifactId, null)
-                return { success: true, capability: cap, provider: 'huggingface', model: hfAdultModel, outputType: 'image', output, artifactId, fallbackUsed: true, fallbackReason: 'xAI/Together unavailable' }
+                return { success: true, capability: cap, provider: 'huggingface', model: hfAdultModel, outputType: 'image', output, artifactId, fallbackUsed: true, fallbackReason: 'Together unavailable' }
               }
             }
           } else if (res.status === 503) {
-            continue // Model loading
+            continue
           }
         } catch (err) { console.warn(`[capability-router] HuggingFace adult image (${hfAdultModel}) failed:`, err instanceof Error ? err.message : err) }
       }
     }
 
     const adultMissingKeys: string[] = []
-    if (!grokKey) adultMissingKeys.push('xAI/Grok key missing (Admin → AI Providers → xAI / Grok)')
     if (!togetherKeyAdult) adultMissingKeys.push('Together AI key missing (Admin → AI Providers → Together AI)')
     if (!hfKeyAdult) adultMissingKeys.push('HuggingFace key missing (Admin → AI Providers → HuggingFace)')
 
@@ -1340,10 +1305,10 @@ export async function executeCapability(
       outputType: 'image',
       output: null,
       fallbackUsed: false,
-      error: adultMissingKeys.length === 3
+      error: adultMissingKeys.length === 2
         ? `Adult image generation requires at least one provider key. ${adultMissingKeys.join('; ')}`
-        : 'All adult image providers failed. Configure xAI/Grok, Together AI, or HuggingFace with adult-capable models.',
-      error_category: adultMissingKeys.length === 3 ? 'missing_key' : 'provider_policy_block',
+        : 'All adult image providers failed. Configure Together AI or HuggingFace with adult-capable models.',
+      error_category: adultMissingKeys.length === 2 ? 'missing_key' : 'provider_policy_block',
     }
   }
 
@@ -1377,30 +1342,7 @@ export async function executeCapability(
     }
     const finalPrompt = `${SUGGESTIVE_STYLE_PREFIX} ${request.input}`
 
-    // Try OpenAI DALL-E 3 first (has built-in content policy for suggestive-but-not-explicit)
-    const openaiKeySug = await getVaultApiKey('openai')
-    if (openaiKeySug && (!request.providerOverride || request.providerOverride === 'openai')) {
-      try {
-        const res = await fetch('https://api.openai.com/v1/images/generations', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${openaiKeySug}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: 'dall-e-3', prompt: finalPrompt, n: 1, size: '1024x1024', style: 'natural' }),
-          signal: AbortSignal.timeout(60_000),
-        })
-        if (res.ok) {
-          const data = await res.json() as { data?: Array<{ url?: string }> }
-          const url = data.data?.[0]?.url ?? null
-          if (url) {
-            let artifactId: string | undefined
-            if (save) artifactId = await maybeSaveArtifact(cap, url, 'openai', 'dall-e-3', appSlug, request.traceId)
-            logExecution(cap, 'openai', 'dall-e-3', false, !!artifactId, null)
-            return { success: true, capability: cap, provider: 'openai', model: 'dall-e-3', outputType: 'image', output: url, artifactId, fallbackUsed: false }
-          }
-        }
-      } catch (err) { console.warn('[capability-router] OpenAI suggestive image failed:', err instanceof Error ? err.message : err) }
-    }
-
-    // Fallback: Together AI FLUX
+    // Together AI FLUX (primary)
     const togetherKeySug = await getVaultApiKey('together')
     if (togetherKeySug && (!request.providerOverride || request.providerOverride === 'together')) {
       try {
@@ -1416,8 +1358,8 @@ export async function executeCapability(
           if (url) {
             let artifactId: string | undefined
             if (save) artifactId = await maybeSaveArtifact(cap, url, 'together', 'FLUX.1-schnell-Free', appSlug, request.traceId)
-            logExecution(cap, 'together', 'FLUX.1-schnell-Free', true, !!artifactId, null)
-            return { success: true, capability: cap, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: url, artifactId, fallbackUsed: true, fallbackReason: 'OpenAI unavailable' }
+            logExecution(cap, 'together', 'FLUX.1-schnell-Free', false, !!artifactId, null)
+            return { success: true, capability: cap, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: url, artifactId, fallbackUsed: false }
           }
         }
       } catch (err) { console.warn('[capability-router] Together suggestive image failed:', err instanceof Error ? err.message : err) }
@@ -1426,7 +1368,7 @@ export async function executeCapability(
     logExecution(cap, null, null, true, false, 'No suggestive image provider available')
     return {
       success: false, capability: cap, provider: null, model: null, outputType: 'image', output: null, fallbackUsed: true,
-      error: 'No suggestive image provider is configured. Configure OpenAI or Together AI.',
+      error: 'No suggestive image provider is configured. Configure Together AI.',
     }
   }
 
