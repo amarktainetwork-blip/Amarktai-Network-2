@@ -40,7 +40,7 @@ export const PROVIDER_CAPABILITY_MAP: ProviderCapabilityMapping[] = [
   { provider: 'genx', capability: 'stt', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
   { provider: 'genx', capability: 'embeddings', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
   { provider: 'genx', capability: 'memory', models: ['auto'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-  { provider: 'genx', capability: 'avatar_generation', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'SOURCE_WIRED' },
+  { provider: 'genx', capability: 'avatar_generation', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Premium avatar image/video via GenX media API' },
 
   // ── Hugging Face ──────────────────────────────────────────────────────────
   { provider: 'huggingface', capability: 'chat', models: ['task:text'], costTier: 'free', qualityTier: 'basic', proofStatus: 'LIVE_PROVEN' },
@@ -53,6 +53,7 @@ export const PROVIDER_CAPABILITY_MAP: ProviderCapabilityMapping[] = [
   { provider: 'huggingface', capability: 'adult_image', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint (HF_ADULT_IMAGE_ENDPOINT). Only executable adult provider.' },
   { provider: 'huggingface', capability: 'adult_video', models: ['NSFW-API/NSFW_Wan_14b', 'custom'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint (HF_ADULT_VIDEO_ENDPOINT). Experimental. Only executable adult provider.' },
   { provider: 'huggingface', capability: 'adult_avatar', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint (HF_ADULT_AVATAR_ENDPOINT). Only executable adult provider.' },
+  { provider: 'huggingface', capability: 'avatar_generation', models: ['stabilityai/stable-diffusion-xl-base-1.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF avatar image via endpoint or serverless API. Set HF_AVATAR_IMAGE_ENDPOINT for dedicated endpoint.' },
   { provider: 'huggingface', capability: 'music_generation', models: ['facebook/musicgen-small', 'facebook/musicgen-medium', 'facebook/musicgen-large'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'MusicGen text-to-audio; segment output, not full mastered song' },
   { provider: 'huggingface', capability: 'video_generation', models: ['tencent/HunyuanVideo', 'Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B', 'THUDM/CogVideoX-5b', 'ByteDance/AnimateDiff-Lightning'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF video models; full-quality requires configured HF Inference Endpoint' },
   { provider: 'huggingface', capability: 'image_to_video', models: ['Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF image-to-video; requires configured endpoint' },
@@ -64,7 +65,7 @@ export const PROVIDER_CAPABILITY_MAP: ProviderCapabilityMapping[] = [
   { provider: 'together', capability: 'research', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
   { provider: 'together', capability: 'image_generation', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
   { provider: 'together', capability: 'image_edit', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'SOURCE_WIRED' },
-  { provider: 'together', capability: 'avatar_generation', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'SOURCE_WIRED' },
+  { provider: 'together', capability: 'avatar_generation', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together FLUX image for avatar generation. Cheap/balanced option.' },
   // NOTE: Together does NOT execute adult capabilities. Adult generation is HuggingFace dedicated endpoint only.
   { provider: 'together', capability: 'video_generation', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together video API short clips via /v1/video/generations' },
 

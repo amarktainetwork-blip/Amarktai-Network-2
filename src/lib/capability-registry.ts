@@ -229,12 +229,13 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
   avatar_generation: {
     key: 'avatar_generation',
     label: 'Avatar Generation',
-    description: 'Generate avatar images',
+    description: 'Generate avatar images and video — realistic, anime, cartoon, brand, story, and more',
     category: 'image',
     outputType: 'image',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'SOURCE_WIRED' },
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'SOURCE_WIRED' },
+      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Premium avatar image/video via GenX media API' },
+      { provider: 'huggingface', models: ['stabilityai/stable-diffusion-xl-base-1.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF avatar image via endpoint or serverless API. Set HF_AVATAR_IMAGE_ENDPOINT for dedicated endpoint.' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together FLUX image for avatar generation. Cheap/balanced option.' },
     ],
   },
   adult_text: {

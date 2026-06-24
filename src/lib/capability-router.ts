@@ -27,6 +27,19 @@ import {
   type MusicCapabilityPayload,
 } from '@/lib/music-capability'
 import {
+  validateAvatarPayload,
+  buildAvatarPrompt,
+  executeHFAvatarImage,
+  executeTogetherAvatarImage,
+  executeAvatarVoice as executeAvatarVoiceNonAdult,
+  resolveAvatarProviderOrder,
+  buildAvatarStorageMetadata,
+  type AvatarPayload,
+  type AvatarStyle as AvatarStyleType,
+  type AvatarMode as AvatarModeType,
+  type AvatarVoiceConfig,
+} from '@/lib/avatar-capability'
+import {
   validateVideoPayload,
   buildVideoProviderPrompt,
   executeHFVideoGeneration,
@@ -194,6 +207,7 @@ const ALL_CAPABILITIES = [
   'music_generation', 'lyrics_generation',
   'tts', 'stt', 'voice_response',
   'adult_text', 'adult_image', 'adult_video', 'adult_avatar',
+  'avatar_generation',
   'suggestive_image', 'suggestive_video',
   'repo_edit', 'app_build', 'deploy_plan',
   'research', 'scrape_website',
@@ -1407,6 +1421,164 @@ export async function executeCapability(
       error_category: 'endpoint_error',
       metadata: { providerAttempts: hfResult.providerAttempts },
     }
+  }
+
+  // ── Avatar generation — GenX + HuggingFace + Together multi-provider ────────
+  // Non-adult avatar only. Adult avatars are routed via adult_avatar capability.
+  // Provider order: runtime-resolved by budget preference.
+  if (cap === 'avatar_generation') {
+    const meta = request.metadata ?? {}
+    const rawVoice = meta.voice as Record<string, unknown> | undefined
+    const avatarPayload: AvatarPayload = {
+      avatarName: typeof meta.avatarName === 'string' ? meta.avatarName : request.input.slice(0, 80),
+      appSlug: appSlug !== '__system__' ? appSlug : undefined,
+      avatarRole: typeof meta.avatarRole === 'string' ? meta.avatarRole : undefined,
+      style: typeof meta.style === 'string' ? meta.style as AvatarStyleType : 'realistic_human',
+      mode: typeof meta.mode === 'string' ? meta.mode as AvatarModeType : 'portrait',
+      ageCategory: typeof meta.ageCategory === 'string' ? meta.ageCategory as AvatarPayload['ageCategory'] : 'adult',
+      appearance: typeof meta.appearance === 'string' ? meta.appearance : request.input,
+      personality: typeof meta.personality === 'string' ? meta.personality : undefined,
+      outfit: typeof meta.outfit === 'string' ? meta.outfit : undefined,
+      pose: typeof meta.pose === 'string' ? meta.pose : undefined,
+      background: typeof meta.background === 'string' ? meta.background : undefined,
+      brandColors: Array.isArray(meta.brandColors) ? meta.brandColors as string[] : undefined,
+      referenceImageUrl: typeof meta.referenceImageUrl === 'string' ? meta.referenceImageUrl : undefined,
+      consistencySeed: typeof meta.consistencySeed === 'number' ? meta.consistencySeed : undefined,
+      aspectRatio: typeof meta.aspectRatio === 'string' ? meta.aspectRatio as AvatarPayload['aspectRatio'] : '1:1',
+      resolution: typeof meta.resolution === 'string' ? meta.resolution as AvatarPayload['resolution'] : '1024px',
+      animationPrompt: typeof meta.animationPrompt === 'string' ? meta.animationPrompt : undefined,
+      scriptLine: typeof meta.scriptLine === 'string' ? meta.scriptLine : undefined,
+      emotion: typeof meta.emotion === 'string' ? meta.emotion : undefined,
+      targetAudience: typeof meta.targetAudience === 'string' ? meta.targetAudience : undefined,
+      usage: typeof meta.usage === 'string' ? meta.usage as AvatarPayload['usage'] : 'general',
+      budget: typeof meta.budget === 'string' ? meta.budget as AvatarPayload['budget'] : 'balanced',
+      voice: rawVoice ? {
+        voiceMode: (rawVoice.voiceMode as AvatarVoiceConfig['voiceMode']) ?? 'none',
+        consentConfirmed: typeof rawVoice.consentConfirmed === 'boolean' ? rawVoice.consentConfirmed : false,
+        rightsConfirmed: typeof rawVoice.rightsConfirmed === 'boolean' ? rawVoice.rightsConfirmed : false,
+        referenceAudioUrl: typeof rawVoice.referenceAudioUrl === 'string' ? rawVoice.referenceAudioUrl : undefined,
+        sampleText: typeof rawVoice.sampleText === 'string' ? rawVoice.sampleText : undefined,
+        voiceStyle: typeof rawVoice.voiceStyle === 'string' ? rawVoice.voiceStyle : undefined,
+        language: typeof rawVoice.language === 'string' ? rawVoice.language : undefined,
+        emotion: typeof rawVoice.emotion === 'string' ? rawVoice.emotion : undefined,
+        speakingRate: typeof rawVoice.speakingRate === 'number' ? rawVoice.speakingRate : undefined,
+        pitch: typeof rawVoice.pitch === 'number' ? rawVoice.pitch : undefined,
+      } : undefined,
+    }
+
+    // Validate
+    const avatarValidation = validateAvatarPayload(avatarPayload)
+    if (!avatarValidation.valid) {
+      logExecution(cap, null, null, false, false, avatarValidation.error ?? 'invalid avatar payload')
+      return { success: false, capability: cap, provider: null, model: null, outputType: 'image', output: null, fallbackUsed: false, error: avatarValidation.error ?? 'Invalid avatar payload', error_category: 'guardrail_block' }
+    }
+
+    // Build prompt
+    const avatarPrompt = buildAvatarPrompt(avatarPayload)
+    const budget = avatarPayload.budget ?? 'balanced'
+    const providerOrder = resolveAvatarProviderOrder(budget, avatarPayload.mode, avatarPayload.style)
+
+    // ── GenX avatar helper
+    const tryAvatarGenX = async (fallbackUsed: boolean) => {
+      const res = await tryGenXMedia(avatarPrompt.prompt, 'image', 'auto', {
+        width: avatarPrompt.params.width as number,
+        height: avatarPrompt.params.height as number,
+        negative_prompt: avatarPrompt.negativePrompt,
+        ...(avatarPayload.consistencySeed !== undefined ? { seed: avatarPayload.consistencySeed } : {}),
+      })
+      if (!res.success || (!res.url && !res.jobId)) return null
+      const output = res.url
+      let artifactId: string | undefined
+      if (save && output) artifactId = await maybeSaveArtifact(cap, output, 'genx', res.model, appSlug, request.traceId)
+      logExecution(cap, 'genx', res.model, fallbackUsed, !!artifactId, null)
+      return {
+        success: true, capability: cap, provider: 'genx', model: res.model,
+        outputType: 'image' as const, output, artifactId, fallbackUsed,
+        ...(res.jobId ? { jobId: res.jobId, status: res.status as CapabilityResponse['status'] } : {}),
+        metadata: buildAvatarStorageMetadata(avatarPayload, 'genx', res.model),
+      }
+    }
+
+    // ── HF avatar helper
+    const tryAvatarHF = async (fallbackUsed: boolean) => {
+      const hfKey = await getVaultApiKey('huggingface')
+      if (!hfKey) return null
+      const hfRes = await executeHFAvatarImage(avatarPrompt, hfKey)
+      if (!hfRes.success) return null
+      const output = hfRes.imageDataUrl ?? hfRes.imageUrl
+      if (!output && !hfRes.jobId) return null
+      let artifactId: string | undefined
+      if (save && output) artifactId = await maybeSaveArtifact(cap, output, 'huggingface', hfRes.model, appSlug, request.traceId)
+      logExecution(cap, 'huggingface', hfRes.model, fallbackUsed, !!artifactId, null)
+      return {
+        success: true, capability: cap, provider: 'huggingface', model: hfRes.model,
+        outputType: 'image' as const, output: output ?? null, artifactId, fallbackUsed,
+        ...(hfRes.jobId ? { jobId: hfRes.jobId, status: 'processing' as CapabilityResponse['status'] } : {}),
+        metadata: buildAvatarStorageMetadata(avatarPayload, 'huggingface', hfRes.model),
+      }
+    }
+
+    // ── Together avatar helper
+    const tryAvatarTogether = async (fallbackUsed: boolean) => {
+      const togetherKey = await getVaultApiKey('together')
+      if (!togetherKey) return null
+      const tRes = await executeTogetherAvatarImage(avatarPrompt, togetherKey)
+      if (!tRes.success || !tRes.imageUrl) return null
+      let artifactId: string | undefined
+      if (save) artifactId = await maybeSaveArtifact(cap, tRes.imageUrl, 'together', tRes.model, appSlug, request.traceId)
+      logExecution(cap, 'together', tRes.model, fallbackUsed, !!artifactId, null)
+      return {
+        success: true, capability: cap, provider: 'together', model: tRes.model,
+        outputType: 'image' as const, output: tRes.imageUrl, artifactId, fallbackUsed,
+        metadata: buildAvatarStorageMetadata(avatarPayload, 'together', tRes.model),
+      }
+    }
+
+    const avatarFns: Record<string, (fallback: boolean) => Promise<CapabilityResponse | null>> = {
+      genx: tryAvatarGenX,
+      huggingface: tryAvatarHF,
+      together: tryAvatarTogether,
+    }
+
+    let avatarResult: CapabilityResponse | null = null
+    let isFirst = true
+    const avatarErrors: string[] = []
+
+    for (const provider of providerOrder) {
+      const fn = avatarFns[provider]
+      if (!fn) continue
+      avatarResult = await fn(!isFirst)
+      if (avatarResult) break
+      avatarErrors.push(`${provider} avatar failed`)
+      isFirst = false
+    }
+
+    if (!avatarResult) {
+      const errMsg = avatarErrors.join('; ') || 'No avatar provider could generate an image. Configure GenX, HuggingFace (HF_AVATAR_IMAGE_ENDPOINT), or Together AI.'
+      logExecution(cap, null, null, false, false, errMsg)
+      return { success: false, capability: cap, provider: null, model: null, outputType: 'image', output: null, fallbackUsed: false, error: errMsg }
+    }
+
+    // Attach voice if requested and image succeeded
+    if (avatarPayload.voice && avatarPayload.voice.voiceMode !== 'none') {
+      const hfKey = await getVaultApiKey('huggingface')
+      if (hfKey) {
+        const voiceRes = await executeAvatarVoiceNonAdult(avatarPayload.voice, hfKey, `${avatarPayload.avatarName} ${avatarPayload.appearance}`)
+        const prevMeta = avatarResult.metadata as Record<string, unknown> ?? {}
+        avatarResult = {
+          ...avatarResult,
+          metadata: {
+            ...prevMeta,
+            voiceStatus: voiceRes.voiceStatus,
+            voiceUrl: voiceRes.voiceUrl,
+            voiceJobId: voiceRes.voiceJobId,
+            voiceModel: voiceRes.voiceModel,
+          },
+        }
+      }
+    }
+
+    return avatarResult
   }
 
   // ── Suggestive image generation (non-explicit, gated) ────────────────────
