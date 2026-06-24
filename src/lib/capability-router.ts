@@ -3,8 +3,12 @@
  * @description Central capability router for the AmarktAI Network.
  *
  * Routes AI capability requests to the best available provider using the
- * Runtime Registry as the single source of truth for capabilities,
+ * Capability Registry as the single source of truth for capabilities,
  * provider mappings, and model selection.
+ *
+ * Apps request capabilities. The runtime decides provider, model, endpoint.
+ *
+ * ACTIVE PROVIDERS ONLY: genx, huggingface, together, groq, mimo
  *
  * Server-side only. Never import from client components.
  */
@@ -36,6 +40,15 @@ import {
   isWithinBudget,
 } from '@/lib/runtime-registry'
 import { resolveBestModel, type ResolvedModel } from '@/lib/model-resolver'
+import {
+  type CapabilityKey,
+  type ProviderKey,
+  getCapabilityDefinition,
+  getProvidersForCapability,
+  getBestProvider as getBestProviderFromRegistry,
+  requiresAdultMode,
+  requiresSafeModeOff,
+} from '@/lib/capability-registry'
 
 // ── Orchestration Types (merged from orchestrator.ts) ─────────────────────────
 
