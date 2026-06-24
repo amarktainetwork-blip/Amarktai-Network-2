@@ -71,7 +71,7 @@ import {
   type AdultCapabilityType,
 } from '@/lib/adult-capability'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
-import { crawlAppWebsite } from '@/lib/firecrawl'
+import { crawlWebsite } from '@/lib/scraper'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 import { prisma } from '@/lib/prisma'
@@ -1083,17 +1083,23 @@ export async function executeCapability(
   // ── Scrape website ────────────────────────────────────────────────────────
   if (cap === 'scrape_website') {
     try {
-      // Prefer a valid URL extracted from input; fall back to the raw input as-is
+      // Prefer a valid URL extracted from input; fall back to raw input
       let url = request.input.trim()
       const urlMatch = request.input.match(/https?:\/\/\S+/)
       if (urlMatch) {
         try { new URL(urlMatch[0]); url = urlMatch[0] } catch { /* keep raw input */ }
       }
-      const result = await crawlAppWebsite(url)
+      const meta = request.metadata ?? {}
+      const result = await crawlWebsite(url, {
+        maxPages: typeof meta.maxPages === 'number' ? meta.maxPages : 10,
+        maxDepth: typeof meta.maxDepth === 'number' ? meta.maxDepth : 2,
+        timeoutMs: typeof meta.timeoutMs === 'number' ? meta.timeoutMs : 15_000,
+        followLinks: typeof meta.followLinks === 'boolean' ? meta.followLinks : true,
+      })
       const output = result.success
         ? JSON.stringify({
             summary: result.summary,
-            pages: result.pages.length,
+            pages: result.totalPages,
             niche: result.detectedNiche,
             features: result.detectedFeatures,
             capabilities: result.aiCapabilitiesNeeded,
@@ -1101,13 +1107,13 @@ export async function executeCapability(
         : null
       let artifactId: string | undefined
       if (save && output) {
-        artifactId = await maybeSaveArtifact(cap, output, 'firecrawl', null, appSlug, request.traceId)
+        artifactId = await maybeSaveArtifact(cap, output, 'scraper', null, appSlug, request.traceId)
       }
-      logExecution(cap, 'firecrawl', null, false, !!artifactId, result.error)
+      logExecution(cap, 'scraper', null, false, !!artifactId, result.error ?? null)
       return {
         success: result.success,
         capability: cap,
-        provider: 'firecrawl',
+        provider: 'scraper',
         model: null,
         outputType: 'text',
         output,
@@ -1116,9 +1122,9 @@ export async function executeCapability(
         error: result.error ?? undefined,
       }
     } catch (err) {
-      const error = err instanceof Error ? err.message : 'Firecrawl failed'
-      logExecution(cap, 'firecrawl', null, false, false, error)
-      return { success: false, capability: cap, provider: 'firecrawl', model: null, outputType: 'text', output: null, fallbackUsed: false, error }
+      const error = err instanceof Error ? err.message : 'Scraper failed'
+      logExecution(cap, 'scraper', null, false, false, error)
+      return { success: false, capability: cap, provider: 'scraper', model: null, outputType: 'text', output: null, fallbackUsed: false, error }
     }
   }
 
