@@ -51,6 +51,7 @@ export const PROVIDER_CAPABILITY_MAP: ProviderCapabilityMapping[] = [
   { provider: 'huggingface', capability: 'rag', models: ['sentence-transformers/all-MiniLM-L6-v2'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires Qdrant' },
   { provider: 'huggingface', capability: 'adult_text', models: ['custom'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL', notes: 'Requires adult-capable endpoint' },
   { provider: 'huggingface', capability: 'adult_image', models: ['SG161222/RealVisXL_V4.0'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL' },
+  { provider: 'huggingface', capability: 'music_generation', models: ['facebook/musicgen-small', 'facebook/musicgen-medium', 'facebook/musicgen-large'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'MusicGen text-to-audio; segment output, not full mastered song' },
 
   // ── Together ──────────────────────────────────────────────────────────────
   { provider: 'together', capability: 'chat', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },

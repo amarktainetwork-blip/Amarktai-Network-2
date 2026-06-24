@@ -96,6 +96,14 @@ const HF_FALLBACK_MODELS: Partial<Record<CapabilityClass, HfFallbackSpec[]>> = {
     { model: 'Lykon/dreamshaper-8', label: 'DreamShaper 8', notes: 'Versatile high-quality generation — adult mode fallback' },
     { model: 'stabilityai/stable-diffusion-xl-base-1.0', label: 'SDXL Base', notes: 'General SDXL fallback — adult mode' },
   ],
+  // music_generation: MusicGen produces real audio bytes via HF Inference API.
+  // Output is a short segment (typically 8–30s per clip). generationMode='segment'.
+  // Not a full mastered song — callers receive real audio plus honest metadata.
+  music_generation: [
+    { model: 'facebook/musicgen-small', label: 'MusicGen Small', notes: 'Fast text-to-audio, segment output ~8-30s' },
+    { model: 'facebook/musicgen-medium', label: 'MusicGen Medium', notes: 'Higher quality text-to-audio, segment output' },
+    { model: 'facebook/musicgen-large', label: 'MusicGen Large', notes: 'Best quality text-to-audio, segment output, slower' },
+  ],
 };
 
 // ---------------------------------------------------------------------------

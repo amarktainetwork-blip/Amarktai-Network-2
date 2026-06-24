@@ -163,6 +163,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     outputType: 'audio',
     providers: [
       { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX Lyria quota' },
+      { provider: 'huggingface', models: ['facebook/musicgen-small', 'facebook/musicgen-medium', 'facebook/musicgen-large'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'MusicGen text-to-audio; segment-length audio only' },
     ],
   },
   tts: {

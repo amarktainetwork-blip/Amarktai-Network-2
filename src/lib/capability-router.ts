@@ -16,7 +16,14 @@
 import {
   callGenXChat,
   callGenXMedia,
+  GENX_AUDIO_MODELS,
 } from '@/lib/genx-client'
+import {
+  validateMusicPayload,
+  buildMusicProviderPrompt,
+  executeHFMusicGeneration,
+  type MusicCapabilityPayload,
+} from '@/lib/music-capability'
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlAppWebsite } from '@/lib/firecrawl'
 import { createArtifact } from '@/lib/artifact-store'
@@ -141,6 +148,8 @@ export interface CapabilityResponse {
   classification?: ClassificationResult
   /** Human-readable explanation of why this provider/model was chosen. */
   routingReason?: string
+  /** Capability-specific structured metadata (e.g. music duration, genres, lyricsMode). */
+  metadata?: Record<string, unknown>
 }
 
 // ── Supported capability set ───────────────────────────────────────────────────
@@ -538,8 +547,11 @@ async function tryGenXMedia(
   prompt: string,
   type: 'image' | 'video' | 'audio',
   model: string,
+  extraParams?: Record<string, unknown>,
 ): Promise<{ success: boolean; url: string | null; jobId: string | null; status: 'pending' | 'processing' | 'completed' | 'succeeded' | 'failed'; model: string; error: string | null }> {
-  const result = await callGenXMedia({ model, prompt, type })
+  const duration = typeof extraParams?.duration === 'number' ? extraParams.duration : undefined
+  const params = extraParams ? { ...extraParams } : undefined
+  const result = await callGenXMedia({ model, prompt, type, duration, params })
   return { success: result.success, url: result.url, jobId: result.jobId, status: result.status, model: result.model, error: result.error }
 }
 
@@ -1486,87 +1498,157 @@ export async function executeCapability(
     }
   }
 
-  // Music generation (registry-driven)
+  // ── Music generation — GenX (Lyria) + HuggingFace (full-song/segment) ────────
+  // Success = real audio URL, data URL, or async job ID.
+  // Blueprint-only is never success. No text fallback.
+  // Provider order: runtime-resolved primary → fallback to other executable provider.
   if (cap === 'music_generation') {
-    // Resolve best model from registry
+    // Parse structured music payload from metadata; fall back to raw input as theme
+    const meta = request.metadata ?? {}
+    const rawGenres = Array.isArray(meta.genres) ? (meta.genres as string[]) : ['pop']
+    const rawVocal = typeof meta.vocalType === 'string' ? meta.vocalType : 'female'
+    const rawMoods = Array.isArray(meta.moods) ? (meta.moods as string[]) : []
+    const musicPayload: MusicCapabilityPayload = {
+      theme: (typeof meta.theme === 'string' && meta.theme.trim()) ? meta.theme.trim() : request.input,
+      genres: rawGenres as MusicCapabilityPayload['genres'],
+      vocalType: rawVocal as MusicCapabilityPayload['vocalType'],
+      moods: rawMoods.length > 0 ? rawMoods as MusicCapabilityPayload['moods'] : undefined,
+      duration: typeof meta.duration === 'number' ? meta.duration : 180,
+      bpm: typeof meta.bpm === 'number' ? meta.bpm : undefined,
+      language: typeof meta.language === 'string' ? meta.language : undefined,
+      explicit: typeof meta.explicit === 'boolean' ? meta.explicit : false,
+      lyrics: typeof meta.lyrics === 'string' && meta.lyrics.trim() ? meta.lyrics.trim() : undefined,
+      referenceStyle: typeof meta.referenceStyle === 'string' ? meta.referenceStyle : undefined,
+      productionNotes: typeof meta.productionNotes === 'string' ? meta.productionNotes : undefined,
+      title: typeof meta.title === 'string' ? meta.title : undefined,
+    }
+
+    // Validate before touching any provider
+    const validationError = validateMusicPayload(musicPayload)
+    if (validationError) {
+      logExecution(cap, null, null, false, false, validationError)
+      return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: false, error: validationError }
+    }
+
+    // Build the provider prompt (lyrics, style traits, vocal description)
+    const musicPrompt = buildMusicProviderPrompt(musicPayload)
+
+    // Shared metadata returned on every success path
+    const musicMeta = (generationMode: 'full_song' | 'segment', provider: string, model: string): Record<string, unknown> => ({
+      provider,
+      model,
+      requestedDuration: musicPrompt.duration,
+      generationMode,
+      genres: musicPayload.genres,
+      vocalType: musicPayload.vocalType,
+      lyricsMode: musicPrompt.lyricsMode,
+      ...(musicPrompt.generatedLyrics ? { generatedLyrics: musicPrompt.generatedLyrics } : {}),
+    })
+
+    // Resolve runtime-selected primary provider
     const resolvedModel = await resolveBestModel({
       capability: cap,
       provider: request.providerOverride,
     })
 
-    if (!resolvedModel || resolvedModel.providerKey !== 'genx') {
-      const blueprintResult = await tryFallbackText(
-        `Generate a complete music blueprint for: "${request.input}". ` +
-        `Include: song title, genre, BPM, key, full verse/chorus/bridge structure, ` +
-        `full lyrics, and production notes.`,
-      )
-      if (blueprintResult.success && blueprintResult.output) {
+    // ── Attempt order: try primary provider, then fallback ──────────────────
+
+    // Helper: try GenX Lyria
+    const tryGenX = async (fallbackUsed: boolean): Promise<CapabilityResponse | null> => {
+      const audioModel = (!resolvedModel || resolvedModel.modelId === 'auto')
+        ? GENX_AUDIO_MODELS[0]
+        : resolvedModel.modelId
+
+      const res = await tryGenXMedia(musicPrompt.prompt, 'audio', audioModel, {
+        duration: musicPrompt.duration,
+        ...musicPrompt.params,
+      })
+
+      if (res.success && res.url) {
         let artifactId: string | undefined
-        if (save) artifactId = await maybeSaveArtifact(cap, blueprintResult.output, blueprintResult.provider, blueprintResult.model, appSlug, request.traceId)
-        logExecution(cap, blueprintResult.provider, blueprintResult.model, true, !!artifactId, null)
-        return {
-          success: true,
-          capability: cap,
-          provider: blueprintResult.provider,
-          model: blueprintResult.model,
-          outputType: 'music_blueprint',
-          output: blueprintResult.output,
-          artifactId,
-          fallbackUsed: true,
-          fallbackReason: 'GenX music job unavailable',
-          warning: 'Generated a music blueprint only. No audio job was created.',
-        }
+        if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
+        logExecution(cap, 'genx', res.model, fallbackUsed, !!artifactId, null)
+        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'audio', output: res.url, artifactId, fallbackUsed, fallbackReason: fallbackUsed ? 'HuggingFace music failed' : undefined, metadata: musicMeta('full_song', 'genx', res.model) }
       }
-      logExecution(cap, null, null, true, false, 'Music generation failed')
-      return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: true, error: 'No music generation provider is configured.' }
+      if (res.success && res.jobId) {
+        logExecution(cap, 'genx', res.model, fallbackUsed, false, null)
+        return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'audio', output: null, jobId: res.jobId, status: res.status, fallbackUsed, fallbackReason: fallbackUsed ? 'HuggingFace music failed' : undefined, metadata: musicMeta('full_song', 'genx', res.model) }
+      }
+      return null // failed — let caller decide fallback
     }
 
-    const res = await tryGenXMedia(request.input, 'audio', resolvedModel.modelId)
-    if (res.success && res.url) {
+    // Helper: try HuggingFace — iterates the full HF music catalog (full-song → segment)
+    const tryHF = async (fallbackUsed: boolean): Promise<CapabilityResponse | null> => {
+      const hfKey = await getVaultApiKey('huggingface')
+      if (!hfKey) return null
+
+      const hasLyrics = musicPrompt.lyricsMode !== 'instrumental'
+      const hfRes = await executeHFMusicGeneration(musicPrompt.prompt, musicPrompt.duration, hfKey, hasLyrics)
+      if (!hfRes.success) return null
+
+      const audioOutput = hfRes.audioDataUrl ?? hfRes.audioUrl
+      if (!audioOutput && !hfRes.jobId) return null
+
+      const output = audioOutput ?? null
       let artifactId: string | undefined
-      if (save) artifactId = await maybeSaveArtifact(cap, res.url, 'genx', res.model, appSlug, request.traceId)
-      logExecution(cap, 'genx', res.model, false, !!artifactId, null)
-      return { success: true, capability: cap, provider: 'genx', model: res.model, outputType: 'audio', output: res.url, artifactId, fallbackUsed: false }
-    }
-    if (res.success && res.jobId) {
-      logExecution(cap, 'genx', res.model, false, false, null)
+      if (save && output) artifactId = await maybeSaveArtifact(cap, output, 'huggingface', hfRes.model, appSlug, request.traceId)
+      logExecution(cap, 'huggingface', hfRes.model, fallbackUsed, !!artifactId, null)
       return {
         success: true,
         capability: cap,
-        provider: 'genx',
-        model: res.model,
+        provider: 'huggingface',
+        model: hfRes.model,
         outputType: 'audio',
-        output: null,
-        jobId: res.jobId,
-        status: res.status,
-        fallbackUsed: false,
+        output,
+        ...(hfRes.jobId ? { jobId: hfRes.jobId, status: 'processing' as const } : {}),
+        artifactId,
+        fallbackUsed,
+        fallbackReason: fallbackUsed ? 'GenX music failed' : undefined,
+        metadata: musicMeta(hfRes.generationMode as 'full_song' | 'segment', 'huggingface', hfRes.model),
       }
     }
 
-    const blueprintResult = await tryFallbackText(
-      `Generate a complete music blueprint for: "${request.input}". ` +
-      `Include: song title, genre, BPM, key, full verse/chorus/bridge structure, ` +
-      `full lyrics, and production notes.`,
-    )
-    if (blueprintResult.success && blueprintResult.output) {
-      let artifactId: string | undefined
-      if (save) artifactId = await maybeSaveArtifact(cap, blueprintResult.output, blueprintResult.provider, blueprintResult.model, appSlug, request.traceId)
-      logExecution(cap, blueprintResult.provider, blueprintResult.model, true, !!artifactId, null)
-      return {
-        success: true,
-        capability: cap,
-        provider: blueprintResult.provider,
-        model: blueprintResult.model,
-        outputType: 'music_blueprint',
-        output: blueprintResult.output,
-        artifactId,
-        fallbackUsed: true,
-        fallbackReason: 'GenX music job unavailable',
-        warning: 'Generated a music blueprint only. No audio job was created.',
+    // Determine execution order based on resolved primary provider
+    const primaryIsHF = resolvedModel?.providerKey === 'huggingface'
+    const primaryIsGenX = !resolvedModel || resolvedModel.providerKey === 'genx'
+
+    let result: CapabilityResponse | null = null
+    let primaryError = ''
+    let secondaryError = ''
+
+    if (primaryIsHF) {
+      // HF primary, GenX fallback
+      result = await tryHF(false)
+      if (!result) {
+        const hfKey = await getVaultApiKey('huggingface')
+        primaryError = hfKey ? 'HuggingFace MusicGen returned no audio' : 'HuggingFace API key not configured'
+        result = await tryGenX(true)
+        if (!result) secondaryError = 'GenX music generation also failed'
+      }
+    } else {
+      // GenX primary (default), HF fallback
+      if (primaryIsGenX) {
+        result = await tryGenX(false)
+        if (!result) {
+          primaryError = 'GenX music generation returned no audio URL and no job ID'
+          result = await tryHF(true)
+          if (!result) {
+            const hfKey = await getVaultApiKey('huggingface')
+            secondaryError = hfKey ? 'HuggingFace MusicGen also failed or returned no audio' : 'HuggingFace API key not configured'
+          }
+        }
+      } else {
+        primaryError = `Resolved provider "${resolvedModel?.providerKey}" does not support real music audio generation`
       }
     }
-    logExecution(cap, null, null, true, false, 'Music generation failed')
-    return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: true, error: 'No music generation provider is configured.' }
+
+    if (result) return result
+
+    // Both providers failed — return clear error
+    const finalError = [primaryError, secondaryError].filter(Boolean).join('; ') ||
+      'No music provider could generate audio. Configure GenX (Lyria quota) or HuggingFace (MusicGen).'
+    logExecution(cap, null, null, false, false, finalError)
+    return { success: false, capability: cap, provider: null, model: null, outputType: 'audio', output: null, fallbackUsed: false, error: finalError }
   }
 
   // ── Lyrics generation (registry-driven) ─────────────────────────────────────

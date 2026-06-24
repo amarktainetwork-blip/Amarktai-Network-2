@@ -52,7 +52,8 @@ export type CapabilityClass =
   | 'scraping_extraction'
   | 'suggestive_image_generation'
   | 'suggestive_video_planning'
-  | 'suggestive_video_generation';
+  | 'suggestive_video_generation'
+  | 'music_generation';
 
 export type ExecutionPreference = 'cheap' | 'balanced' | 'premium';
 
@@ -208,6 +209,11 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
     anyCapabilityFlag: ['supports_video_generation'],
     label: 'suggestive video generation (non-explicit, prompt-guarded)',
     suggestedProviders: ['genx', 'together'],
+  },
+  music_generation: {
+    anyCapabilityFlag: ['supports_music_generation'],
+    label: 'music generation',
+    suggestedProviders: ['genx', 'huggingface'],
   },
 };
 
@@ -607,6 +613,7 @@ const BACKEND_ROUTE_EXISTS: Record<CapabilityClass, boolean> = {
   suggestive_image_generation:  true, // /api/brain/suggestive-image (prompt-guarded, safeMode+suggestiveMode gated)
   suggestive_video_planning:    true, // /api/brain/suggestive-video (planning only, no generation)
   suggestive_video_generation:  true, // /api/brain/suggestive-video-gen (Hugging Face text-to-video, prompt-guarded)
+  music_generation:             true, // /api/brain/request (capability='music_generation') — GenX Lyria + HuggingFace MusicGen
 };
 
 // ---------------------------------------------------------------------------
