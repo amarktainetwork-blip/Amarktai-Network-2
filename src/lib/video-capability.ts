@@ -4,7 +4,7 @@
  *
  * Providers:
  *   genx        — Premium async video jobs (veo-3.1, kling, seedance, pixverse)
- *   together    — Short video generation via Together video API
+ *   together    — disabled for video until a current async video endpoint is proven
  *   huggingface — HunyuanVideo, LTX-Video, Wan2.x, CogVideoX, AnimateDiff
  *                 (endpoint-based full-length; serverless for short clips)
  *
@@ -268,21 +268,7 @@ export interface TogetherVideoEntry {
   apiPath: string
 }
 
-export const TOGETHER_VIDEO_CATALOG: TogetherVideoEntry[] = [
-  {
-    key: 'together_video_fast',
-    label: 'Together Video (fast)',
-    modelId: 'black-forest-labs/FLUX.1-schnell-Free',
-    modesSupported: ['text_to_video', 'short_form'],
-    generationMode: 'clip',
-    supportsImageInput: false,
-    maxDurationSeconds: 5,
-    costTier: 'low',
-    qualityTier: 'standard',
-    priority: 70,
-    apiPath: '/v1/video/generations',
-  },
-]
+export const TOGETHER_VIDEO_CATALOG: TogetherVideoEntry[] = []
 
 // ── HF candidate resolution ───────────────────────────────────────────────────
 
@@ -507,7 +493,7 @@ export async function executeTogetherVideoGeneration(
   mode: VideoMode,
   imageInput?: string,
 ): Promise<TogetherVideoResult> {
-  // Together video API: POST /v1/video/generations
+  // Together video remains disabled until the current async endpoint/model is live-proven.
   const entry = TOGETHER_VIDEO_CATALOG[0]
   if (!entry) {
     return { success: false, videoUrl: null, jobId: null, model: 'none', generationMode: 'clip', requestedDuration, error: 'No Together video model configured' }
@@ -695,24 +681,19 @@ export function resolveVideoProviderOrder(
   duration: number,
 ): VideoProviderOrder {
   // Long-form always orchestrates via text, then attempts clip generation
-  // For real clip generation, order depends on budget
+  // For real clip generation, order depends on budget. Together is omitted until live video proof exists.
 
   if (budget === 'cheap') {
-    // Cheap: Together or HF first, GenX only if others fail
-    if (mode === 'image_to_video') {
-      return { primary: 'huggingface', fallbacks: ['together', 'genx'] }
-    }
-    return { primary: 'together', fallbacks: ['huggingface', 'genx'] }
+    return { primary: 'huggingface', fallbacks: ['genx'] }
   }
 
   if (budget === 'premium') {
-    // Premium: GenX first (highest quality), then Together, then HF
-    return { primary: 'genx', fallbacks: ['together', 'huggingface'] }
+    return { primary: 'genx', fallbacks: ['huggingface'] }
   }
 
-  // Balanced: duration drives choice — short clips try Together/HF first
+  // Balanced: duration drives choice; short clips try HF first.
   if (duration <= 10) {
-    return { primary: 'together', fallbacks: ['huggingface', 'genx'] }
+    return { primary: 'huggingface', fallbacks: ['genx'] }
   }
-  return { primary: 'genx', fallbacks: ['together', 'huggingface'] }
+  return { primary: 'genx', fallbacks: ['huggingface'] }
 }

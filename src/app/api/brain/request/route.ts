@@ -46,6 +46,34 @@ const requestSchema = z.object({
   traceId: z.string().optional(),
 })
 
+const APP_FORBIDDEN_OVERRIDE_FIELDS = new Set([
+  'provider',
+  'model',
+  'endpoint',
+  'providerKey',
+  'modelId',
+  'providerOverride',
+  'modelOverride',
+  'provider_override',
+  'model_override',
+])
+
+function findForbiddenProviderOverride(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null
+  const record = raw as Record<string, unknown>
+  for (const field of APP_FORBIDDEN_OVERRIDE_FIELDS) {
+    if (record[field] !== undefined) return field
+  }
+  const metadata = record.metadata
+  if (metadata && typeof metadata === 'object') {
+    const meta = metadata as Record<string, unknown>
+    for (const field of APP_FORBIDDEN_OVERRIDE_FIELDS) {
+      if (meta[field] !== undefined) return `metadata.${field}`
+    }
+  }
+  return null
+}
+
 /**
  * POST /api/brain/request
  *
@@ -70,6 +98,19 @@ export async function POST(request: NextRequest) {
   let body: z.infer<typeof requestSchema>
   try {
     const raw = await request.json()
+    const forbiddenOverride = findForbiddenProviderOverride(raw)
+    if (forbiddenOverride) {
+      return NextResponse.json(
+        errorResponse({
+          traceId: randomUUID(),
+          taskType: 'unknown',
+          error: `App requests cannot override provider routing (${forbiddenOverride}).`,
+          statusCode: 422,
+          latencyMs: Date.now() - start,
+        }),
+        { status: 422 },
+      )
+    }
     body = requestSchema.parse(raw)
   } catch (err) {
     return NextResponse.json(
@@ -342,8 +383,6 @@ export async function POST(request: NextRequest) {
     taskType: effectiveTaskType,
     message: suggestiveModeNote + emotionContext + federatedMemoryContext + memoryContext + body.message,
     agentSystemPrompt,
-    providerOverride: typeof body.metadata?.provider_override === 'string' ? body.metadata.provider_override : undefined,
-    modelOverride: typeof body.metadata?.model_override === 'string' ? body.metadata.model_override : undefined,
     allowFallback: body.metadata?.allow_fallback === true,
   })
 

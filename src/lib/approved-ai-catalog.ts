@@ -1,9 +1,6 @@
-import { AI_PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+import { getAllProviderRuntimes, type ActiveAIProviderKey } from '@/lib/provider-runtime'
 
-export type ApprovedProviderKey = Extract<
-  ProviderMeshId,
-  'genx' | 'huggingface' | 'mimo' | 'groq' | 'together'
->
+export type ApprovedProviderKey = ActiveAIProviderKey
 
 export type CostMode = 'cheap' | 'balanced' | 'premium'
 
@@ -27,22 +24,14 @@ export interface ApprovedModel {
   taskLabel?: string
 }
 
-const PROVIDER_NOTES: Record<ApprovedProviderKey, string> = {
-  genx: 'Primary OpenAI-compatible routing layer across text, code, media, voice, files, and async jobs.',
-  huggingface: 'Model universe for specialist text, embedding, image, video, and speech tasks.',
-  mimo: 'Xiaomi MiMo V2.5-compatible reasoning, coding, multimodal, voice, and tool workflows.',
-  groq: 'Fast text, reasoning, code triage, speech, vision, and tool execution.',
-  together: 'OpenAI-compatible text, image, video, vision, embedding, rerank, and tool routes.',
-}
-
-export const APPROVED_AI_PROVIDERS: readonly ApprovedProvider[] = AI_PROVIDER_MESH.map((provider, sortOrder) => ({
-  key: provider.id as ApprovedProviderKey,
+export const APPROVED_AI_PROVIDERS: readonly ApprovedProvider[] = getAllProviderRuntimes().map((provider, sortOrder) => ({
+  key: provider.key,
   displayName: provider.displayName,
   settingsLabel: provider.displayName,
   defaultBaseUrl: provider.baseUrl,
   envVars: [...provider.envAliases],
   providerType: 'ai' as const,
-  notes: PROVIDER_NOTES[provider.id as ApprovedProviderKey],
+  notes: provider.adminNotes,
   sortOrder,
 }))
 

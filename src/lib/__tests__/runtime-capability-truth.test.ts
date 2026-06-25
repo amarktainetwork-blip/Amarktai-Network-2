@@ -108,12 +108,12 @@ describe('adult mode', () => {
     delete process.env.ADULT_MODE_ENABLED
   })
 
-  it('adult gate uses connected Together AI without a separate adult live-test flag', async () => {
+  it('adult gate uses connected Hugging Face without a separate adult live-test flag', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: {
         integrationConfig: {
           findUnique: vi.fn(async ({ where: { key } }: { where: { key: string } }) => {
-            if (key === 'together') return { apiKey: 'tg_q1234567890abcdef1234567890', notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }) }
+            if (key === 'huggingface') return { apiKey: 'hf_q1234567890abcdef01234567', notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true }) }
             if (key === 'adult_mode') return { notes: JSON.stringify({ mode: 'specialist', lastTestStatus: 'failed' }) }
             return null
           }),
@@ -135,7 +135,7 @@ describe('adult mode', () => {
 
     expect(truth.adultGate.providerAvailable).toBe(true)
     expect(truth.adultGate.status).toBe('ready')
-    expect(truth.adultGate.configuredProviders).toContain('together')
+    expect(truth.adultGate.configuredProviders).toContain('huggingface')
   })
 
   it('adult gate uses connected HuggingFace provider key', async () => {
@@ -203,7 +203,7 @@ describe('adult gate ignores the obsolete separate adult live-test gate', () => 
       prisma: {
         integrationConfig: {
           findUnique: vi.fn(async ({ where: { key } }: { where: { key: string } }) => {
-            if (key === 'together') return { apiKey: 'tg_q1234567890abcdef1234567890' }
+            if (key === 'huggingface') return { apiKey: 'hf_q1234567890abcdef01234567' }
             if (key === 'adult_mode') return { notes: JSON.stringify({ mode: 'specialist', lastTestStatus: 'failed' }) }
             return null
           }),
@@ -221,9 +221,9 @@ describe('adult gate ignores the obsolete separate adult live-test gate', () => 
     }))
 
     const { getAdultCapabilityGate } = await import('@/lib/runtime-capability-truth')
-    const togetherProvider = {
-      key: 'together',
-      displayName: 'Together AI',
+    const huggingFaceProvider = {
+      key: 'huggingface',
+      displayName: 'Hugging Face',
       reason: '',
       configured: true,
       connected: true,
@@ -231,7 +231,7 @@ describe('adult gate ignores the obsolete separate adult live-test gate', () => 
       keySource: 'vault' as const,
       status: 'configured_wired' as const,
     }
-    const gate = await getAdultCapabilityGate([togetherProvider])
+    const gate = await getAdultCapabilityGate([huggingFaceProvider])
 
     expect(gate.status).toBe('ready')
     expect(gate.testPassed).toBe(true)

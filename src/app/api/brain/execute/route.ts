@@ -33,6 +33,36 @@ import { POST as handleAdminTest } from '@/app/api/admin/brain/test/route'
 import { resolveCapability } from '@/lib/capability-engine'
 import { executeCapability, type CapabilityResponse } from '@/lib/capability-router'
 
+const APP_FORBIDDEN_OVERRIDE_FIELDS = new Set([
+  'provider',
+  'model',
+  'endpoint',
+  'providerKey',
+  'modelId',
+  'providerOverride',
+  'modelOverride',
+  'provider_override',
+  'model_override',
+])
+
+function findForbiddenProviderOverride(raw: Record<string, unknown>): string | null {
+  for (const field of APP_FORBIDDEN_OVERRIDE_FIELDS) {
+    if (raw[field] !== undefined) return field
+  }
+  const metadata = raw.metadata
+  if (metadata && typeof metadata === 'object') {
+    const meta = metadata as Record<string, unknown>
+    for (const field of APP_FORBIDDEN_OVERRIDE_FIELDS) {
+      if (meta[field] !== undefined) return `metadata.${field}`
+    }
+  }
+  return null
+}
+
+function hasAppCredentials(raw: Record<string, unknown>): boolean {
+  return Boolean((raw.appId ?? raw.app_id) && (raw.appSecret ?? raw.app_secret))
+}
+
 /**
  * Map a CapabilityResponse failure to the appropriate HTTP status code.
  *
@@ -104,12 +134,6 @@ function normaliseToStandard(raw: Record<string, unknown>): Record<string, unkno
       ...(raw.requested_capability !== undefined
         ? { requested_capability: raw.requested_capability }
         : {}),
-      ...(raw.provider_override !== undefined
-        ? { provider_override: raw.provider_override }
-        : {}),
-      ...(raw.model_override !== undefined
-        ? { model_override: raw.model_override }
-        : {}),
       ...(raw.session_id !== undefined
         ? { session_id: raw.session_id }
         : {}),
@@ -154,6 +178,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     )
     return handleAdminTest(adminReq) as Promise<NextResponse>
+  }
+
+  const forbiddenOverride = hasAppCredentials(raw) ? findForbiddenProviderOverride(raw) : null
+  if (forbiddenOverride) {
+    return NextResponse.json(
+      { success: false, error: `App requests cannot override provider routing (${forbiddenOverride}).` },
+      { status: 422 },
+    )
   }
 
   // ── Direct capability request (no appId) — route through capability router ─

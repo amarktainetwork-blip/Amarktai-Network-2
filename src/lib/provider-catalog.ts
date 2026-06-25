@@ -1,4 +1,5 @@
 import { APPROVED_AI_PROVIDERS, type ApprovedProviderKey } from '@/lib/approved-ai-catalog'
+import { getProviderRuntime, type ArtifactHandling, type ProviderAudience } from '@/lib/provider-runtime'
 
 export interface CanonicalProviderEntry {
   readonly key: ApprovedProviderKey
@@ -6,27 +7,39 @@ export interface CanonicalProviderEntry {
   readonly defaultBaseUrl: string
   readonly healthCheckSupported: boolean
   readonly supportedCapabilityFamilies: readonly string[]
+  readonly testEndpointMap: Readonly<Record<string, string>>
+  readonly asyncJobSupport: boolean
+  readonly artifactHandling: ArtifactHandling
+  readonly audience: ProviderAudience
   readonly sortOrder: number
   readonly launchRequired: boolean
 }
 
 const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
-  genx: ['chat', 'reasoning', 'code', 'image_generation', 'voice', 'agent_planning'],
-  huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings'],
-  mimo: ['chat', 'reasoning', 'code', 'vision', 'voice', 'video_understanding', 'tools'],
-  groq: ['chat', 'reasoning', 'code', 'voice'],
-  together: ['chat', 'code', 'image_generation'],
+  genx: ['chat', 'reasoning', 'code', 'media_requires_verification', 'voice_requires_verification', 'agent_planning'],
+  huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings', 'dedicated_endpoint_media'],
+  mimo: ['chat_requires_verification', 'reasoning', 'code', 'vision_ocr_requires_verification'],
+  groq: ['chat', 'streaming_chat', 'reasoning', 'code', 'speech_to_text'],
+  together: ['chat', 'streaming_requires_verification', 'image_generation', 'embeddings_requires_verification', 'rerank_requires_verification'],
 }
 
-export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = APPROVED_AI_PROVIDERS.map((provider) => ({
-  key: provider.key,
-  displayName: provider.displayName,
-  defaultBaseUrl: provider.defaultBaseUrl,
-  healthCheckSupported: true,
-  supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.key],
-  sortOrder: provider.sortOrder,
-  launchRequired: provider.key === 'genx',
-}))
+export const CANONICAL_PROVIDERS: readonly CanonicalProviderEntry[] = APPROVED_AI_PROVIDERS.map((provider) => {
+  const runtime = getProviderRuntime(provider.key)
+
+  return {
+    key: provider.key,
+    displayName: provider.displayName,
+    defaultBaseUrl: provider.defaultBaseUrl,
+    healthCheckSupported: Boolean(runtime?.taskEndpointMap.health),
+    supportedCapabilityFamilies: CAPABILITY_FAMILIES[provider.key],
+    testEndpointMap: runtime?.testEndpointMap ?? {},
+    asyncJobSupport: runtime?.asyncJobSupport ?? false,
+    artifactHandling: runtime?.artifactHandling ?? 'none',
+    audience: runtime?.audience ?? 'normal_only',
+    sortOrder: provider.sortOrder,
+    launchRequired: provider.key === 'genx',
+  }
+})
 
 export function getCanonicalProvider(key: string): CanonicalProviderEntry | undefined {
   return CANONICAL_PROVIDERS.find((provider) => provider.key === key)

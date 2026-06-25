@@ -6,12 +6,13 @@ import {
   loadAppSafetyConfigFromDB,
   scanContent,
 } from '@/lib/content-filter'
-import { getVaultApiKey } from '@/lib/brain'
+import { authenticateApp, getVaultApiKey } from '@/lib/brain'
+import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
 import { getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 
-type AdultTextProvider = 'auto' | 'huggingface' | 'together'
+type AdultTextProvider = 'auto' | 'huggingface'
 type Attempt = {
   provider: Exclude<AdultTextProvider, 'auto'>
   model: string
@@ -20,7 +21,6 @@ type Attempt = {
 }
 
 const CAPABILITY = 'adult_text'
-const DEFAULT_TOGETHER_MODEL = 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO'
 const SYSTEM_PROMPT =
   'You are an adult-oriented creative writing assistant for consenting adults only. ' +
   'All people and fictional characters must be unambiguously adults. Refuse minors, coercion, exploitation, ' +
@@ -91,43 +91,6 @@ function extractText(data: unknown): string | null {
     ?? null
 }
 
-async function executeTogether(apiKey: string | null, model: string, prompt: string): Promise<{ output: string | null; attempt: Attempt }> {
-  if (!apiKey) {
-    return { output: null, attempt: { provider: 'together', model, status: 'needs_key', error: 'Together API key is missing.' } }
-  }
-  try {
-    const res = await fetch('https://api.together.xyz/v1/chat/completions', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: prompt }],
-        max_tokens: 900,
-        temperature: 0.75,
-      }),
-      signal: AbortSignal.timeout(60_000),
-    })
-    const body = await res.text()
-    const output = res.ok ? extractText(JSON.parse(body)) : null
-    return output
-      ? { output, attempt: { provider: 'together', model, status: 'ready' } }
-      : {
-        output: null,
-        attempt: {
-          provider: 'together',
-          model,
-          status: res.status === 401 || res.status === 403 ? 'needs_key' : 'test_failed',
-          error: body || `Together returned HTTP ${res.status}.`,
-        },
-      }
-  } catch (error) {
-    return {
-      output: null,
-      attempt: { provider: 'together', model, status: 'test_failed', error: error instanceof Error ? error.message : 'Together failed.' },
-    }
-  }
-}
-
 async function executeHuggingFace(
   apiKey: string | null,
   endpoint: string | null,
@@ -182,12 +145,39 @@ async function executeHuggingFace(
   }
 }
 
+async function authorizeAdultRequest(body: Record<string, unknown>): Promise<{ ok: true; appSlug: string } | { ok: false; status: number; error: string }> {
+  const session = await getSession()
+  if (session.isLoggedIn) {
+    return { ok: true, appSlug: typeof body.appSlug === 'string' && body.appSlug ? body.appSlug : '__admin_test__' }
+  }
+
+  const appId = typeof body.appId === 'string'
+    ? body.appId
+    : typeof body.app_id === 'string'
+      ? body.app_id
+      : ''
+  const appSecret = typeof body.appSecret === 'string'
+    ? body.appSecret
+    : typeof body.app_secret === 'string'
+      ? body.app_secret
+      : ''
+  const auth = await authenticateApp(appId, appSecret)
+  if (!auth.ok || !auth.app) {
+    return { ok: false, status: auth.statusCode || 401, error: auth.error ?? 'Unauthorized' }
+  }
+  return { ok: true, appSlug: auth.app.slug }
+}
+
 export async function POST(request: NextRequest) {
   const traceId = randomUUID()
   try {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const prompt = String(body.prompt ?? body.message ?? '').trim()
-    const appSlug = typeof body.appSlug === 'string' ? body.appSlug : '__admin_test__'
+    const auth = await authorizeAdultRequest(body)
+    if (!auth.ok) {
+      return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', status: 'unauthorized', error: auth.error }), { status: auth.status })
+    }
+    const appSlug = auth.appSlug
     if (!prompt) {
       return NextResponse.json(response({ success: false, traceId, jobStatus: 'blocked', error: 'prompt or message is required.' }), { status: 400 })
     }
@@ -213,28 +203,24 @@ export async function POST(request: NextRequest) {
     }
 
     const provider = (typeof body.provider === 'string' ? body.provider : 'auto') as AdultTextProvider
-    if (!['auto', 'huggingface', 'together'].includes(provider)) {
+    if (!['auto', 'huggingface'].includes(provider)) {
       return NextResponse.json(response({
         success: false,
         traceId,
         jobStatus: 'blocked',
-        error: `Provider "${provider}" is not in the canonical adult_text route.`,
+        error: `Provider "${provider}" is not in the canonical adult_text route. Configure a Hugging Face private endpoint.`,
       }), { status: 400 })
     }
 
     const route = getMediaCapabilityRoute(CAPABILITY)!
-    const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
-    const endpoint = typeof body.endpoint === 'string' && body.endpoint.trim() ? body.endpoint.trim() : null
+    const endpoint = process.env.HF_ADULT_TEXT_ENDPOINT ?? null
     const attempts: Attempt[] = []
-    const togetherKey = await getVaultApiKey('together')
     const hfKey = await getVaultApiKey('huggingface')
     const chain = route.providers.filter((entry) => provider === 'auto' || entry.provider === provider)
 
     for (const entry of chain) {
-      const model = requestedModel ?? (entry.provider === 'huggingface' ? getDefaultAdultTextModel().id : DEFAULT_TOGETHER_MODEL)
-      const result = entry.provider === 'together'
-        ? await executeTogether(togetherKey, model, prompt)
-        : await executeHuggingFace(hfKey, endpoint, model, prompt)
+      const model = getDefaultAdultTextModel().id
+      const result = await executeHuggingFace(hfKey, endpoint, model, prompt)
       attempts.push(result.attempt)
       if (!result.output) continue
 
@@ -294,7 +280,7 @@ export async function POST(request: NextRequest) {
       traceId,
       jobStatus: 'needs_setup',
       status: 'needs_setup',
-      error: 'No tested adult text provider returned output. Configure Together or a Hugging Face private endpoint.',
+      error: 'No tested adult text provider returned output. Configure a Hugging Face private endpoint.',
       attempts,
     }), { status: 503 })
   } catch (error) {

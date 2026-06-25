@@ -1,14 +1,15 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
-import { getVaultApiKey } from '@/lib/brain'
+import { authenticateApp, getVaultApiKey } from '@/lib/brain'
+import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultImageModels } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 
 const CAPABILITY = 'adult_image'
 const ALLOWED_SIZES = ['512x512', '768x768', '1024x1024'] as const
-type AdultImageProvider = 'auto' | 'together' | 'huggingface'
+type AdultImageProvider = 'auto' | 'huggingface'
 
 function payload(input: {
   success: boolean
@@ -42,14 +43,52 @@ function payload(input: {
   }
 }
 
+function validateEndpoint(raw: string): string | null {
+  try {
+    const url = new URL(raw)
+    if (!['http:', 'https:'].includes(url.protocol)) return null
+    if (process.env.NODE_ENV === 'production' && /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(url.hostname)) return null
+    return url.href.replace(/\/$/, '')
+  } catch {
+    return null
+  }
+}
+
+async function authorizeAdultRequest(body: Record<string, unknown>): Promise<{ ok: true; appSlug: string } | { ok: false; status: number; error: string }> {
+  const session = await getSession()
+  if (session.isLoggedIn) {
+    return { ok: true, appSlug: typeof body.appSlug === 'string' && body.appSlug ? body.appSlug : '__admin_test__' }
+  }
+
+  const appId = typeof body.appId === 'string'
+    ? body.appId
+    : typeof body.app_id === 'string'
+      ? body.app_id
+      : ''
+  const appSecret = typeof body.appSecret === 'string'
+    ? body.appSecret
+    : typeof body.app_secret === 'string'
+      ? body.app_secret
+      : ''
+  const auth = await authenticateApp(appId, appSecret)
+  if (!auth.ok || !auth.app) {
+    return { ok: false, status: auth.statusCode || 401, error: auth.error ?? 'Unauthorized' }
+  }
+  return { ok: true, appSlug: auth.app.slug }
+}
+
 export async function POST(request: NextRequest) {
   const traceId = randomUUID()
   try {
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
-    const appSlug = typeof body.appSlug === 'string' ? body.appSlug : ''
-    if (!prompt || !appSlug) {
-      return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt and appSlug are required.' }), { status: 400 })
+    const auth = await authorizeAdultRequest(body)
+    if (!auth.ok) {
+      return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: auth.error }), { status: auth.status })
+    }
+    const appSlug = auth.appSlug
+    if (!prompt) {
+      return NextResponse.json(payload({ success: false, traceId, jobStatus: 'blocked', error: 'prompt is required.' }), { status: 400 })
     }
 
     await loadAppSafetyConfigFromDB(appSlug)
@@ -74,12 +113,12 @@ export async function POST(request: NextRequest) {
     }
 
     const requestedProvider = (typeof body.provider === 'string' ? body.provider : 'auto') as AdultImageProvider
-    if (!['auto', 'together', 'huggingface'].includes(requestedProvider)) {
+    if (!['auto', 'huggingface'].includes(requestedProvider)) {
       return NextResponse.json(payload({
         success: false,
         traceId,
         jobStatus: 'blocked',
-        error: `Provider "${requestedProvider}" is not in the canonical adult_image route.`,
+        error: `Provider "${requestedProvider}" is not in the canonical adult_image route. Configure a Hugging Face private endpoint.`,
       }), { status: 400 })
     }
 
@@ -87,46 +126,29 @@ export async function POST(request: NextRequest) {
       ? body.size as typeof ALLOWED_SIZES[number]
       : '768x768'
     const [width, height] = size.split('x').map(Number)
-    const requestedModel = typeof body.model === 'string' && body.model ? body.model : null
     const route = getMediaCapabilityRoute(CAPABILITY)!
     const attempts: Array<Record<string, unknown>> = []
+    const endpoint = process.env.HF_ADULT_IMAGE_ENDPOINT ?? null
 
     for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
-      const model = requestedModel ?? entry.model
-      if (entry.provider === 'together') {
-        const apiKey = await getVaultApiKey('together')
-        if (!apiKey) {
-          attempts.push({ provider: entry.provider, model, status: 'needs_key' })
-          continue
-        }
-        try {
-          const res = await fetch('https://api.together.xyz/v1/images/generations', {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, prompt, n: 1, steps: 4, width, height, disable_safety_checker: true }),
-            signal: AbortSignal.timeout(60_000),
-          })
-          const data = await res.json().catch(() => ({})) as { data?: Array<{ url?: string; b64_json?: string }> }
-          const imageUrl = data.data?.[0]?.url
-          const imageBase64 = data.data?.[0]?.b64_json ? `data:image/png;base64,${data.data[0].b64_json}` : undefined
-          if (res.ok && (imageUrl || imageBase64)) {
-            return persistImage({ appSlug, prompt, provider: entry.provider, model, traceId, imageUrl, imageBase64, attempts })
-          }
-          attempts.push({ provider: entry.provider, model, status: 'test_failed', httpStatus: res.status })
-        } catch (error) {
-          attempts.push({ provider: entry.provider, model, status: 'test_failed', error: error instanceof Error ? error.message : 'Together failed.' })
-        }
-      }
-
       if (entry.provider === 'huggingface') {
         const apiKey = await getVaultApiKey('huggingface')
         if (!apiKey) {
-          attempts.push({ provider: entry.provider, model, status: 'needs_key' })
+          attempts.push({ provider: entry.provider, model: entry.model, status: 'needs_key' })
           continue
         }
-        const hfModel = requestedModel ?? getAdultImageModels()[0]?.id ?? entry.model
+        if (!endpoint) {
+          attempts.push({ provider: entry.provider, model: entry.model, status: 'needs_endpoint', error: 'Configure HF_ADULT_IMAGE_ENDPOINT.' })
+          continue
+        }
+        const validated = validateEndpoint(endpoint)
+        if (!validated) {
+          attempts.push({ provider: entry.provider, model: entry.model, status: 'test_failed', error: 'Invalid Hugging Face adult image endpoint.' })
+          continue
+        }
+        const hfModel = getAdultImageModels()[0]?.id ?? entry.model
         try {
-          const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+          const res = await fetch(validated, {
             method: 'POST',
             headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -158,7 +180,7 @@ export async function POST(request: NextRequest) {
       success: false,
       traceId,
       jobStatus: 'needs_setup',
-      error: 'No tested adult image provider returned a real image. Configure Together or Hugging Face.',
+      error: 'No tested adult image provider returned a real image. Configure Hugging Face.',
       attempts,
     }), { status: 503 })
   } catch (error) {

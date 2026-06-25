@@ -37,7 +37,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'document',
     providers: [
-      { provider: 'together', model: 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO' },
       { provider: 'huggingface', model: 'private-adult-text-endpoint' },
     ],
   },
@@ -47,8 +46,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'image',
     providers: [
-      { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell-Free' },
-      { provider: 'huggingface', model: 'SG161222/RealVisXL_V4.0' },
+      { provider: 'huggingface', model: 'private-adult-image-endpoint' },
     ],
   },
   adult_video: {
@@ -57,7 +55,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'video',
     providers: [
-      { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
+      { provider: 'huggingface', model: 'private-adult-video-endpoint' },
     ],
   },
   adult_voice: {
@@ -66,8 +64,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'audio',
     providers: [
-      { provider: 'genx', model: GENX_TTS_MODELS[0] },
-      { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
+      { provider: 'huggingface', model: 'private-adult-voice-endpoint' },
     ],
   },
   image_generation: {

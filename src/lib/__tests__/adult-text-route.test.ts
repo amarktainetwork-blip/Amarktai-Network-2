@@ -13,12 +13,16 @@ vi.mock('@/lib/content-filter', () => ({
 }))
 
 vi.mock('@/lib/brain', () => ({
+  authenticateApp: vi.fn(async () => ({ ok: false, statusCode: 401, error: 'Unauthorized' })),
   getVaultApiKey: vi.fn(async (provider: string) => {
-    if (provider === 'together') return 'tg_test'
     if (provider === 'huggingface') return 'hf_test'
     if (provider === 'grok' || provider === 'xai') return null
     return null
   }),
+}))
+
+vi.mock('@/lib/session', () => ({
+  getSession: vi.fn(async () => ({ isLoggedIn: true })),
 }))
 
 vi.mock('@/lib/artifact-store', () => ({
@@ -43,7 +47,7 @@ describe('/api/brain/adult-text', () => {
       method: 'POST',
       body: JSON.stringify({
         appSlug: '__admin_test__',
-        provider: 'together',
+        provider: 'huggingface',
         prompt: 'make her feel worthless in a degrading scene',
       }),
     }) as never)
@@ -72,15 +76,9 @@ describe('/api/brain/adult-text', () => {
     expect(data.attempts[0].status).toBe('needs_endpoint')
   })
 
-  it('executes adult text through Together chat completions', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-      expect(String(input)).toBe('https://api.together.xyz/v1/chat/completions')
-      const body = JSON.parse(String(init?.body ?? '{}'))
-      expect(body.model).toBe('NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO')
-      return new Response(JSON.stringify({
-        choices: [{ message: { content: 'A respectful consenting adult romance paragraph.' } }],
-      }), { status: 200 })
-    }))
+  it('rejects Together as an adult text route provider', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
     const { POST } = await import('@/app/api/brain/adult-text/route')
 
     const response = await POST(new Request('http://test.local/api/brain/adult-text', {
@@ -93,11 +91,10 @@ describe('/api/brain/adult-text', () => {
     }) as never)
     const data = await response.json()
 
-    expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(data.provider).toBe('together')
-    expect(data.output).toContain('consenting adult')
-    expect(data.artifactId).toBe('artifact_adult_text_1')
+    expect(response.status).toBe(400)
+    expect(data.success).toBe(false)
+    expect(data.error).toContain('Hugging Face')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('routes adult_text capability through Hugging Face endpoints without GenX fallback', async () => {

@@ -262,9 +262,9 @@ describe('HF_VIDEO_CATALOG', () => {
 })
 
 describe('TOGETHER_VIDEO_CATALOG', () => {
-  it('has at least one entry with a video API path', () => {
-    expect(TOGETHER_VIDEO_CATALOG.length).toBeGreaterThan(0)
-    expect(TOGETHER_VIDEO_CATALOG[0].apiPath).toContain('/v1/video')
+  it('does not route FLUX image models as video models', () => {
+    expect(TOGETHER_VIDEO_CATALOG).toHaveLength(0)
+    expect(TOGETHER_VIDEO_CATALOG.map((entry) => entry.modelId)).not.toContain('black-forest-labs/FLUX.1-schnell-Free')
   })
 })
 
@@ -415,20 +415,22 @@ describe('executeHFVideoCandidate', () => {
 // ── Budget provider ordering ──────────────────────────────────────────────────
 
 describe('resolveVideoProviderOrder', () => {
-  it('cheap: prefers together or huggingface over genx for text_to_video', () => {
+  it('cheap: prefers huggingface over genx for text_to_video', () => {
     const order = resolveVideoProviderOrder('cheap', 'text_to_video', 10)
-    expect(order.primary).not.toBe('genx')
+    expect(order.primary).toBe('huggingface')
     expect(order.fallbacks).toContain('genx')
+    expect(order.fallbacks).not.toContain('together')
   })
 
   it('premium: genx is primary', () => {
     const order = resolveVideoProviderOrder('premium', 'text_to_video', 30)
     expect(order.primary).toBe('genx')
+    expect(order.fallbacks).not.toContain('together')
   })
 
-  it('balanced short clip: prefers together or huggingface', () => {
+  it('balanced short clip: prefers huggingface', () => {
     const order = resolveVideoProviderOrder('balanced', 'text_to_video', 10)
-    expect(['together', 'huggingface']).toContain(order.primary)
+    expect(order.primary).toBe('huggingface')
   })
 
   it('balanced long clip: prefers genx', () => {
@@ -436,12 +438,12 @@ describe('resolveVideoProviderOrder', () => {
     expect(order.primary).toBe('genx')
   })
 
-  it('all three providers appear across primary + fallbacks', () => {
+  it('only proven video providers appear across primary + fallbacks', () => {
     const order = resolveVideoProviderOrder('balanced', 'text_to_video', 10)
     const all = [order.primary, ...order.fallbacks]
     expect(all).toContain('genx')
-    expect(all).toContain('together')
     expect(all).toContain('huggingface')
+    expect(all).not.toContain('together')
   })
 })
 
@@ -549,24 +551,29 @@ describe('executeCapability video_generation — router', () => {
       GENX_AUDIO_MODELS: [], GENX_VIDEO_MODELS: ['veo-3.1'], GENX_I2V_MODELS: [],
     }))
     vi.doMock('@/lib/brain', () => ({
-      getVaultApiKey: vi.fn(async (p: string) => p === 'together' ? 'together-key' : null),
+      getVaultApiKey: vi.fn(async (p: string) => p === 'huggingface' ? 'hf-key' : null),
       callProvider: vi.fn(),
     }))
     vi.doMock('@/lib/video-capability', async () => {
       const actual = await vi.importActual<typeof import('../video-capability')>('../video-capability')
       return {
         ...actual,
-        executeTogetherVideoGeneration: vi.fn(async () => ({
-          success: true, videoUrl: 'https://cdn.together.com/clip.mp4', jobId: null,
-          model: 'FLUX.1-schnell-Free', generationMode: 'clip', requestedDuration: 10, error: null,
+        executeTogetherVideoGeneration: vi.fn(async () => {
+          throw new Error('Together video should not be called')
+        }),
+        executeHFVideoGeneration: vi.fn(async () => ({
+          success: true, videoUrl: 'https://cdn.hf.example/clip.mp4', videoDataUrl: null,
+          jobId: null, model: 'ByteDance/AnimateDiff-Lightning',
+          providerKey: 'animatediff', generationMode: 'clip',
+          requestedDuration: 10, actualDuration: 4, error: null,
         })),
       }
     })
 
     const result = await call({ budget: 'cheap' })
     expect(result.success).toBe(true)
-    expect(result.provider).toBe('together')
-    expect(result.output).toBe('https://cdn.together.com/clip.mp4')
+    expect(result.provider).toBe('huggingface')
+    expect(result.output).toBe('https://cdn.hf.example/clip.mp4')
     expect(result.outputType).toBe('video')
     expect(result.metadata?.generationMode).toBe('clip')
   })
@@ -612,28 +619,28 @@ describe('executeCapability video_generation — router', () => {
       GENX_AUDIO_MODELS: [], GENX_VIDEO_MODELS: ['veo-3.1'], GENX_I2V_MODELS: [],
     }))
     vi.doMock('@/lib/brain', () => ({
-      getVaultApiKey: vi.fn(async (p: string) => p === 'together' ? 'together-key' : null),
+      getVaultApiKey: vi.fn(async (p: string) => p === 'huggingface' ? 'hf-key' : null),
       callProvider: vi.fn(),
     }))
     vi.doMock('@/lib/video-capability', async () => {
       const actual = await vi.importActual<typeof import('../video-capability')>('../video-capability')
       return {
         ...actual,
-        executeTogetherVideoGeneration: vi.fn(async () => ({
-          success: true, videoUrl: 'https://cdn.together.com/fallback.mp4', jobId: null,
-          model: 'FLUX.1-schnell-Free', generationMode: 'clip', requestedDuration: 10, error: null,
-        })),
+        executeTogetherVideoGeneration: vi.fn(async () => {
+          throw new Error('Together video should not be called')
+        }),
         executeHFVideoGeneration: vi.fn(async () => ({
-          success: false, videoUrl: null, videoDataUrl: null, jobId: null,
-          model: 'none', providerKey: 'none', generationMode: 'clip',
-          requestedDuration: 10, actualDuration: null, error: 'HF not configured',
+          success: true, videoUrl: 'https://cdn.hf.example/fallback.mp4', videoDataUrl: null,
+          jobId: null, model: 'ByteDance/AnimateDiff-Lightning',
+          providerKey: 'animatediff', generationMode: 'clip',
+          requestedDuration: 10, actualDuration: 4, error: null,
         })),
       }
     })
 
     const result = await call({ budget: 'premium' })
     expect(result.success).toBe(true)
-    expect(result.provider).toBe('together')
+    expect(result.provider).toBe('huggingface')
     expect(result.fallbackUsed).toBe(true)
   })
 
@@ -648,7 +655,6 @@ describe('executeCapability video_generation — router', () => {
     }))
     vi.doMock('@/lib/brain', () => ({
       getVaultApiKey: vi.fn(async (p: string) => {
-        if (p === 'together') return 'together-key'
         if (p === 'huggingface') return 'hf-key'
         return null
       }),
@@ -658,11 +664,9 @@ describe('executeCapability video_generation — router', () => {
       const actual = await vi.importActual<typeof import('../video-capability')>('../video-capability')
       return {
         ...actual,
-        executeTogetherVideoGeneration: vi.fn(async () => ({
-          success: false, videoUrl: null, jobId: null,
-          model: 'FLUX.1-schnell-Free', generationMode: 'clip', requestedDuration: 10,
-          error: 'Together video unavailable',
-        })),
+        executeTogetherVideoGeneration: vi.fn(async () => {
+          throw new Error('Together video should not be called')
+        }),
         executeHFVideoGeneration: vi.fn(async () => ({
           success: true, videoUrl: null, videoDataUrl: 'data:video/mp4;base64,BBBB',
           jobId: null, model: 'ByteDance/AnimateDiff-Lightning',
