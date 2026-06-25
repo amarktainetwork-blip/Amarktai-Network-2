@@ -441,7 +441,6 @@ export async function callProvider(
         return { ok: true, output: data?.choices?.[0]?.message?.content ?? null, error: null, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
       }
 
-      // ── Replicate ──────────────────────────────────────────────────────────
       default:
         return { ok: false, output: null, error: `Unknown provider: "${providerKey}"`, latencyMs: Date.now() - start, model: resolvedModel, providerKey }
     }

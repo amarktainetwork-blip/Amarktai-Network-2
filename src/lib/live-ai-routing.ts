@@ -275,11 +275,11 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
     .filter((model) => model.enabled)
     .filter((model) => {
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
-      if (capability === 'adult_text') return ['genx', 'together', 'huggingface', 'openai'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
+      if (capability === 'adult_text') return ['genx', 'together', 'huggingface'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
       if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
       if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
-      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'minimax' || model.provider === 'openai'
-      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'openai'
+      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'mimo' || model.provider === 'genx'
+      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'huggingface'
       if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false
       if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing') return model.modalities.includes('image') || model.modalities.includes('multimodal')
       if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')

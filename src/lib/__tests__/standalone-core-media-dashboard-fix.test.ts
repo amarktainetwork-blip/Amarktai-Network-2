@@ -39,9 +39,25 @@ describe('canonical media artifact pipeline', () => {
 })
 
 describe('standalone dashboard product shell', () => {
-  it('contains the six required primary sections', () => {
+  it('contains the required control-centre primary sections', () => {
     const nav = read('lib/dashboard-nav.ts')
-    for (const label of ['App Builder', 'Repo Workbench', 'Media Studio / Playground', 'Outputs', 'Settings', 'Advanced Admin']) {
+    for (const label of [
+      'Control Centre',
+      'Studio',
+      'Capabilities',
+      'Apps',
+      'Providers & Keys',
+      'Storage & Artifacts',
+      'Memory & RAG',
+      'Agents',
+      'Jobs & Worker',
+      'Approvals',
+      'Publishing',
+      'Analytics',
+      'Safety',
+      'VPS Health',
+      'Settings',
+    ]) {
       expect(nav).toContain(`label: '${label}'`)
     }
   })

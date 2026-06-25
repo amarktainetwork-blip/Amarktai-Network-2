@@ -7,7 +7,7 @@ import { getAppAgent, buildAgentSystemPrompt } from '@/lib/app-agent'
 
 // ── Provider streaming configuration ──────────────────────────────────────────
 
-/** Base URLs for OpenAI-compatible streaming providers */
+/** Base URLs for chat-completions-compatible streaming providers */
 const STREAMING_PROVIDERS: Record<string, { baseUrl: string }> = {
   genx:      { baseUrl: 'https://query.genx.sh' },
   groq:       { baseUrl: 'https://api.groq.com/openai' },
@@ -131,8 +131,8 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // ── HuggingFace / Replicate non-streaming fallback ─────────────
-        // These providers don't support SSE — call via callProvider and
+        // ── HuggingFace non-streaming fallback ─────────────
+        // This provider does not support SSE — call via callProvider and
         // emit the full response as a single chunk + done event.
         if (resolvedProvider === 'huggingface') {
           const result = await callProvider(
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
           return
         }
 
-        // ── OpenAI-compatible streaming ────────────────────────────────
+        // ── Chat-completions-compatible streaming ──────────────────────
         const providerConfig = STREAMING_PROVIDERS[resolvedProvider]
         if (!providerConfig) {
           send({ type: 'error', message: `Provider "${resolvedProvider}" does not support streaming.` })

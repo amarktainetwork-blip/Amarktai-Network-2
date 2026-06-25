@@ -16,14 +16,23 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
     vi.restoreAllMocks()
   })
 
-  it('keeps the dashboard to the seven final sections only', () => {
+  it('keeps the dashboard to the final control-centre sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'App Builder',
-      'Repo Workbench',
-      'Media Studio / Playground',
-      'Outputs',
+      'Control Centre',
+      'Studio',
+      'Capabilities',
+      'Apps',
+      'Providers & Keys',
+      'Storage & Artifacts',
+      'Memory & RAG',
+      'Agents',
+      'Jobs & Worker',
+      'Approvals',
+      'Publishing',
+      'Analytics',
+      'Safety',
+      'VPS Health',
       'Settings',
-      'Advanced Admin',
     ])
   })
 

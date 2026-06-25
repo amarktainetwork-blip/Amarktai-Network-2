@@ -189,7 +189,7 @@ model WaitlistEntry {
 
 model AiProvider {
   id            Int       @id @default(autoincrement())
-  providerKey   String    @unique @map("provider_key") // openai | gemini | grok | qwen | huggingface | nvidia
+  providerKey   String    @unique @map("provider_key") // active provider key
   displayName   String    @map("display_name")
   enabled       Boolean   @default(false)
   apiKey        String    @default("") @map("api_key") // stored server-side only — never returned raw
@@ -537,7 +537,7 @@ model AppAiProfile {
 
 // ── Fine-Tuning Jobs ─────────────────────────────────────────────────────────
 
-/// Persisted fine-tuning job metadata for OpenAI / Together / Qwen providers.
+/// Persisted fine-tuning job metadata for active provider integrations.
 model FineTuneJob {
   id              Int       @id @default(autoincrement())
   jobId           String    @unique @map("job_id")
@@ -758,7 +758,7 @@ model WebhookDeliveryRecord {
 // ── App Agent (per-app dedicated specialist) ────────────────────────────────
 
 /// A dedicated AI agent created for each connected app.
-/// Routes through the AmarktAI super-brain — never calls providers directly.
+/// Routes through the AmarktAI runtime layer — never calls providers directly.
 model AppAgent {
   id        String   @id @default(cuid())
   appSlug   String   @unique @map("app_slug")

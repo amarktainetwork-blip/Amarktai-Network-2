@@ -50,9 +50,23 @@ describe('Phase 1 backend source of truth', () => {
     )
   })
 
-  it('uses Workspace navigation and keeps Command as compatibility only', () => {
+  it('uses control-centre navigation and keeps Command as compatibility only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'App Builder', 'Repo Workbench', 'Media Studio / Playground', 'Outputs', 'Settings', 'Advanced Admin',
+      'Control Centre',
+      'Studio',
+      'Capabilities',
+      'Apps',
+      'Providers & Keys',
+      'Storage & Artifacts',
+      'Memory & RAG',
+      'Agents',
+      'Jobs & Worker',
+      'Approvals',
+      'Publishing',
+      'Analytics',
+      'Safety',
+      'VPS Health',
+      'Settings',
     ])
     expect(read('app/admin/dashboard/workspace/page.tsx')).toContain('CommandCenter')
     expect(read('app/admin/dashboard/command/page.tsx')).toContain("redirect('/admin/dashboard/workspace')")

@@ -56,19 +56,19 @@ interface CapabilityRequirement {
  * available the gap is flagged.
  */
 export const CAPABILITY_REQUIREMENTS: Record<string, CapabilityRequirement> = {
-  chat:              { providers: ['openai', 'groq', 'deepseek'],   models: ['gpt-4o', 'llama-3.1-70b', 'deepseek-chat'] },
-  code:              { providers: ['openai', 'deepseek'],           models: ['gpt-4o', 'deepseek-coder'] },
-  image_generation:  { providers: ['openai', 'together'],           models: ['dall-e-3'] },
-  video:             { providers: ['openai'],                       models: [] },
-  voice:             { providers: ['openai'],                       models: ['tts-1', 'whisper-1'] },
-  retrieval:         { providers: ['openai'],                       models: ['text-embedding-3-small'] },
-  agents:            { providers: ['openai', 'groq'],               models: ['gpt-4o'] },
-  reasoning:         { providers: ['openai', 'deepseek'],           models: ['gpt-4o', 'deepseek-chat'] },
-  embeddings:        { providers: ['openai'],                       models: ['text-embedding-3-small'] },
-  structured_output: { providers: ['openai', 'groq'],               models: ['gpt-4o'] },
-  tool_use:          { providers: ['openai'],                       models: ['gpt-4o'] },
-  multilingual:      { providers: ['openai', 'deepseek'],           models: ['gpt-4o'] },
-  agent_planning:    { providers: ['openai'],                       models: ['gpt-4o'] },
+  chat:              { providers: ['genx', 'groq', 'together'],      models: ['genx/default-chat', 'llama-3.1-70b'] },
+  code:              { providers: ['genx', 'groq', 'together'],      models: ['genx/default-code', 'llama-3.1-70b'] },
+  image_generation:  { providers: ['genx', 'huggingface', 'together'], models: ['black-forest-labs/FLUX.1-schnell-Free'] },
+  video:             { providers: ['genx', 'together'],              models: [] },
+  voice:             { providers: ['genx', 'groq', 'huggingface', 'mimo'], models: ['openai/whisper-large-v3'] },
+  retrieval:         { providers: ['huggingface'],                   models: ['sentence-transformers/all-MiniLM-L6-v2'] },
+  agents:            { providers: ['genx', 'groq', 'together'],      models: ['genx/default-chat'] },
+  reasoning:         { providers: ['genx', 'groq', 'together'],      models: ['genx/default-reasoning'] },
+  embeddings:        { providers: ['huggingface'],                   models: ['sentence-transformers/all-MiniLM-L6-v2'] },
+  structured_output: { providers: ['genx', 'groq', 'together'],      models: ['genx/default-chat'] },
+  tool_use:          { providers: ['genx'],                          models: ['genx/default-chat'] },
+  multilingual:      { providers: ['genx', 'huggingface', 'together'], models: ['genx/default-chat'] },
+  agent_planning:    { providers: ['genx'],                          models: ['genx/default-chat'] },
 }
 
 /* ------------------------------------------------------------------ */

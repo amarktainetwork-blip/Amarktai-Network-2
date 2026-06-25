@@ -10,11 +10,11 @@ const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf
 
 describe('final public website', () => {
   it('uses the exact public navigation source of truth', () => {
-    // Updated nav includes marketing, capabilities, apps, safety pages
+    // Updated nav keeps the public site platform-first.
     const hrefs = PUBLIC_NAV_ITEMS.map(i => i.href)
     expect(hrefs).toContain('/')
     expect(hrefs).toContain('/platform')
-    expect(hrefs).toContain('/marketing')
+    expect(hrefs).not.toContain('/marketing')
     expect(hrefs).toContain('/capabilities')
     expect(hrefs).toContain('/apps')
     expect(hrefs).toContain('/safety')
@@ -27,7 +27,7 @@ describe('final public website', () => {
     // IntelligenceFabric still used in hero
     expect(source).toContain('intelligencefabric')
     // New required sections
-    expect(source).toContain('marketing-workflow')
+    expect(source).toContain('runtime-workflow')
     expect(source).toContain('capabilities')
     expect(source).toContain('brand memory')
     expect(source).toContain('approval')
@@ -63,7 +63,8 @@ describe('final public website', () => {
     }
   })
 
-  it('keeps the final audit document', () => {
-    expect(fs.existsSync(path.join(REPO, 'docs/audits/FINAL_SOURCE_OF_TRUTH_AND_PROVIDER_MESH_AUDIT.md'))).toBe(true)
+  it('removes old audit drift documents from the repo', () => {
+    expect(fs.existsSync(path.join(REPO, 'docs/audits'))).toBe(false)
+    expect(fs.existsSync(path.join(REPO, 'docs/forensic'))).toBe(false)
   })
 })

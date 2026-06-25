@@ -100,14 +100,15 @@ describe('/api/brain/adult-text', () => {
     expect(data.artifactId).toBe('artifact_adult_text_1')
   })
 
-  it('routes adult_text capability through specialist providers without GenX fallback', async () => {
+  it('routes adult_text capability through Hugging Face endpoints without GenX fallback', async () => {
+    vi.stubEnv('HF_ADULT_TEXT_ENDPOINT', 'https://hf.test/adult-text')
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-      expect(String(input)).toBe('https://api.together.xyz/v1/chat/completions')
+      expect(String(input)).toBe('https://hf.test/adult-text')
       const body = JSON.parse(String(init?.body ?? '{}'))
-      expect(body.model).toBe('NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO')
+      expect(body.messages[1].content).toContain('adult roleplay conversation for consenting adults')
       return new Response(JSON.stringify({
-        choices: [{ message: { content: 'A respectful consenting adult conversation response.' } }],
-      }), { status: 200 })
+        generated_text: 'A respectful consenting adult conversation response.',
+      }), { status: 200, headers: { 'content-type': 'application/json' } })
     }))
     const { executeCapability } = await import('@/lib/capability-router')
 
@@ -116,12 +117,12 @@ describe('/api/brain/adult-text', () => {
       capability: 'adult_text',
       adultMode: true,
       safeMode: false,
-      providerOverride: 'together',
+      providerOverride: 'huggingface',
     })
 
     expect(result.success).toBe(true)
     expect(result.capability).toBe('adult_text')
-    expect(result.provider).toBe('together')
+    expect(result.provider).toBe('huggingface')
     expect(result.fallbackUsed).toBe(false)
     expect(result.output).toContain('consenting adult')
   })

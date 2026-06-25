@@ -104,9 +104,6 @@ export async function GET() {
     voice.push(directModel('hf/tts-model', 'Configured TTS endpoint/model', 'Hugging Face', 'voice', 'medium'))
   }
   if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
-  if (false) {
-    // Music generation for MiniMax is post-launch — route not yet implemented
-  }
 
   return NextResponse.json({
     genx: {

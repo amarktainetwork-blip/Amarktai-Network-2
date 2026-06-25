@@ -399,7 +399,7 @@ async function main() {
 
   // ── API Keys ───────────────────────────────────────────────────────
   const apiKeys = [
-    { provider: 'Anthropic', label: 'Claude API', apiKey: 'sk-ant-••••••••••••••••', isActive: true },
+    { provider: 'Groq', label: 'Groq API', apiKey: 'gsk_••••••••••••••••', isActive: true },
     { provider: 'Coinbase', label: 'Crypto Data Feed', apiKey: 'cb_••••••••••••••••••••', isActive: false },
   ]
   for (const k of apiKeys) {

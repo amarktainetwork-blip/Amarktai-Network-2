@@ -76,7 +76,7 @@ const BUDGET_BANDS: Record<string, BudgetBand> = {
     preferredModels: [
       'groq/llama-3.1-8b-instant',
       'groq/llama-3.3-70b-versatile',
-      'deepseek/deepseek-chat',
+      'together/meta-llama/Llama-3.3-70B-Instruct-Turbo',
     ],
     fallbackModels: ['groq/llama-3.1-8b-instant'],
   },
@@ -85,22 +85,20 @@ const BUDGET_BANDS: Record<string, BudgetBand> = {
     maxCostPerRequest: 0.02,
     preferredModels: [
       'groq/llama-3.3-70b-versatile',
-      'openai/gpt-4o-mini',
-      'deepseek/deepseek-chat',
-      'anthropic/claude-3-5-haiku-latest',
+      'together/meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      'genx/default-chat',
     ],
-    fallbackModels: ['groq/llama-3.1-8b-instant', 'deepseek/deepseek-chat'],
+    fallbackModels: ['groq/llama-3.1-8b-instant', 'genx/default-chat'],
   },
   best_quality: {
     mode: 'best_quality',
     maxCostPerRequest: 0.15,
     preferredModels: [
-      'openai/gpt-4o',
-      'anthropic/claude-3-5-sonnet-latest',
-      'openai/o1-mini',
-      'gemini/gemini-2.0-flash',
+      'genx/default-chat',
+      'together/meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      'groq/llama-3.3-70b-versatile',
     ],
-    fallbackModels: ['openai/gpt-4o-mini', 'groq/llama-3.3-70b-versatile'],
+    fallbackModels: ['groq/llama-3.3-70b-versatile', 'genx/default-chat'],
   },
 }
 
@@ -226,7 +224,7 @@ export async function callLiteLLM(request: LiteLLMRequest): Promise<LiteLLMRespo
 }
 
 /**
- * Extract provider name from a model string like "openai/gpt-4o".
+ * Extract provider name from a model string like "groq/llama-3.3-70b-versatile".
  */
 function extractProvider(model: string): string {
   if (!model.includes('/')) return 'unknown'

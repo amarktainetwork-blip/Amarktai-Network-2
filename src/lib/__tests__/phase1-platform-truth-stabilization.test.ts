@@ -22,22 +22,40 @@ describe('Phase 1 platform truth stabilization', () => {
     delete process.env.AMARKTAI_ALLOW_DEV_STORAGE_FALLBACK
   })
 
-  it('keeps the dashboard to the six command operating-system sections', () => {
+  it('keeps the dashboard to the control-centre operating sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'App Builder',
-      'Repo Workbench',
-      'Media Studio / Playground',
-      'Outputs',
+      'Control Centre',
+      'Studio',
+      'Capabilities',
+      'Apps',
+      'Providers & Keys',
+      'Storage & Artifacts',
+      'Memory & RAG',
+      'Agents',
+      'Jobs & Worker',
+      'Approvals',
+      'Publishing',
+      'Analytics',
+      'Safety',
+      'VPS Health',
       'Settings',
-      'Advanced Admin',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard/app-builder',
-      '/admin/dashboard/workbench',
+      '/admin/dashboard',
       '/admin/dashboard/studio',
+      '/admin/dashboard/operations',
+      '/admin/dashboard/network-apps',
+      '/admin/dashboard/providers',
       '/admin/dashboard/outputs',
-      '/admin/dashboard/settings',
+      '/admin/dashboard/rag',
+      '/admin/dashboard/agents',
       '/admin/dashboard/system',
+      '/admin/dashboard/approvals',
+      '/admin/dashboard/publishing',
+      '/admin/dashboard/analytics',
+      '/admin/dashboard/adult-mode',
+      '/admin/dashboard/vps-health',
+      '/admin/dashboard/settings',
     ])
   })
 

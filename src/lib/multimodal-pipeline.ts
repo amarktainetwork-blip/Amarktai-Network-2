@@ -251,7 +251,7 @@ async function executeStage(stage: PipelineStage, input: unknown): Promise<unkno
     return result.output ?? ''
   }
 
-  // text → audio — OpenAI TTS
+  // text → audio — active media provider
   if (stage.inputModality === 'text' && stage.outputModality === 'audio') {
     if (stage.provider !== 'genx') throw new Error('Audio pipeline stages require the approved GenX media provider')
     const result = await callGenXMedia({
@@ -264,7 +264,7 @@ async function executeStage(stage: PipelineStage, input: unknown): Promise<unkno
     return { url: result.url, provider: 'genx', jobId: result.jobId ?? null }
   }
 
-  // text → image — OpenAI DALL-E or Replicate
+  // text → image — active image provider
   if (stage.inputModality === 'text' && stage.outputModality === 'image') {
     if (stage.provider === 'genx') {
       const result = await callGenXMedia({
@@ -281,7 +281,7 @@ async function executeStage(stage: PipelineStage, input: unknown): Promise<unkno
     return { url: result.output, provider: stage.provider }
   }
 
-  // image → text (vision) — OpenAI GPT-4V
+  // image → text (vision) — active vision provider
   if (stage.inputModality === 'image' && stage.outputModality === 'text') {
     const imageUrl = typeof input === 'string' ? input : (input as { url?: string })?.url
     if (!imageUrl) throw new Error('Vision stage expects an image URL as input')

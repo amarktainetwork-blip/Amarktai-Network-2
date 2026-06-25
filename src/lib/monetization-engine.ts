@@ -180,16 +180,12 @@ const subscriptions = new Map<string, AppSubscription>()
 
 /** Rough per-token cost in USD cents by model prefix. */
 const MODEL_TOKEN_COST_CENTS: Array<{ prefix: string; inputCentsPerKToken: number; outputCentsPerKToken: number }> = [
-  { prefix: 'gpt-4o',        inputCentsPerKToken: 0.25,  outputCentsPerKToken: 1.00 },
-  { prefix: 'gpt-4',         inputCentsPerKToken: 3.00,  outputCentsPerKToken: 6.00 },
-  { prefix: 'gpt-3.5',       inputCentsPerKToken: 0.05,  outputCentsPerKToken: 0.15 },
-  { prefix: 'claude-3-5',    inputCentsPerKToken: 0.30,  outputCentsPerKToken: 1.50 },
-  { prefix: 'claude-3-opus', inputCentsPerKToken: 1.50,  outputCentsPerKToken: 7.50 },
-  { prefix: 'claude-3',      inputCentsPerKToken: 0.30,  outputCentsPerKToken: 1.50 },
-  { prefix: 'deepseek',      inputCentsPerKToken: 0.014, outputCentsPerKToken: 0.028 },
-  { prefix: 'gemini',        inputCentsPerKToken: 0.075, outputCentsPerKToken: 0.30 },
+  { prefix: 'genx',          inputCentsPerKToken: 0.10,  outputCentsPerKToken: 0.30 },
+  { prefix: 'groq',          inputCentsPerKToken: 0.02,  outputCentsPerKToken: 0.02 },
+  { prefix: 'together',      inputCentsPerKToken: 0.05,  outputCentsPerKToken: 0.08 },
+  { prefix: 'huggingface',   inputCentsPerKToken: 0.00,  outputCentsPerKToken: 0.00 },
+  { prefix: 'mimo',          inputCentsPerKToken: 0.05,  outputCentsPerKToken: 0.08 },
   { prefix: 'llama',         inputCentsPerKToken: 0.02,  outputCentsPerKToken: 0.02 },
-  { prefix: 'mistral',       inputCentsPerKToken: 0.07,  outputCentsPerKToken: 0.07 },
 ]
 
 /** Flat cost per generation for non-token types. */
@@ -201,7 +197,7 @@ const FLAT_GENERATION_COST_CENTS: Record<GenerationType, number> = {
   embedding: 0,     // token-based
   workflow: 2,      // 2¢ per workflow run
   agent_task: 3,    // 3¢ per agent task
-  image: 4,         // ~4¢ per image (DALL-E 3 standard)
+  image: 4,         // ~4 cents per image
   video: 20,        // ~20¢ per video generation
   audio: 2,         // ~2¢ per TTS chunk
   music: 15,        // ~15¢ per music generation
@@ -220,10 +216,12 @@ export function estimateCost(
   const tokenRates = MODEL_TOKEN_COST_CENTS.find((r) => modelLower.startsWith(r.prefix))
 
   if (tokenRates && (inputTokens > 0 || outputTokens > 0)) {
-    return Math.round(
+    const estimatedCost = Math.round(
       (inputTokens / 1000) * tokenRates.inputCentsPerKToken +
       (outputTokens / 1000) * tokenRates.outputCentsPerKToken,
     )
+    const isFreeProvider = tokenRates.inputCentsPerKToken === 0 && tokenRates.outputCentsPerKToken === 0
+    return isFreeProvider ? 0 : Math.max(1, estimatedCost)
   }
 
   return FLAT_GENERATION_COST_CENTS[type] ?? 1

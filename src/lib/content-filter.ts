@@ -2,8 +2,8 @@
  * Content Filter Pipeline
  *
  * Scans outputs for policy-violating content and blocks flagged material.
- * Uses the OpenAI Moderation API as the primary classifier, with a
- * keyword-based fallback when the API is unavailable.
+ * Uses deterministic keyword-based scanning so safety checks do not depend on
+ * removed provider keys.
  *
  * Categories checked:
  *  - child sexual abuse material (CSAM)
@@ -20,7 +20,6 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { getVaultApiKey } from '@/lib/brain'
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -39,7 +38,7 @@ export interface ContentFilterResult {
   /** Confidence 0-1 (keyword match always returns 1.0) */
   confidence: number;
   /** Which scanner produced the result. */
-  scanner: 'openai_moderation' | 'keyword_fallback';
+  scanner: 'keyword_fallback';
 }
 
 export interface ModerationAlert {
@@ -383,7 +382,7 @@ const BLOCKED_MESSAGE =
  * Keyword-based content scanner (fallback).
  *
  * This is a lightweight keyword-based classifier. For production use,
- * the OpenAI Moderation API is preferred (see scanContentWithModeration).
+ * the keyword scanning is used by scanContentWithModeration().
  */
 export function scanContent(text: string, appSlug?: string): ContentFilterResult {
   const flagged: FlagCategory[] = [];
@@ -423,8 +422,7 @@ export function scanContent(text: string, appSlug?: string): ContentFilterResult
 }
 
 /**
- * Scan content using the OpenAI Moderation API (primary), falling back to
- * keyword-based scanning when the API is unavailable.
+ * Scan content using the keyword-based safety scanner.
  *
  * @param text - The text to scan
  * @param appSlug - Optional app slug to apply per-app safety config
@@ -433,43 +431,6 @@ export async function scanContentWithModeration(
   text: string,
   appSlug?: string,
 ): Promise<ContentFilterResult> {
-  const apiKey = await getVaultApiKey('openai');
-
-  // Try OpenAI Moderation API first
-  if (apiKey) {
-    try {
-      const response = await fetch('https://api.openai.com/v1/moderations', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input: text }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const result = data.results?.[0];
-        if (result) {
-          const openAiResult = mapOpenAIModerationResult(result, appSlug);
-          if (openAiResult.flagged) {
-            return openAiResult;
-          }
-          // OpenAI said not flagged — run keyword scanner as a conservative
-          // secondary check to catch content OpenAI may have missed.
-          const keywordResult = scanContent(text);
-          if (keywordResult.flagged) {
-            return appSlug ? applySafetyConfig(keywordResult, appSlug) : keywordResult;
-          }
-          return openAiResult;
-        }
-      }
-    } catch {
-      // OpenAI API unavailable — fall through to keyword scanner
-    }
-  }
-
-  // Fallback to keyword scanner
   const keywordResult = scanContent(text);
 
   // Apply per-app safety config
@@ -481,56 +442,6 @@ export async function scanContentWithModeration(
 }
 
 /**
- * Map OpenAI Moderation API result to our FlagCategory system.
- */
-function mapOpenAIModerationResult(
-  result: { flagged: boolean; categories: Record<string, boolean> },
-  appSlug?: string,
-): ContentFilterResult {
-  if (!result.flagged) {
-    return { flagged: false, categories: [], message: '', confidence: 0, scanner: 'openai_moderation' };
-  }
-
-  const flagged: FlagCategory[] = [];
-
-  // Map OpenAI categories to our categories
-  if (result.categories['sexual/minors']) flagged.push('csam');
-  if (result.categories['harassment/threatening'] || result.categories['hate/threatening']) {
-    flagged.push('hate_speech');
-  }
-  if (result.categories['hate']) flagged.push('hate_speech');
-  if (result.categories['violence/graphic'] || result.categories['violence']) flagged.push('violence');
-  if (result.categories['self-harm'] || result.categories['self-harm/instructions'] || result.categories['self-harm/intent']) {
-    flagged.push('self_harm');
-  }
-  // OpenAI does not have a dedicated terrorism category — extremist content is
-  // typically caught under harassment/threatening or violence.  Our keyword
-  // scanner covers terrorism patterns explicitly.
-
-  // Deduplicate
-  const unique = [...new Set(flagged)];
-
-  if (unique.length === 0) {
-    return { flagged: false, categories: [], message: '', confidence: 0, scanner: 'openai_moderation' };
-  }
-
-  const filterResult: ContentFilterResult = {
-    flagged: true,
-    categories: unique,
-    message: BLOCKED_MESSAGE,
-    confidence: 0.95,
-    scanner: 'openai_moderation',
-  };
-
-  // Apply per-app safety config
-  if (appSlug) {
-    return applySafetyConfig(filterResult, appSlug);
-  }
-
-  return filterResult;
-}
-
-/**
  * Apply per-app safety configuration to a filter result.
  * CSAM, non-consensual, violence, self-harm, and hate speech are ALWAYS blocked.
  *
@@ -538,8 +449,7 @@ function mapOpenAIModerationResult(
  * is allowed through. Since all our current FlagCategories are in ALWAYS_BLOCKED,
  * this primarily affects future categories and ensures the flag is respected.
  * More importantly, this extends to the moderation pipeline: when suggestiveMode=true,
- * OpenAI Moderation's "sexual" flag (which we don't map to our categories) is
- * not escalated, and guardrails toxicity checks do not block suggestive language.
+ * suggestive keyword matches can be evaluated under the app safety policy.
  */
 function applySafetyConfig(result: ContentFilterResult, appSlug: string): ContentFilterResult {
   // Always block these categories regardless of mode

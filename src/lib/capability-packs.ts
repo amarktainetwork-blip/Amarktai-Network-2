@@ -6,7 +6,7 @@
  * access, agent assignments, and safety/budget constraints tailored to a
  * specific category of application (support bots, creator tools, companion
  * apps, etc.).  Apps register against a pack to receive a pre-configured
- * slice of the AmarktAI brain that matches their use-case.
+ * slice of the AmarktAI capability platform that matches their use-case.
  *
  * Server-side only — do NOT import from client components.
  */
@@ -76,8 +76,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Customer support and help-desk chat applications with retrieval-augmented generation and voice.',
       capabilities: ['chat', 'retrieval', 'agents', 'voice', 'structured_output'],
-      allowedProviders: ['openai', 'groq', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 5_000, monthly: 100_000 }, // $50/day, $1 000/month
       recommendedAgents: ['router', 'support_community', 'memory'],
@@ -94,8 +94,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Creative and marketing applications including image/video generation, copywriting, and campaign management.',
       capabilities: ['chat', 'image_generation', 'video', 'voice', 'code', 'reasoning'],
-      allowedProviders: ['openai', 'deepseek', 'together'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 8_000, monthly: 200_000 }, // $80/day, $2 000/month
       recommendedAgents: ['creative', 'campaign', 'router'],
@@ -112,8 +112,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Persistent AI companion applications with rich memory, voice interaction, and image capabilities.',
       capabilities: ['chat', 'voice', 'image_generation', 'reasoning', 'embeddings'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 10_000, monthly: 250_000 }, // $100/day, $2 500/month
       recommendedAgents: ['router', 'memory', 'creative'],
@@ -137,8 +137,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
         'embeddings',
         'multilingual',
       ],
-      allowedProviders: ['openai', 'deepseek', 'groq'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 3_000, monthly: 80_000 }, // $30/day, $800/month
       recommendedAgents: ['router', 'retrieval', 'memory'],
@@ -155,8 +155,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Dating and social-matching applications with conversational AI, image generation, and real-time voice.',
       capabilities: ['chat', 'image_generation', 'voice', 'reasoning'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 7_000, monthly: 150_000 }, // $70/day, $1 500/month
       recommendedAgents: ['router', 'memory', 'creative'],
@@ -173,8 +173,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Music production, media generation, and creative asset pipelines with image, video, and code capabilities.',
       capabilities: ['chat', 'image_generation', 'video', 'voice', 'code'],
-      allowedProviders: ['openai', 'together', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 12_000, monthly: 300_000 }, // $120/day, $3 000/month
       recommendedAgents: ['creative', 'router'],
@@ -191,8 +191,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Voice-first companion and assistant applications with persistent memory and real-time streaming.',
       capabilities: ['chat', 'voice', 'reasoning'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 6_000, monthly: 150_000 }, // $60/day, $1 500/month
       recommendedAgents: ['router', 'voice', 'memory'],
@@ -209,8 +209,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Developer-oriented tools with code generation, reasoning, structured output, and agentic planning.',
       capabilities: ['chat', 'code', 'reasoning', 'structured_output', 'tool_use', 'agent_planning'],
-      allowedProviders: ['openai', 'deepseek', 'groq', 'together'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'relaxed',
       defaultBudget: { daily: 15_000, monthly: 400_000 }, // $150/day, $4 000/month
       recommendedAgents: ['developer', 'router', 'planner'],
@@ -227,8 +227,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Age-gated adult content applications requiring verified 18+ audiences and strict access controls.',
       capabilities: ['chat', 'image_generation', 'voice', 'video'],
-      allowedProviders: ['openai', 'together'],
-      recommendedModels: ['gpt-4o'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'adult_gated',
       defaultBudget: { daily: 10_000, monthly: 250_000 }, // $100/day, $2 500/month
       recommendedAgents: ['router', 'creative', 'memory'],
@@ -245,8 +245,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Deep research, web scraping, data analysis, and report generation for intelligence-gathering applications.',
       capabilities: ['chat', 'retrieval', 'reasoning', 'structured_output', 'embeddings', 'code'],
-      allowedProviders: ['openai', 'deepseek', 'groq', 'together'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 10_000, monthly: 250_000 },
       recommendedAgents: ['researcher', 'retrieval', 'router'],
@@ -263,8 +263,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Security monitoring, threat analysis, anomaly detection, and compliance reporting applications.',
       capabilities: ['chat', 'reasoning', 'structured_output', 'code'],
-      allowedProviders: ['openai', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'deepseek-r1'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 5_000, monthly: 120_000 },
       recommendedAgents: ['security', 'router', 'planner'],
@@ -281,8 +281,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Business operations automation, scheduling, notifications, and workflow orchestration.',
       capabilities: ['chat', 'reasoning', 'structured_output', 'tool_use', 'agent_planning'],
-      allowedProviders: ['openai', 'groq', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 8_000, monthly: 200_000 },
       recommendedAgents: ['operations', 'router', 'planner'],
@@ -299,8 +299,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Pet care, equestrian, and animal-focused applications with image recognition and advice generation.',
       capabilities: ['chat', 'image_generation', 'reasoning', 'retrieval'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 5_000, monthly: 100_000 },
       recommendedAgents: ['router', 'memory', 'creative'],
@@ -317,8 +317,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Faith-based applications — Bible study, sermon prep, prayer tools, devotional content, and doctrinal research.',
       capabilities: ['chat', 'reasoning', 'retrieval', 'structured_output'],
-      allowedProviders: ['openai', 'groq', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 5_000, monthly: 80_000 },
       recommendedAgents: ['router', 'memory', 'validator'],
@@ -335,8 +335,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Educational platforms — tutoring, quiz generation, course content, study aids, and adaptive learning.',
       capabilities: ['chat', 'reasoning', 'retrieval', 'embeddings', 'structured_output'],
-      allowedProviders: ['openai', 'groq', 'deepseek'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 8_000, monthly: 150_000 },
       recommendedAgents: ['router', 'memory', 'learning'],
@@ -353,8 +353,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Home automation and IoT control — device management, routines, energy monitoring, and voice commands.',
       capabilities: ['chat', 'voice', 'structured_output', 'agents'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o-mini', 'llama-3.1-8b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'standard',
       defaultBudget: { daily: 3_000, monthly: 60_000 },
       recommendedAgents: ['router', 'executor'],
@@ -371,8 +371,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Health and wellness applications — fitness tracking, nutrition, mental health, symptom logging, and wellness coaching.',
       capabilities: ['chat', 'reasoning', 'retrieval', 'structured_output'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o', 'llama-3.1-70b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 5_000, monthly: 100_000 },
       recommendedAgents: ['router', 'memory', 'learning'],
@@ -389,8 +389,8 @@ const CAPABILITY_PACKS: Map<string, CapabilityPack> = new Map([
       description:
         'Family management and personal assistant apps — scheduling, reminders, meal planning, and family coordination.',
       capabilities: ['chat', 'voice', 'structured_output', 'agents'],
-      allowedProviders: ['openai', 'groq'],
-      recommendedModels: ['gpt-4o-mini', 'llama-3.1-8b'],
+      allowedProviders: ['genx', 'huggingface', 'together', 'groq', 'mimo'],
+      recommendedModels: ['genx/default-chat', 'llama-3.1-70b'],
       safetyLevel: 'strict',
       defaultBudget: { daily: 4_000, monthly: 80_000 },
       recommendedAgents: ['router', 'memory', 'scheduler'],

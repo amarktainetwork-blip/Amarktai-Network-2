@@ -120,7 +120,6 @@ export default function PublicShell({ children }: { children: React.ReactNode })
                 {[
                   { href: '/platform', label: 'Overview' },
                   { href: '/capabilities', label: 'Capabilities' },
-                  { href: '/marketing', label: 'Marketing' },
                   { href: '/apps', label: 'Apps' },
                 ].map((l) => (
                   <li key={l.href}>

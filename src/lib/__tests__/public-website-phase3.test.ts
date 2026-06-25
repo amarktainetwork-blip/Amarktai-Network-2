@@ -161,10 +161,9 @@ describe('Removed providers not shown as active', () => {
     }
   })
 
-  it('capabilities page explicitly states removed providers are not active', () => {
+  it('capabilities page explicitly states only active providers are available', () => {
     const src = readSrc('src/app/capabilities/page.tsx')
-    // Should mention removed providers are not active
-    expect(src).toMatch(/removed providers|not active|not used/i)
+    expect(src).toMatch(/approved active provider set|active providers only/i)
   })
 
   it('landing page mentions that removed providers are not used', () => {
@@ -199,24 +198,24 @@ describe('Apps never choose providers/models', () => {
 
 // ── 7. Marketing workflow section ─────────────────────────────────────────────
 
-describe('Marketing workflow section', () => {
-  it('landing page has marketing workflow section', () => {
+describe('Runtime workflow section', () => {
+  it('landing page has runtime workflow section', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('marketing-workflow')
-    expect(src).toContain('marketing workflow')
+    expect(src).toContain('runtime-workflow')
+    expect(src).toContain('Runtime workflow')
   })
 
-  it('marketing workflow shows all 9 steps', () => {
+  it('runtime workflow shows all 9 steps', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('Website URL')
-    expect(src).toContain('Brand Memory')
-    expect(src).toContain('RAG')
-    expect(src).toContain('Campaign plan')
-    expect(src).toContain('Generated assets')
-    expect(src).toContain('Approval queue')
-    expect(src).toContain('Schedule')
-    expect(src).toContain('Analytics')
-    expect(src).toContain('Learning')
+    expect(src).toContain('Request')
+    expect(src).toContain('Policy')
+    expect(src).toContain('Routing')
+    expect(src).toContain('Execution')
+    expect(src).toContain('Artifact')
+    expect(src).toContain('Review')
+    expect(src).toContain('Publish / export')
+    expect(src).toContain('Measure')
+    expect(src).toContain('Improve')
   })
 
   it('marketing page exists and has workflow steps', () => {
@@ -308,7 +307,7 @@ describe('Public navigation and footer', () => {
     const hrefs = PUBLIC_NAV_ITEMS.map(i => i.href)
     expect(hrefs).toContain('/')
     expect(hrefs).toContain('/platform')
-    expect(hrefs).toContain('/marketing')
+    expect(hrefs).not.toContain('/marketing')
     expect(hrefs).toContain('/capabilities')
     expect(hrefs).toContain('/apps')
     expect(hrefs).toContain('/safety')
@@ -324,7 +323,7 @@ describe('Public navigation and footer', () => {
     const src = readSrc('src/components/public/PublicShell.tsx')
     expect(src).toContain('/platform')
     expect(src).toContain('/capabilities')
-    expect(src).toContain('/marketing')
+    expect(src).not.toContain('/marketing')
     expect(src).toContain('/apps')
     expect(src).toContain('/safety')
     expect(src).toContain('/privacy')

@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         error:
           'Video generation failed: unsupported model or provider. ' +
           'Hugging Face does not support this video model via API. ' +
-          'Suggestive video generation requires a tested GenX, Qwen, or Together video route.',
+          'Suggestive video generation requires a tested GenX or Together video route.',
         provider_required: 'approved_video_provider',
         availabilityLevel: 'BLOCKED',
       },

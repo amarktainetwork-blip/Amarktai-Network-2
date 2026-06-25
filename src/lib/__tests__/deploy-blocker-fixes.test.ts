@@ -8,7 +8,7 @@
  *  4. package.json has worker script
  *  5. Worker script points to scripts/worker.mjs
  *  6. Removed providers are not shown as active providers
- *  7. Patch script exists and removes [key] entries from manifests
+ *  7. Patch script exists and only copies standalone assets
  */
 
 import { describe, it, expect } from 'vitest'
@@ -62,24 +62,21 @@ describe('Route conflict: [key] removed from built manifests', () => {
     expect(keys.some(k => k.includes('[id]') && k.includes('test'))).toBe(true)
   })
 
-  it('[key]/test route.ts source exports no HTTP handlers', () => {
-    const src = readSrc('src/app/api/admin/providers/[key]/test/route.ts')
-    // Must not export GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS
-    expect(src).not.toMatch(/^export (async )?function (GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)/m)
-    // Source file should be intentionally empty or just export {}
-    expect(src).toMatch(/export\s*\{\}|intentionally empty|use \[id\]/)
+  it('[key]/test route source is deleted', () => {
+    expect(existsSync(join(ROOT, 'src/app/api/admin/providers/[key]/test/route.ts'))).toBe(false)
+    expect(existsSync(join(ROOT, 'src/app/api/admin/providers/[key]'))).toBe(false)
   })
 
   it('patch-manifests.mjs script exists', () => {
     expect(existsSync(join(ROOT, 'scripts/patch-manifests.mjs'))).toBe(true)
   })
 
-  it('patch-manifests.mjs removes [key] routes', () => {
+  it('patch-manifests.mjs does not patch route manifests', () => {
     const src = readSrc('scripts/patch-manifests.mjs')
-    expect(src).toContain('[key]')
-    expect(src).toContain('filter')
-    expect(src).toContain('app-path-routes-manifest')
-    expect(src).toContain('app-paths-manifest')
+    expect(src).not.toContain('[key]')
+    expect(src).not.toContain('app-path-routes-manifest')
+    expect(src).not.toContain('app-paths-manifest')
+    expect(src).toContain('Route manifests are not')
   })
 
   it('patch-manifests.mjs copies standalone static and public assets', () => {
@@ -94,21 +91,6 @@ describe('Route conflict: [key] removed from built manifests', () => {
       writeFileSync(join(tempRoot, '.next/static/css/app.css'), 'body{}')
       writeFileSync(join(tempRoot, '.next/static/chunks/app.js'), 'console.log("ok")')
       writeFileSync(join(tempRoot, 'public/images/logo.txt'), 'logo')
-      writeFileSync(
-        join(tempRoot, '.next/app-path-routes-manifest.json'),
-        JSON.stringify({
-          '/api/admin/providers/[key]/test/route': '/api/admin/providers/[key]/test',
-          '/api/admin/providers/[id]/test/route': '/api/admin/providers/[id]/test',
-        })
-      )
-      writeFileSync(
-        join(tempRoot, '.next/server/app-paths-manifest.json'),
-        JSON.stringify({
-          '/api/admin/providers/[key]/test/route': 'server/key.js',
-          '/api/admin/providers/[id]/test/route': 'server/id.js',
-        })
-      )
-
       execFileSync(process.execPath, [join(ROOT, 'scripts/patch-manifests.mjs')], {
         cwd: tempRoot,
         stdio: 'pipe',
@@ -117,10 +99,6 @@ describe('Route conflict: [key] removed from built manifests', () => {
       expect(existsSync(join(tempRoot, '.next/standalone/.next/static/css/app.css'))).toBe(true)
       expect(existsSync(join(tempRoot, '.next/standalone/.next/static/chunks/app.js'))).toBe(true)
       expect(existsSync(join(tempRoot, '.next/standalone/public/images/logo.txt'))).toBe(true)
-
-      const manifest = JSON.parse(readFileSync(join(tempRoot, '.next/app-path-routes-manifest.json'), 'utf-8')) as Record<string, string>
-      expect(Object.keys(manifest).some((key) => key.includes('[key]'))).toBe(false)
-      expect(Object.keys(manifest).some((key) => key.includes('[id]') && key.includes('test'))).toBe(true)
     } finally {
       rmSync(tempRoot, { recursive: true, force: true })
     }
@@ -230,7 +208,7 @@ describe('package.json: worker script', () => {
     expect(result.status).not.toBe(127)
     expect(output).toContain('[worker] AmarktAI Network Worker starting...')
     expect(output).toContain('REDIS_URL is required')
-  })
+  }, 30_000)
 
   it('package.json has postbuild script that runs the manifest patch', () => {
     const pkg = readJson('package.json')

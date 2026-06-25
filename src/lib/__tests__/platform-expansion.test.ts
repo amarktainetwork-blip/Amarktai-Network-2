@@ -47,7 +47,7 @@ describe('Routing Profiles', () => {
     const p = getRoutingProfile('ultra_resilient')
     expect(p.distributeLoad).toBe(true)
     expect(p.autoFallthrough).toBe(true)
-    expect(p.providerTiers.length).toBeGreaterThanOrEqual(6)
+    expect(p.providerTiers.length).toBe(5)
   })
 
   it('premium profile allows premium cost tier', () => {
@@ -83,7 +83,7 @@ describe('Routing Profiles', () => {
     const decision = shouldRetry(p.retryPolicy, {
       attempt: p.retryPolicy.maxRetries,
       lastErrorMessage: 'timeout',
-      providerKey: 'openai',
+      providerKey: 'groq',
     })
     expect(decision.shouldRetry).toBe(false)
   })
@@ -93,7 +93,7 @@ describe('Routing Profiles', () => {
     const decision = shouldRetry(p.retryPolicy, {
       attempt: 0,
       lastErrorMessage: null,
-      providerKey: 'openai',
+      providerKey: 'groq',
     })
     expect(decision.shouldRetry).toBe(true)
     expect(decision.delayMs).toBeGreaterThan(0)
@@ -101,8 +101,8 @@ describe('Routing Profiles', () => {
 
   it('shouldRetry applies exponential backoff correctly', () => {
     const p = getRoutingProfile('balanced')
-    const d0 = shouldRetry(p.retryPolicy, { attempt: 0, lastErrorMessage: null, providerKey: 'openai' })
-    const d1 = shouldRetry(p.retryPolicy, { attempt: 1, lastErrorMessage: null, providerKey: 'openai' })
+    const d0 = shouldRetry(p.retryPolicy, { attempt: 0, lastErrorMessage: null, providerKey: 'groq' })
+    const d1 = shouldRetry(p.retryPolicy, { attempt: 1, lastErrorMessage: null, providerKey: 'groq' })
     // With backoffMultiplier > 1, d1 should be larger (until capped at maxDelayMs)
     expect(d1.delayMs).toBeGreaterThanOrEqual(d0.delayMs)
   })
@@ -161,18 +161,18 @@ Carrying us through the night.
 PRODUCTION NOTES:
 Gospel organ, choir harmonies, uplifting key change in bridge.`
 
-    const result = parseLyricsOutput(raw, baseRequest, 'gpt-4o')
+    const result = parseLyricsOutput(raw, baseRequest, 'groq/llama-3.3-70b-versatile')
     expect(result.title).toBe('Hope Rises')
     expect(result.genre).toBe('gospel')
     expect(result.vocalStyle).toBe('choir')
     expect(result.lyrics).toBeTruthy()
     expect(result.structure.sections.length).toBeGreaterThan(0)
-    expect(result.model).toBe('gpt-4o')
+    expect(result.model).toBe('groq/llama-3.3-70b-versatile')
     expect(result.id).toBeTruthy()
   })
 
   it('parseLyricsOutput auto-generates title from theme when not in output', () => {
-    const result = parseLyricsOutput('some lyrics without title marker', baseRequest, 'gpt-4o')
+    const result = parseLyricsOutput('some lyrics without title marker', baseRequest, 'groq/llama-3.3-70b-versatile')
     expect(result.title).toContain('hope and resilience')
   })
 
@@ -253,15 +253,15 @@ describe('Monetization Engine', () => {
     expect(free.limits.premiumModels).toBe(false)
   })
 
-  it('estimateCost uses token pricing for GPT models', () => {
+  it('estimateCost uses token pricing for active chat models', () => {
     // Use large enough token counts so the result is non-zero after rounding
-    const cost = estimateCost('chat', 'gpt-4o', 5000, 2000)
+    const cost = estimateCost('chat', 'llama-3.3-70b-versatile', 5000, 2000)
     expect(cost).toBeGreaterThan(0)
   })
 
   it('estimateCost uses flat pricing for image/music', () => {
-    const imageCost = estimateCost('image', 'dall-e-3', 0, 0)
-    const musicCost = estimateCost('music', 'suno-v3.5', 0, 0)
+    const imageCost = estimateCost('image', 'huggingface/stable-diffusion-xl', 0, 0)
+    const musicCost = estimateCost('music', 'genx/music-generation', 0, 0)
     expect(imageCost).toBeGreaterThan(0)
     expect(musicCost).toBeGreaterThan(0)
   })
@@ -270,8 +270,8 @@ describe('Monetization Engine', () => {
     const event = trackUsage({
       appSlug: testApp,
       type: 'chat',
-      model: 'gpt-4o',
-      provider: 'openai',
+      model: 'groq/llama-3.3-70b-versatile',
+      provider: 'groq',
       inputTokens: 500,
       outputTokens: 200,
       success: true,

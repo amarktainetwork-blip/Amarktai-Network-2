@@ -310,7 +310,7 @@ export const CAP_TO_MODEL_FLAG: Record<string, string> = {
   // (the framework runs in simulation mode with no external hub required)
   smart_home_control: 'supports_chat',
   device_automation: 'supports_chat',
-  // Music Studio — requires music provider key (Suno or Replicate) for audio; lyrics always available
+  // Music Studio requires an active audio-capable provider key for audio; lyrics always available.
   music_generation: 'supports_music_generation',
   lyrics_generation: 'supports_chat',
   music_cover_art: 'supports_image_generation',
@@ -385,9 +385,9 @@ export async function getCapabilityTruth(
         reason = 'Capability is gated by safety settings (suggestive_mode).';
       }
     } else if (cap === 'realtime_voice' && !process.env.REALTIME_SERVICE_URL?.trim()) {
-      // Realtime voice requires a separately-deployed WebSocket service in
-      // addition to an OpenAI provider. Without REALTIME_SERVICE_URL the
-      // session endpoint exists but streaming cannot work.
+      // Realtime voice requires a separately-deployed WebSocket service.
+      // Without REALTIME_SERVICE_URL the session endpoint exists but streaming
+      // cannot work.
       // implementationState: 'IMPLEMENTED_IN_PLATFORM' — route + model exist,
       // the platform has the feature, but the external service is not configured.
       state = 'UNAVAILABLE_WITH_CURRENT_CONFIG';
@@ -398,8 +398,7 @@ export async function getCapabilityTruth(
         '(/api/realtime/session) exists but streaming requires the separate service.';
     } else if (cap === 'adult_18plus_image') {
       // Adult 18+ image generation exclusively uses HuggingFace diffusion models.
-      // OpenAI and other image providers are NOT used for this capability.
-      // Showing AVAILABLE_NOW when only OpenAI is active would be a lie.
+      // Showing AVAILABLE_NOW without HuggingFace active would be a lie.
       const hfActive = activeProviders.has('huggingface');
       if (hfActive) {
         state = 'AVAILABLE_NOW';
@@ -433,12 +432,7 @@ export async function getCapabilityTruth(
         const activeImageModels = capableModels
           .filter((m) => activeProviders.has(m.provider))
           .map((m) => m.model_id);
-        const hasGptImageModel = activeImageModels.some((id) =>
-          id === 'gpt-image-1' || id === 'gpt-image-1.5' || id === 'gpt-image-1-mini',
-        );
-        reason = hasGptImageModel
-          ? `Image generation ready — GPT Image model available (${activeImageModels.filter((id) => id.startsWith('gpt-image')).join(', ')}).`
-          : `Image generation ready via ${activeImageModels.join(', ')}.`;
+        reason = `Image generation ready via ${activeImageModels.join(', ')}.`;
       } else {
         reason = 'Route exists, capable model found, provider is active.';
       }
@@ -450,7 +444,7 @@ export async function getCapabilityTruth(
       if (cap === 'image_generation') {
         reason = !hasCapableModel
           ? 'No image generation model in the registry.'
-          : 'OpenAI API key is not configured — add it via Admin → AI Providers to enable GPT Image models (gpt-image-1, gpt-image-1.5, gpt-image-1-mini).';
+          : 'No active provider is configured for the image generation models currently in the registry.';
       } else {
         reason = !hasCapableModel
           ? 'No model in the registry supports this capability.'

@@ -89,15 +89,11 @@ export interface AgentAuditResult {
 // Keep in sync with the `case` statements in callProvider().
 
 const CALLABLE_PROVIDERS = new Set([
-  'openai',
+  'genx',
   'groq',
-  'deepseek',
-  'openrouter',
   'together',
-  'grok',
-  'gemini',
   'huggingface',
-  'nvidia',
+  'mimo',
 ])
 
 // ─── Audit logic ────────────────────────────────────────────────────────────
@@ -107,7 +103,7 @@ const CALLABLE_PROVIDERS = new Set([
  */
 function auditAgent(def: AgentDefinition): AgentAuditEntry {
   const reasons: string[] = []
-  const provider = def.defaultProvider ?? 'openai'
+  const provider = def.defaultProvider ?? 'genx'
   const model = def.defaultModel ?? ''
 
   // Check 1: Provider is callable

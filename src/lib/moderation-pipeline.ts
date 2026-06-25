@@ -4,10 +4,7 @@
  * Provides a unified moderation layer that:
  *   1. Records a per-request audit trail entry for every content scan
  *   2. Scans both input AND output with the full moderation stack
- *   3. Falls back through multiple moderation strategies:
- *      a. OpenAI Moderation API (primary, ML-based)
- *      b. Keyword scanner (secondary, zero-latency)
- *      c. Guardrails engine checks (tertiary, PII/toxicity/bias)
+ *   3. Combines deterministic keyword scanning with guardrails checks
  *
  * Every scan — pass or fail — is recorded to the audit trail with:
  *   - trace ID, app slug, actor, timestamp
@@ -46,7 +43,7 @@ export type ScanDirection = 'input' | 'output'
 export interface ModerationScanResult {
   /** Whether the content was blocked. */
   blocked: boolean
-  /** Content filter result (OpenAI Moderation or keyword). */
+  /** Content filter result from the keyword safety scanner. */
   contentFilter: ContentFilterResult
   /** Guardrails result (PII, toxicity, bias, etc.). */
   guardrails: GuardrailResult | null
@@ -83,10 +80,9 @@ export interface ModerationContext {
  * Run the full moderation pipeline on a piece of text.
  *
  * Execution order:
- *   1. OpenAI Moderation API (async, ML-based) — primary
- *   2. If OpenAI unavailable → keyword scanner (sync, zero-latency) — fallback
- *   3. Guardrails engine (PII, toxicity, bias checks) — always runs
- *   4. Record audit trail entry for the scan
+ *   1. Keyword scanner (sync, zero-latency)
+ *   2. Guardrails engine (PII, toxicity, bias checks)
+ *   3. Record audit trail entry for the scan
  *
  * Returns a unified result with all scan outcomes and audit entry ID.
  */
@@ -98,13 +94,13 @@ export async function runModerationPipeline(
   const start = Date.now()
   const scannersUsed: string[] = []
 
-  // ── Step 1: Content filter (OpenAI Moderation → keyword fallback) ────
+  // ── Step 1: Content filter (keyword safety scanner) ────
   let contentFilter: ContentFilterResult
   try {
     contentFilter = await scanContentWithModeration(text, context.appSlug)
     scannersUsed.push(contentFilter.scanner)
   } catch {
-    // OpenAI Moderation failed — use keyword scanner
+    // Safety scanner failed; fall back to the synchronous keyword path.
     contentFilter = scanContent(text, context.appSlug)
     scannersUsed.push('keyword_fallback')
   }

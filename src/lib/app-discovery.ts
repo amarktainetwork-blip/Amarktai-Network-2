@@ -269,8 +269,8 @@ export async function discoverApp(
   const confidence = computeConfidence(topMatchCount)
 
   // ── Build proposed config from the pack (or sensible defaults) ──
-  const providers = pack?.allowedProviders ?? ['openai']
-  const models = pack?.recommendedModels ?? ['gpt-4o']
+  const providers = pack?.allowedProviders ?? ['genx', 'huggingface', 'together', 'groq', 'mimo']
+  const models = pack?.recommendedModels ?? ['genx/default-chat']
   const budget = pack?.defaultBudget ?? { daily: 5_000, monthly: 100_000 }
   const safetyMode = pack?.safetyLevel ?? 'standard'
   const memoryMode = pack?.memoryStrategy ?? 'session'

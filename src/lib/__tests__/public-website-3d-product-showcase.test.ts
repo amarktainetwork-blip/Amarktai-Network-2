@@ -18,28 +18,20 @@ describe('public product architecture animation', () => {
     expect(source).toContain('aria-label')
   })
 
-  it('maps the six readable hero concepts and telemetry', () => {
+  it('uses a label-free capability flow without old operating-system copy', () => {
     const source = read('components/public/IntelligenceFabric.tsx').toLowerCase()
-    for (const token of [
-      'apps',
-      'media',
-      'core os',
-      'agents',
-      'memory',
-      'runtime truth',
-    ]) {
-      expect(source, token).toContain(token)
-    }
+    expect(source).toContain('capability flow')
+    expect(source).toContain('particle')
+    expect(source).not.toContain('core os')
+    expect(source).not.toContain('runtime truth')
   })
 
   it('supports performance, mobile, and reduced-motion constraints', () => {
     const source = read('components/public/IntelligenceFabric.tsx')
     expect(source).toContain('ResizeObserver')
     expect(source).toContain('prefers-reduced-motion')
-    expect(source).toContain('isMobile')
     expect(source).toContain('devicePixelRatio')
     expect(source).toContain('Math.min')
-    expect(source).toContain('visibilitychange')
     expect(source).toContain('cancelAnimationFrame')
     expect(source).toContain('ro.disconnect()')
   })

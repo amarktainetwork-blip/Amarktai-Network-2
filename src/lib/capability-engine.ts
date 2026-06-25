@@ -591,21 +591,21 @@ const BACKEND_ROUTE_EXISTS: Record<CapabilityClass, boolean> = {
   coding:                    true,   // /api/brain/request
   retrieval:                 true,   // /api/brain/request (retrieval_chain)
   embeddings:                true,   // /api/brain/request (embedding pipeline)
-  reranking:                 true,   // /api/brain/rerank (Hugging Face cross-encoder / NVIDIA)
+  reranking:                 true,   // /api/brain/rerank (Hugging Face cross-encoder)
   summarization:             true,   // /api/brain/request
   classification:            true,   // /api/brain/request
   validation:                true,   // /api/brain/request
   agent_planning:            true,   // /api/brain/request (agent_chain)
   multimodal_understanding:  true,   // /api/brain/request (multimodal_chain)
   image_generation:          true,   // /api/brain/request (DALL-E / FLUX)
-  image_editing:             true,   // /api/brain/image-edit (OpenAI DALL-E 2 inpainting + Hugging Face SD-inpainting)
+  image_editing:             true,   // /api/brain/image-edit (Hugging Face SD-inpainting)
   video_planning:            true,   // /api/brain/request (AI text — always possible via chat models)
-  video_generation:          true,   // /api/brain/video-generate (async job pipeline — Replicate / Together AI)
-  voice_input:               true,   // /api/brain/stt + /api/voice/stt (Groq Whisper / OpenAI Whisper / Gemini Live / Hugging Face Whisper)
-  voice_output:              true,   // /api/brain/tts + /api/voice/tts (Groq PlayAI / OpenAI TTS / Gemini TTS / Hugging Face MMS)
+  video_generation:          true,   // /api/brain/video-generate (async job pipeline through active providers)
+  voice_input:               true,   // /api/brain/stt + /api/voice/stt (Groq Whisper / Hugging Face Whisper)
+  voice_output:              true,   // /api/brain/tts + /api/voice/tts (GenX/MiMo/Groq/Hugging Face routes)
   realtime_voice:            true,   // /api/realtime/session (session config) + separate WS service (services/realtime)
   adult_18plus_image:        true,   // /api/brain/adult-image (Hugging Face — adultMode gated, ALWAYS_BLOCKED enforced)
-  moderation:                true,   // /api/brain/request (OpenAI moderation)
+  moderation:                true,   // /api/brain/request (keyword safety filter)
   app_analysis:              true,   // /api/brain/request
   research_search:           true,   // /api/brain/request + /api/brain/research
   deep_research:             true,   // /api/brain/research (multi-step reasoning)
@@ -732,7 +732,7 @@ const SETTINGS_GATED_CAPABILITIES: ReadonlySet<CapabilityClass> = new Set([
  *  AVAILABLE — route exists + at least one usable model is present.
  *  PARTIAL   — route exists but only a lower-fidelity fallback mode can serve the
  *              request (e.g. video_generation when only video_planning works because
- *              no Replicate/Together key is configured).
+ *              no active image/video provider key is configured).
  *  BLOCKED   — no backend route, no provider, or settings-gated without the
  *              required mode enabled.
  *

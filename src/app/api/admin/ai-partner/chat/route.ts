@@ -13,12 +13,10 @@ import { getGenXStatusAsync, callGenXChat, type GenXChatMessage } from '@/lib/ge
  * rather than being crammed into the user turn.
  *
  * Provider resolution order (first configured wins):
- *   1. Groq   — fast, low-latency, cheap
- *   2. OpenAI — high quality
- *   3. Gemini — free tier available
- *   4. Together AI
- *   5. DeepSeek
- *   6. Mistral
+ *   1. GenX
+ *   2. Groq
+ *   3. Together AI
+ *   4. MiMo
  *
  * Request body:
  *   {
@@ -60,7 +58,7 @@ async function callChatProvider(
   systemPrompt: string,
   messages: ChatMessage[],
 ): Promise<string | null> {
-  // OpenAI-compatible providers (Groq, Together, MiMo)
+  // Chat-completions-compatible providers (Groq, Together, MiMo)
   const base = baseUrl ?? 'https://api.groq.com/openai'
   const headers: Record<string, string> = {
     Authorization: `Bearer ${apiKey}`,

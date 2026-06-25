@@ -106,7 +106,7 @@ export default function PlatformPage() {
             Apps never choose providers or models.
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
-            The active platform providers handle all routing. Removed providers (OpenAI, Gemini, Anthropic, DeepSeek, and others) are not used.
+            The active platform providers handle all routing through the approved provider set.
           </p>
           <div className="mt-10 grid gap-4 sm:grid-cols-5">
             {[

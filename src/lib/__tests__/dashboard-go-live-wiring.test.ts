@@ -8,17 +8,27 @@ const ROOT = path.resolve(__dirname, '../../')
 const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf8')
 
 describe('final dashboard source-of-truth wiring', () => {
-  it('keeps exactly the six truthful dashboard routes', () => {
+  it('keeps the control-centre dashboard routes', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard/app-builder',
-      '/admin/dashboard/workbench',
+      '/admin/dashboard',
       '/admin/dashboard/studio',
+      '/admin/dashboard/operations',
+      '/admin/dashboard/network-apps',
+      '/admin/dashboard/providers',
       '/admin/dashboard/outputs',
-      '/admin/dashboard/settings',
+      '/admin/dashboard/rag',
+      '/admin/dashboard/agents',
       '/admin/dashboard/system',
+      '/admin/dashboard/approvals',
+      '/admin/dashboard/publishing',
+      '/admin/dashboard/analytics',
+      '/admin/dashboard/adult-mode',
+      '/admin/dashboard/vps-health',
+      '/admin/dashboard/settings',
     ])
-    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Agents')).toBe(false)
-    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Command' || item.label === 'Network Apps')).toBe(false)
+    expect(DASHBOARD_NAV_ITEMS).toHaveLength(15)
+    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Agents')).toBe(true)
+    expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Command')).toBe(false)
   })
 
   it('uses one provider mesh with all required connections', () => {

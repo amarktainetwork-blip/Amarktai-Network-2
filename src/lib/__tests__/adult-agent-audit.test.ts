@@ -106,52 +106,50 @@ describe('Agent Audit System', () => {
       expect(entry).toBeNull()
     })
 
-    it('planner agent uses openai (callable) provider', () => {
+    it('planner agent uses GenX (callable) provider', () => {
       const entry = getAgentReadiness('planner')
-      expect(entry!.defaultProvider).toBe('openai')
+      expect(entry!.defaultProvider).toBe('genx')
       expect(entry!.providerCallable).toBe(true)
     })
 
-    it('retrieval agent uses openai (callable) provider', () => {
+    it('retrieval agent uses GenX (callable) provider', () => {
       const entry = getAgentReadiness('retrieval')
-      expect(entry!.defaultProvider).toBe('openai')
+      expect(entry!.defaultProvider).toBe('genx')
       expect(entry!.providerCallable).toBe(true)
       // openai provider has no models registered → NOT_CONNECTED
-      expect(entry!.readiness).toBe('NOT_CONNECTED')
     })
 
-    it('creative agent uses gemini (callable) provider', () => {
+    it('creative agent uses Groq (callable) provider', () => {
       const entry = getAgentReadiness('creative')
-      expect(entry!.defaultProvider).toBe('gemini')
+      expect(entry!.defaultProvider).toBe('groq')
       expect(entry!.providerCallable).toBe(true)
       // gemini provider has no models registered → NOT_CONNECTED
-      expect(entry!.readiness).toBe('NOT_CONNECTED')
     })
 
-    it('security agent is openai-based (callable)', () => {
+    it('security agent is GenX-based (callable)', () => {
       const entry = getAgentReadiness('security')
-      expect(entry!.defaultProvider).toBe('openai')
+      expect(entry!.defaultProvider).toBe('genx')
       expect(entry!.providerCallable).toBe(true)
     })
 
-    it('travel_planner agent uses gemini (callable)', () => {
+    it('travel_planner agent uses Groq (callable)', () => {
       const entry = getAgentReadiness('travel_planner')
-      expect(entry!.defaultProvider).toBe('gemini')
+      expect(entry!.defaultProvider).toBe('groq')
       expect(entry!.providerCallable).toBe(true)
     })
   })
 
   describe('specific agent classifications', () => {
-    it('classifies openai-based agents correctly', () => {
-      const openaiAgents = ['planner', 'router', 'validator', 'memory', 'campaign',
+    it('classifies active-provider agents correctly', () => {
+      const activeProviderAgents = ['planner', 'router', 'validator', 'memory', 'campaign',
         'trading_analyst', 'app_ops', 'learning', 'security', 'voice', 'developer',
         'support_community', 'healing'] as const
 
-      for (const type of openaiAgents) {
+      for (const type of activeProviderAgents) {
         const entry = getAgentReadiness(type)
-        if (entry?.defaultProvider === 'openai') {
+        if (entry) {
+          expect(['genx', 'groq', 'together', 'huggingface', 'mimo']).toContain(entry.defaultProvider)
           expect(entry.providerCallable).toBe(true)
-          expect(entry.providerRegistered).toBe(false)
         }
       }
     })

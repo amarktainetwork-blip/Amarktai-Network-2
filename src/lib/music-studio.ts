@@ -30,10 +30,10 @@ import { createArtifact } from '@/lib/artifact-store'
 /** Maximum characters from generated lyrics sent to the Suno API as a prompt.
  *  The Suno API accepts prompts up to ~3000 characters. */
 
-/** Number of polling iterations when waiting for a Replicate prediction.
+/** Number of polling iterations when waiting for an async audio prediction.
  *  Each iteration waits REPLICATE_POLL_INTERVAL_MS Ã¢â€ â€™ total max wait = 60 s. */
 
-/** Milliseconds to wait between Replicate prediction polling attempts. */
+/** Milliseconds to wait between async audio prediction polling attempts. */
 const IS_TEST_RUNTIME = process.env.VITEST === 'true' || process.env.NODE_ENV === 'test'
 
 function usableKey(raw: string | null | undefined): string | null {
@@ -637,19 +637,13 @@ async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<stri
 // Ã¢â€â‚¬Ã¢â€â‚¬ Lyrics-only Generation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 /**
- * Generate lyrics by calling the platform's internal chat API.
- *
- * Provider resolution order:
- * 1. OpenAI key from DB vault (set via Admin Ã¢â€ â€™ AI Providers UI)
- * 2. OPENAI_API_KEY environment variable fallback (local dev / CI)
- * 3. Groq fallback via vault Ã¢â€ â€™ env (cheap, fast, supports long output)
- * 4. Template fallback when no key is available anywhere
+ * Generate lyrics by calling an active chat provider when configured.
+ * Falls back to a structured template when no key is available.
  */
 async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
-  // Try OpenAI first (vault Ã¢â€ â€™ env)
-  // Groq fallback (vault Ã¢â€ â€™ env) Ã¢â‚¬â€ fast and cost-effective for text generation
+  // Groq fallback (vault or env) for text generation.
   const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
   if (groqKey) {
     const prompt = buildLyricsPrompt(request)

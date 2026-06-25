@@ -8,8 +8,8 @@ import { getAppSafetyConfig, validateSuggestivePrompt } from '@/lib/content-filt
  * and model-style content. No nudity. No explicit acts. No minors.
  *
  * This endpoint provides **video planning** capabilities only.
- * It does NOT generate actual video files. Video generation (e.g. via Gemini
- * Veo, Runway, Pika) is not yet integrated — the capability engine truthfully
+ * It does NOT generate actual video files. Video rendering is not yet integrated,
+ * and the capability engine truthfully
  * reports suggestive_video_generation as unavailable (no BACKEND_ROUTE_EXISTS
  * entry). Only planning (scene decomposition) is available here.
  *
@@ -212,8 +212,8 @@ export async function POST(request: NextRequest) {
       generation_available: false,
       generation_blocker:
         'No video generation provider SDK is integrated. ' +
-        'Candidates: Gemini Veo 2, Runway Gen-3, Pika, Stability AI Stable Video Diffusion. ' +
-        'Provider API key alone is not sufficient; a rendering pipeline must be implemented.',
+        'An approved rendering pipeline must be implemented before generation can run. ' +
+        'Provider API key alone is not sufficient.',
       params: {
         script: validation.sanitized.slice(0, 200),
         style,

@@ -102,7 +102,7 @@ export default function CapabilitiesPage() {
               </div>
             ))}
           </div>
-          <p className="mt-5 text-sm text-slate-400">Removed providers — OpenAI, Gemini, Anthropic, DeepSeek, MiniMax, Qwen, and others — are not active in the platform runtime.</p>
+          <p className="mt-5 text-sm text-slate-400">Only the approved active provider set is available in the platform runtime.</p>
         </div>
       </section>
 

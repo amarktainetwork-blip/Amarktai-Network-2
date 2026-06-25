@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
   }
   if (!body.text?.trim()) return NextResponse.json({ success: false, error: 'text is required' }, { status: 400 })
 
-  const selectedProvider = body.voiceId && ['minimax', 'genx', 'groq', 'openai'].includes(body.voiceId) ? body.voiceId : 'auto'
+  const selectedProvider = body.voiceId && ['mimo', 'genx', 'groq', 'huggingface', 'together'].includes(body.voiceId) ? body.voiceId : 'auto'
   const route = routeLiveModel({
     capability: 'voice_tts',
     appSlug: 'assistant',

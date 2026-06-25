@@ -50,7 +50,7 @@ export default function HomePage() {
               A central <span className="text-blue-400">AI</span> capability platform for building and running AI-powered apps.
             </p>
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-300">
-              Every app gets access to shared <span className="text-blue-300">AI</span> capabilities — chat, research, image, video, music, voice, avatars, Brand Memory, RAG, agents, campaign automation, asset storage, approvals, publishing, analytics, and learning.
+              Every app gets access to shared <span className="text-blue-300">AI</span> capabilities - chat, research, image, video, music, voice, avatars, Brand Memory, RAG, agents, asset storage, approvals, publishing, analytics, and learning.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link
@@ -78,7 +78,7 @@ export default function HomePage() {
             AmarktAI turns <span className="text-blue-600">AI</span> into usable business workflows.
           </h2>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-            The platform can scrape a website, understand a brand, build Brand Memory, create campaign plans, generate images, videos, music, voice, avatars, captions, scripts, and posts — then save every asset, manage approvals, schedule and export content, track performance, and learn from results.
+            The platform gives apps one reliable place to request AI capabilities, store outputs, enforce approvals, route through active providers, and keep operational state visible without turning each app into its own infrastructure project.
           </p>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
@@ -108,23 +108,23 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Marketing workflow section ───────────────────────────────────────── */}
-      <section className="bg-[#050a14] py-20 text-white lg:py-28" id="marketing-workflow">
+      {/* ── Runtime workflow section ─────────────────────────────────────────── */}
+      <section className="bg-[#050a14] py-20 text-white lg:py-28" id="runtime-workflow">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Marketing automation</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Runtime workflow</p>
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-6xl">
-            From website URL to published campaign.
+            From app request to stored, reviewable output.
           </h2>
           <p className="mt-5 max-w-2xl text-base leading-8 text-slate-300">
-            The marketing workflow is fully autonomous. Give it a website — AmarktAI does the rest.
+            Apps ask for a capability. AmarktAI handles validation, routing, execution, persistence, review state, and downstream handoff through the same control plane.
           </p>
           <div className="mt-12 grid gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {[
-              { step: '01', label: 'Website URL', sub: 'Scrape and extract' },
-              { step: '02', label: 'Brand Memory', sub: 'Identity + tone' },
-              { step: '03', label: 'RAG knowledge', sub: 'Embed + retrieve' },
-              { step: '04', label: 'Campaign plan', sub: 'Items + calendar' },
-              { step: '05', label: 'Generated assets', sub: 'Images, video, copy' },
+              { step: '01', label: 'Request', sub: 'App + capability' },
+              { step: '02', label: 'Policy', sub: 'Permissions + safety' },
+              { step: '03', label: 'Routing', sub: 'Provider + model' },
+              { step: '04', label: 'Execution', sub: 'Text, media, agents' },
+              { step: '05', label: 'Artifact', sub: 'Stored output' },
             ].map((s) => (
               <div key={s.step} className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">{s.step}</p>
@@ -135,10 +135,10 @@ export default function HomePage() {
           </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { step: '06', label: 'Approval queue', sub: 'Review + approve' },
-              { step: '07', label: 'Schedule / export', sub: 'Timed or manual' },
-              { step: '08', label: 'Analytics', sub: 'Impressions, CTR, reach' },
-              { step: '09', label: 'Learning signals', sub: 'Feedback to runtime' },
+              { step: '06', label: 'Review', sub: 'Approval state' },
+              { step: '07', label: 'Publish / export', sub: 'Manual or scheduled' },
+              { step: '08', label: 'Measure', sub: 'Usage + outcomes' },
+              { step: '09', label: 'Improve', sub: 'Learning signals' },
             ].map((s) => (
               <div key={s.step} className="rounded-2xl border border-white/10 bg-white/5 p-5">
                 <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400">{s.step}</p>
@@ -148,8 +148,8 @@ export default function HomePage() {
             ))}
           </div>
           <div className="mt-8">
-            <Link href="/marketing" className="inline-flex items-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-300 transition hover:bg-blue-500/20">
-              See the marketing workflow <ArrowRight className="h-4 w-4" />
+            <Link href="/platform" className="inline-flex items-center gap-2 rounded-xl border border-blue-500/40 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-300 transition hover:bg-blue-500/20">
+              Explore the control plane <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
@@ -347,35 +347,38 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-slate-400">Active providers only. Removed providers (OpenAI, Gemini, Anthropic, DeepSeek, etc.) are not used by the runtime.</p>
+          <p className="mt-6 text-xs text-slate-400">Active providers only. Provider status is based on real configured keys and live checks in the admin control centre.</p>
         </div>
       </section>
 
-      {/* ── System health ────────────────────────────────────────────────────── */}
-      <section className="bg-slate-950 py-20 text-white lg:py-28" id="system-health">
+      {/* ── Readiness gates ──────────────────────────────────────────────────── */}
+      <section className="bg-slate-950 py-20 text-white lg:py-28" id="readiness-gates">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">System health</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Readiness gates</p>
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight lg:text-5xl">
-            Real readiness checks. No fake green.
+            No publish path depends on hardcoded green lights.
           </h2>
+          <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300">
+            The admin control centre separates configured, missing, degraded, and recovered services. Database, storage, queues, vector search, providers, and publishing all report from runtime probes or stored state.
+          </p>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'CPU / RAM / Disk', status: 'healthy' },
-              { label: 'Database (Prisma)', status: 'healthy' },
-              { label: 'Redis queue', status: 'healthy' },
-              { label: 'Qdrant vectors', status: 'healthy' },
-              { label: 'Artifact storage', status: 'healthy' },
-              { label: 'Publishing backlog', status: 'healthy' },
-              { label: 'Provider health', status: 'healthy' },
-              { label: 'Queue depth', status: 'healthy' },
+              'Database persistence',
+              'Provider keys',
+              'Artifact storage',
+              'Approvals',
+              'Publishing jobs',
+              'Worker queue',
+              'Vector store',
+              'VPS probes',
             ].map((r) => (
-              <div key={r.label} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="h-2 w-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-                <span className="text-xs font-bold text-slate-300">{r.label}</span>
+              <div key={r} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                <Shield className="h-4 w-4 shrink-0 text-blue-300" />
+                <span className="text-xs font-bold text-slate-300">{r}</span>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-xs text-slate-500">Live checks run against real services. VPS Health page shows actual probe results — no hardcoded status.</p>
+          <p className="mt-6 text-xs text-slate-500">Readiness details live behind admin authentication and never expose secret values.</p>
         </div>
       </section>
 
