@@ -27,7 +27,6 @@ import {
   ALLOWED_AVATAR_MODES,
   AVATAR_PROVIDER_CATALOG,
   type AvatarPayload,
-  type AvatarVoiceConfig,
 } from '../avatar-capability'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@
  */
 
 import { crawlWebsite } from '@/lib/scraper'
-import { brandMemoryEngine, type BrandMemory } from '@/lib/brand-memory'
+import { brandMemoryEngine } from '@/lib/brand-memory'
 import { ingestWebsite, queryRAG } from '@/lib/rag-capability'
 import { runAgent, type AgentConfig } from '@/lib/agent-system'
 import { recordExecutionSignal, type ExecutionSignal } from '@/lib/learning-engine'
@@ -34,7 +34,6 @@ import {
   createGeneratedAsset,
   type StoredCampaign,
   type StoredCampaignItem,
-  type StoredGeneratedAsset,
 } from '@/lib/campaign-storage'
 
 // ── Input ──────────────────────────────────────────────────────────────────────

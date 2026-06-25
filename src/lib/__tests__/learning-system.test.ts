@@ -13,11 +13,6 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
-  recordFeedback,
-  recordExecutionSignal,
-  getLearningSignals,
-  getProviderSuccessRates,
-  logRouteOutcome,
   type UserFeedback,
   type ExecutionSignal,
   type RouteOutcome,

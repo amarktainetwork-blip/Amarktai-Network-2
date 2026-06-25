@@ -747,7 +747,7 @@ export function checkVoiceCloneRules(payload: AvatarVoicePayload, voiceDescripti
  * Primary: HF_ADULT_VOICE_ENDPOINT / HF_ADULT_VOICE_MODEL
  * Fallback: HF_ADULT_VOICE_ENDPOINT_FALLBACK / HF_ADULT_VOICE_MODEL_FALLBACK
  */
-export function resolveVoiceCandidates(hfApiKey: string): Array<{ url: string; modelId: string; priority: 'primary' | 'fallback' }> {
+export function resolveVoiceCandidates(_hfApiKey: string): Array<{ url: string; modelId: string; priority: 'primary' | 'fallback' }> {
   const candidates: Array<{ url: string; modelId: string; priority: 'primary' | 'fallback' }> = []
 
   const primaryUrl = process.env.HF_ADULT_VOICE_ENDPOINT ?? null
@@ -832,7 +832,7 @@ export async function executeAvatarVoice(
       })
 
       if (!res.ok) {
-        const errText = await res.text().catch(() => `HTTP ${res.status}`)
+        await res.text().catch(() => null) // consume response body
         continue // try next candidate
       }
 

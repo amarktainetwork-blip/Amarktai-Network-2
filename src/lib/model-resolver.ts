@@ -130,7 +130,7 @@ export async function resolveBestModel(options: ModelResolutionOptions): Promise
     provider,
     budgetProfile,
     preferredCostTier,
-    preferredLatencyTier,
+    preferredLatencyTier: _preferredLatencyTier,
     excludeModels = [],
   } = options
 
@@ -271,7 +271,7 @@ export async function resolveAllModels(options: ModelResolutionOptions): Promise
   const {
     capability,
     provider,
-    budgetProfile,
+    budgetProfile: _budgetProfile,
     excludeModels = [],
   } = options
 

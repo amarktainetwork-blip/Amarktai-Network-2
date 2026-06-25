@@ -11,8 +11,8 @@
  *  - agent memory
  */
 
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { MemoryEngine, type MemoryScope, type MemoryCategory } from '../memory-capability'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { MemoryEngine, type MemoryScope } from '../memory-capability'
 
 // ── DB mock factory ───────────────────────────────────────────────────────────
 

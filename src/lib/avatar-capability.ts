@@ -319,7 +319,7 @@ export const AVATAR_PROVIDER_CATALOG: AvatarProviderEntry[] = [
 export function resolveAvatarProviderOrder(
   budget: 'cheap' | 'balanced' | 'premium',
   mode: AvatarMode,
-  style: AvatarStyle,
+  _style: AvatarStyle,
 ): AvatarProviderKey[] {
   return AVATAR_PROVIDER_CATALOG
     .filter(p => p.modesSupported.includes(mode) || ['portrait', 'image_avatar'].includes(mode))
@@ -390,7 +390,7 @@ export async function executeHFAvatarImage(
       })
 
       if (!res.ok) {
-        const errText = await res.text().catch(() => `HTTP ${res.status}`)
+        await res.text().catch(() => null) // consume body
         if (res.status === 503) continue // model loading — try next
         continue
       }

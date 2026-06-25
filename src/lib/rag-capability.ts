@@ -27,7 +27,7 @@ import {
   searchAppKnowledge,
   type VectorPoint,
 } from '@/lib/vector-store'
-import { crawlWebsite, type ExtractedPage } from '@/lib/scraper'
+import { crawlWebsite } from '@/lib/scraper'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ export interface RAGIngestionResult {
 // ── HF Embedding ──────────────────────────────────────────────────────────────
 
 const HF_EMBEDDING_MODEL = 'sentence-transformers/all-MiniLM-L6-v2'
-const EMBEDDING_DIM = 384 // all-MiniLM-L6-v2 output dim
+const _EMBEDDING_DIM = 384 // all-MiniLM-L6-v2 output dim (kept for documentation)
 
 /**
  * Generate embeddings for a batch of texts via HuggingFace Inference API.

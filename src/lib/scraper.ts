@@ -102,7 +102,7 @@ export interface ExtractedPage {
  */
 export function extractFromHtml(html: string, pageUrl: string): Omit<ExtractedPage, 'url' | 'byteSize' | 'error'> {
   // Remove script/style/nav/footer/header/aside blocks
-  let cleaned = html
+  const cleaned = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<nav[\s\S]*?<\/nav>/gi, ' ')

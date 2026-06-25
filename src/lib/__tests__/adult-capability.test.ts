@@ -29,19 +29,16 @@ import {
   resolveVoiceCandidates,
   buildAdultTextBody,
   buildAdultImageBody,
-  buildAdultVideoBody,
   buildAdultAvatarBody,
   validateAdultAvatarPayload,
   executeHFAdultGeneration,
   executeHFAdultGenerationChain,
   executeAvatarVoice,
   checkVoiceCloneRules,
-  HF_ADULT_CATALOG,
   ALLOWED_AVATAR_STYLES,
   type HFAdultProviderEntry,
   type ResolvedAdultEndpoint,
   type AdultAvatarPayload,
-  type AvatarVoicePayload,
 } from '../adult-capability'
 
 // ── Permission checks ─────────────────────────────────────────────────────────
@@ -1065,11 +1062,9 @@ describe('executeCapability adult — router', () => {
     vi.doMock('@/lib/genx-client', () => ({ callGenXChat: vi.fn(), callGenXMedia: vi.fn(), GENX_AUDIO_MODELS: [], GENX_VIDEO_MODELS: [], GENX_I2V_MODELS: [] }))
     vi.doMock('@/lib/adult-capability', async () => {
       const actual = await vi.importActual<typeof import('../adult-capability')>('../adult-capability')
-      let calls = 0
       return {
         ...actual,
         executeHFAdultGenerationChain: vi.fn(async () => {
-          calls++
           return {
             success: true, output: 'fallback text result', jobId: null, status: undefined,
             model: 'fallback-model', endpointKey: 'HF_ADULT_TEXT_ENDPOINT_FALLBACK',

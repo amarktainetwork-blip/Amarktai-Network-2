@@ -21,22 +21,7 @@
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import {
-  createSchedule,
-  getSchedule,
-  listDueSchedules,
-  checkApprovalGate,
-  blockScheduleForApproval,
-  markScheduleReady,
-  persistPublishingResult,
-  ingestAnalytics,
-  aggregateCampaignAnalytics,
-  aggregateAssetAnalytics,
-  createRecurringSchedule,
-  advanceRecurringSchedule,
-  listDueRecurringSchedules,
-  type CreateScheduleInput,
-} from '../publishing-scheduler'
+// All imports in this test file are done locally via await import() inside each test
 
 // ── DB mock helpers ───────────────────────────────────────────────────────────
 

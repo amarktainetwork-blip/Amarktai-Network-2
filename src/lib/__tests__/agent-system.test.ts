@@ -18,12 +18,6 @@ import {
   validateAgentConfig,
   assertNoRemovedProviders,
   isAllowedProvider,
-  runMarketingAgent,
-  runAdultCreatorAgent,
-  runCustomerServiceAgent,
-  runResearchAgent,
-  runAutomationAgent,
-  runAgent,
   type AgentConfig,
 } from '../agent-system'
 

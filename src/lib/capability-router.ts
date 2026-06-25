@@ -73,7 +73,7 @@ import {
 import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { crawlWebsite } from '@/lib/scraper'
 import { createArtifact } from '@/lib/artifact-store'
-import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
+import { getAdultTextModel } from '@/lib/adult-model-catalog'
 import { prisma } from '@/lib/prisma'
 import {
   getDefaultModelForProvider,
@@ -85,23 +85,10 @@ import { isProviderWithinBudget } from '@/lib/budget-tracker'
 import { getAppProfileFromDb, runtimeProfileOverrides } from '@/lib/app-profiles'
 import { recordPerformance, loadSmartRouterState } from '@/lib/smart-router'
 import {
-  getCapability,
-  getAllCapabilities,
   getAllowedProviders,
-  getBestProvider,
-  getBudgetProfile,
-  isWithinBudget,
 } from '@/lib/runtime-registry'
-import { resolveBestModel, type ResolvedModel } from '@/lib/model-resolver'
-import {
-  type CapabilityKey,
-  type ProviderKey,
-  getCapabilityDefinition,
-  getProvidersForCapability,
-  getBestProvider as getBestProviderFromRegistry,
-  requiresAdultMode,
-  requiresSafeModeOff,
-} from '@/lib/capability-registry'
+import { resolveBestModel } from '@/lib/model-resolver'
+// capability-registry types/functions imported when needed inline
 
 // ── Orchestration Types (merged from orchestrator.ts) ─────────────────────────
 
@@ -407,8 +394,8 @@ const ADULT_TEXT_SYSTEM_PROMPT =
   'Strictly refuse minors, coercion, exploitation, non-consensual content, threats, hate, illegal activity, instructions for harm, or degrading abuse. ' +
   'Keep the tone respectful, consent-aware, and non-degrading.'
 
-const DEFAULT_TOGETHER_ADULT_TEXT_MODEL = 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO'
-const DEFAULT_XAI_ADULT_TEXT_MODEL = 'grok-2-latest'
+const _DEFAULT_TOGETHER_ADULT_TEXT_MODEL = 'NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO'
+const _DEFAULT_XAI_ADULT_TEXT_MODEL = 'grok-2-latest'
 
 const ADULT_TEXT_DEGRADING_PATTERNS: RegExp[] = [
   /\b(degrade|humiliate|worthless|subhuman)\s+(her|him|them|woman|man|person|partner)\b/i,
@@ -655,7 +642,7 @@ async function tryFallbackText(
   return { success: false, output: null, provider: null, model: null, error: 'All fallback text providers failed' }
 }
 
-function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
+function _metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
   const value = metadata?.[key]
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
@@ -684,7 +671,7 @@ function adultProviderBaseUrl(raw: string): string {
     .replace(/\/$/, '')
 }
 
-function hasAdultTextDegradingTerms(text: string): boolean {
+function _hasAdultTextDegradingTerms(text: string): boolean {
   return ADULT_TEXT_DEGRADING_PATTERNS.some((pattern) => pattern.test(text))
 }
 
@@ -763,7 +750,7 @@ async function postAdultHuggingFaceRaw(opts: {
   }
 }
 
-async function tryAdultTextProvider(opts: {
+async function _tryAdultTextProvider(opts: {
   provider: 'huggingface' | 'together' | 'xai' | 'custom'
   input: string
   model: string

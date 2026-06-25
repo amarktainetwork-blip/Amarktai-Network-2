@@ -21,7 +21,6 @@ import {
   generateEmbeddings,
   generateQueryEmbedding,
   assembleContext,
-  type RAGChunkWithScore,
   type RAGChunk,
 } from '../rag-capability'
 

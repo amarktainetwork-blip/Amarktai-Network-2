@@ -16,20 +16,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
-  createCampaign,
-  updateCampaignStatus,
-  getCampaign,
-  createCampaignItem,
-  updateCampaignItemApproval,
-  createGeneratedAsset,
-  updateAssetApproval,
-  getGeneratedAsset,
-  listAssetsByCampaign,
-  createAssetVersion,
-  listAssetVersions,
-  rejectAssetWithVersionPreservation,
   type CreateCampaignInput,
-  type CreateCampaignItemInput,
   type CreateGeneratedAssetInput,
 } from '../campaign-storage'
 

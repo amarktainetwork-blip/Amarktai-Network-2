@@ -73,7 +73,7 @@ function brandKey(appSlug: string, brandId: string): string {
   return `brand:${appSlug}:${brandId}:profile`
 }
 
-function parseBrandId(key: string): string {
+function _parseBrandId(key: string): string {
   // key format: brand:{appSlug}:{brandId}:profile
   const parts = key.split(':')
   return parts[2] ?? key
