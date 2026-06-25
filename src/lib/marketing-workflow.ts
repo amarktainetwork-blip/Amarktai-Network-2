@@ -27,6 +27,15 @@ import { ingestWebsite, queryRAG } from '@/lib/rag-capability'
 import { runAgent, type AgentConfig } from '@/lib/agent-system'
 import { recordExecutionSignal, type ExecutionSignal } from '@/lib/learning-engine'
 import { executeCapability, type CapabilityRequest } from '@/lib/capability-router'
+import {
+  createCampaign,
+  updateCampaignStatus,
+  createCampaignItem,
+  createGeneratedAsset,
+  type StoredCampaign,
+  type StoredCampaignItem,
+  type StoredGeneratedAsset,
+} from '@/lib/campaign-storage'
 
 // ── Input ──────────────────────────────────────────────────────────────────────
 
@@ -117,6 +126,11 @@ export interface MarketingWorkflowResult {
   // Brand
   brandIdentity?: ExtractedBrandIdentity
   brandId?: string
+
+  // Persisted campaign IDs
+  persistedCampaignId?: string
+  persistedItemIds: string[]
+  persistedAssetIds: string[]
 
   // Campaign
   campaignName?: string
@@ -373,6 +387,9 @@ export async function runMarketingWorkflow(
     brandExtracted: false,
     ragIngested: false,
     campaignPlanned: false,
+    persistedCampaignId: undefined,
+    persistedItemIds: [],
+    persistedAssetIds: [],
     campaignGoal: input.campaignGoal,
     platforms: input.platforms,
     contentCalendar: [],
@@ -575,6 +592,31 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
   )
   result.campaignName = rawPlan.campaignName
 
+  // ── Phase 6b: Persist campaign record ─────────────────────────────────────
+  let persistedCampaign: StoredCampaign | null = null
+  try {
+    persistedCampaign = await createCampaign({
+      appSlug: input.appSlug,
+      workspaceId: input.workspaceId,
+      brandId: savedBrandId,
+      name: rawPlan.campaignName,
+      goal: input.campaignGoal,
+      targetAudience: input.targetAudience,
+      platforms: input.platforms,
+      contentTypes: input.contentTypes,
+      budgetTier: input.budgetTier,
+      qualityTier: input.qualityTier,
+      approvalMode: input.approvalMode ?? 'auto',
+      durationDays: input.durationDays,
+      websiteUrl: input.websiteUrl,
+      workflowId,
+    })
+    result.persistedCampaignId = persistedCampaign.id
+    await recordExecutionSignal({ appSlug: input.appSlug, capability: 'campaign_create', providerKey: 'runtime', model: 'multi', success: true, latencyMs: 0, fallbackUsed: false, agentType: 'marketing' }).catch(() => {})
+  } catch (err) {
+    warnings.push(`Campaign persistence failed: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
   // ── Phase 7: Asset generation through capability-router ──────────────────
   const brandContextShort = brandSummary.slice(0, 300)
   const campaignItems: CampaignItem[] = []
@@ -583,6 +625,26 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
     const item = rawPlan.items[i]!
     const itemId = `item_${i}_${Date.now().toString(36)}`
     result.assetsRequested++
+
+    // Persist campaign item record
+    let persistedItem: StoredCampaignItem | null = null
+    if (persistedCampaign) {
+      try {
+        persistedItem = await createCampaignItem({
+          campaignId: persistedCampaign.id,
+          platform: item.platform,
+          contentType: item.contentType,
+          caption: item.caption,
+          script: item.script ?? '',
+          hashtags: item.hashtags,
+          promptSummary: item.prompt.slice(0, 500),
+          metadata: { musicDirection: item.musicDirection, voiceInstructions: item.voiceInstructions, avatarInstructions: item.avatarInstructions },
+        })
+        result.persistedItemIds.push(persistedItem.id)
+      } catch (err) {
+        warnings.push(`Campaign item persistence failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
 
     const assetStart = Date.now()
     const assetResult = await generateCampaignAsset(item, input.appSlug, input.budgetTier, input.qualityTier, brandContextShort)
@@ -597,10 +659,43 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
       assetLatency,
     )
 
+    // Persist generated asset record (success or failure)
+    if (persistedCampaign) {
+      const assetType = ['image', 'avatar_presenter'].includes(item.contentType) ? 'image'
+        : ['short_video', 'reel'].includes(item.contentType) ? 'video'
+        : item.contentType === 'music' ? 'audio'
+        : item.contentType === 'voiceover' ? 'audio' : 'text'
+
+      try {
+        const persistedAsset = await createGeneratedAsset({
+          appSlug: input.appSlug,
+          workspaceId: input.workspaceId,
+          brandId: savedBrandId,
+          campaignId: persistedCampaign.id,
+          campaignItemId: persistedItem?.id,
+          assetType,
+          capability: CONTENT_TYPE_CAPABILITY[item.contentType as ContentType] ?? 'chat',
+          runtimeSelectedProvider: assetResult.provider ?? '',
+          runtimeSelectedModel: assetResult.model ?? '',
+          fallbackUsed: false,
+          promptSummary: item.prompt.slice(0, 500),
+          sourceInputs: { platform: item.platform, contentType: item.contentType, brandContext: brandContextShort.slice(0, 200) },
+          resultUrl: assetResult.assetUrl ?? undefined,
+          latencyMs: assetLatency,
+          error: assetResult.error ?? undefined,
+          metadata: { assetJobId: assetResult.assetJobId, caption: item.caption, hashtags: item.hashtags },
+        })
+        result.persistedAssetIds.push(persistedAsset.id)
+        await recordExecutionSignal({ appSlug: input.appSlug, capability: 'asset_generate', providerKey: assetResult.provider ?? 'runtime', model: assetResult.model ?? 'auto', success: !assetResult.error, latencyMs: assetLatency, fallbackUsed: false, agentType: 'marketing' }).catch(() => {})
+      } catch (err) {
+        warnings.push(`Asset persistence failed: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+
     if (assetResult.error) {
       result.assetsFailed++
       campaignItems.push({
-        itemId,
+        itemId: persistedItem?.id ?? itemId,
         platform: item.platform as SocialPlatform,
         contentType: item.contentType as ContentType,
         caption: item.caption,
@@ -616,7 +711,7 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
     } else {
       result.assetsGenerated++
       campaignItems.push({
-        itemId,
+        itemId: persistedItem?.id ?? itemId,
         platform: item.platform as SocialPlatform,
         contentType: item.contentType as ContentType,
         caption: item.caption,
@@ -635,14 +730,21 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
 
   result.contentCalendar = campaignItems
 
-  // ── Finalize ─────────────────────────────────────────────────────────────
+  // ── Finalize campaign status ──────────────────────────────────────────────
   const completedAt = new Date()
   result.completedAt = completedAt.toISOString()
   result.durationMs = completedAt.getTime() - startedAt.getTime()
 
   result.success = result.scrapeSuccess && result.campaignPlanned
-  result.partialSuccess = result.scrapeSuccess && !result.campaignPlanned ||
+  result.partialSuccess = (result.scrapeSuccess && !result.campaignPlanned) ||
     (result.assetsRequested > 0 && result.assetsFailed > 0 && result.assetsGenerated > 0)
+
+  if (persistedCampaign) {
+    const finalStatus = result.success
+      ? (result.partialSuccess ? 'partial_failure' : 'active')
+      : 'failed'
+    await updateCampaignStatus(persistedCampaign.id, finalStatus).catch(() => {})
+  }
 
   // Record final workflow signal
   await recordExecutionSignal({

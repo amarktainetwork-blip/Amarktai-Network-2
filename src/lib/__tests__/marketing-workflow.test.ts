@@ -19,6 +19,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import type { MarketingWorkflowInput } from '../marketing-workflow'
 
+// Global mock for campaign-storage — all workflow tests use this.
+// Individual tests may override specific fns via vi.doMock after vi.resetModules().
+vi.mock('@/lib/campaign-storage', () => ({
+  createCampaign: vi.fn(async () => ({ id: 'camp-global-mock', name: 'Campaign', status: 'draft', appSlug: 'test-marketing-app', workspaceId: '', brandId: '', goal: '', targetAudience: '', platforms: [], contentTypes: [], budgetTier: 'balanced', qualityTier: 'standard', approvalMode: 'auto', durationDays: 7, websiteUrl: '', workflowId: '', metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+  updateCampaignStatus: vi.fn(async () => {}),
+  createCampaignItem: vi.fn(async () => ({ id: `item-${Date.now()}`, campaignId: 'camp-global-mock', platform: 'instagram', contentType: 'image', title: '', caption: '', script: '', hashtags: [], promptSummary: '', scheduledFor: null, status: 'draft', approvalStatus: 'draft', approvalNotes: '', metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+  createGeneratedAsset: vi.fn(async () => ({ id: `asset-${Date.now()}`, appSlug: 'test-marketing-app', workspaceId: '', brandId: '', campaignId: 'camp-global-mock', campaignItemId: null, assetType: 'image', capability: 'image_generation', status: 'completed', approvalStatus: 'draft', approvalNotes: '', runtimeSelectedProvider: 'together', runtimeSelectedModel: 'auto', fallbackUsed: false, generationMode: '', promptSummary: '', sourceInputs: {}, resultUrl: null, resultFilePath: null, thumbnailUrl: null, mimeType: null, durationSeconds: null, width: null, height: null, costCredits: null, latencyMs: null, error: null, metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+}))
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makeInput(overrides: Partial<MarketingWorkflowInput> = {}): MarketingWorkflowInput {
@@ -115,6 +124,12 @@ describe('runMarketingWorkflow — full success', () => {
     vi.doMock('@/lib/learning-engine', () => ({
       recordExecutionSignal: vi.fn(async () => true),
     }))
+    vi.doMock('@/lib/campaign-storage', () => ({
+      createCampaign: vi.fn(async () => ({ id: 'campaign-persisted-1', name: 'Summer Boom', status: 'draft', appSlug: 'test-marketing-app', workspaceId: '', brandId: 'brand-id-1', goal: '', targetAudience: '', platforms: [], contentTypes: [], budgetTier: 'balanced', qualityTier: 'standard', approvalMode: 'auto', durationDays: 7, websiteUrl: '', workflowId: '', metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+      updateCampaignStatus: vi.fn(async () => {}),
+      createCampaignItem: vi.fn(async (_input: unknown, index?: number) => ({ id: `item-persisted-${Date.now()}`, campaignId: 'campaign-persisted-1', platform: 'instagram', contentType: 'image', title: '', caption: '', script: '', hashtags: [], promptSummary: '', scheduledFor: null, status: 'draft', approvalStatus: 'draft', approvalNotes: '', metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+      createGeneratedAsset: vi.fn(async () => ({ id: `asset-persisted-${Date.now()}`, appSlug: 'test-marketing-app', workspaceId: '', brandId: '', campaignId: 'campaign-persisted-1', campaignItemId: null, assetType: 'image', capability: 'image_generation', status: 'completed', approvalStatus: 'draft', approvalNotes: '', runtimeSelectedProvider: 'together', runtimeSelectedModel: 'auto', fallbackUsed: false, generationMode: '', promptSummary: '', sourceInputs: {}, resultUrl: 'https://cdn.example.com/img.png', resultFilePath: null, thumbnailUrl: null, mimeType: null, durationSeconds: null, width: null, height: null, costCredits: null, latencyMs: 800, error: null, metadata: {}, createdAt: new Date(), updatedAt: new Date() })),
+    }))
 
     const { runMarketingWorkflow } = await import('../marketing-workflow')
     const result = await runMarketingWorkflow(makeInput())
@@ -129,8 +144,12 @@ describe('runMarketingWorkflow — full success', () => {
     expect(result.assetsRequested).toBeGreaterThan(0)
     expect(result.success).toBe(true)
     expect(result.errors).toHaveLength(0)
+    // Persisted campaign ID returned
+    expect(result.persistedCampaignId).toBe('campaign-persisted-1')
+    // Persisted item and asset IDs returned
+    expect(Array.isArray(result.persistedItemIds)).toBe(true)
+    expect(Array.isArray(result.persistedAssetIds)).toBe(true)
     // brandExtracted may be true or false depending on capability-router mock resolution
-    // — the important contract is that scrape + campaign succeeded regardless
     if (result.brandExtracted) {
       expect(result.brandId).toBe('brand-id-1')
     }

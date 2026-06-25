@@ -1471,3 +1471,148 @@ model VoiceLibrary {
   @@index([language])
   @@map("voice_library")
 }
+
+// ── Marketing Campaigns ───────────────────────────────────────────────────────
+
+/// A marketing campaign owned by a workspace/app/brand scope.
+model Campaign {
+  id              String   @id @default(cuid())
+  workspaceId     String   @default("") @map("workspace_id")
+  appSlug         String   @map("app_slug")
+  brandId         String   @default("") @map("brand_id")
+  name            String
+  goal            String
+  targetAudience  String   @default("") @map("target_audience")
+  /// JSON string[] of platform names
+  platforms       String   @default("[]")
+  /// JSON string[] of content types
+  contentTypes    String   @default("[]") @map("content_types")
+  budgetTier      String   @default("balanced") @map("budget_tier")  // cheap|balanced|premium
+  qualityTier     String   @default("standard") @map("quality_tier") // basic|standard|high|premium
+  /// draft|active|completed|partial_failure|failed|archived
+  status          String   @default("draft")
+  approvalMode    String   @default("auto") @map("approval_mode") // auto|manual_review
+  durationDays    Int      @default(7) @map("duration_days")
+  websiteUrl      String   @default("") @map("website_url")
+  workflowId      String   @default("") @map("workflow_id")
+  /// JSON metadata blob
+  metadata        String   @default("{}")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  items    CampaignItem[]
+  assets   GeneratedAsset[]
+
+  @@index([appSlug])
+  @@index([status])
+  @@index([createdAt])
+  @@map("campaigns")
+}
+
+/// A single content item within a campaign (one post, image, video, etc.)
+model CampaignItem {
+  id             String    @id @default(cuid())
+  campaignId     String    @map("campaign_id")
+  campaign       Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  platform       String    // instagram|tiktok|youtube_shorts|facebook|linkedin|x|pinterest|generic
+  contentType    String    @map("content_type") // social_post|image|short_video|reel|caption|script|music|voiceover|avatar_presenter
+  title          String    @default("")
+  caption        String    @default("")
+  script         String    @default("")
+  /// JSON string[] of hashtags
+  hashtags       String    @default("[]")
+  /// Prompt used for asset generation
+  promptSummary  String    @default("") @map("prompt_summary")
+  scheduledFor   DateTime? @map("scheduled_for")
+  /// draft|pending_review|approved|rejected|needs_changes|published|failed
+  status         String    @default("draft")
+  approvalStatus String    @default("draft") @map("approval_status")
+  approvalNotes  String    @default("") @map("approval_notes")
+  /// JSON metadata blob
+  metadata       String    @default("{}")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  assets GeneratedAsset[]
+
+  @@index([campaignId])
+  @@index([platform])
+  @@index([status])
+  @@map("campaign_items")
+}
+
+/// A generated asset produced by the capability runtime.
+/// Provider/model fields store what the RUNTIME selected — never app-provided.
+model GeneratedAsset {
+  id                     String    @id @default(cuid())
+  workspaceId            String    @default("") @map("workspace_id")
+  appSlug                String    @map("app_slug")
+  brandId                String    @default("") @map("brand_id")
+  campaignId             String?   @map("campaign_id")
+  campaign               Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  campaignItemId         String?   @map("campaign_item_id")
+  campaignItem           CampaignItem? @relation(fields: [campaignItemId], references: [id], onDelete: SetNull)
+  assetType              String    @map("asset_type") // image|video|audio|text|avatar
+  capability             String    // image_generation|video_generation|music_generation|tts|avatar_generation|chat
+  /// draft|processing|completed|failed|pending_review|approved|rejected|needs_changes|published
+  status                 String    @default("processing")
+  approvalStatus         String    @default("draft") @map("approval_status")
+  approvalNotes          String    @default("") @map("approval_notes")
+  /// Set by RUNTIME only — never app-provided
+  runtimeSelectedProvider String   @default("") @map("runtime_selected_provider")
+  runtimeSelectedModel   String   @default("") @map("runtime_selected_model")
+  fallbackUsed           Boolean  @default(false) @map("fallback_used")
+  generationMode         String   @default("") @map("generation_mode")
+  promptSummary          String   @default("") @map("prompt_summary")
+  /// JSON of source inputs used (brand context, RAG context, etc.)
+  sourceInputs           String   @default("{}") @map("source_inputs")
+  resultUrl              String?  @map("result_url")
+  resultFilePath         String?  @map("result_file_path")
+  thumbnailUrl           String?  @map("thumbnail_url")
+  mimeType               String?  @map("mime_type")
+  durationSeconds        Float?   @map("duration_seconds")
+  width                  Int?
+  height                 Int?
+  costCredits            Float?   @map("cost_credits")
+  latencyMs              Int?     @map("latency_ms")
+  error                  String?
+  /// JSON metadata blob
+  metadata               String   @default("{}")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  versions AssetVersion[]
+
+  @@index([appSlug])
+  @@index([campaignId])
+  @@index([campaignItemId])
+  @@index([status])
+  @@index([assetType])
+  @@map("generated_assets")
+}
+
+/// Versioned snapshot of a generated asset (for rollback / approval history).
+model AssetVersion {
+  id             String         @id @default(cuid())
+  assetId        String         @map("asset_id")
+  asset          GeneratedAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  versionNumber  Int            @map("version_number")
+  status         String         @default("draft") // draft|approved|rejected|superseded
+  resultUrl      String?        @map("result_url")
+  resultFilePath String?        @map("result_file_path")
+  thumbnailUrl   String?        @map("thumbnail_url")
+  promptSummary  String         @default("") @map("prompt_summary")
+  /// JSON of source inputs used
+  sourceInputs   String         @default("{}") @map("source_inputs")
+  provider       String         @default("")
+  model          String         @default("")
+  costCredits    Float?         @map("cost_credits")
+  latencyMs      Int?           @map("latency_ms")
+  /// JSON metadata blob
+  metadata       String         @default("{}")
+  createdAt      DateTime       @default(now()) @map("created_at")
+
+  @@index([assetId])
+  @@index([versionNumber])
+  @@map("asset_versions")
+}
