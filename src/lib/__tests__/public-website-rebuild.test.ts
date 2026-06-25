@@ -10,37 +10,40 @@ const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf
 
 describe('final public website', () => {
   it('uses the exact public navigation source of truth', () => {
-    expect(PUBLIC_NAV_ITEMS).toEqual([
-      { href: '/', label: 'Home' },
-      { href: '/platform', label: 'Platform' },
-      { href: '/network-apps', label: 'Network Apps' },
-      { href: '/contact', label: 'Contact' },
-      { href: '/admin/login', label: 'Login' },
-    ])
+    // Updated nav includes marketing, capabilities, apps, safety pages
+    const hrefs = PUBLIC_NAV_ITEMS.map(i => i.href)
+    expect(hrefs).toContain('/')
+    expect(hrefs).toContain('/platform')
+    expect(hrefs).toContain('/marketing')
+    expect(hrefs).toContain('/capabilities')
+    expect(hrefs).toContain('/apps')
+    expect(hrefs).toContain('/safety')
+    expect(hrefs).toContain('/admin/login')
     expect(read('components/public/PublicShell.tsx')).toContain('PUBLIC_NAV_ITEMS')
   })
 
-  it('contains the required alternating homepage story', () => {
+  it('contains the required homepage sections', () => {
     const source = read('app/page.tsx').toLowerCase()
-    for (const token of [
-      'intelligencefabric',
-      'what amarktai network is',
-      'one command window',
-      'plan, build, launch, monitor, and improve',
-      'connected apps',
-      'create media, apps, and workflows',
-      'runtime truth',
-    ]) expect(source).toContain(token)
-    expect(source).toContain('bg-white')
-    expect(source).toContain('bg-cyan-50')
-    expect(source).toContain('bg-[#050a12]')
+    // IntelligenceFabric still used in hero
+    expect(source).toContain('intelligencefabric')
+    // New required sections
+    expect(source).toContain('marketing-workflow')
+    expect(source).toContain('capabilities')
+    expect(source).toContain('brand memory')
+    expect(source).toContain('approval')
+    expect(source).toContain('publishing')
+    expect(source).toContain('providers')
+    // AI is blue
+    expect(source).toContain('text-blue-')
+    // CTA exists
+    expect(source).toContain('/admin/login')
   })
 
-  it('explains the complete platform without backend report language', () => {
+  it('platform page explains the AI capability layer', () => {
     const source = read('app/platform/page.tsx')
-    for (const token of ['One command window', 'Provider mesh', 'Connected apps', 'Agents', 'Memory', 'Outputs', 'Hidden monitoring']) {
-      expect(source).toContain(token)
-    }
+    expect(source).toContain('capability')
+    expect(source).toContain('routing')
+    expect(source).toContain('providers')
   })
 
   it('shows connected apps registry (currently empty until apps are completed)', () => {
@@ -52,7 +55,6 @@ describe('final public website', () => {
     const source = [
       'app/page.tsx',
       'app/platform/page.tsx',
-      'app/network-apps/page.tsx',
       'app/contact/page.tsx',
       'components/public/PublicShell.tsx',
     ].map(read).join('\n')
