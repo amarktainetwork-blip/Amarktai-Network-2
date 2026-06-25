@@ -1616,3 +1616,126 @@ model AssetVersion {
   @@index([versionNumber])
   @@map("asset_versions")
 }
+
+// ── Publishing Scheduler ──────────────────────────────────────────────────────
+
+/// A scheduled publishing job for a campaign item or asset.
+/// Approval gating enforced before any publish attempt.
+model PublishingSchedule {
+  id              String    @id @default(cuid())
+  workspaceId     String    @default("") @map("workspace_id")
+  appSlug         String    @map("app_slug")
+  campaignId      String?   @map("campaign_id")
+  campaignItemId  String?   @map("campaign_item_id")
+  assetId         String?   @map("asset_id")
+  agentId         String?   @map("agent_id")
+  platform        String    @default("generic_export")
+  scheduledFor    DateTime  @map("scheduled_for")
+  timezone        String    @default("UTC")
+  /// draft|scheduled|ready|blocked_approval_required|processing|completed|failed|cancelled|retrying
+  status          String    @default("draft")
+  blockReason     String?   @map("block_reason")
+  attemptCount    Int       @default(0) @map("attempt_count")
+  maxAttempts     Int       @default(3) @map("max_attempts")
+  lastAttemptAt   DateTime? @map("last_attempt_at")
+  nextRetryAt     DateTime? @map("next_retry_at")
+  error           String?
+  /// JSON metadata blob
+  metadata        String    @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([appSlug])
+  @@index([campaignId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("publishing_schedules")
+}
+
+/// Result of a publishing/export attempt.
+model PublishingResult {
+  id               String    @id @default(cuid())
+  workspaceId      String    @default("") @map("workspace_id")
+  appSlug          String    @map("app_slug")
+  campaignId       String?   @map("campaign_id")
+  campaignItemId   String?   @map("campaign_item_id")
+  /// JSON string[] of asset IDs included
+  assetIds         String    @default("[]") @map("asset_ids")
+  platform         String    @default("generic_export")
+  /// not_ready|approval_required|export_ready|published|failed|provider_not_configured|cancelled
+  status           String    @default("not_ready")
+  provider         String    @default("") // platform name or 'generic_export'
+  externalPostId   String?   @map("external_post_id")
+  externalPostUrl  String?   @map("external_post_url")
+  exportPackageId  String?   @map("export_package_id")
+  error            String?
+  publishedAt      DateTime? @map("published_at")
+  /// JSON export package or provider response
+  metadata         String    @default("{}")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  @@index([appSlug])
+  @@index([campaignId])
+  @@index([status])
+  @@map("publishing_results")
+}
+
+/// Analytics record for a campaign, item, or asset.
+model CampaignAnalytics {
+  id               String   @id @default(cuid())
+  workspaceId      String   @default("") @map("workspace_id")
+  appSlug          String   @map("app_slug")
+  campaignId       String?  @map("campaign_id")
+  campaignItemId   String?  @map("campaign_item_id")
+  assetId          String?  @map("asset_id")
+  platform         String   @default("generic")
+  externalPostId   String?  @map("external_post_id")
+  /// impressions|reach|views|likes|comments|shares|saves|clicks|ctr|watch_time|completion_rate|engagement_rate|followers_gained|conversions|revenue|cost|manual_score
+  metricName       String   @map("metric_name")
+  metricValue      Float    @map("metric_value")
+  metricUnit       String?  @map("metric_unit")
+  capturedAt       DateTime @default(now()) @map("captured_at")
+  /// manual|platform_api|computed
+  source           String   @default("manual")
+  /// JSON metadata blob
+  metadata         String   @default("{}")
+
+  @@index([appSlug])
+  @@index([campaignId])
+  @@index([platform])
+  @@index([metricName])
+  @@index([capturedAt])
+  @@map("campaign_analytics")
+}
+
+/// Recurring campaign automation run schedule.
+model RecurringCampaignSchedule {
+  id            String    @id @default(cuid())
+  workspaceId   String    @default("") @map("workspace_id")
+  appSlug       String    @map("app_slug")
+  campaignId    String?   @map("campaign_id")
+  name          String
+  /// daily|weekly|monthly|custom
+  frequency     String    @default("weekly")
+  /// Optional custom cron string (e.g. '0 9 * * 1' for every Monday at 9am)
+  cronExpression String?  @map("cron_expression")
+  startDate     DateTime  @map("start_date")
+  endDate       DateTime? @map("end_date")
+  maxRuns       Int?      @map("max_runs")
+  runCount      Int       @default(0) @map("run_count")
+  lastRunAt     DateTime? @map("last_run_at")
+  nextRunAt     DateTime? @map("next_run_at")
+  /// active|paused|completed|cancelled|failed
+  status        String    @default("active")
+  error         String?
+  /// JSON metadata blob for run configuration
+  metadata      String    @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([appSlug])
+  @@index([status])
+  @@index([nextRunAt])
+  @@map("recurring_campaign_schedules")
+}
