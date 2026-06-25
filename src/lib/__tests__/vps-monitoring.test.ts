@@ -24,14 +24,6 @@ import {
   checkMemoryUsage,
   checkCpuLoad,
   checkDiskUsage,
-  checkDatabaseConnectivity,
-  checkRedisConnectivity,
-  checkQdrantConnectivity,
-  checkArtifactStorage,
-  checkQueueDepth,
-  checkPublishingBacklog,
-  checkProviderHealth,
-  runReadinessCheck,
   THRESHOLDS,
 } from '../vps-monitoring'
 
@@ -341,9 +333,6 @@ describe('runReadinessCheck', () => {
   }
   function criticalCheck(name: string, message: string): import('../vps-monitoring').HealthCheck {
     return { name, status: 'critical', message, value: null, threshold: null, checkedAt: new Date().toISOString(), durationMs: 1, metadata: {} }
-  }
-  function warningCheck(name: string, value: number): import('../vps-monitoring').HealthCheck {
-    return { name, status: 'warning', message: `${name} warning: ${value}`, value, threshold: { warning: 75, critical: 90 }, checkedAt: new Date().toISOString(), durationMs: 1, metadata: {} }
   }
   function unknownCheck(name: string): import('../vps-monitoring').HealthCheck {
     return { name, status: 'unknown', message: `${name} not configured`, value: 'not_configured', threshold: null, checkedAt: new Date().toISOString(), durationMs: 1, metadata: {} }

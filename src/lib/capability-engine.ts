@@ -76,17 +76,17 @@ const CAPABILITY_MAP: Record<CapabilityClass, CapabilityRequirement> = {
   general_chat: {
     anyCapabilityFlag: ['supports_chat'],
     label: 'general chat',
-    suggestedProviders: ['openai', 'groq', 'deepseek', 'gemini', 'huggingface'],
+    suggestedProviders: ['genx', 'groq', 'together', 'huggingface', 'mimo'],
   },
   deep_reasoning: {
     anyCapabilityFlag: ['supports_reasoning'],
     label: 'deep reasoning',
-    suggestedProviders: ['openai', 'deepseek', 'gemini'],
+    suggestedProviders: ['genx', 'groq', 'together'],
   },
   coding: {
     anyCapabilityFlag: ['supports_code'],
     label: 'code generation / editing',
-    suggestedProviders: ['openai', 'deepseek', 'groq'],
+    suggestedProviders: ['genx', 'groq', 'together'],
   },
   retrieval: {
     anyCapabilityFlag: ['supports_embeddings'],
