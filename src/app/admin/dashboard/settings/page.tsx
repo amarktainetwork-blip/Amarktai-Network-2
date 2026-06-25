@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle2, Eye, EyeOff, Loader2, Save, TestTube2 } from 'lucide-react'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
@@ -35,6 +36,23 @@ export default function SettingsPage() {
           {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
           {truth?.connectedCount ?? 0} live connections
         </div>
+      </section>
+
+      {/* Admin quick links */}
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {[
+          { href: '/admin/dashboard/providers', label: 'Provider Settings', desc: 'Configure the 5 active AI providers' },
+          { href: '/admin/dashboard/adult-mode', label: 'Adult Permissions', desc: 'Age gate, consent, and rights checks' },
+          { href: '/admin/dashboard/vps-health', label: 'Storage & Artifact Status', desc: 'VPS readiness, disk, Qdrant, Redis' },
+          { href: '/admin/dashboard/publishing', label: 'Publishing Credentials', desc: 'Platform export and publishing status' },
+          { href: '/admin/dashboard/brand-memory', label: 'Brand Memory', desc: 'Brand profiles and guidelines' },
+          { href: '/admin/dashboard/rag', label: 'Knowledge Base', desc: 'RAG ingestion and query' },
+        ].map(({ href, label, desc }) => (
+          <Link key={href} href={href} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
+            <p className="font-black text-slate-200 text-sm">{label}</p>
+            <p className="mt-1 text-xs text-slate-500">{desc}</p>
+          </Link>
+        ))}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">

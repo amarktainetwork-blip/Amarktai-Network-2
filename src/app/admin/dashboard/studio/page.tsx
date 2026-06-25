@@ -178,8 +178,6 @@ export default function StudioPage() {
         body: JSON.stringify({
           message,
           capability: mode.capability,
-          providerOverride: executionProvider,
-          modelOverride: executionModel,
           costMode,
           metadata: { appSlug, adultPolicy, dashboardContext: true, studioTab: tab },
         }),
@@ -241,8 +239,6 @@ export default function StudioPage() {
           tab,
           prompt: message,
           appSlug,
-          provider: selectedModel?.provider ?? provider,
-          model: selectedModel?.modelId === 'auto' ? undefined : selectedModel?.modelId ?? modelId,
           costMode,
           adultPolicy,
           mode: adultMode,
@@ -280,8 +276,8 @@ export default function StudioPage() {
         { role: 'assistant', content: summarizeStudioResult(effectiveData) },
       ])
       setLastResult(extractStudioDetails(effectiveData, {
-        provider: executionProvider,
-        model: executionModel,
+        provider: '',
+        model: '',
         jobStatus: String(effectiveData.jobStatus ?? effectiveData.status ?? (effectiveData.result as Record<string, unknown> | undefined)?.status ?? ''),
       }))
       setStatus(effectiveData.workbenchUrl
@@ -312,8 +308,6 @@ export default function StudioPage() {
       const form = new FormData()
       form.append('file', uploadFile)
       form.append('appSlug', appSlug)
-      form.append('provider', executionProvider)
-      if (executionModel) form.append('model', executionModel)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json().catch(() => ({}))
       setLastPayload(data)
@@ -324,8 +318,8 @@ export default function StudioPage() {
         { role: 'assistant', content: String(data.result?.transcript ?? summarizeStudioResult(data)) },
       ])
       setLastResult(extractStudioDetails(data, {
-        provider: executionProvider,
-        model: executionModel,
+        provider: '',
+        model: '',
         jobStatus: 'completed',
       }))
       setStatus(data.artifact?.id ? `Transcript saved: ${data.artifact.id}` : 'Transcript returned')
