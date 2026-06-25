@@ -12,8 +12,8 @@
  * Run after: npm run build (via "postbuild" lifecycle hook)
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 const cwd = process.cwd()
 const distDir = join(cwd, '.next')
@@ -23,10 +23,6 @@ const MANIFESTS = [
   join(distDir, 'app-path-routes-manifest.json'),
   join(distDir, 'server', 'app-paths-manifest.json'),
 ]
-
-// Inside standalone, the manifests may also be copied there
-const standaloneBase = join(distDir, 'standalone')
-const possibleStandaloneNames = ['server', '.next/server']
 
 function isKeyRoute(key) {
   return key.includes('[key]')
@@ -49,6 +45,27 @@ function patchManifest(filePath) {
   writeFileSync(filePath, JSON.stringify(cleaned, null, 2))
   console.log(`[patch-manifests] Removed ${before - after} [key] route(s) from ${filePath}`)
   return true
+}
+
+function copyDirectory(source, destination) {
+  if (!existsSync(source)) {
+    throw new Error(`[patch-manifests] Required build asset path is missing: ${source}`)
+  }
+
+  rmSync(destination, { recursive: true, force: true })
+  mkdirSync(dirname(destination), { recursive: true })
+  cpSync(source, destination, { recursive: true, force: true })
+  console.log(`[patch-manifests] Copied ${source} -> ${destination}`)
+}
+
+function ensureStandaloneAssets() {
+  const standaloneDir = join(distDir, 'standalone')
+  if (!existsSync(standaloneDir)) {
+    throw new Error(`[patch-manifests] Standalone output is missing: ${standaloneDir}`)
+  }
+
+  copyDirectory(join(distDir, 'static'), join(standaloneDir, '.next', 'static'))
+  copyDirectory(join(cwd, 'public'), join(standaloneDir, 'public'))
 }
 
 let patched = 0
@@ -76,5 +93,7 @@ function findAndPatch(dir) {
 }
 
 findAndPatch(join(distDir, 'standalone'))
+
+ensureStandaloneAssets()
 
 console.log(`[patch-manifests] Done. Patched ${patched} manifest file(s).`)
