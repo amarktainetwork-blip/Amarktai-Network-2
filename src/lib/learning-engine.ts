@@ -772,3 +772,175 @@ export function getOptimizedModel(
     reason: `Cheapest successful — ${cheapest.modelId} with ${Math.round(cheapest.winRate * 100)}% win rate, ${cheapest.avgLatencyMs}ms avg`,
   }
 }
+
+// ── Feedback Recording ────────────────────────────────────────────────────────
+
+export interface UserFeedback {
+  appSlug: string
+  taskId?: string
+  capability: string
+  providerKey: string
+  model: string
+  /** User-provided rating 1–5 */
+  rating: number
+  /** Optional comment */
+  comment?: string
+  /** Was the output used/accepted? */
+  accepted: boolean
+}
+
+export interface ExecutionSignal {
+  appSlug: string
+  capability: string
+  providerKey: string
+  model: string
+  success: boolean
+  latencyMs: number
+  costEstimateUsd?: number
+  qualityScore?: number
+  fallbackUsed: boolean
+  fallbackReason?: string
+  agentType?: string
+  taskId?: string
+}
+
+/**
+ * Record user or app feedback on an AI output.
+ * Stored in MemoryEntry with memoryType='learned' for routing decisions.
+ * Never throws.
+ */
+export async function recordFeedback(feedback: UserFeedback): Promise<boolean> {
+  try {
+    await prisma.memoryEntry.create({
+      data: {
+        appSlug: feedback.appSlug,
+        memoryType: 'learned',
+        key: 'user_feedback',
+        content: JSON.stringify({
+          ...feedback,
+          recordedAt: new Date().toISOString(),
+          signalType: 'user_feedback',
+        }),
+        importance: feedback.rating >= 4 ? 0.8 : feedback.rating <= 2 ? 0.9 : 0.5,
+      },
+    })
+    // Also update in-memory model score if available
+    const improvement = feedback.accepted ? 1 : -1
+    const currentScore = modelScores.get(`${feedback.providerKey}:${feedback.model}`)
+    if (currentScore) {
+      modelScores.set(`${feedback.providerKey}:${feedback.model}`, {
+        ...currentScore,
+        winRate: Math.max(0, Math.min(1, currentScore.winRate + improvement * 0.02)),
+      })
+    }
+    return true
+  } catch (err) {
+    console.warn('[learning-engine] recordFeedback failed:', err instanceof Error ? err.message : err)
+    return false
+  }
+}
+
+/**
+ * Record an execution signal (success/failure, latency, cost, quality, fallback).
+ * These signals feed directly into provider selection for future requests.
+ * Never throws.
+ */
+export async function recordExecutionSignal(signal: ExecutionSignal): Promise<boolean> {
+  try {
+    await prisma.memoryEntry.create({
+      data: {
+        appSlug: signal.appSlug,
+        memoryType: 'learned',
+        key: 'execution_signal',
+        content: JSON.stringify({
+          ...signal,
+          recordedAt: new Date().toISOString(),
+          signalType: 'execution_signal',
+        }),
+        importance: signal.success ? 0.4 : 0.8,
+      },
+    })
+    // Update in-memory model scoring from real execution
+    recordModelScore(signal.providerKey, signal.model, signal.capability, signal.success, signal.latencyMs, signal.qualityScore ?? null)
+    return true
+  } catch (err) {
+    console.warn('[learning-engine] recordExecutionSignal failed:', err instanceof Error ? err.message : err)
+    return false
+  }
+}
+
+/**
+ * Retrieve recent learning signals for a given app and capability.
+ * Used by routing decisions to prefer better-performing providers.
+ */
+export async function getLearningSignals(
+  appSlug: string,
+  capability?: string,
+  limit = 50,
+): Promise<Array<{ signalType: string; providerKey: string; model: string; success: boolean; latencyMs: number; recordedAt: string }>> {
+  try {
+    const rows = await prisma.memoryEntry.findMany({
+      where: {
+        appSlug,
+        memoryType: 'learned',
+        key: { in: ['route_outcome', 'user_feedback', 'execution_signal'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
+
+    const signals = []
+    for (const row of rows) {
+      try {
+        const data = JSON.parse(row.content) as Record<string, unknown>
+        if (capability && data.capability !== capability && data.taskType !== capability) continue
+        signals.push({
+          signalType: String(data.signalType ?? data.key ?? 'unknown'),
+          providerKey: String(data.providerKey ?? data.provider ?? ''),
+          model: String(data.model ?? ''),
+          success: Boolean(data.success),
+          latencyMs: Number(data.latencyMs ?? 0),
+          recordedAt: String(data.recordedAt ?? ''),
+        })
+      } catch {
+        // skip malformed rows
+      }
+    }
+    return signals
+  } catch (err) {
+    console.warn('[learning-engine] getLearningSignals failed:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
+/**
+ * Get provider success rates from learning signals for a given capability.
+ * Used for routing decisions — prefers higher success rate providers.
+ */
+export async function getProviderSuccessRates(
+  appSlug: string,
+  capability: string,
+): Promise<Record<string, { successRate: number; avgLatencyMs: number; sampleCount: number }>> {
+  const signals = await getLearningSignals(appSlug, capability, 200)
+  const grouped: Record<string, { successes: number; total: number; totalLatency: number }> = {}
+
+  for (const s of signals) {
+    if (!s.providerKey) continue
+    if (!grouped[s.providerKey]) grouped[s.providerKey] = { successes: 0, total: 0, totalLatency: 0 }
+    grouped[s.providerKey].total++
+    if (s.success) grouped[s.providerKey].successes++
+    grouped[s.providerKey].totalLatency += s.latencyMs
+  }
+
+  const result: Record<string, { successRate: number; avgLatencyMs: number; sampleCount: number }> = {}
+  for (const [provider, stats] of Object.entries(grouped)) {
+    result[provider] = {
+      successRate: stats.total > 0 ? stats.successes / stats.total : 0,
+      avgLatencyMs: stats.total > 0 ? Math.round(stats.totalLatency / stats.total) : 0,
+      sampleCount: stats.total,
+    }
+  }
+  return result
+}
+
+// modelScores is defined earlier in this file (line ~623) and used above

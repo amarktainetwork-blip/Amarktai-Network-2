@@ -94,8 +94,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:planner'],
       canHandoff: ['router', 'creative', 'trading_analyst'],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -109,8 +109,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:router'],
       canHandoff: ['validator'],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -124,8 +124,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:validator'],
       canHandoff: [],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -139,8 +139,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:memory'],
       canHandoff: [],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -154,8 +154,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:retrieval'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -169,8 +169,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:creative'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'gemini',
-      defaultModel: 'gemini-2.0-flash',
+      defaultProvider: 'groq',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -184,8 +184,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:campaign'],
       canHandoff: ['creative'],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -199,8 +199,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:trading_analyst'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -214,8 +214,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:app_ops'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -229,8 +229,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:learning'],
       canHandoff: [],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -244,8 +244,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:security'],
       canHandoff: ['validator'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -259,8 +259,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:voice'],
       canHandoff: ['creative', 'campaign'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -274,8 +274,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:travel_planner'],
       canHandoff: ['creative', 'voice'],
       memoryEnabled: true,
-      defaultProvider: 'gemini',
-      defaultModel: 'gemini-1.5-pro',
+      defaultProvider: 'groq',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -289,8 +289,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:developer'],
       canHandoff: ['validator', 'planner'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -304,8 +304,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:support_community'],
       canHandoff: ['security', 'validator'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -319,8 +319,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:healing'],
       canHandoff: ['app_ops', 'validator'],
       memoryEnabled: false,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -335,8 +335,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:chatbot'],
       canHandoff: ['support_community', 'campaign'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o-mini',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
   [
@@ -351,8 +351,8 @@ const AGENT_DEFINITIONS: ReadonlyMap<AgentType, AgentDefinition> = new Map<Agent
       requiredPermissions: ['agent:marketing_agent'],
       canHandoff: ['campaign', 'creative'],
       memoryEnabled: true,
-      defaultProvider: 'openai',
-      defaultModel: 'gpt-4o',
+      defaultProvider: 'genx',
+      defaultModel: 'auto',
     },
   ],
 ])
@@ -408,7 +408,7 @@ function resolveProviderAndModel(
 
   // Use the agent's default provider if the app allows it; otherwise fall back
   // to the first allowed provider on the app profile.
-  let provider = definition.defaultProvider ?? 'openai'
+  let provider = definition.defaultProvider ?? 'genx'
   if (!profile.allowed_providers.includes(provider) && profile.allowed_providers.length > 0) {
     provider = profile.allowed_providers[0]
   }
@@ -417,7 +417,7 @@ function resolveProviderAndModel(
   let model = definition.defaultModel ?? getDefaultModelForProvider(provider)
 
   // Only override with an app-preferred model when it belongs to the resolved
-  // provider (avoids mismatched provider/model combos like cohere + gpt-4o).
+  // provider (avoids mismatched provider/model combos like mismatched provider/model).
   if (profile.preferred_models.length > 0 && profile.allowed_models.length > 0) {
     const compatiblePreferred = profile.preferred_models.find((m) =>
       profile.allowed_models.includes(m),
