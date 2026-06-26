@@ -1,54 +1,33 @@
 import Link from 'next/link'
-import { ArrowRight, BarChart3, BookOpen, Bot, CheckCircle2, Database, FileImage, Globe, Layers3, Mic, Music, Network, Package, Play, Radar, Send, Shield, Sparkles, Users, Video, Zap } from 'lucide-react'
+import { ArrowRight, Bot, Boxes, Database, FileImage, Mic, Music, Search, ShieldCheck, Sparkles, Video } from 'lucide-react'
 import PublicShell from '@/components/public/PublicShell'
 
-const capabilityGroups = [
+const groups = [
   {
-    group: 'Intelligence',
-    color: 'border-blue-200 bg-blue-50',
-    iconColor: 'text-blue-600',
-    caps: [
-      { icon: <Sparkles className="h-5 w-5" />, label: 'Chat and reasoning', desc: 'Conversational AI, reasoning chains, structured outputs' },
-      { icon: <Globe className="h-5 w-5" />, label: 'Research', desc: 'Web search, synthesis, fact-checking, citations' },
-      { icon: <Radar className="h-5 w-5" />, label: 'Website scraping', desc: 'In-house scraper — no external paid APIs' },
-      { icon: <BookOpen className="h-5 w-5" />, label: 'Brand Memory', desc: 'Persistent brand identity, guidelines, and rules' },
-      { icon: <Database className="h-5 w-5" />, label: 'RAG and knowledge', desc: 'HuggingFace embeddings + Qdrant vector store' },
-      { icon: <Bot className="h-5 w-5" />, label: 'Agents', desc: 'Marketing, research, customer service, automation' },
+    label: 'Intelligence',
+    items: [
+      ['Text and reasoning', 'Structured output, app assistance, workflow decisions', Sparkles],
+      ['Research', 'Research tasks, synthesis, retrieval-backed context', Search],
+      ['Agents', 'Marketing, research, customer service, automation', Bot],
+      ['Memory and RAG', 'Brand memory, app memory, vector retrieval', Database],
     ],
   },
   {
-    group: 'Media',
-    color: 'border-purple-200 bg-purple-50',
-    iconColor: 'text-purple-600',
-    caps: [
-      { icon: <FileImage className="h-5 w-5" />, label: 'Image generation', desc: 'GenX, HuggingFace, Together — quality tiers' },
-      { icon: <Video className="h-5 w-5" />, label: 'Video generation', desc: 'Short videos, reels, avatar video presenters' },
-      { icon: <Music className="h-5 w-5" />, label: 'Music generation', desc: 'Songs, jingles, background tracks — multiple genres' },
-      { icon: <Mic className="h-5 w-5" />, label: 'Voice / TTS', desc: 'Text-to-speech, voiceovers, multiple voice types' },
-      { icon: <Users className="h-5 w-5" />, label: 'Avatars', desc: 'AI avatar presenters, talking heads, brand characters' },
+    label: 'Media',
+    items: [
+      ['Image', 'Generated images and image artifacts', FileImage],
+      ['Video', 'Video jobs, avatar clips, status-aware outputs', Video],
+      ['Music', 'Music and audio generation routes', Music],
+      ['Voice and avatars', 'TTS, STT, avatar presenter workflows', Mic],
     ],
   },
   {
-    group: 'Workflows',
-    color: 'border-emerald-200 bg-emerald-50',
-    iconColor: 'text-emerald-600',
-    caps: [
-      { icon: <Play className="h-5 w-5" />, label: 'Marketing campaigns', desc: 'End-to-end autonomous campaign generation' },
-      { icon: <Package className="h-5 w-5" />, label: 'Campaign storage', desc: 'Versioned assets with full audit trail' },
-      { icon: <CheckCircle2 className="h-5 w-5" />, label: 'Approvals', desc: 'Human-in-the-loop approval queue enforcement' },
-      { icon: <Send className="h-5 w-5" />, label: 'Publishing and export', desc: 'Scheduled publishing or manual export packages' },
-      { icon: <BarChart3 className="h-5 w-5" />, label: 'Analytics', desc: '17 metrics — impressions, CTR, engagement, and more' },
-    ],
-  },
-  {
-    group: 'Platform',
-    color: 'border-slate-200 bg-slate-50',
-    iconColor: 'text-slate-700',
-    caps: [
-      { icon: <Network className="h-5 w-5" />, label: 'Provider routing', desc: 'Automatic routing — apps never choose providers' },
-      { icon: <Shield className="h-5 w-5" />, label: 'VPS readiness', desc: 'Live health checks for all system components' },
-      { icon: <Layers3 className="h-5 w-5" />, label: 'Learning signals', desc: 'Every run feeds feedback to improve future decisions' },
-      { icon: <Zap className="h-5 w-5" />, label: 'Budget and quality tiers', desc: 'Cheap, balanced, premium — per capability request' },
+    label: 'Operations',
+    items: [
+      ['Artifacts', 'Stored outputs, links, previews, status', Boxes],
+      ['Approvals', 'Manual review, needs changes, publish gates', ShieldCheck],
+      ['Campaigns', 'Autonomous marketing results and generated assets', Bot],
+      ['Learning', 'Execution signals and agent summaries', Sparkles],
     ],
   },
 ]
@@ -56,65 +35,49 @@ const capabilityGroups = [
 export default function CapabilitiesPage() {
   return (
     <PublicShell>
-      {/* Hero */}
-      <section className="bg-[#050a12] py-24 text-white lg:py-32">
+      <section className="bg-[#03050a] py-24 text-white lg:py-32">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Capabilities</p>
-          <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] tracking-tight lg:text-7xl">
-            Every <span className="text-blue-400">AI</span> capability your app needs.
+          <p className="font-mono text-xs font-black uppercase tracking-[0.2em] text-blue-300">Capabilities</p>
+          <h1 className="mt-5 max-w-5xl text-5xl font-black leading-none tracking-tight lg:text-7xl">
+            Request capabilities, not providers.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-            AmarktAI provides a unified capability layer. Apps request what they need — the platform handles routing, providers, quality, cost, and fallback. No app ever sets a provider or model directly.
+            The platform exposes capability categories to apps while runtime owns provider selection, model selection, fallback, storage, approval state, and proof through automatic routing.
           </p>
         </div>
       </section>
 
-      {/* Capability groups */}
-      {capabilityGroups.map((group) => (
-        <section key={group.group} className={`py-16 lg:py-20 ${group.color.split(' ')[1] === 'bg-blue-50' ? 'bg-blue-50' : group.color.split(' ')[1] === 'bg-purple-50' ? 'bg-purple-50' : group.color.split(' ')[1] === 'bg-emerald-50' ? 'bg-emerald-50' : 'bg-slate-50'} text-slate-950`}>
+      {groups.map((group, index) => (
+        <section key={group.label} className={`${index % 2 === 0 ? 'bg-[#071019]' : 'bg-[#03050a]'} py-20 text-white lg:py-24`}>
           <div className="mx-auto max-w-7xl px-5 lg:px-8">
-            <p className={`text-xs font-black uppercase tracking-[0.2em] ${group.iconColor}`}>{group.group}</p>
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {group.caps.map((cap) => (
-                <article key={cap.label} className={`rounded-2xl border p-6 bg-white shadow-sm ${group.color.split(' ')[0]}`}>
-                  <div className={group.iconColor}>{cap.icon}</div>
-                  <h3 className="mt-4 text-lg font-black text-slate-900">{cap.label}</h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{cap.desc}</p>
-                </article>
-              ))}
+            <p className="font-mono text-xs font-black uppercase tracking-[0.2em] text-cyan-300">{group.label}</p>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {group.items.map(([title, body, Icon]) => {
+                const ItemIcon = Icon as typeof Sparkles
+                return (
+                  <article key={String(title)} className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+                    <ItemIcon className="h-6 w-6 text-cyan-300" />
+                    <h2 className="mt-5 text-lg font-black text-white">{String(title)}</h2>
+                    <p className="mt-3 text-sm leading-7 text-slate-400">{String(body)}</p>
+                  </article>
+                )
+              })}
             </div>
           </div>
         </section>
       ))}
 
-      {/* Provider note */}
-      <section className="bg-[#050a12] py-20 text-white lg:py-28">
+      <section className="bg-[#071019] py-20 text-white lg:py-28">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-400">Platform providers</p>
+          <p className="font-mono text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Provider boundary</p>
           <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight">
-            Active providers only. Apps never pick them.
+            The capability console does not expose provider or model pickers.
           </h2>
-          <div className="mt-8 flex flex-wrap gap-4">
-            {['GenX', 'Hugging Face', 'Together AI', 'Groq', 'MiMo'].map((p) => (
-              <div key={p} className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-4 py-2.5">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)]" />
-                <span className="text-sm font-black text-white">{p}</span>
-              </div>
-            ))}
-          </div>
-          <p className="mt-5 text-sm text-slate-400">Only the approved active provider set is available in the platform runtime.</p>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-blue-600 py-16 text-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
-          <div>
-            <h2 className="text-3xl font-black tracking-tight">Use every capability from one platform.</h2>
-            <p className="mt-2 text-blue-100">Apps stay simple. AmarktAI handles the AI capability layer.</p>
-          </div>
-          <Link href="/admin/login" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-black text-blue-700 transition hover:bg-blue-50">
-            Open Dashboard <ArrowRight className="h-4 w-4" />
+          <p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">
+            Active providers only: GenX, Hugging Face, Together, Groq, and MiMo. The approved active provider set is routed automatically. After a run, the proof panel can show the provider and model selected by runtime. Before a run, users choose context, capability, request, budget, quality, and permitted safety settings.
+          </p>
+          <Link href="/admin/login" className="mt-8 inline-flex items-center gap-2 rounded-lg bg-cyan-400 px-5 py-3 text-sm font-black text-slate-950 transition hover:bg-cyan-300">
+            Open capability console <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </section>

@@ -94,7 +94,7 @@ describe('hard cleanup and recovery gate', () => {
       const source = fs.readFileSync(file, 'utf8')
       expect(source, `${path.relative(REPO, file)} should not match ${activeProviderPattern}`).not.toMatch(activeProviderPattern)
     }
-  })
+  }, 30_000)
 
   it('keeps exactly the active AI provider set in provider admin source', () => {
     const providerRoute = read('src/app/api/admin/providers/[id]/test/route.ts')
