@@ -54,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     acc[g].push(item)
     return acc
   }, {})
-  const groupOrder = ['Platform', 'Marketing', 'Intelligence', 'Admin', 'Build']
+  const groupOrder = ['Control', 'Workflow', 'Knowledge', 'Governance', 'System']
 
   const sidebar = (
     <div className="flex h-full flex-col">

@@ -3,11 +3,11 @@
  *
  * Proves:
  *  1. AmarktAI branding exists in public pages
- *  2. AI can be styled separately (blue references exist)
+ *  2. AI can be styled separately (blue/cyan references exist)
  *  3. No "brain" wording in public pages
- *  4. Active providers shown only (GenX, HuggingFace, Together, Groq, MiMo)
- *  5. Removed providers not shown as active
- *  6. "Apps never choose providers/models" copy exists
+ *  4. Provider names are not exposed on public pages
+ *  5. Removed providers are not shown as active
+ *  6. Apps request capabilities, not infrastructure routes
  *  7. Marketing workflow section exists
  *  8. Adult safety copy exists
  *  9. CTA (call to action) exists
@@ -27,6 +27,10 @@ function readSrc(rel: string): string {
 
 const ALL_PUBLIC_SOURCES = [
   'src/app/page.tsx',
+  'src/app/about/page.tsx',
+  'src/app/features/page.tsx',
+  'src/app/what-we-can-do/page.tsx',
+  'src/app/contact/page.tsx',
   'src/app/platform/page.tsx',
   'src/app/marketing/page.tsx',
   'src/app/capabilities/page.tsx',
@@ -68,28 +72,27 @@ describe('AmarktAI branding', () => {
 
 // ── 2. AI styled blue ─────────────────────────────────────────────────────────
 
-describe('AI visually blue', () => {
-  it('landing page uses blue color for AI references', () => {
+describe('AI visually emphasized', () => {
+  it('landing page uses blue or cyan color for AI references', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('text-blue-')
-    // AI text is styled blue
-    expect(src).toMatch(/text-blue-[0-9]+.*AI|AI.*text-blue-[0-9]+/)
+    expect(src).toMatch(/text-(blue|cyan)-/)
+    expect(src).toMatch(/text-(blue|cyan)-[0-9]+.*AI|AI.*text-(blue|cyan)-[0-9]+/)
   })
 
-  it('hero section has blue CTA button', () => {
+  it('hero section has blue or cyan CTA button', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('bg-blue-')
+    expect(src).toMatch(/bg-(blue|cyan)-/)
     expect(src).toContain('Launch your')
   })
 
-  it('capabilities page uses blue for AI capability items', () => {
+  it('capabilities page uses blue or cyan for AI capability items', () => {
     const src = readSrc('src/app/capabilities/page.tsx')
-    expect(src).toContain('text-blue-')
+    expect(src).toMatch(/text-(blue|cyan)-/)
   })
 
-  it('provider section uses blue accent', () => {
+  it('runtime sections use blue or cyan accents', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('text-blue-')
+    expect(src).toMatch(/text-(blue|cyan)-/)
   })
 })
 
@@ -122,27 +125,12 @@ describe('No brain wording', () => {
 
 // ── 4. Active providers shown ─────────────────────────────────────────────────
 
-describe('Active providers shown correctly', () => {
-  const ACTIVE_PROVIDERS = ['GenX', 'Hugging Face', 'Together', 'Groq', 'MiMo']
+describe('Provider names hidden on public pages', () => {
+  const PROVIDER_NAMES = ['GenX', 'Hugging Face', 'Together', 'Groq', 'MiMo']
 
-  it('landing page lists all 5 active providers', () => {
-    const src = readSrc('src/app/page.tsx')
-    for (const p of ACTIVE_PROVIDERS) {
-      expect(src).toContain(p)
-    }
-  })
-
-  it('platform page lists active providers', () => {
-    const src = readSrc('src/app/platform/page.tsx')
-    expect(src).toContain('GenX')
-    expect(src).toContain('Groq')
-    expect(src).toContain('MiMo')
-  })
-
-  it('capabilities page lists active providers', () => {
-    const src = readSrc('src/app/capabilities/page.tsx')
-    for (const p of ACTIVE_PROVIDERS) {
-      expect(src).toContain(p)
+  it('public website copy does not list provider names', () => {
+    for (const p of PROVIDER_NAMES) {
+      expect(ALL_PUBLIC_SOURCES).not.toContain(p)
     }
   })
 })
@@ -161,38 +149,34 @@ describe('Removed providers not shown as active', () => {
     }
   })
 
-  it('capabilities page explicitly states only active providers are available', () => {
-    const src = readSrc('src/app/capabilities/page.tsx')
-    expect(src).toMatch(/approved active provider set|active providers only/i)
-  })
-
-  it('landing page mentions that removed providers are not used', () => {
-    const src = readSrc('src/app/page.tsx')
-    expect(src).toMatch(/removed providers|not used/i)
+  it('public website does not mention removed provider names', () => {
+    for (const p of REMOVED) {
+      expect(ALL_PUBLIC_SOURCES.toLowerCase()).not.toContain(p)
+    }
   })
 })
 
 // ── 6. Apps never choose providers/models copy ────────────────────────────────
 
-describe('Apps never choose providers/models', () => {
-  it('landing page states apps never choose providers', () => {
+describe('Apps request capabilities, not infrastructure routes', () => {
+  it('landing page states runtime chooses infrastructure', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toMatch(/apps never choose|never choose providers|never specify/i)
+    expect(src).toMatch(/request capabilities|chooses the route|centralized/i)
   })
 
-  it('platform page states apps never choose providers', () => {
+  it('platform page states apps never choose infrastructure routes', () => {
     const src = readSrc('src/app/platform/page.tsx')
-    expect(src).toMatch(/apps never choose|never choose providers|no provider.*set by the app/i)
+    expect(src).toMatch(/apps never choose infrastructure routes/i)
   })
 
-  it('apps page states apps never choose providers', () => {
+  it('apps page states apps request capabilities', () => {
     const src = readSrc('src/app/apps/page.tsx')
-    expect(src).toMatch(/apps never choose|never choose providers/i)
+    expect(src).toMatch(/apps never choose infrastructure routes|apps send|runtime decides/i)
   })
 
-  it('capabilities page mentions provider routing is automatic', () => {
+  it('capabilities page mentions routing is automatic', () => {
     const src = readSrc('src/app/capabilities/page.tsx')
-    expect(src).toMatch(/never choose|never pick|automatic/i)
+    expect(src).toMatch(/never choose|never pick|automatic|runtime/i)
   })
 })
 
@@ -277,10 +261,10 @@ describe('Call to action exists', () => {
     expect(src).toContain('Launch your')
   })
 
-  it('landing page has secondary CTA linking to platform', () => {
+  it('landing page has secondary CTA linking to features', () => {
     const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('/platform')
-    expect(src).toContain('Explore the platform')
+    expect(src).toContain('/features')
+    expect(src).toContain('Explore features')
   })
 
   it('landing page bottom CTA exists', () => {
@@ -305,13 +289,15 @@ describe('Call to action exists', () => {
 describe('Public navigation and footer', () => {
   it('nav items include required sections', () => {
     const hrefs = PUBLIC_NAV_ITEMS.map(i => i.href)
-    expect(hrefs).toContain('/')
-    expect(hrefs).toContain('/platform')
+    expect(hrefs).toEqual([
+      '/',
+      '/about',
+      '/features',
+      '/what-we-can-do',
+      '/contact',
+      '/admin/login',
+    ])
     expect(hrefs).not.toContain('/marketing')
-    expect(hrefs).toContain('/capabilities')
-    expect(hrefs).toContain('/apps')
-    expect(hrefs).toContain('/safety')
-    expect(hrefs).toContain('/admin/login')
   })
 
   it('PublicShell uses PUBLIC_NAV_ITEMS', () => {
@@ -322,10 +308,9 @@ describe('Public navigation and footer', () => {
   it('footer has all required links', () => {
     const src = readSrc('src/components/public/PublicShell.tsx')
     expect(src).toContain('/platform')
-    expect(src).toContain('/capabilities')
+    expect(src).toContain('/features')
+    expect(src).toContain('/what-we-can-do')
     expect(src).not.toContain('/marketing')
-    expect(src).toContain('/apps')
-    expect(src).toContain('/safety')
     expect(src).toContain('/privacy')
     expect(src).toContain('/terms')
     expect(src).toContain('/contact')

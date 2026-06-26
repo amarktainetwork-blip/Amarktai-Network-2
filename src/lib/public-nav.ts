@@ -1,8 +1,8 @@
 export const PUBLIC_NAV_ITEMS = [
   { href: '/', label: 'Home' },
-  { href: '/platform', label: 'Platform' },
-  { href: '/capabilities', label: 'Capabilities' },
-  { href: '/apps', label: 'Apps' },
-  { href: '/safety', label: 'Safety' },
-  { href: '/admin/login', label: 'Dashboard' },
+  { href: '/about', label: 'About Us' },
+  { href: '/features', label: 'Features' },
+  { href: '/what-we-can-do', label: 'What We Can Do' },
+  { href: '/contact', label: 'Contact Us' },
+  { href: '/admin/login', label: 'Login' },
 ] as const

@@ -271,7 +271,7 @@ describe('adult mode gate', () => {
   it('adult mode page gate is locked by default', () => {
     const src = readSrc('src/app/admin/dashboard/adult-mode/page.tsx')
     expect(src).toContain("'locked'")
-    expect(src).toContain('gate !== ')
+    expect(src).toContain("gate === 'locked'")
   })
 
   it('adult mode page requires age confirmation', () => {
@@ -314,11 +314,12 @@ describe('adult mode gate', () => {
     expect(src).toContain('leaked')
   })
 
-  it('adult mode submit is disabled until gate is unlocked and prompt clean', () => {
+  it('adult mode does not expose a dead submit button before governance checks pass', () => {
     const src = readSrc('src/app/admin/dashboard/adult-mode/page.tsx')
-    expect(src).toContain('canSubmit')
-    expect(src).toContain("gate === 'unlocked'")
+    expect(src).toContain('readyForStudio')
+    expect(src).toContain("href=\"/admin/dashboard/studio\"")
     expect(src).toContain('!blockReason')
+    expect(src).not.toContain('type="submit"')
   })
 
   it('adult mode page never selects a provider', () => {
@@ -383,27 +384,26 @@ describe('dashboard nav: required sections present', () => {
   it('nav items export from dashboard-nav.ts', async () => {
     const { DASHBOARD_NAV_ITEMS } = await import('@/lib/dashboard-nav')
     expect(Array.isArray(DASHBOARD_NAV_ITEMS)).toBe(true)
-    expect(DASHBOARD_NAV_ITEMS.length).toBeGreaterThanOrEqual(15)
+    expect(DASHBOARD_NAV_ITEMS).toHaveLength(14)
   })
 
   it('nav includes required section IDs', async () => {
     const { DASHBOARD_NAV_ITEMS } = await import('@/lib/dashboard-nav')
     const ids = DASHBOARD_NAV_ITEMS.map(item => item.id)
-    expect(ids).toContain('control-centre')
+    expect(ids).toContain('overview')
+    expect(ids).toContain('connected-apps')
     expect(ids).toContain('studio')
     expect(ids).toContain('capabilities')
-    expect(ids).toContain('apps')
-    expect(ids).toContain('approvals')
-    expect(ids).toContain('providers')
-    expect(ids).toContain('storage-artifacts')
-    expect(ids).toContain('memory-rag')
-    expect(ids).toContain('vps-health')
-    expect(ids).toContain('safety')
+    expect(ids).toContain('campaigns')
+    expect(ids).toContain('assets')
     expect(ids).toContain('agents')
-    expect(ids).toContain('jobs-worker')
-    expect(ids).toContain('publishing')
-    expect(ids).toContain('analytics')
+    expect(ids).toContain('memory')
+    expect(ids).toContain('knowledge-rag')
+    expect(ids).toContain('approvals')
+    expect(ids).toContain('scheduler-publishing')
+    expect(ids).toContain('adult-permissions')
     expect(ids).toContain('settings')
+    expect(ids).toContain('system-monitoring')
   })
 
   it('all nav items have href, label, icon, and group', async () => {

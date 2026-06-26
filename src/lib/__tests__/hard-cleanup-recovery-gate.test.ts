@@ -152,24 +152,21 @@ describe('hard cleanup and recovery gate', () => {
     expect(fabric).not.toContain('Runtime Truth')
 
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Control Centre',
+      'Overview',
+      'Connected Apps',
       'Studio',
       'Capabilities',
-      'Apps',
-      'Providers & Keys',
-      'Storage & Artifacts',
-      'Memory & RAG',
+      'Campaigns',
+      'Assets',
       'Agents',
-      'Jobs & Worker',
+      'Memory',
+      'Knowledge/RAG',
       'Approvals',
-      'Publishing',
-      'Analytics',
-      'Safety',
-      'VPS Health',
+      'Scheduler/Publishing',
+      'Adult Permissions',
       'Settings',
+      'System Monitoring',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Marketing')
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Campaigns')
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Scheduler')
   })
 })

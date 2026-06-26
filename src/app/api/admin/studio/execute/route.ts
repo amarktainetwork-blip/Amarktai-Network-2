@@ -18,10 +18,15 @@ import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 type ExecuteBody = {
   tab?: StudioTab
   prompt?: string
-  provider?: string
-  model?: string
+  provider?: unknown
+  model?: unknown
+  providerOverride?: unknown
+  modelOverride?: unknown
   costMode?: 'cheap' | 'balanced' | 'premium'
+  qualityTier?: 'basic' | 'standard' | 'high' | 'premium'
   appSlug?: string
+  workspaceId?: string
+  brandId?: string
   adultPolicy?: string
   mode?: 'text' | 'image' | 'video' | 'voice'
   voiceId?: string
@@ -97,6 +102,15 @@ export async function POST(request: NextRequest) {
   if (!session.isLoggedIn) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json().catch(() => ({})) as ExecuteBody
+  const forbiddenFields = ['provider', 'model', 'providerOverride', 'modelOverride'] as const
+  const forbidden = forbiddenFields.filter((field) => Object.prototype.hasOwnProperty.call(body, field))
+  if (forbidden.length > 0) {
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      error: `Studio UI payload cannot include ${forbidden.join(', ')}. Runtime routing selects these values after execution.`,
+    }, { status: 400 })
+  }
   const tab = body.tab
   const prompt = body.prompt?.trim() ?? ''
   const appSlug = body.appSlug?.trim() || 'amarktai-network'
@@ -121,8 +135,8 @@ export async function POST(request: NextRequest) {
   const route = routeLiveModel({
     capability,
     appSlug,
-    selectedProvider: body.provider ?? 'auto',
-    selectedModel: body.model === 'auto' ? undefined : body.model,
+    selectedProvider: 'auto',
+    selectedModel: undefined,
     costMode: body.costMode ?? 'balanced',
     adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
     requiresMedia: ['image', 'video', 'adult_image', 'adult_video', 'adult_voice', 'music_generation', 'tts'].includes(capability),

@@ -24,7 +24,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-1 md:flex" aria-label="Public navigation">
-            {PUBLIC_NAV_ITEMS.filter(i => i.label !== 'Dashboard').map((item) => {
+            {PUBLIC_NAV_ITEMS.filter(i => i.label !== 'Login').map((item) => {
               const active = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href)
               return (
                 <Link
@@ -47,7 +47,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
               href="/admin/login"
               className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-[0_0_16px_rgba(59,130,246,0.35)] transition hover:bg-blue-500"
             >
-              Dashboard <ArrowRight className="h-3.5 w-3.5" />
+              Login <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
@@ -77,7 +77,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
                   key={item.href}
                   href={item.href}
                   className={`rounded-lg px-3 py-3 text-sm font-bold transition ${
-                    item.label === 'Dashboard'
+                    item.label === 'Login'
                       ? 'text-blue-300 hover:bg-blue-500/10'
                       : 'text-slate-100 hover:bg-white/5'
                   }`}
@@ -119,8 +119,8 @@ export default function PublicShell({ children }: { children: React.ReactNode })
               <ul className="mt-4 space-y-3">
                 {[
                   { href: '/platform', label: 'Overview' },
-                  { href: '/capabilities', label: 'Capabilities' },
-                  { href: '/apps', label: 'Apps' },
+                  { href: '/features', label: 'Features' },
+                  { href: '/what-we-can-do', label: 'What We Can Do' },
                 ].map((l) => (
                   <li key={l.href}>
                     <Link href={l.href} className="text-sm text-slate-400 transition hover:text-white">{l.label}</Link>
@@ -134,10 +134,10 @@ export default function PublicShell({ children }: { children: React.ReactNode })
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Company</p>
               <ul className="mt-4 space-y-3">
                 {[
-                  { href: '/safety', label: 'Safety' },
+                  { href: '/about', label: 'About Us' },
                   { href: '/privacy', label: 'Privacy' },
                   { href: '/terms', label: 'Terms' },
-                  { href: '/contact', label: 'Contact' },
+                  { href: '/contact', label: 'Contact Us' },
                 ].map((l) => (
                   <li key={l.href}>
                     <Link href={l.href} className="text-sm text-slate-400 transition hover:text-white">{l.label}</Link>
@@ -151,8 +151,8 @@ export default function PublicShell({ children }: { children: React.ReactNode })
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Access</p>
               <ul className="mt-4 space-y-3">
                 {[
-                  { href: '/admin/login', label: 'Dashboard' },
-                  { href: '/admin/dashboard', label: 'Admin Panel' },
+                  { href: '/admin/login', label: 'Login' },
+                  { href: '/admin/dashboard', label: 'Control Centre' },
                 ].map((l) => (
                   <li key={l.href}>
                     <Link href={l.href} className="text-sm text-slate-400 transition hover:text-white">{l.label}</Link>

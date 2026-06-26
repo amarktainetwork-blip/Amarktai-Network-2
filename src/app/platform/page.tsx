@@ -5,13 +5,13 @@ import PublicShell from '@/components/public/PublicShell'
 const controlPlane = [
   ['App context', 'Workspace, brand, app profile, memory, RAG, permissions'],
   ['Capability policy', 'Budget tier, quality tier, safety gates, approval rules'],
-  ['Runtime routing', 'Provider, model, fallback, latency, cost, verification state'],
+  ['Runtime routing', 'Execution path, fallback, latency, cost, verification state'],
   ['Persistence', 'Artifacts, generated assets, campaign items, proofs, logs'],
   ['Learning', 'Execution signals, campaign outcomes, agent summaries'],
 ]
 
 const pillars = [
-  { icon: Route, title: 'Runtime routing', body: 'Apps request a capability. Runtime chooses provider, model, route, fallback, and quality tier after checking live provider state.' },
+  { icon: Route, title: 'Runtime routing', body: 'Apps request a capability. Runtime chooses the execution path, fallback, and quality tier after checking live readiness.' },
   { icon: Database, title: 'Context and memory', body: 'Brand memory, retrieval context, storage, artifacts, and app profiles travel with each request.' },
   { icon: Workflow, title: 'Workflow execution', body: 'Campaigns, agents, media jobs, approvals, and publishing flows use the same central execution layer.' },
   { icon: ShieldCheck, title: 'Operational truth', body: 'The control centre reports configured, unconfigured, working, failed, unsupported, and requires-verification states without fake success.' },
@@ -27,7 +27,7 @@ export default function PlatformPage() {
             The runtime layer for AI-powered apps.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-            AmarktAI centralizes provider execution, agent orchestration, memory, media generation, storage, approvals, and learning so apps can stay thin.
+            AmarktAI centralizes execution, agent orchestration, memory, media generation, storage, approvals, and learning so apps can stay thin.
           </p>
         </div>
       </section>
@@ -67,7 +67,7 @@ export default function PlatformPage() {
           <div>
             <p className="font-mono text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Runtime rule</p>
             <h2 className="mt-4 text-4xl font-black tracking-tight lg:text-5xl">
-              Apps never choose providers or models.
+              Apps never choose infrastructure routes.
             </h2>
             <p className="mt-5 text-base leading-8 text-slate-400">
               A capability request may include budget, quality, context, safety, and artifact requirements. Runtime selection is reported after execution as proof, not exposed as an input control.
@@ -75,10 +75,10 @@ export default function PlatformPage() {
           </div>
           <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.05] p-6">
             {[
-              [Network, 'Active providers', 'GenX, Hugging Face, Together, Groq, MiMo'],
+              [Network, 'Execution network', 'routing, fallback, budget, quality, and proof'],
               [Gauge, 'Runtime knobs', 'budget tier, quality tier, safety gates'],
               [Lock, 'Governance', 'approval state, permissions, adult mode gates'],
-              [CheckCircle2, 'Proof', 'selected provider/model shown only after execution'],
+              [CheckCircle2, 'Proof', 'selected runtime path shown only after execution'],
             ].map(([Icon, label, value]) => {
               const RowIcon = Icon as typeof Network
               return (
@@ -99,7 +99,7 @@ export default function PlatformPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
             <h2 className="text-3xl font-black tracking-tight">Open the operational control centre.</h2>
-            <p className="mt-2 text-sm font-semibold text-slate-800">Runtime health, provider state, artifacts, campaigns, agents, and system gates in one place.</p>
+            <p className="mt-2 text-sm font-semibold text-slate-800">Runtime health, route state, artifacts, campaigns, agents, and system gates in one place.</p>
           </div>
           <Link href="/admin/login" className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-900">
             Open dashboard <ArrowRight className="h-4 w-4" />

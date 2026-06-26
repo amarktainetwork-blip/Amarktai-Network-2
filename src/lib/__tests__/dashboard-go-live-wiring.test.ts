@@ -11,22 +11,21 @@ describe('final dashboard source-of-truth wiring', () => {
   it('keeps the control-centre dashboard routes', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
       '/admin/dashboard',
+      '/admin/dashboard/network-apps',
       '/admin/dashboard/studio',
       '/admin/dashboard/operations',
-      '/admin/dashboard/network-apps',
-      '/admin/dashboard/providers',
-      '/admin/dashboard/outputs',
-      '/admin/dashboard/rag',
+      '/admin/dashboard/campaigns',
+      '/admin/dashboard/assets',
       '/admin/dashboard/agents',
-      '/admin/dashboard/system',
+      '/admin/dashboard/memory',
+      '/admin/dashboard/rag',
       '/admin/dashboard/approvals',
       '/admin/dashboard/publishing',
-      '/admin/dashboard/analytics',
       '/admin/dashboard/adult-mode',
-      '/admin/dashboard/vps-health',
       '/admin/dashboard/settings',
+      '/admin/dashboard/system',
     ])
-    expect(DASHBOARD_NAV_ITEMS).toHaveLength(15)
+    expect(DASHBOARD_NAV_ITEMS).toHaveLength(14)
     expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Agents')).toBe(true)
     expect(DASHBOARD_NAV_ITEMS.some((item) => item.label === 'Command')).toBe(false)
   })

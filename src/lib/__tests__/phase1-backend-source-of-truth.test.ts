@@ -52,21 +52,20 @@ describe('Phase 1 backend source of truth', () => {
 
   it('uses control-centre navigation and keeps Command as compatibility only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Control Centre',
+      'Overview',
+      'Connected Apps',
       'Studio',
       'Capabilities',
-      'Apps',
-      'Providers & Keys',
-      'Storage & Artifacts',
-      'Memory & RAG',
+      'Campaigns',
+      'Assets',
       'Agents',
-      'Jobs & Worker',
+      'Memory',
+      'Knowledge/RAG',
       'Approvals',
-      'Publishing',
-      'Analytics',
-      'Safety',
-      'VPS Health',
+      'Scheduler/Publishing',
+      'Adult Permissions',
       'Settings',
+      'System Monitoring',
     ])
     expect(read('app/admin/dashboard/workspace/page.tsx')).toContain('CommandCenter')
     expect(read('app/admin/dashboard/command/page.tsx')).toContain("redirect('/admin/dashboard/workspace')")

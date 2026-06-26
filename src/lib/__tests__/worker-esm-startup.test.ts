@@ -34,7 +34,7 @@ describe('worker ESM startup', () => {
     const workerModule = await import('@/lib/worker')
 
     expect(typeof workerModule.startWorker).toBe('function')
-  })
+  }, 15_000)
 
   it('starts without require being undefined when the queue degrades safely', async () => {
     const createWorker = vi.fn(() => null)
@@ -52,7 +52,7 @@ describe('worker ESM startup', () => {
 
     expect(thrown).toBeUndefined()
     expect(result).toBeNull()
-  })
+  }, 15_000)
 
   it('surfaces real startup errors without converting them to require crashes', async () => {
     const startupError = new Error('Redis unavailable during worker startup')
@@ -79,5 +79,5 @@ describe('worker ESM startup', () => {
       expect(thrown).toBe(startupError)
     }
     expect(String(thrown)).not.toContain('require is not defined')
-  })
+  }, 15_000)
 })

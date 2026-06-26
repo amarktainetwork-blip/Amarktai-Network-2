@@ -10,15 +10,16 @@ const read = (relPath: string) => fs.readFileSync(path.join(ROOT, relPath), 'utf
 
 describe('final public website', () => {
   it('uses the exact public navigation source of truth', () => {
-    // Updated nav keeps the public site platform-first.
     const hrefs = PUBLIC_NAV_ITEMS.map(i => i.href)
-    expect(hrefs).toContain('/')
-    expect(hrefs).toContain('/platform')
+    expect(hrefs).toEqual([
+      '/',
+      '/about',
+      '/features',
+      '/what-we-can-do',
+      '/contact',
+      '/admin/login',
+    ])
     expect(hrefs).not.toContain('/marketing')
-    expect(hrefs).toContain('/capabilities')
-    expect(hrefs).toContain('/apps')
-    expect(hrefs).toContain('/safety')
-    expect(hrefs).toContain('/admin/login')
     expect(read('components/public/PublicShell.tsx')).toContain('PUBLIC_NAV_ITEMS')
   })
 
@@ -32,9 +33,8 @@ describe('final public website', () => {
     expect(source).toContain('brand memory')
     expect(source).toContain('approval')
     expect(source).toContain('publishing')
-    expect(source).toContain('providers')
-    // AI is blue
-    expect(source).toContain('text-blue-')
+    expect(source).toContain('routing')
+    expect(source).toMatch(/text-(blue|cyan)-/)
     // CTA exists
     expect(source).toContain('/admin/login')
   })
@@ -43,7 +43,7 @@ describe('final public website', () => {
     const source = read('app/platform/page.tsx')
     expect(source).toContain('capability')
     expect(source).toContain('routing')
-    expect(source).toContain('providers')
+    expect(source).toContain('infrastructure routes')
   })
 
   it('shows connected apps registry (currently empty until apps are completed)', () => {

@@ -93,7 +93,9 @@ describe('provider capability governance', () => {
 
   it('surfaces governance truth in Settings, Operations, and model catalog routes', () => {
     expect(read('app/admin/dashboard/settings/page.tsx')).toContain('Connect capabilities once')
-    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Governance blockers and route truth')
+    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Runtime capability matrix')
+    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Storage/Permission')
+    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Proof')
     expect(read('app/api/admin/ai-model-catalog/route.ts')).toContain('rootWorkspaceHasFullAccess')
     expect(read('app/api/admin/provider-governance/route.ts')).toContain('capabilityGovernance')
   })

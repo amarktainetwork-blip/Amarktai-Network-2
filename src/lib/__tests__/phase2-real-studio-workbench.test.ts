@@ -18,21 +18,20 @@ describe('Phase 2 real Studio and Workbench wiring', () => {
 
   it('keeps the dashboard to the final control-centre sections only', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Control Centre',
+      'Overview',
+      'Connected Apps',
       'Studio',
       'Capabilities',
-      'Apps',
-      'Providers & Keys',
-      'Storage & Artifacts',
-      'Memory & RAG',
+      'Campaigns',
+      'Assets',
       'Agents',
-      'Jobs & Worker',
+      'Memory',
+      'Knowledge/RAG',
       'Approvals',
-      'Publishing',
-      'Analytics',
-      'Safety',
-      'VPS Health',
+      'Scheduler/Publishing',
+      'Adult Permissions',
       'Settings',
+      'System Monitoring',
     ])
   })
 

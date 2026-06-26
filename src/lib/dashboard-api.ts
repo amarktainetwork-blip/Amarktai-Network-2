@@ -147,6 +147,21 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<ApiResul
   }
 }
 
+function unwrapArray<T>(data: unknown, key: string): T[] {
+  if (Array.isArray(data)) return data as T[]
+  if (data && typeof data === 'object') {
+    const value = (data as Record<string, unknown>)[key]
+    if (Array.isArray(value)) return value as T[]
+    const nested = (data as Record<string, unknown>).data
+    if (Array.isArray(nested)) return nested as T[]
+    if (nested && typeof nested === 'object') {
+      const nestedValue = (nested as Record<string, unknown>)[key]
+      if (Array.isArray(nestedValue)) return nestedValue as T[]
+    }
+  }
+  return []
+}
+
 // ── VPS ────────────────────────────────────────────────────────────────────────
 
 export async function getVpsReadiness(): Promise<ApiResult<VpsReadinessResult>> {
@@ -166,9 +181,9 @@ export async function runMarketingWorkflow(input: MarketingWorkflowPayload): Pro
 // ── Campaigns ─────────────────────────────────────────────────────────────────
 
 export async function listCampaigns(): Promise<ApiResult<CampaignSummary[]>> {
-  const result = await apiFetch<{ campaigns: CampaignSummary[] }>('/api/admin/campaigns')
+  const result = await apiFetch<unknown>('/api/admin/campaigns')
   if (!result.ok) return { ok: false, data: null, error: result.error }
-  return { ok: true, data: result.data?.campaigns ?? [], error: null }
+  return { ok: true, data: unwrapArray<CampaignSummary>(result.data, 'campaigns'), error: null }
 }
 
 export async function getCampaign(id: string): Promise<ApiResult<{ campaign: Record<string, unknown>; items: unknown[]; assets: AssetSummary[] }>> {
@@ -179,17 +194,17 @@ export async function getCampaign(id: string): Promise<ApiResult<{ campaign: Rec
 
 export async function listAssets(campaignId?: string): Promise<ApiResult<AssetSummary[]>> {
   const url = campaignId ? `/api/admin/assets?campaignId=${encodeURIComponent(campaignId)}` : '/api/admin/assets'
-  const result = await apiFetch<{ assets: AssetSummary[] }>(url)
+  const result = await apiFetch<unknown>(url)
   if (!result.ok) return { ok: false, data: null, error: result.error }
-  return { ok: true, data: result.data?.assets ?? [], error: null }
+  return { ok: true, data: unwrapArray<AssetSummary>(result.data, 'assets'), error: null }
 }
 
 // ── Approvals ─────────────────────────────────────────────────────────────────
 
 export async function listPendingApprovals(): Promise<ApiResult<ApprovalTarget[]>> {
-  const result = await apiFetch<{ approvals: ApprovalTarget[] }>('/api/admin/approvals/assets')
+  const result = await apiFetch<unknown>('/api/admin/approvals/assets')
   if (!result.ok) return { ok: false, data: null, error: result.error }
-  return { ok: true, data: result.data?.approvals ?? [], error: null }
+  return { ok: true, data: unwrapArray<ApprovalTarget>(result.data, 'approvals'), error: null }
 }
 
 export async function approveAsset(id: string, notes?: string): Promise<ApiResult<{ ok: boolean }>> {
@@ -210,9 +225,9 @@ export async function requestChanges(id: string, notes: string): Promise<ApiResu
 // ── Providers (admin display only) ────────────────────────────────────────────
 
 export async function getProviderStatus(): Promise<ApiResult<ProviderStatusEntry[]>> {
-  const result = await apiFetch<{ providers: ProviderStatusEntry[] }>('/api/admin/providers')
+  const result = await apiFetch<unknown>('/api/admin/providers')
   if (!result.ok) return { ok: false, data: null, error: result.error }
-  return { ok: true, data: result.data?.providers ?? [], error: null }
+  return { ok: true, data: unwrapArray<ProviderStatusEntry>(result.data, 'providers'), error: null }
 }
 
 export async function testProvider(key: string): Promise<ApiResult<{ ok: boolean; latencyMs?: number; error?: string }>> {

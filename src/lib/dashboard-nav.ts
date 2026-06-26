@@ -13,26 +13,24 @@ import {
   Shield,
   Sparkles,
   Users,
-  Zap,
 } from 'lucide-react'
 import type { ComponentType, SVGProps } from 'react'
 
 export type DashboardSectionId =
-  | 'control-centre'
+  | 'overview'
+  | 'connected-apps'
   | 'studio'
   | 'capabilities'
-  | 'apps'
-  | 'providers'
-  | 'storage-artifacts'
-  | 'memory-rag'
+  | 'campaigns'
+  | 'assets'
   | 'agents'
-  | 'jobs-worker'
+  | 'memory'
+  | 'knowledge-rag'
   | 'approvals'
-  | 'publishing'
-  | 'analytics'
-  | 'safety'
-  | 'vps-health'
+  | 'scheduler-publishing'
+  | 'adult-permissions'
   | 'settings'
+  | 'system-monitoring'
 
 export type DashboardNavItem = {
   id: DashboardSectionId
@@ -44,19 +42,18 @@ export type DashboardNavItem = {
 }
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
-  { id: 'control-centre',    href: '/admin/dashboard',              label: 'Control Centre',      description: 'Operational status, recent activity, and key runtime signals.', icon: LayoutDashboard, group: 'Operate' },
-  { id: 'studio',            href: '/admin/dashboard/studio',        label: 'Studio',              description: 'Run chat, research, media, voice, and artifact workflows.', icon: Sparkles,        group: 'Operate' },
-  { id: 'capabilities',      href: '/admin/dashboard/operations',    label: 'Capabilities',        description: 'Capability readiness, route coverage, and runtime gates.', icon: Blocks,          group: 'Operate' },
-  { id: 'apps',              href: '/admin/dashboard/network-apps',  label: 'Apps',                description: 'Connected app registry and app-level runtime state.', icon: FolderOpen,      group: 'Operate' },
-  { id: 'providers',         href: '/admin/dashboard/providers',     label: 'Providers & Keys',    description: 'Configure the five active AI providers and verify live tests.', icon: Zap,           group: 'Runtime' },
-  { id: 'storage-artifacts', href: '/admin/dashboard/outputs',       label: 'Storage & Artifacts', description: 'Persisted outputs, storage paths, and artifact recovery.', icon: Database,       group: 'Runtime' },
-  { id: 'memory-rag',        href: '/admin/dashboard/rag',           label: 'Memory & RAG',        description: 'Brand memory, retrieval sources, and knowledge queries.', icon: Radio,          group: 'Runtime' },
-  { id: 'agents',            href: '/admin/dashboard/agents',        label: 'Agents',              description: 'Agent runs, handoffs, and task history.', icon: Users,            group: 'Runtime' },
-  { id: 'jobs-worker',       href: '/admin/dashboard/system',        label: 'Jobs & Worker',       description: 'Queues, workers, logs, and background job diagnostics.', icon: Activity,        group: 'Runtime' },
-  { id: 'approvals',         href: '/admin/dashboard/approvals',     label: 'Approvals',           description: 'Review gates before assets can be published or exported.', icon: CheckSquare,    group: 'Governance' },
-  { id: 'publishing',        href: '/admin/dashboard/publishing',    label: 'Publishing',          description: 'Publishing jobs, export state, and delivery results.', icon: Send,             group: 'Governance' },
-  { id: 'analytics',         href: '/admin/dashboard/analytics',     label: 'Analytics',           description: 'Usage, outcomes, and app performance metrics.', icon: Gauge,             group: 'Governance' },
-  { id: 'safety',            href: '/admin/dashboard/adult-mode',    label: 'Safety',              description: 'Permission gates, adult mode controls, and policy state.', icon: Lock,             group: 'Governance' },
-  { id: 'vps-health',        href: '/admin/dashboard/vps-health',    label: 'VPS Health',          description: 'Runtime probes for host, database, Redis, Qdrant, and storage.', icon: Shield,        group: 'System' },
-  { id: 'settings',          href: '/admin/dashboard/settings',      label: 'Settings',            description: 'Platform configuration, integrations, and recovery checks.', icon: Settings2,      group: 'System' },
+  { id: 'overview',             href: '/admin/dashboard',              label: 'Overview',              description: 'Runtime health, warnings, activity, storage, and proof status.', icon: LayoutDashboard, group: 'Control' },
+  { id: 'connected-apps',       href: '/admin/dashboard/network-apps',  label: 'Connected Apps',        description: 'App profiles, permissions, memory, RAG, and request surface.', icon: FolderOpen,      group: 'Control' },
+  { id: 'studio',               href: '/admin/dashboard/studio',        label: 'Studio',                description: 'Run capability requests without choosing providers or models.', icon: Sparkles,        group: 'Control' },
+  { id: 'capabilities',         href: '/admin/dashboard/operations',    label: 'Capabilities',          description: 'Capability readiness, proof, route coverage, and runtime gates.', icon: Blocks,          group: 'Control' },
+  { id: 'campaigns',            href: '/admin/dashboard/campaigns',     label: 'Campaigns',             description: 'Website scrape, plan, generated items, approvals, and learning.', icon: Gauge,           group: 'Workflow' },
+  { id: 'assets',               href: '/admin/dashboard/assets',        label: 'Assets',                description: 'Images, video, music, audio, avatars, documents, and links.', icon: Database,        group: 'Workflow' },
+  { id: 'agents',               href: '/admin/dashboard/agents',        label: 'Agents',                description: 'Agent status, logs, learning summaries, and handoffs.', icon: Users,              group: 'Workflow' },
+  { id: 'memory',               href: '/admin/dashboard/memory',        label: 'Memory',                description: 'User, workspace, app, brand, avatar, and gated memory scopes.', icon: Activity,          group: 'Knowledge' },
+  { id: 'knowledge-rag',        href: '/admin/dashboard/rag',           label: 'Knowledge/RAG',         description: 'Ingestion, chunks, embeddings, vector store, and retrieval tests.', icon: Radio,          group: 'Knowledge' },
+  { id: 'approvals',            href: '/admin/dashboard/approvals',     label: 'Approvals',             description: 'Review gates before assets can be published or exported.', icon: CheckSquare,      group: 'Governance' },
+  { id: 'scheduler-publishing', href: '/admin/dashboard/publishing',    label: 'Scheduler/Publishing',  description: 'Scheduled jobs, export queue, retries, and delivery state.', icon: Send,             group: 'Governance' },
+  { id: 'adult-permissions',    href: '/admin/dashboard/adult-mode',    label: 'Adult Permissions',     description: 'Permission gates, app safety state, and adult capability policy.', icon: Lock,            group: 'Governance' },
+  { id: 'settings',             href: '/admin/dashboard/settings',      label: 'Settings',              description: 'Provider/API keys, platform configuration, and recovery checks.', icon: Settings2,        group: 'System' },
+  { id: 'system-monitoring',    href: '/admin/dashboard/system',        label: 'System Monitoring',     description: 'Platform, worker, DB, Redis, storage, artifact proof, and VPS.', icon: Shield,          group: 'System' },
 ] as const

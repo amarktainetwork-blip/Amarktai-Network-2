@@ -33,7 +33,7 @@ describe('dashboard productization correction', () => {
   it('presents memory in plain English with working management actions', () => {
     const memory = read('app/admin/dashboard/memory-learning/page.tsx')
     const actions = read('components/dashboard/MemoryActions.tsx')
-    expect(memory).toContain('What Amarktai Network remembers.')
+    expect(memory).toContain('What AmarktAI Network remembers.')
     expect(memory).toContain('Recent memory writes')
     expect(actions).toContain('Export memory')
     expect(actions).toContain('Delete all memory')

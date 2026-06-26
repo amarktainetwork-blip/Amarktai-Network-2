@@ -42,21 +42,20 @@ describe('standalone dashboard product shell', () => {
   it('contains the required control-centre primary sections', () => {
     const nav = read('lib/dashboard-nav.ts')
     for (const label of [
-      'Control Centre',
+      'Overview',
+      'Connected Apps',
       'Studio',
       'Capabilities',
-      'Apps',
-      'Providers & Keys',
-      'Storage & Artifacts',
-      'Memory & RAG',
+      'Campaigns',
+      'Assets',
       'Agents',
-      'Jobs & Worker',
+      'Memory',
+      'Knowledge/RAG',
       'Approvals',
-      'Publishing',
-      'Analytics',
-      'Safety',
-      'VPS Health',
+      'Scheduler/Publishing',
+      'Adult Permissions',
       'Settings',
+      'System Monitoring',
     ]) {
       expect(nav).toContain(`label: '${label}'`)
     }
@@ -83,7 +82,6 @@ describe('standalone dashboard product shell', () => {
     const nav = read('lib/dashboard-nav.ts')
     expect(nav).not.toContain('Marketing')
     expect(nav).not.toContain('Crypto')
-    expect(nav).not.toContain('Connected Apps')
   })
 })
 

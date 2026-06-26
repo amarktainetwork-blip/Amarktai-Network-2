@@ -24,21 +24,24 @@ describe('final dashboard UX', () => {
 
   it('renders the standalone core sections in primary navigation', () => {
     const nav = read('lib/dashboard-nav.ts')
-    expect(nav).toContain("label: 'Control Centre'")
-    expect(nav).toContain("label: 'Studio'")
-    expect(nav).toContain("label: 'Capabilities'")
-    expect(nav).toContain("label: 'Apps'")
-    expect(nav).toContain("label: 'Providers & Keys'")
-    expect(nav).toContain("label: 'Storage & Artifacts'")
-    expect(nav).toContain("label: 'Memory & RAG'")
-    expect(nav).toContain("label: 'Agents'")
-    expect(nav).toContain("label: 'Jobs & Worker'")
-    expect(nav).toContain("label: 'Approvals'")
-    expect(nav).toContain("label: 'Publishing'")
-    expect(nav).toContain("label: 'Analytics'")
-    expect(nav).toContain("label: 'Safety'")
-    expect(nav).toContain("label: 'VPS Health'")
-    expect(nav).toContain("label: 'Settings'")
+    for (const label of [
+      'Overview',
+      'Connected Apps',
+      'Studio',
+      'Capabilities',
+      'Campaigns',
+      'Assets',
+      'Agents',
+      'Memory',
+      'Knowledge/RAG',
+      'Approvals',
+      'Scheduler/Publishing',
+      'Adult Permissions',
+      'Settings',
+      'System Monitoring',
+    ]) {
+      expect(nav).toContain(`label: '${label}'`)
+    }
     expect(nav).not.toContain("label: 'Advanced Admin'")
   })
 })

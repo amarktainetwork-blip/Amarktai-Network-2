@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react'
 import BrandName from '@/components/BrandName'
+import PublicShell from '@/components/public/PublicShell'
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function AdminLoginPage() {
       })
 
       if (response.ok) {
-        router.push('/admin/dashboard/command')
+        router.push('/admin/dashboard')
         router.refresh()
       } else {
         const data = await response.json()
@@ -40,7 +41,8 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--amarkt-obsidian)] px-4 text-white">
+    <PublicShell>
+    <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center overflow-hidden bg-[var(--amarkt-obsidian)] px-4 py-16 text-white">
       <div className="pointer-events-none absolute inset-0 panel-grid opacity-35" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(100,167,255,0.08),transparent_34%,rgba(3,5,10,0.96))]" />
 
@@ -103,5 +105,6 @@ export default function AdminLoginPage() {
         </div>
       </section>
     </div>
+    </PublicShell>
   )
 }

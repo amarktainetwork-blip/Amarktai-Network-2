@@ -23,7 +23,7 @@ export default function AppsPage() {
             Thin apps. Central AI runtime.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-            AmarktAI is not a single marketing app. It is the capability platform behind marketing, creator, companion, automation, research, customer service, and business apps. Apps never choose providers or models.
+            AmarktAI is not a single marketing app. It is the capability platform behind marketing, creator, companion, automation, research, customer service, and business apps. Apps never choose infrastructure routes.
           </p>
         </div>
       </section>
@@ -55,7 +55,7 @@ export default function AppsPage() {
           <div className="mt-10 grid gap-3 lg:grid-cols-3">
             {[
               ['Apps send', 'context, capability, input, budget, quality, permissions'],
-              ['Runtime decides', 'provider, model, fallback, safety, storage, approval path'],
+              ['Runtime decides', 'route, fallback, safety, storage, approval path'],
               ['Apps receive', 'result, artifact reference, selected route proof, status'],
             ].map(([title, body]) => (
               <div key={title} className="rounded-lg border border-white/10 bg-slate-950/70 p-6">

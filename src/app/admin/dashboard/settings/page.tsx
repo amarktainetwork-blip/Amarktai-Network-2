@@ -41,7 +41,7 @@ export default function SettingsPage() {
       {/* Admin quick links */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { href: '/admin/dashboard/providers', label: 'Provider Settings', desc: 'Configure the 5 active AI providers' },
+          { href: '/admin/dashboard/providers', label: 'Providers / API Keys', desc: 'Configure approved runtime providers and run live tests' },
           { href: '/admin/dashboard/adult-mode', label: 'Adult Permissions', desc: 'Age gate, consent, and rights checks' },
           { href: '/admin/dashboard/vps-health', label: 'Storage & Artifact Status', desc: 'VPS readiness, disk, Qdrant, Redis' },
           { href: '/admin/dashboard/publishing', label: 'Publishing Credentials', desc: 'Platform export and publishing status' },

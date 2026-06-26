@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowRight, Loader2, Play, Save, Send, Sparkles, Upload, X } from 'lucide-react'
-import { APPROVED_AI_PROVIDERS, type CostMode, providerLabel } from '@/lib/approved-ai-catalog'
-import type { UniversalModelCatalog } from '@/lib/universal-model-catalog'
+import type { CostMode } from '@/lib/approved-ai-catalog'
 import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
 
 type StudioMode = {
@@ -42,12 +41,6 @@ type MusicGenre = typeof MUSIC_GENRES[number]
 const VOICE_TYPES = ['male', 'female', 'deep', 'calm', 'emotional', 'narrator', 'assistant', 'seductive', 'cinematic', 'robotic'] as const
 type VoiceType = typeof VOICE_TYPES[number]
 
-type AssistantContext = {
-  workbench?: Record<string, unknown>
-  costs?: Record<string, unknown>
-  voice?: Array<{ provider: string; label: string; status: string }>
-  modelCatalog?: unknown[]
-}
 type CapabilityReadiness = {
   capability: string
   status: 'available' | 'needs_setup'
@@ -80,14 +73,12 @@ type StudioResultDetails = {
 export default function StudioPage() {
   const [mode, setMode] = useState<StudioMode>(studioModes[0])
   const tab = mode.tab
-  const [catalog, setCatalog] = useState<UniversalModelCatalog | null>(null)
-  const [context, setContext] = useState<AssistantContext | null>(null)
   const [capabilityReadiness, setCapabilityReadiness] = useState<CapabilityReadiness[]>([])
-  const [modelId, setModelId] = useState('auto')
-  const [provider, setProvider] = useState('auto')
   const [costMode, setCostMode] = useState<CostMode>('balanced')
-  const [voice, setVoice] = useState('auto')
-  const [appSlug] = useState('amarktai-network')
+  const [qualityTier, setQualityTier] = useState('standard')
+  const [appSlug, setAppSlug] = useState('amarktai-network')
+  const [workspaceId, setWorkspaceId] = useState('default')
+  const [brandId, setBrandId] = useState('default')
   const [adultPolicy, setAdultPolicy] = useState('full_adult_app_mode')
   const [message, setMessage] = useState('')
   const [conversation, setConversation] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -115,12 +106,8 @@ export default function StudioPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch('/api/admin/ai-model-catalog').then((response) => response.json()).catch(() => null),
-      fetch('/api/admin/amarktai-assistant/context').then((response) => response.json()).catch(() => null),
       fetch('/api/admin/ai-routing').then((response) => response.json()).catch(() => null),
-    ]).then(([modelData, contextData, routingData]) => {
-      setCatalog(modelData?.universal ?? null)
-      setContext(contextData ?? null)
+    ]).then(([routingData]) => {
       setCapabilityReadiness(Array.isArray(routingData?.mediaCapabilities) ? routingData.mediaCapabilities : [])
     })
   }, [])
@@ -140,19 +127,8 @@ export default function StudioPage() {
   }, [mode])
 
   const tabTruth = STUDIO_ROUTE_MAP[tab]
-  const modelOptions = useMemo(() => {
-    if (!catalog) return []
-    if (mode.capability.startsWith('adult_')) {
-      return catalog.grouped.adult?.length ? catalog.grouped.adult : catalog.models.filter((model) => model.supportsAdult)
-    }
-    return catalog.grouped[capabilityGroupForMode(mode)] ?? catalog.models
-  }, [catalog, mode])
-  const selectedModel = modelOptions.find((model) => model.modelId === modelId)
-  const executionProvider = selectedModel?.provider ?? provider
-  const executionModel = modelIdForExecution(selectedModel?.modelId ?? modelId)
   const activeCapability = capabilityReadiness.find((entry) => entry.capability === mode.capability)
-  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Provider missing / Needs setup' : '')
-  const voiceStatus = context?.voice?.find((item) => item.provider === voice)?.status ?? 'Provider status unknown'
+  const modeBlocker = mode.blocker ?? (activeCapability?.status === 'needs_setup' ? activeCapability.blocker ?? 'Runtime route needs setup' : '')
   const hasRealJob = Boolean(jobStatus || status || lastPayload || lastResult || streaming || executing)
   const activeJobState = hasRealJob
       ? modeBlocker
@@ -178,8 +154,12 @@ export default function StudioPage() {
         body: JSON.stringify({
           message,
           capability: mode.capability,
+          appSlug,
+          workspaceId,
+          brandId,
           costMode,
-          metadata: { appSlug, adultPolicy, dashboardContext: true, studioTab: tab },
+          qualityTier,
+          metadata: { appSlug, workspaceId, brandId, adultPolicy, dashboardContext: true, studioTab: tab },
         }),
         signal: controller.signal,
       })
@@ -239,10 +219,13 @@ export default function StudioPage() {
           tab,
           prompt: message,
           appSlug,
+          workspaceId,
+          brandId,
           costMode,
+          qualityTier,
           adultPolicy,
           mode: adultMode,
-          voiceId: voice,
+          voiceId: voiceType,
           size: mediaSize,
         }),
       })
@@ -308,6 +291,8 @@ export default function StudioPage() {
       const form = new FormData()
       form.append('file', uploadFile)
       form.append('appSlug', appSlug)
+      form.append('workspaceId', workspaceId)
+      form.append('brandId', brandId)
       const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
       const data = await response.json().catch(() => ({}))
       setLastPayload(data)
@@ -373,9 +358,9 @@ export default function StudioPage() {
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <DarkMetric label="Providers" value={String(APPROVED_AI_PROVIDERS.length)} />
-            <DarkMetric label="Models" value={String(catalog?.models.length ?? '...')} />
-            <DarkMetric label="GenX" value={catalog?.genx.live ? 'Live' : 'Fallback'} accent={catalog?.genx.live} />
+            <DarkMetric label="Capability" value={mode.capability} />
+            <DarkMetric label="Budget" value={costMode} />
+            <DarkMetric label="Quality" value={qualityTier} accent={qualityTier !== 'standard'} />
           </div>
         </div>
       </section>
@@ -419,6 +404,18 @@ export default function StudioPage() {
               placeholder={placeholderForMode(mode)}
               className="mt-3 min-h-44 w-full resize-none rounded-xl border border-slate-700/50 bg-slate-800/60 px-4 py-3 text-sm leading-6 text-slate-200 outline-none placeholder:text-slate-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
             />
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <DarkField label="App context">
+                <input value={appSlug} onChange={(event) => setAppSlug(event.target.value)} className="dark-select" />
+              </DarkField>
+              <DarkField label="Workspace">
+                <input value={workspaceId} onChange={(event) => setWorkspaceId(event.target.value)} className="dark-select" />
+              </DarkField>
+              <DarkField label="Brand">
+                <input value={brandId} onChange={(event) => setBrandId(event.target.value)} className="dark-select" />
+              </DarkField>
+            </div>
 
             {(mode.capability === 'image_generation' || mode.capability === 'adult_image') && (
               <div className="mt-3">
@@ -514,8 +511,8 @@ export default function StudioPage() {
                 {/* Hidden RouteFacts for test compliance */}
                 <div className="grid gap-2 sm:grid-cols-2">
                   <RouteFact label="Style" value="genre/style + mood from prompt" />
-                  <RouteFact label="Vocals" value="Not verified - requires live provider test." />
-                  <RouteFact label="Models" value="lyria-3-clip-preview / lyria-3-pro-preview" />
+                  <RouteFact label="Vocals" value="Not verified - requires live route test." />
+                  <RouteFact label="Route" value="Runtime selected after execution" />
                   <RouteFact label="Capability" value="music_generation / song_generation" />
                 </div>
               </div>
@@ -523,20 +520,14 @@ export default function StudioPage() {
 
             {(mode.capability === 'tts' || mode.capability === 'adult_voice') && (
               <div className="mt-3 space-y-2">
-                <div className="grid grid-cols-2 gap-2">
-                  <DarkField label="Voice provider">
-                    <select value={voice} onChange={(event) => setVoice(event.target.value)} className="dark-select">
-                      {(context?.voice ?? []).map((item) => <option key={item.provider} value={item.provider}>{item.label}</option>)}
-                      {!context?.voice?.length && <option value="auto">Auto</option>}
-                    </select>
-                  </DarkField>
+                <div className="grid gap-2">
                   <DarkField label="Voice type">
                     <select value={voiceType} onChange={(e) => setVoiceType(e.target.value as VoiceType)} className="dark-select">
                       {VOICE_TYPES.map((vt) => <option key={vt} value={vt}>{vt.charAt(0).toUpperCase() + vt.slice(1)}</option>)}
                     </select>
                   </DarkField>
                 </div>
-                <p className="text-xs font-semibold text-slate-500">Voice route status: {voiceStatus}</p>
+                <p className="text-xs font-semibold text-slate-500">Voice execution route is selected by runtime after policy and readiness checks.</p>
               </div>
             )}
 
@@ -578,7 +569,7 @@ export default function StudioPage() {
           <div className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Active jobs</p>
             {hasRealJob ? (
-              <JobState state={activeJobState} provider={providerLabel(executionProvider)} model={executionModel || 'auto'} />
+              <JobState state={activeJobState} capability={mode.capability} />
             ) : (
               <p className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3 text-xs font-semibold text-slate-600">No active jobs yet.</p>
             )}
@@ -600,18 +591,6 @@ export default function StudioPage() {
           <details className="rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced route details</summary>
             <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-500">
-              <DarkField label="Provider">
-                <select value={provider} onChange={(event) => setProvider(event.target.value)} className="dark-select">
-                  <option value="auto">Auto routing</option>
-                  {APPROVED_AI_PROVIDERS.map((item) => <option key={item.key} value={item.key}>{item.displayName}</option>)}
-                </select>
-              </DarkField>
-              <DarkField label="Model / task">
-                <select value={modelId} onChange={(event) => setModelId(event.target.value)} className="dark-select">
-                  <option value="auto">Auto resolved</option>
-                  {modelOptions.map((model) => <option key={`${model.provider}:${model.modelId}`} value={model.modelId}>{providerLabel(model.provider)} - {model.displayName}</option>)}
-                </select>
-              </DarkField>
               <DarkField label="Cost mode">
                 <select value={costMode} onChange={(event) => setCostMode(event.target.value as CostMode)} className="dark-select">
                   <option value="cheap">cheap</option>
@@ -619,14 +598,22 @@ export default function StudioPage() {
                   <option value="premium">premium</option>
                 </select>
               </DarkField>
+              <DarkField label="Quality tier">
+                <select value={qualityTier} onChange={(event) => setQualityTier(event.target.value)} className="dark-select">
+                  <option value="basic">basic</option>
+                  <option value="standard">standard</option>
+                  <option value="high">high</option>
+                  <option value="premium">premium</option>
+                </select>
+              </DarkField>
               <DarkField label="Adult policy">
                 <select value={adultPolicy} onChange={(event) => setAdultPolicy(event.target.value)} className="dark-select">
-                  {(catalog?.adultPolicies ?? ['off', 'suggestive', 'adult_text', 'adult_image', 'full_adult_app_mode', 'specialist']).map((item) => <option key={item} value={item}>{item}</option>)}
+                  {['off', 'suggestive', 'adult_text', 'adult_image', 'full_adult_app_mode', 'specialist'].map((item) => <option key={item} value={item}>{item}</option>)}
                 </select>
               </DarkField>
               <RouteFact label="Capability governance" value={mode.capability} />
-              <RouteFact label="Fallback chain" value="Manual model -> manual provider -> auto router -> backend blocker" />
-              <RouteFact label="Media provider mesh" value="Available capabilities require a canonical route and a provider that passed its live test." />
+              <RouteFact label="Routing" value="Runtime selects route after context, budget, quality, policy, and readiness checks." />
+              <RouteFact label="Media route" value="Available capabilities require a canonical route and a live readiness signal." />
               <RouteFact label="Route details" value={tabTruth.detail} />
               <RouteFact label="Dashboard context" value="Assistant context, memory, and Workbench handoff are available to protected routes." />
             </div>
@@ -647,8 +634,8 @@ export default function StudioPage() {
 
           {hasRealJob && (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <RouteFact label="Provider" value={providerLabel(executionProvider)} />
-              <RouteFact label="Model" value={executionModel || 'Auto resolved'} />
+              <RouteFact label="Runtime provider" value={lastResult?.provider || 'Shown after execution'} />
+              <RouteFact label="Runtime model" value={lastResult?.model || 'Shown after execution'} />
               <RouteFact label="Artifact" value={lastResult?.artifactStatus ?? (latestArtifact ? 'Recent artifact available' : 'Waiting')} />
               <RouteFact label="Next action" value={lastResult?.nextAction ?? (modeBlocker ? 'Resolve governance blocker' : 'Run command')} />
             </div>
@@ -694,7 +681,7 @@ export default function StudioPage() {
           <details className="mt-4 rounded-2xl border border-slate-700/50 bg-slate-950/40 p-4">
             <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-slate-500">Advanced details</summary>
             <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and model router'} />
+              <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and runtime router'} />
               <RouteFact label="Job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
               <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
               <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
@@ -769,14 +756,14 @@ function EmptyResult({ text }: { text: string }) {
   )
 }
 
-function JobState({ state, provider, model }: { state: string; provider: string; model: string }) {
+function JobState({ state, capability }: { state: string; capability: string }) {
   return (
     <div className="mt-3 rounded-xl border border-slate-700/40 bg-slate-800/40 p-3">
       <div className="flex items-center justify-between gap-3">
         <span className={['rounded-full border px-2 py-0.5 text-[10px] font-black', stateClass(state)].join(' ')}>{state}</span>
-        <span className="text-[10px] font-semibold text-slate-600">{provider}</span>
+        <span className="text-[10px] font-semibold text-slate-600">runtime routed</span>
       </div>
-      <p className="mt-2 truncate text-xs font-bold text-slate-400">{model}</p>
+      <p className="mt-2 truncate text-xs font-bold text-slate-400">{capability}</p>
     </div>
   )
 }
@@ -824,22 +811,11 @@ function RouteFact({ label, value }: { label: string; value: string }) {
   )
 }
 
-function capabilityGroupForMode(mode: StudioMode): keyof UniversalModelCatalog['grouped'] {
-  if (mode.capability === 'coding') return 'coding'
-  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'image'
-  if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'video'
-  if (mode.capability === 'music_generation') return 'music/audio'
-  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'voice/TTS'
-  if (mode.capability === 'stt') return 'STT'
-  if (mode.capability.startsWith('adult')) return 'adult'
-  return 'chat'
-}
-
 function placeholderForMode(mode: StudioMode) {
   if (mode.capability === 'research') return 'Research the target, summarize findings, and save an artifact.'
   if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
   if (mode.capability === 'music_generation') return 'Describe the song, genre/style, mood, duration, instrumental/vocals, and intended use.'
-  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Enter text to generate speech with the selected voice/provider/model.'
+  if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Enter text to generate speech with the selected voice style.'
   if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
   if (mode.capability.startsWith('adult')) return 'Policy-gated adult request for consenting fictional adults only. Blocked categories remain blocked.'
   return 'Ask the operator studio to help with this app, another connected app, or an operational task.'
@@ -848,7 +824,7 @@ function placeholderForMode(mode: StudioMode) {
 function resultIntroForMode(mode: StudioMode) {
   if (mode.capability === 'chat') return 'Conversation output appears here as the Assistant responds.'
   if (mode.capability === 'research') return 'Research reports, sources, and follow-up actions appear here after the run.'
-  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'Generated images and saved artifact previews appear here when the provider returns output.'
+  if (mode.capability === 'image_generation' || mode.capability === 'adult_image') return 'Generated images and saved artifact previews appear here when the runtime returns output.'
   if (mode.capability === 'video_generation' || mode.capability === 'adult_video') return 'Video progress and the final player appear here after async polling returns a usable output.'
   if (mode.capability === 'music_generation') return 'Music job progress, audio playback, and artifact status appear here.'
   if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Generated speech plays here when the selected voice route returns audio.'
@@ -879,11 +855,6 @@ function summarizeStudioResult(data: Record<string, unknown>) {
   return JSON.stringify(data, null, 2)
 }
 
-function modelIdForExecution(value: string | undefined) {
-  if (!value || value === 'auto' || value.startsWith('auto:')) return undefined
-  return value
-}
-
 function extractStudioDetails(data: Record<string, unknown>, fallback: { provider: string; model?: string; jobStatus?: string }): StudioResultDetails {
   const route = data.route as Record<string, unknown> | undefined
   const result = data.result as Record<string, unknown> | undefined
@@ -896,11 +867,11 @@ function extractStudioDetails(data: Record<string, unknown>, fallback: { provide
   return {
     provider,
     model,
-    routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and model router'),
+    routeReason: String(route?.reason ?? route?.capability ?? 'Backend route selected by Studio tab and runtime router'),
     blocker,
     artifactStatus: artifactId ? `Saved: ${artifactId}` : String(data.storageUrl ?? extractResultUrl(result ?? {})) ? 'Output URL returned' : 'Output pending or not applicable',
     jobStatus: job,
-    nextAction: blocker ? 'Resolve blocker in Settings or provider configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
+    nextAction: blocker ? 'Resolve blocker in Settings or runtime configuration' : artifactId ? 'Review artifact or continue workflow' : job ? 'Wait for polling/artifact refresh' : 'Run complete',
   }
 }
 

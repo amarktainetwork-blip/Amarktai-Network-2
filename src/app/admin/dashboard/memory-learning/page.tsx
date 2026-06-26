@@ -15,7 +15,7 @@ export default function MemoryLearningPage() {
     <div className="space-y-5">
       <section className="rounded-3xl border border-cyan-400/20 bg-slate-900/70 p-6">
         <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Memory</p>
-        <h1 className="mt-2 text-3xl font-black text-white">What Amarktai Network remembers.</h1>
+        <h1 className="mt-2 text-3xl font-black text-white">What AmarktAI Network remembers.</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
           Useful context, app outcomes, and saved decisions remain available for later work. Nothing is invented when no memory has been written.
         </p>
@@ -30,8 +30,12 @@ export default function MemoryLearningPage() {
       <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
         <Panel title="What can be remembered">
           {[
-            'Your preferences and working context',
-            'Context for each connected app',
+            'User memory: preferences and working context',
+            'Workspace memory: shared operational decisions',
+            'App memory: context for each connected app',
+            'Brand memory: voice, offer, positioning, and constraints',
+            'Avatar memory: character and presentation continuity where enabled',
+            'Adult memory: gated and policy-scoped only where permitted',
             'Useful outcomes from completed work',
             'Links between outputs and follow-up work',
           ].map((item) => <PlainRow key={item} value={item} />)}
