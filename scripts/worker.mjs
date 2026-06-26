@@ -11,9 +11,6 @@
  * Requires: REDIS_URL, DATABASE_URL
  */
 
-// Register TypeScript paths for module resolution
-import { register } from 'node:module'
-
 console.log('[worker] AmarktAI Network Worker starting...')
 console.log('[worker] REDIS_URL:', process.env.REDIS_URL ? 'configured' : 'NOT SET')
 console.log('[worker] DATABASE_URL:', process.env.DATABASE_URL ? 'configured' : 'NOT SET')
