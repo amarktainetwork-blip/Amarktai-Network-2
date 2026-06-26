@@ -12,6 +12,8 @@
  *   - A provider with a key but missing endpoint → blocker = 'requires_endpoint'.
  *   - A provider with no key → blocker = 'missing_key'.
  *   - Failed last test → lastTestStatus = 'failed' (not 'connected').
+ *   - Local runtime tools (playwright, scrapy, trafilatura, ffmpeg) have no API key;
+ *     their hasKey is always true but connected depends on the live test result.
  */
 
 import { PROVIDER_MESH, type ProviderMeshId, type ProviderCapability } from '@/lib/provider-mesh'
@@ -35,11 +37,12 @@ export interface ProviderRuntimeTruthEntry {
   blocker: string
   /** true only when hasKey && lastTestStatus === 'passed' */
   connected: boolean
-  /** true when hasKey is true but test has not passed */
+  /** true when hasKey is true (test may not have been run yet) */
   configured: boolean
   optional: boolean
 }
 
+/** Local runtime tools that have no API key — availability proven by live test only. */
 const LOCAL_RUNTIME_IDS: ReadonlySet<ProviderMeshId> = new Set([
   'local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg',
 ])
@@ -52,7 +55,6 @@ const REQUIRES_ENDPOINT_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshI
 function resolveEndpointStatus(id: ProviderMeshId, hasKey: boolean): ProviderEndpointStatus {
   if (!REQUIRES_ENDPOINT_IDS.has(id)) return 'not_required'
   if (!hasKey) return 'missing'
-  // GenX needs a base URL
   const url = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? ''
   return url ? 'ok' : 'missing'
 }
@@ -72,6 +74,15 @@ async function resolveKeySource(
   return 'db'
 }
 
+/** Trim a raw error/detail string to a short dashboard-safe message. */
+function sanitizeDetail(raw: unknown, maxLen = 120): string {
+  if (!raw || typeof raw !== 'string') return ''
+  // Strip Python tracebacks — keep only the last meaningful line
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  const errorLine = lines.findLast((l) => !l.startsWith('File ') && !l.startsWith('Traceback') && !l.startsWith('at ')) ?? lines[0] ?? ''
+  return errorLine.slice(0, maxLen)
+}
+
 async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry> {
   const node = PROVIDER_MESH.find((n) => n.id === id)!
   const isLocalRuntime = LOCAL_RUNTIME_IDS.has(id)
@@ -81,6 +92,7 @@ async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry
   let keySource: ProviderKeySource = 'none'
 
   if (isLocalRuntime) {
+    // Local tools have no API key — treat as "key present" (availability checked via live test)
     hasKey = true
     keySource = 'env'
   } else if (isStorage) {
@@ -103,9 +115,8 @@ async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry
   const lastTestedAt = typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null
   const endpointStatus = resolveEndpointStatus(id, hasKey)
 
-  // connected = key present AND last test passed
+  // connected = key/runtime present AND last test passed
   const connected = hasKey && lastTestStatus === 'passed'
-  // configured = key present (test may not have been run yet)
   const configured = hasKey
 
   let blocker = ''
@@ -118,9 +129,12 @@ async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry
   } else if (endpointStatus === 'missing') {
     blocker = 'requires_endpoint: set GENX_BASE_URL or GENX_API_URL'
   } else if (lastTestStatus === 'failed') {
-    blocker = typeof notes.lastError === 'string' && notes.lastError
-      ? notes.lastError
-      : 'last_test_failed'
+    const raw = sanitizeDetail(notes.lastError) || sanitizeDetail(notes.detail)
+    blocker = raw || 'last_test_failed'
+    // For local-crawler: if detail mentions sub-component failures, show a clean summary
+    if (isLocalRuntime && id === 'local-crawler') {
+      blocker = buildLocalCrawlerBlocker(notes)
+    }
   } else if (lastTestStatus === 'not_tested') {
     blocker = `run the ${node.displayName} live test`
   }
@@ -140,6 +154,19 @@ async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry
     configured,
     optional: Boolean(node.optional),
   }
+}
+
+/** Build a short, deduplicated blocker message for local-crawler failures. */
+function buildLocalCrawlerBlocker(notes: Record<string, unknown>): string {
+  const detail = typeof notes.detail === 'string' ? notes.detail : ''
+  const missing: string[] = []
+  if (/scrapy/i.test(detail) && /not available|No module|cannot|error/i.test(detail)) missing.push('scrapy')
+  if (/trafilatura/i.test(detail) && /not available|No module|cannot|error/i.test(detail)) missing.push('trafilatura')
+  if (/playwright/i.test(detail) && /not available|No module|cannot|error/i.test(detail)) missing.push('playwright')
+  if (missing.length > 0) {
+    return `install_missing_python_packages: ${missing.join(', ')}`
+  }
+  return sanitizeDetail(notes.lastError as string | undefined) || 'install_missing_python_packages'
 }
 
 export async function getProviderRuntimeTruth(): Promise<ProviderRuntimeTruthEntry[]> {

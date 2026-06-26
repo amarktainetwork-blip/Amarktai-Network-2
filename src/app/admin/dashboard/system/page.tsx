@@ -1,6 +1,8 @@
 import { getVpsSnapshot } from '@/lib/vps-monitor'
 import { getDashboardRuntimeTruth } from '@/lib/runtime-capability-truth'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SystemPage() {
   const [vps, runtime] = await Promise.all([getVpsSnapshot().catch(() => null), getDashboardRuntimeTruth().catch(() => null)])
   const serviceRows = vps ? Object.entries(vps.services) : []
