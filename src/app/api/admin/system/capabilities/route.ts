@@ -1,28 +1,34 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { APPROVED_AI_PROVIDERS } from '@/lib/approved-ai-catalog'
-import { getAllProviderModelCatalogs } from '@/lib/ai-model-catalog'
-import { getRepoWorkbenchStatus } from '@/lib/repo-workbench-status'
-import { getResearchToolStatus } from '@/lib/research-tools'
+import { getCapabilityRuntimeTruth } from '@/lib/capability-runtime-truth'
 import { getSystemRuntimeStatus } from '@/lib/system-runtime-status'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET() {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const [modelCatalogs, repoWorkbench, researchTools, system] = await Promise.all([
-    getAllProviderModelCatalogs(),
-    getRepoWorkbenchStatus(),
-    getResearchToolStatus(),
+  const [capabilities, system] = await Promise.all([
+    getCapabilityRuntimeTruth(),
     getSystemRuntimeStatus(),
   ])
 
+  const working = capabilities.filter((c) => c.status === 'working')
+  const wiredUnproven = capabilities.filter((c) => c.status === 'wired_unproven')
+  const blocked = capabilities.filter((c) => c.status === 'blocked')
+  const missing = capabilities.filter((c) => c.status === 'missing')
+
   return NextResponse.json({
     success: true,
-    approvedProviders: APPROVED_AI_PROVIDERS.map((provider) => provider.displayName),
-    modelCatalogs,
-    repoWorkbench,
-    researchTools,
+    capabilities,
+    summary: {
+      total: capabilities.length,
+      working: working.length,
+      wiredUnproven: wiredUnproven.length,
+      blocked: blocked.length,
+      missing: missing.length,
+    },
     system,
   })
 }
