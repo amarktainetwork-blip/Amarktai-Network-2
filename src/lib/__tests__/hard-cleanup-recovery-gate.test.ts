@@ -115,6 +115,22 @@ describe('hard cleanup and recovery gate', () => {
     expect(schema).toContain('@@map("artifacts")')
   })
 
+  it('keeps Prisma migration SQL files free of UTF-8 BOM markers', () => {
+    const migrations = fs.readdirSync(path.join(REPO, 'prisma/migrations'), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(REPO, 'prisma/migrations', entry.name, 'migration.sql'))
+      .filter((migration) => fs.existsSync(migration))
+
+    expect(migrations.length).toBeGreaterThan(0)
+    for (const migration of migrations) {
+      const bytes = fs.readFileSync(migration)
+      const hasUtf8Bom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF
+      const text = bytes.toString('utf8')
+      expect(hasUtf8Bom, `${path.relative(REPO, migration)} starts with EF BB BF`).toBe(false)
+      expect(text.charCodeAt(0), `${path.relative(REPO, migration)} starts with U+FEFF`).not.toBe(0xFEFF)
+    }
+  })
+
   it('exposes an admin-only recovery count route without returning secret values', () => {
     const route = read('src/app/api/admin/settings/recovery-counts/route.ts')
     expect(route).toContain('getSession')
