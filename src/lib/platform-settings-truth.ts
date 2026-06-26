@@ -1,6 +1,5 @@
-import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
-import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
+import { getProviderRuntimeTruth, type ProviderRuntimeTruthEntry } from '@/lib/provider-runtime-truth'
 
 export type SettingsTruthStatus = 'Connected' | 'Optional' | 'Needs key' | 'Needs live test' | 'Failed'
 
@@ -23,55 +22,67 @@ export interface SettingsTruthEntry {
   unlocks: string
 }
 
-async function buildEntry(id: ProviderMeshId): Promise<SettingsTruthEntry> {
-  const node = PROVIDER_MESH.find((item) => item.id === id)!
-  const notes = await getMeshTestNotes(id)
-  const localRuntime = id === 'local-crawler' || id === 'playwright' || id === 'scrapy' || id === 'trafilatura' || id === 'ffmpeg' || id === 'storage'
-  const storageWritable = id === 'storage' ? checkWritable(LOCAL_STORE_FILES.artifacts).writable : false
-  const credential = localRuntime ? 'local-runtime' : await getMeshCredential(id)
-  const configured = Boolean(credential) || storageWritable
-  const connected = Boolean(configured && notes.lastTestPassed)
-  const failed = configured && notes.lastTestStatus === 'failed'
-  const status: SettingsTruthStatus = connected
+function toSettingsEntry(truth: ProviderRuntimeTruthEntry): SettingsTruthEntry {
+  const node = PROVIDER_MESH.find((n) => n.id === truth.providerId)!
+  const isLocalRuntime = ['local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'storage'].includes(truth.providerId)
+
+  const status: SettingsTruthStatus = truth.connected
     ? 'Connected'
-    : failed
+    : truth.lastTestStatus === 'failed'
       ? 'Failed'
-      : configured
+      : truth.configured
         ? 'Needs live test'
-        : node.optional
+        : truth.optional
           ? 'Optional'
           : 'Needs key'
 
+  const lastTestResult = truth.connected
+    ? 'Live test passed'
+    : truth.lastTestStatus === 'failed'
+      ? 'Live test failed'
+      : 'Not tested'
+
+  // Translate internal blocker to user-visible text
+  let blocker = ''
+  if (!truth.connected) {
+    if (!truth.hasKey) {
+      blocker = truth.optional
+        ? 'Optional connection is not configured'
+        : node.envAliases.length > 0
+          ? `Add ${node.envAliases.join(' or ')}`
+          : `Add the local runtime`
+    } else if (truth.endpointStatus === 'missing') {
+      blocker = `Set the ${truth.displayName} endpoint URL`
+    } else if (truth.lastTestStatus === 'failed') {
+      blocker = truth.blocker || 'Live test failed'
+    } else {
+      blocker = `Run the ${truth.displayName} live test`
+    }
+  }
+
   return {
-    key: id,
-    label: node.displayName,
-    kind: node.kind,
+    key: truth.providerId,
+    label: truth.displayName,
+    kind: truth.kind,
     status,
-    configured,
-    connected,
-    optional: Boolean(node.optional),
-    requiresSecret: !localRuntime && node.envAliases.length > 0,
+    configured: truth.configured,
+    connected: truth.connected,
+    optional: truth.optional,
+    requiresSecret: !isLocalRuntime && node.envAliases.length > 0,
     testRoute: node.testRoute,
     envVars: [...node.envAliases],
-    capabilities: [...node.capabilities],
-    lastTestResult: connected ? 'Live test passed' : failed ? 'Live test failed' : 'Not tested',
-    lastTestedAt: typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null,
-    blocker: connected
-      ? ''
-      : failed
-        ? notes.lastError || 'Live test failed'
-        : configured
-          ? `Run the ${node.displayName} live test`
-          : node.optional
-            ? 'Optional connection is not configured'
-            : `Add ${node.envAliases.join(' or ') || 'the local runtime'}`,
-    error: typeof notes.lastError === 'string' ? notes.lastError : '',
-    unlocks: node.capabilities.join(', '),
+    capabilities: [...truth.capabilities],
+    lastTestResult,
+    lastTestedAt: truth.lastTestedAt,
+    blocker,
+    error: truth.lastTestStatus === 'failed' ? (truth.blocker || '') : '',
+    unlocks: [...truth.capabilities].join(', '),
   }
 }
 
 export async function getPlatformSettingsTruth() {
-  const entries = await Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id)))
+  const truthEntries = await getProviderRuntimeTruth()
+  const entries = truthEntries.map(toSettingsEntry)
   const providers = entries.filter((entry) => entry.kind === 'provider')
   const tools = entries.filter((entry) => entry.kind === 'tool')
   const storage = entries.find((entry) => entry.kind === 'storage')!

@@ -1,5 +1,4 @@
-import { getPlatformSettingsTruth } from '@/lib/platform-settings-truth'
-import { getProviderKeyWithSource } from '@/lib/provider-config'
+import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
@@ -111,32 +110,33 @@ function getLocalCoreStatus(): LocalCoreStatus {
   }
 }
 
+function mapKeySource(src: 'db' | 'env' | 'none'): 'vault' | 'env' | 'missing' {
+  if (src === 'db') return 'vault'
+  if (src === 'env') return 'env'
+  return 'missing'
+}
+
 export async function getRuntimeProviderStatus(): Promise<ProviderRuntimeEntry[]> {
-  const truth = await getPlatformSettingsTruth()
-  return Promise.all(truth.entries.map(async (entry) => {
-    const source = entry.kind === 'provider'
-      ? (await getProviderKeyWithSource(entry.key)).source
-      : entry.configured ? 'env' as const : 'missing' as const
-    return {
-      key: entry.key,
-      displayName: entry.label,
-      reason: entry.connected ? 'Live test passed.' : entry.blocker,
-      configured: entry.configured,
-      connected: entry.connected,
-      coveredByGenX: false,
-      keySource: source,
-      status: entry.connected
-        ? 'configured_wired' as const
-        : entry.configured
-          ? 'configured_not_wired' as const
-          : entry.optional
-            ? 'not_configured_optional' as const
-            : 'blocked' as const,
-      governanceStatus: 'approved',
-      showInPrimarySetup: entry.kind === 'provider',
-      defaultCostRole: entry.key === 'genx' ? 'primary' : 'specialist',
-      capabilities: entry.capabilities,
-    }
+  const truth = await getProviderRuntimeTruth()
+  return truth.map((entry) => ({
+    key: entry.providerId,
+    displayName: entry.displayName,
+    reason: entry.connected ? 'Live test passed.' : entry.blocker,
+    configured: entry.configured,
+    connected: entry.connected,
+    coveredByGenX: false,
+    keySource: mapKeySource(entry.keySource),
+    status: entry.connected
+      ? 'configured_wired' as const
+      : entry.configured
+        ? 'configured_not_wired' as const
+        : entry.optional
+          ? 'not_configured_optional' as const
+          : 'blocked' as const,
+    governanceStatus: 'approved',
+    showInPrimarySetup: entry.kind === 'provider',
+    defaultCostRole: entry.providerId === 'genx' ? 'primary' : 'specialist',
+    capabilities: [...entry.capabilities],
   }))
 }
 

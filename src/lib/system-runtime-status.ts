@@ -4,16 +4,31 @@ import path from 'path'
 import { promisify } from 'util'
 import { getProviderKey } from '@/lib/provider-config'
 import { getStorageRoot } from '@/lib/local-json-store'
+import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 
 const execFileAsync = promisify(execFile)
 
 export async function getSystemRuntimeStatus() {
-  const [git, node, storage, webdockKey] = await Promise.all([
+  const [git, node, storage, webdockKey, aiProviders] = await Promise.all([
     commandVersion('git'),
     commandVersion('node'),
     storageWritable(),
     getProviderKey('webdock').catch(() => null),
+    getProviderRuntimeTruth().catch(() => []),
   ])
+
+  const aiProviderRows = aiProviders
+    .filter((p) => p.kind === 'provider')
+    .map((p) => ({
+      providerId: p.providerId,
+      displayName: p.displayName,
+      hasKey: p.hasKey,
+      keySource: p.keySource,
+      endpointStatus: p.endpointStatus,
+      lastTestStatus: p.lastTestStatus,
+      connected: p.connected,
+      blocker: p.blocker,
+    }))
 
   return {
     vps: {
@@ -26,6 +41,7 @@ export async function getSystemRuntimeStatus() {
       { name: 'node', status: node ? 'Available' : 'Unavailable', version: node },
     ],
     storage,
+    aiProviders: aiProviderRows,
     workspaceRoot: getStorageRoot(),
   }
 }

@@ -1,0 +1,155 @@
+/**
+ * Shared server-side provider runtime truth.
+ *
+ * Single source of truth consumed by:
+ *   - /api/admin/settings/status  (Settings page)
+ *   - getDashboardRuntimeTruth()  (Runtime capability truth / System Monitoring)
+ *
+ * Rules:
+ *   - DB keys take priority over env keys.
+ *   - Env keys are fallback only.
+ *   - Actual key values are never exposed.
+ *   - A provider with a key but missing endpoint → blocker = 'requires_endpoint'.
+ *   - A provider with no key → blocker = 'missing_key'.
+ *   - Failed last test → lastTestStatus = 'failed' (not 'connected').
+ */
+
+import { PROVIDER_MESH, type ProviderMeshId, type ProviderCapability } from '@/lib/provider-mesh'
+import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
+import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+
+export type ProviderKeySource = 'db' | 'env' | 'none'
+export type ProviderEndpointStatus = 'ok' | 'missing' | 'not_required' | 'failed'
+export type ProviderLastTestStatus = 'passed' | 'failed' | 'not_tested'
+
+export interface ProviderRuntimeTruthEntry {
+  providerId: ProviderMeshId
+  displayName: string
+  kind: 'provider' | 'tool' | 'storage'
+  hasKey: boolean
+  keySource: ProviderKeySource
+  endpointStatus: ProviderEndpointStatus
+  lastTestStatus: ProviderLastTestStatus
+  lastTestedAt: string | null
+  capabilities: readonly ProviderCapability[]
+  blocker: string
+  /** true only when hasKey && lastTestStatus === 'passed' */
+  connected: boolean
+  /** true when hasKey is true but test has not passed */
+  configured: boolean
+  optional: boolean
+}
+
+const LOCAL_RUNTIME_IDS: ReadonlySet<ProviderMeshId> = new Set([
+  'local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg',
+])
+
+/** Providers that require a separate endpoint URL in addition to an API key. */
+const REQUIRES_ENDPOINT_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshId>([
+  'genx',
+])
+
+function resolveEndpointStatus(id: ProviderMeshId, hasKey: boolean): ProviderEndpointStatus {
+  if (!REQUIRES_ENDPOINT_IDS.has(id)) return 'not_required'
+  if (!hasKey) return 'missing'
+  // GenX needs a base URL
+  const url = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? ''
+  return url ? 'ok' : 'missing'
+}
+
+/** Determine key source without exposing the actual value. */
+async function resolveKeySource(
+  id: ProviderMeshId,
+  rawKey: string | null,
+): Promise<ProviderKeySource> {
+  if (!rawKey) return 'none'
+  const node = PROVIDER_MESH.find((n) => n.id === id)
+  if (!node) return 'none'
+  for (const envName of node.envAliases) {
+    const envVal = process.env[envName]?.trim()
+    if (envVal && envVal === rawKey) return 'env'
+  }
+  return 'db'
+}
+
+async function buildEntry(id: ProviderMeshId): Promise<ProviderRuntimeTruthEntry> {
+  const node = PROVIDER_MESH.find((n) => n.id === id)!
+  const isLocalRuntime = LOCAL_RUNTIME_IDS.has(id)
+  const isStorage = id === 'storage'
+
+  let hasKey = false
+  let keySource: ProviderKeySource = 'none'
+
+  if (isLocalRuntime) {
+    hasKey = true
+    keySource = 'env'
+  } else if (isStorage) {
+    const writable = checkWritable(LOCAL_STORE_FILES.artifacts).writable
+    hasKey = writable
+    keySource = writable ? 'env' : 'none'
+  } else {
+    const rawKey = await getMeshCredential(id)
+    hasKey = Boolean(rawKey?.trim())
+    keySource = await resolveKeySource(id, rawKey)
+  }
+
+  const notes = await getMeshTestNotes(id)
+  const rawLastTest = notes.lastTestStatus
+  const lastTestStatus: ProviderLastTestStatus =
+    rawLastTest === 'passed' ? 'passed' :
+    rawLastTest === 'failed' ? 'failed' :
+    'not_tested'
+
+  const lastTestedAt = typeof notes.lastTestedAt === 'string' ? notes.lastTestedAt : null
+  const endpointStatus = resolveEndpointStatus(id, hasKey)
+
+  // connected = key present AND last test passed
+  const connected = hasKey && lastTestStatus === 'passed'
+  // configured = key present (test may not have been run yet)
+  const configured = hasKey
+
+  let blocker = ''
+  if (!hasKey) {
+    if (node.envAliases.length > 0) {
+      blocker = `missing_key: add ${node.envAliases.join(' or ')}`
+    } else {
+      blocker = 'missing_key: local runtime not available'
+    }
+  } else if (endpointStatus === 'missing') {
+    blocker = 'requires_endpoint: set GENX_BASE_URL or GENX_API_URL'
+  } else if (lastTestStatus === 'failed') {
+    blocker = typeof notes.lastError === 'string' && notes.lastError
+      ? notes.lastError
+      : 'last_test_failed'
+  } else if (lastTestStatus === 'not_tested') {
+    blocker = `run the ${node.displayName} live test`
+  }
+
+  return {
+    providerId: id,
+    displayName: node.displayName,
+    kind: node.kind,
+    hasKey,
+    keySource,
+    endpointStatus,
+    lastTestStatus,
+    lastTestedAt,
+    capabilities: node.capabilities,
+    blocker,
+    connected,
+    configured,
+    optional: Boolean(node.optional),
+  }
+}
+
+export async function getProviderRuntimeTruth(): Promise<ProviderRuntimeTruthEntry[]> {
+  return Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id)))
+}
+
+export async function getProviderRuntimeTruthEntry(
+  id: ProviderMeshId,
+): Promise<ProviderRuntimeTruthEntry | null> {
+  const node = PROVIDER_MESH.find((n) => n.id === id)
+  if (!node) return null
+  return buildEntry(id)
+}
