@@ -86,35 +86,25 @@ export async function POST(req: NextRequest) {
             },
           })
         }
-        const integration = await prisma.integrationConfig.findUnique({ where: { key: 'github' } })
-        let notes: Record<string, unknown> = {}
-        try { notes = JSON.parse(integration?.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
-        await prisma.integrationConfig.upsert({
-          where: { key: 'github' },
-          update: {
-            notes: JSON.stringify({
-              ...notes,
-              username: userData.login ?? null,
-              repoCount,
-              lastTestStatus: 'passed',
-              lastTestPassed: true,
-              lastTestedAt: new Date().toISOString(),
-            }),
-          },
-          create: {
-            key: 'github',
-            displayName: 'GitHub',
-            apiKey: '',
-            enabled: true,
-            notes: JSON.stringify({
-              username: userData.login ?? null,
-              repoCount,
-              lastTestStatus: 'passed',
-              lastTestPassed: true,
-              lastTestedAt: new Date().toISOString(),
-            }),
-          },
-        })
+        // Update notes on existing row only — never create a ghost row with apiKey: ''.
+        const integration = await prisma.integrationConfig.findUnique({ where: { key: 'github' }, select: { notes: true } })
+        if (integration) {
+          let notes: Record<string, unknown> = {}
+          try { notes = JSON.parse(integration.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
+          await prisma.integrationConfig.update({
+            where: { key: 'github' },
+            data: {
+              notes: JSON.stringify({
+                ...notes,
+                username: userData.login ?? null,
+                repoCount,
+                lastTestStatus: 'passed',
+                lastTestPassed: true,
+                lastTestedAt: new Date().toISOString(),
+              }),
+            },
+          })
+        }
       } catch { /* ignore */ }
     }
 

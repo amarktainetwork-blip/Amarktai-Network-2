@@ -11,6 +11,8 @@ const mockUpdateMany = vi.fn()
 const mockUpdate = vi.fn()
 const mockUpsert = vi.fn()
 const mockFindUnique = vi.fn()
+const mockGitHubFindFirst = vi.fn()
+const mockGitHubUpdate = vi.fn()
 
 vi.mock('@/lib/prisma', () => ({
   prisma: {
@@ -19,6 +21,10 @@ vi.mock('@/lib/prisma', () => ({
       updateMany: mockUpdateMany,
       update: mockUpdate,
       upsert: mockUpsert,
+    },
+    gitHubConfig: {
+      findFirst: mockGitHubFindFirst,
+      update: mockGitHubUpdate,
     },
   },
 }))
@@ -42,6 +48,8 @@ beforeEach(() => {
   mockUpdateMany.mockResolvedValue({ count: 1 })
   mockUpdate.mockResolvedValue({})
   mockUpsert.mockResolvedValue({})
+  mockGitHubFindFirst.mockResolvedValue(null)
+  mockGitHubUpdate.mockResolvedValue({})
 })
 
 function okHF() {
@@ -272,5 +280,90 @@ describe('Test 7: recordMeshTestResult uses updateMany, not upsert', () => {
     const notes = JSON.parse(lastCall[0].data.notes) as Record<string, unknown>
     expect(notes.lastTestStatus).toBe('failed')
     expect(notes.lastTestPassed).toBe(false)
+  })
+})
+
+// ── Test 8: GitHub test route ─────────────────────────────────────────────────
+
+function okGitHub(login = 'testuser') {
+  return Promise.resolve(new Response(
+    JSON.stringify({ login, name: 'Test User', public_repos: 10, total_private_repos: 2 }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  ))
+}
+
+describe('Test 8: test-github never writes apiKey: empty', () => {
+  it('success with stored token + existing integrationConfig row → update only, no upsert', async () => {
+    mockGetProviderKey.mockResolvedValue('ghp_realtoken')
+    mockFetch.mockReturnValue(okGitHub())
+    // Existing integrationConfig row with notes
+    mockFindUnique.mockResolvedValue({ notes: '{"savedAt":"2026-01-01"}' })
+    // No gitHubConfig row
+    mockGitHubFindFirst.mockResolvedValue(null)
+
+    const { POST } = await import('@/app/api/admin/settings/test-github/route')
+    const res = await POST(makeReq())
+    expect((await res.json()).success).toBe(true)
+
+    expect(mockUpsert).not.toHaveBeenCalled()
+    for (const [arg] of allWriteCalls()) {
+      const data = (arg.data ?? {}) as Record<string, unknown>
+      expect(data.apiKey).toBeUndefined()
+    }
+  })
+
+  it('success with stored token + no integrationConfig row → no DB write for integrationConfig', async () => {
+    mockGetProviderKey.mockResolvedValue('ghp_realtoken')
+    mockFetch.mockReturnValue(okGitHub())
+    // No existing integrationConfig row
+    mockFindUnique.mockResolvedValue(null)
+    mockGitHubFindFirst.mockResolvedValue(null)
+
+    const { POST } = await import('@/app/api/admin/settings/test-github/route')
+    await POST(makeReq())
+
+    expect(mockUpsert).not.toHaveBeenCalled()
+    // update should not be called since no row exists
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('no token → success:false, zero DB writes', async () => {
+    mockGetProviderKey.mockResolvedValue(null)
+    mockGitHubFindFirst.mockResolvedValue(null)
+
+    const { POST } = await import('@/app/api/admin/settings/test-github/route')
+    const res = await POST(makeReq())
+    expect((await res.json()).success).toBe(false)
+
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockUpdateMany).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('API failure with stored token → no integrationConfig write', async () => {
+    mockGetProviderKey.mockResolvedValue('ghp_realtoken')
+    mockFetch.mockReturnValue(failHttp(401))
+
+    const { POST } = await import('@/app/api/admin/settings/test-github/route')
+    const res = await POST(makeReq())
+    expect((await res.json()).success).toBe(false)
+
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockUpdate).not.toHaveBeenCalled()
+  })
+
+  it('no write call in GitHub route ever sets apiKey', async () => {
+    mockGetProviderKey.mockResolvedValue('ghp_realtoken')
+    mockFetch.mockReturnValue(okGitHub())
+    mockFindUnique.mockResolvedValue({ notes: '{}' })
+    mockGitHubFindFirst.mockResolvedValue({ id: 1, username: 'user' })
+
+    const { POST } = await import('@/app/api/admin/settings/test-github/route')
+    await POST(makeReq())
+
+    for (const [arg] of allWriteCalls()) {
+      const data = (arg.data ?? {}) as Record<string, unknown>
+      expect(data).not.toHaveProperty('apiKey')
+    }
   })
 })
