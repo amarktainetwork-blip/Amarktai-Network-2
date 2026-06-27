@@ -106,16 +106,13 @@ export async function recordMeshTestResult(input: {
     detail: input.detail?.slice(0, 280) ?? '',
   }
 
-  await prisma.integrationConfig.upsert({
+  // Only update notes on an existing row — never create a ghost row with apiKey: ''.
+  // If no row exists yet the key has not been saved via Settings, so there is
+  // nothing to record; the next Settings key-save will create the row with the
+  // real encrypted key.
+  await prisma.integrationConfig.updateMany({
     where: { key: input.id },
-    create: {
-      key: input.id,
-      displayName: node.displayName,
-      apiKey: '',
-      enabled: true,
-      notes: JSON.stringify(notes),
-    },
-    update: {
+    data: {
       displayName: node.displayName,
       enabled: true,
       notes: JSON.stringify(notes),

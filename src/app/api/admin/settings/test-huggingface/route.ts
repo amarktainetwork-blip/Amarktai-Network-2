@@ -44,10 +44,10 @@ export async function POST(req: NextRequest) {
     const data = await res.json() as { name?: string; type?: string }
 
     if (!inlineKey) {
-      await prisma.integrationConfig.upsert({
+      // Update notes on existing row only — never create a ghost row with apiKey: ''.
+      await prisma.integrationConfig.updateMany({
         where: { key: 'huggingface' },
-        create: { key: 'huggingface', displayName: 'Hugging Face', apiKey: '', enabled: true, notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
-        update: { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
+        data: { notes: JSON.stringify({ lastTestStatus: 'passed', lastTestPassed: true, lastTestedAt: new Date().toISOString() }) },
       }).catch(() => null)
     }
 

@@ -259,42 +259,28 @@ export async function POST(req: NextRequest) {
   const success = catalogOk && executionOk
   if (!inlineKey) {
     try {
-      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' } })
-      let notes: Record<string, unknown> = {}
-      try { notes = JSON.parse(row?.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
-      await prisma.integrationConfig.upsert({
-        where: { key: 'genx' },
-        update: {
-          notes: JSON.stringify({
-            ...notes,
-            lastTestStatus: success ? 'passed' : 'failed',
-            lastTestPassed: success,
-            lastTestedAt: new Date().toISOString(),
-            modelCount,
-            catalogOk,
-            chatOk,
-            generateOk,
-            executionOk,
-          }),
-        },
-        create: {
-          key: 'genx',
-          displayName: 'GenX',
-          apiKey: '',
-          apiUrl: baseUrl,
-          enabled: true,
-          notes: JSON.stringify({
-            lastTestStatus: success ? 'passed' : 'failed',
-            lastTestPassed: success,
-            lastTestedAt: new Date().toISOString(),
-            modelCount,
-            catalogOk,
-            chatOk,
-            generateOk,
-            executionOk,
-          }),
-        },
-      })
+      // Only update an existing row — never create a ghost row with apiKey: ''.
+      const row = await prisma.integrationConfig.findUnique({ where: { key: 'genx' }, select: { notes: true } })
+      if (row) {
+        let notes: Record<string, unknown> = {}
+        try { notes = JSON.parse(row.notes ?? '{}') as Record<string, unknown> } catch { /* ignore */ }
+        await prisma.integrationConfig.update({
+          where: { key: 'genx' },
+          data: {
+            notes: JSON.stringify({
+              ...notes,
+              lastTestStatus: success ? 'passed' : 'failed',
+              lastTestPassed: success,
+              lastTestedAt: new Date().toISOString(),
+              modelCount,
+              catalogOk,
+              chatOk,
+              generateOk,
+              executionOk,
+            }),
+          },
+        })
+      }
     } catch { /* status persistence is best-effort; response stays factual */ }
   }
 
