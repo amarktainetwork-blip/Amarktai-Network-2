@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import path from 'path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
   ACTIVE_AI_PROVIDER_KEYS,
   REMOVED_AI_PROVIDER_KEYS,
@@ -8,16 +8,51 @@ import {
   getEligibleProvidersForCapability,
   getProviderRuntime,
 } from '@/lib/provider-runtime'
-import {
-  REQUIRED_RUNTIME_CAPABILITY_KEYS,
-  getAllRuntimeCapabilityProofs,
-  getRuntimeCapabilityProof,
-} from '@/lib/capability-proof-registry'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 import { AI_PROVIDER_MESH } from '@/lib/provider-mesh'
 import { TOGETHER_VIDEO_CATALOG, resolveVideoProviderOrder } from '@/lib/video-capability'
 
 const repoPath = (...parts: string[]) => path.join(process.cwd(), ...parts)
+
+// ── Mocks for capability-runtime-truth tests ──────────────────────────────────
+
+vi.mock('@/lib/provider-mesh-status', () => ({
+  getMeshCredential: vi.fn(),
+  getMeshTestNotes: vi.fn(),
+}))
+
+vi.mock('@/lib/local-json-store', () => ({
+  checkWritable: vi.fn(() => ({ writable: true, root: '/tmp', file: '/tmp/artifacts.json' })),
+  listRecords: vi.fn(() => []),
+  LOCAL_STORE_FILES: {
+    memory: 'memory.json', approvals: 'approvals.json', artifacts: 'artifacts.json',
+    research: 'research.json', apps: 'apps.json', agents: 'agents.json',
+  },
+  getStorageRoot: vi.fn(() => '/tmp'),
+}))
+
+import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
+import { checkWritable } from '@/lib/local-json-store'
+
+const mockGetMeshCredential = vi.mocked(getMeshCredential)
+const mockGetMeshTestNotes = vi.mocked(getMeshTestNotes)
+const mockCheckWritable = vi.mocked(checkWritable)
+
+const noNotes = { lastTestStatus: undefined, lastTestPassed: undefined, lastTestedAt: undefined, lastError: undefined }
+const passedNotes = { lastTestStatus: 'passed' as const, lastTestPassed: true, lastTestedAt: '2026-06-26T10:00:00Z', lastError: '' }
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  mockGetMeshCredential.mockResolvedValue(null)
+  mockGetMeshTestNotes.mockResolvedValue(noNotes)
+  mockCheckWritable.mockReturnValue({ writable: true, root: '/tmp', file: '/tmp/artifacts.json' })
+  delete process.env.GENX_BASE_URL
+  delete process.env.GENX_API_URL
+  delete process.env.HF_ADULT_TEXT_ENDPOINT
+  delete process.env.ADULT_MODE_ENABLED
+})
+
+// ── Original tests (no capability-proof-registry dependency) ──────────────────
 
 describe('provider endpoint and capability proof recovery', () => {
   it('keeps the active provider set exact and excludes removed providers', () => {
@@ -63,23 +98,6 @@ describe('provider endpoint and capability proof recovery', () => {
     }
   })
 
-  it('proves every required capability has a status and storage/async contract', () => {
-    const proofs = getAllRuntimeCapabilityProofs()
-    expect(proofs).toHaveLength(REQUIRED_RUNTIME_CAPABILITY_KEYS.length)
-    for (const key of REQUIRED_RUNTIME_CAPABILITY_KEYS) {
-      const proof = getRuntimeCapabilityProof(key)
-      expect(proof?.key).toBe(key)
-      expect(proof?.status).toMatch(/working|requires_endpoint|requires_verification/)
-      if (key.includes('video')) expect(proof?.requiresAsyncJob || proof?.status === 'working').toBeTruthy()
-    }
-
-    for (const key of ['text_to_image', 'text_to_video', 'text_to_speech', 'music_song', 'artifact_create'] as const) {
-      expect(getRuntimeCapabilityProof(key)?.requiresStorage).toBe(true)
-    }
-    expect(getRuntimeCapabilityProof('adult_video')?.status).toBe('requires_endpoint')
-    expect(getRuntimeCapabilityProof('long_form_video_assembly')?.status).toBe('requires_verification')
-  })
-
   it('does not route Together FLUX image models as video', () => {
     expect(TOGETHER_VIDEO_CATALOG).toEqual([])
     const cheap = resolveVideoProviderOrder('cheap', 'text_to_video', 10)
@@ -110,5 +128,135 @@ describe('provider endpoint and capability proof recovery', () => {
     expect(adminRoute).toContain('requires_endpoint')
     expect(adminRoute).toContain('requires live verification')
     expect(adminRoute).toContain('/api/admin/settings/test-provider')
+  })
+})
+
+// ── Migrated from capability-proof-registry — now uses canonical truth ─────────
+
+describe('capability runtime truth: proof-based status (replaces hardcoded proof registry)', () => {
+  // 1. Provider-backed media never marked working from static metadata alone
+  it('provider-backed media capabilities are never working from metadata alone', async () => {
+    // No providers connected
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    const mediaEntries = entries.filter((e) =>
+      (e.category === 'image' || e.category === 'video' || e.category === 'audio') &&
+      !e.capabilityId.startsWith('adult_'),
+    )
+
+    for (const entry of mediaEntries) {
+      expect(
+        entry.status,
+        `${entry.capabilityId} must not be working with no connected providers`,
+      ).not.toBe('working')
+      expect(entry.proofStatus).not.toBe('passed')
+    }
+  })
+
+  // 2. Connected provider but no live media proof → wired_unproven
+  it('media capability with connected provider but no live proof is wired_unproven', async () => {
+    process.env.GENX_BASE_URL = 'https://query.genx.sh'
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'genx' ? 'genx-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'genx' ? passedNotes : noNotes,
+    )
+
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    // video_generation requires genx (connected) — but media needs live proof beyond chat test
+    const video = entries.find((e) => e.capabilityId === 'video_generation')!
+    expect(video.connectedProviderCandidates).toContain('genx')
+    expect(video.status).toBe('wired_unproven')
+    expect(video.proofStatus).not.toBe('passed')
+
+    // image_generation similarly wired_unproven even with connected genx
+    const image = entries.find((e) => e.capabilityId === 'image_generation')!
+    expect(image.connectedProviderCandidates.length).toBeGreaterThan(0)
+    expect(image.status).toBe('wired_unproven')
+  })
+
+  // 3. No provider key → missing, not working
+  it('capabilities with no provider key are missing, not working', async () => {
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    const providerBacked = entries.filter((e) =>
+      e.providerCandidates.length > 0 && !e.capabilityId.startsWith('adult_'),
+    )
+
+    for (const entry of providerBacked) {
+      expect(
+        entry.status === 'working',
+        `${entry.capabilityId} must not be working with no keys`,
+      ).toBe(false)
+    }
+  })
+
+  // 4. Storage-only capabilities work only when storage passes
+  it('storage-only capabilities are working when storage is writable', async () => {
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    for (const id of ['assets', 'approvals', 'scheduler']) {
+      const entry = entries.find((e) => e.capabilityId === id)!
+      expect(entry.status).toBe('working')
+      expect(entry.proofStatus).toBe('passed')
+    }
+  })
+
+  it('storage-only capabilities are blocked when storage is not writable', async () => {
+    mockCheckWritable.mockReturnValue({ writable: false, root: '/tmp', file: '/tmp/artifacts.json' })
+
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    for (const id of ['assets', 'approvals', 'scheduler']) {
+      const entry = entries.find((e) => e.capabilityId === id)!
+      expect(entry.status).toBe('blocked')
+      expect(entry.hasStorage).toBe(false)
+    }
+  })
+
+  // 5. Adult capabilities blocked when endpoint/gate missing
+  it('adult capabilities are blocked when required endpoints and gates are missing', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? 'hf-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? passedNotes : noNotes,
+    )
+    // No adult endpoints set, adult mode off
+
+    const { getCapabilityRuntimeTruth } = await import('@/lib/capability-runtime-truth')
+    const entries = await getCapabilityRuntimeTruth()
+
+    for (const id of ['adult_text', 'adult_image', 'adult_video', 'adult_voice']) {
+      const entry = entries.find((e) => e.capabilityId === id)!
+      expect(entry.status).not.toBe('working')
+      // Either blocked (endpoint missing) or permission issue
+      expect(['blocked', 'missing', 'wired_unproven']).toContain(entry.status)
+    }
+  })
+
+  it('adult_text remains blocked when HF connected but dedicated endpoint missing', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? 'hf-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? passedNotes : noNotes,
+    )
+    process.env.ADULT_MODE_ENABLED = 'true'
+    // HF_ADULT_TEXT_ENDPOINT deliberately not set
+
+    const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
+    const entry = await getCapabilityRuntimeTruthEntry('adult_text')
+
+    expect(entry!.hasRequiredEndpoint).toBe(false)
+    expect(entry!.status).toBe('blocked')
+    expect(entry!.blocker).toMatch(/requires_endpoint/)
   })
 })
