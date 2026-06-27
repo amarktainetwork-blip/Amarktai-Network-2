@@ -264,14 +264,14 @@ export default async function ControlCentrePage() {
         <Panel title="Campaigns" label="Marketing workflow">
           <div className="space-y-3">
             {db.campaigns.length > 0 ? db.campaigns.map((campaign) => (
-              <Link key={campaign.id} href={`/admin/dashboard/campaigns/${campaign.id}`} className="block rounded-lg border border-slate-700 bg-slate-950/55 p-3 transition hover:border-cyan-300/30">
+              <div key={campaign.id} className="rounded-lg border border-slate-700 bg-slate-950/55 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="truncate text-sm font-black text-white">{campaign.name}</p>
                   <StatusBadge value={campaign.status} />
                 </div>
                 <p className="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">{campaign.goal || 'No campaign goal stored.'}</p>
                 <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-slate-500">{campaign.budgetTier} budget - {campaign.qualityTier} quality - {campaign.approvalMode}</p>
-              </Link>
+              </div>
             )) : <EmptyState text={db.database === 'working' ? 'No campaigns found.' : 'Database unavailable, campaigns cannot be loaded.'} />}
           </div>
         </Panel>

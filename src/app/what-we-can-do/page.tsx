@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { ArrowRight, Bot, Briefcase, Headphones, Megaphone, Microscope, PenTool, Search, Workflow } from 'lucide-react'
+import { ArrowRight, Briefcase, Headphones, Megaphone, Microscope, PenTool, Search, Workflow, GraduationCap } from 'lucide-react'
 import PublicShell from '@/components/public/PublicShell'
 
 const outcomes = [
   ['Marketing apps', 'Scrape a site, extract brand context, plan campaigns, generate items, route approvals, and store assets.', Megaphone],
   ['Creator platforms', 'Coordinate image, video, music, audio, avatar, and document outputs through governed capability requests.', PenTool],
-  ['Companion apps', 'Use app-scoped memory, safety settings, and response controls while keeping the app interface thin.', Bot],
+  ['Knowledge apps', 'Use app-scoped memory, retrieval, safety settings, and response controls while keeping the app interface thin.', GraduationCap],
   ['Automation tools', 'Turn repeated operational work into queued jobs, artifacts, approvals, and learning signals.', Workflow],
   ['Research workflows', 'Gather sources, summarize findings, store knowledge, and test retrieval from one workspace.', Search],
   ['Customer service', 'Connect context, brand memory, permissions, and response governance for support experiences.', Headphones],
@@ -59,7 +59,7 @@ export default function WhatWeCanDoPage() {
           <div>
             <h2 className="text-3xl font-black tracking-tight lg:text-5xl">Bring the app. Keep the AI layer central.</h2>
             <p className="mt-3 max-w-2xl text-sm font-semibold leading-7 text-slate-800">
-              Build marketing, creator, companion, automation, research, customer service, and business apps on one capability platform.
+              Build marketing, creator, automation, research, customer service, knowledge, and business apps on one capability platform.
             </p>
           </div>
           <Link href="/contact" className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-900">

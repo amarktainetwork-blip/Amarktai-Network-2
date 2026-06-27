@@ -163,7 +163,7 @@ export default function PublicShell({ children }: { children: React.ReactNode })
           </div>
         </div>
         <div className="border-t border-white/8 px-5 py-4 text-center font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500 lg:px-8">
-          © 2026 AmarktAI. All rights reserved.
+          &copy; 2026 AmarktAI. All rights reserved.
         </div>
       </footer>
     </div>

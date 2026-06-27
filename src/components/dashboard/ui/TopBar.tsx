@@ -2,7 +2,7 @@
 
 import { Menu, X } from 'lucide-react'
 import BrandName from '@/components/BrandName'
-import type { DashboardNavItem } from '@/lib/dashboard-marketing-nav'
+import type { DashboardNavItem } from '@/lib/dashboard-nav'
 
 export function TopBar({
   activeItem,

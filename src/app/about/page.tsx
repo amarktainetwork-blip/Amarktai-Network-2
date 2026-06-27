@@ -1,7 +1,7 @@
 import PublicShell from '@/components/public/PublicShell'
 
 const principles = [
-  ['Infrastructure before interface', 'Reliable AI work depends on routing discipline, durable context, explicit boundaries, and operational evidence.'],
+  ['Infrastructure before interface', 'Reliable AI work depends on routing discipline, durable context, clear boundaries, and operational evidence.'],
   ['Automation with restraint', 'Agents should move quickly inside defined scopes and pause when production, policy, or ownership requires review.'],
   ['Runtime independence', 'A serious operating layer keeps execution flexible while preserving memory, artifacts, and workflow state.'],
   ['Truthful systems', 'Operations, approvals, queues, runtime health, and deployments must be visible as system facts, not hidden side effects.'],

@@ -16,13 +16,15 @@ type StudioMode = {
 
 const studioModes: StudioMode[] = [
   { label: 'Chat', tab: 'Chat', capability: 'chat' },
-  { label: 'Research', tab: 'Research', capability: 'research' },
   { label: 'Image', tab: 'Image', capability: 'image_generation' },
   { label: 'Video', tab: 'Video', capability: 'video_generation' },
-  { label: 'Music / Song', tab: 'Music / Audio', capability: 'music_generation' },
+  { label: 'Long-form Video', tab: 'Video', capability: 'long_form_video' },
+  { label: 'Music', tab: 'Music / Audio', capability: 'music_generation' },
   { label: 'Voice / TTS', tab: 'Voice / TTS', capability: 'tts' },
-  { label: 'Avatar Video', tab: 'Avatar / Talking Video', capability: 'avatar_video' },
-  { label: 'STT / Transcription', tab: 'STT / Transcription', capability: 'stt' },
+  { label: 'STT', tab: 'STT / Transcription', capability: 'stt' },
+  { label: 'Avatar', tab: 'Avatar / Talking Video', capability: 'avatar_video' },
+  { label: 'RAG / Research', tab: 'Research', capability: 'research' },
+  { label: 'Campaign workflow', tab: 'Research', capability: 'campaign_workflow' },
   { label: 'Adult Text', tab: 'Adult', capability: 'adult_text', adultMode: 'text' },
   { label: 'Adult Image', tab: 'Adult', capability: 'adult_image', adultMode: 'image' },
   { label: 'Adult Video', tab: 'Adult', capability: 'adult_video', adultMode: 'video' },
@@ -264,7 +266,7 @@ export default function StudioPage() {
         jobStatus: String(effectiveData.jobStatus ?? effectiveData.status ?? (effectiveData.result as Record<string, unknown> | undefined)?.status ?? ''),
       }))
       setStatus(effectiveData.workbenchUrl
-        ? 'Workbench handoff saved'
+        ? 'Coding handoff saved'
         : effectiveData.artifactId
           ? `Artifact saved: ${String(effectiveData.artifactId)}`
           : pollUrl
@@ -615,7 +617,7 @@ export default function StudioPage() {
               <RouteFact label="Routing" value="Runtime selects route after context, budget, quality, policy, and readiness checks." />
               <RouteFact label="Media route" value="Available capabilities require a canonical route and a live readiness signal." />
               <RouteFact label="Route details" value={tabTruth.detail} />
-              <RouteFact label="Dashboard context" value="Assistant context, memory, and Workbench handoff are available to protected routes." />
+              <RouteFact label="Dashboard context" value="Assistant context, memory, and coding handoff are available to protected routes." />
             </div>
             {modeBlocker && <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/8 px-3 py-2 text-xs font-bold leading-5 text-amber-300">{modeBlocker}</p>}
           </details>
@@ -670,8 +672,8 @@ export default function StudioPage() {
               <ResultPanel title="Actions">
                 <div className="grid gap-2">
                   <button onClick={() => loadArtifacts().catch(() => null)} className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800">Refresh artifacts</button>
-                  <Link href={`/admin/dashboard/workbench?prompt=${encodeURIComponent(message)}`} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-400 hover:bg-cyan-500/15">
-                    Open in Workbench <ArrowRight className="h-3 w-3" />
+                  <Link href="/admin/dashboard/assets" className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-cyan-500/20 bg-cyan-500/8 px-3 py-2 text-xs font-black text-cyan-400 hover:bg-cyan-500/15">
+                    Open saved handoffs <ArrowRight className="h-3 w-3" />
                   </Link>
                 </div>
               </ResultPanel>
@@ -684,7 +686,7 @@ export default function StudioPage() {
               <RouteFact label="Route reason" value={lastResult?.routeReason ?? 'Backend route selected by Studio tab and runtime router'} />
               <RouteFact label="Job status" value={lastResult?.jobStatus || jobStatus || 'none'} />
               <RouteFact label="Route" value={tabTruth.route ?? 'backend route not implemented'} />
-              <RouteFact label="Context" value="Dashboard-aware context loaded; Workspace memory available; Workbench handoff enabled." />
+              <RouteFact label="Context" value="Dashboard-aware context loaded; app memory available; coding handoff enabled." />
               {lastResult?.provider && <RouteFact label="Resolved provider" value={lastResult.provider} />}
               {lastResult?.model && <RouteFact label="Resolved model" value={lastResult.model} />}
             </div>
@@ -813,7 +815,7 @@ function RouteFact({ label, value }: { label: string; value: string }) {
 
 function placeholderForMode(mode: StudioMode) {
   if (mode.capability === 'research') return 'Research the target, summarize findings, and save an artifact.'
-  if (mode.capability === 'coding') return 'Describe the repo change. The Studio will hand it to Workbench.'
+  if (mode.capability === 'coding') return 'Describe the repo change. Studio saves a coding handoff artifact.'
   if (mode.capability === 'music_generation') return 'Describe the song, genre/style, mood, duration, instrumental/vocals, and intended use.'
   if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Enter text to generate speech with the selected voice style.'
   if (mode.capability === 'stt') return 'Upload audio or video to transcribe.'
@@ -830,12 +832,12 @@ function resultIntroForMode(mode: StudioMode) {
   if (mode.capability === 'tts' || mode.capability === 'adult_voice') return 'Generated speech plays here when the selected voice route returns audio.'
   if (mode.capability === 'stt') return 'Transcripts appear here after the upload finishes.'
   if (mode.capability === 'adult_text') return 'Policy-gated adult text output appears here when safeguards allow the request.'
-  if (mode.capability === 'coding') return 'Workbench handoff status appears here, with the next repo action available after saving.'
+  if (mode.capability === 'coding') return 'Coding handoff status appears here, with the saved artifact available after completion.'
   return 'Run a command to see results here.'
 }
 
 function actionLabelForMode(mode: StudioMode) {
-  if (mode.capability === 'coding') return 'Send to Workbench'
+  if (mode.capability === 'coding') return 'Save coding handoff'
   if (mode.capability === 'stt') return 'Transcribe'
   if (mode.capability === 'chat') return 'Send'
   if (mode.capability === 'music_generation') return 'Generate music'
@@ -844,7 +846,7 @@ function actionLabelForMode(mode: StudioMode) {
 }
 
 function summarizeStudioResult(data: Record<string, unknown>) {
-  if (typeof data.workbenchUrl === 'string') return `Workbench task saved.\n${data.workbenchUrl}`
+  if (typeof data.workbenchUrl === 'string') return `Coding handoff saved.\n${data.workbenchUrl}`
   const result = data.result as Record<string, unknown> | undefined
   if (typeof result?.transcript === 'string') return result.transcript
   if (typeof result?.output === 'string') return result.output

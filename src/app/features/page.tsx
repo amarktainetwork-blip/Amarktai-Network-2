@@ -8,7 +8,7 @@ const features = [
   ['Memory and RAG', 'Workspace, app, brand, and retrieval context can be stored and reused without making apps heavy.', Database],
   ['Media generation', 'Images, video, music, audio, voice, avatars, and documents flow into stored artifacts where routes are available.', Sparkles],
   ['Approval gates', 'Generated work can pause for human review before publishing, export, or reuse.', FileCheck2],
-  ['Safety controls', 'Adult and sensitive capabilities are permission-gated and unavailable when required policy or runtime setup is missing.', Lock],
+  ['Safety controls', 'Sensitive capabilities are permission-gated and unavailable when required policy or runtime setup is missing.', Lock],
   ['Artifact proof', 'Outputs are tracked with status, storage reference, and execution proof instead of unverifiable claims.', Boxes],
   ['Operations view', 'Worker, storage, database, queue, and system signals are surfaced honestly in the control centre.', RadioTower],
 ] as const

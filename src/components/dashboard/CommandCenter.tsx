@@ -113,9 +113,9 @@ export default function CommandCenter() {
 
   const attachedHref = useMemo(() => {
     if (!active) return ''
-    if (active.route.surface === 'Workbench') return '/admin/dashboard/workbench'
+    if (active.route.surface === 'Workbench') return '/admin/dashboard/studio'
     if (active.route.surface === 'System') return '/admin/dashboard/system'
-    if (active.route.surface === 'Network Apps') return '/admin/dashboard/workspace'
+    if (active.route.surface === 'Network Apps') return '/admin/dashboard/apps'
     return active.route.executionRoute
   }, [active])
 
@@ -190,8 +190,8 @@ export default function CommandCenter() {
         </section>
 
         <section className="grid grid-cols-2 gap-2">
-          <SummaryLink href="/admin/dashboard/outputs" label="Recent outputs" />
-          <SummaryLink href="/admin/dashboard/network-apps" label="Connected apps" />
+          <SummaryLink href="/admin/dashboard/assets" label="Assets & jobs" />
+          <SummaryLink href="/admin/dashboard/apps" label="Connected apps" />
         </section>
 
         <section className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4">

@@ -48,11 +48,9 @@ export async function POST(request: NextRequest) {
     artifact = { id: null, warning: error instanceof Error ? error.message : 'Artifact persistence failed' }
   }
 
-  const search = new URLSearchParams({ prompt })
-  if (body.repoFullName) search.set('repo', body.repoFullName)
   return NextResponse.json({
     success: true,
     artifact,
-    workbenchUrl: `/admin/dashboard/workbench?${search.toString()}`,
+    workbenchUrl: '/admin/dashboard/assets',
   })
 }

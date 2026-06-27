@@ -9,7 +9,7 @@
  *  5. Removed providers are not shown as active
  *  6. Apps request capabilities, not infrastructure routes
  *  7. Marketing workflow section exists
- *  8. Adult safety copy exists
+ *  8. Public safety copy is neutral and does not mention adult-only products
  *  9. CTA (call to action) exists
  *  10. Public pages build (nav items correct)
  */
@@ -60,7 +60,7 @@ describe('AmarktAI branding', () => {
   it('BrandName component uses exact AmarktAI branding', () => {
     const src = readSrc('src/components/BrandName.tsx')
     expect(src).toContain('Amarkt')
-    expect(src).toContain('ai')
+    expect(src).toContain('AI')
     expect(src).toContain('Network')
   })
 
@@ -213,42 +213,37 @@ describe('Runtime workflow section', () => {
 
 // ── 8. Adult safety copy ──────────────────────────────────────────────────────
 
-describe('Adult safety copy', () => {
-  it('landing page has adult safety section', () => {
-    const src = readSrc('src/app/page.tsx')
-    expect(src).toContain('permission-gated')
-    expect(src).toContain('safety-controlled')
-    expect(src).toContain('consent')
+describe('Public safety copy', () => {
+  it('landing page describes sensitive capability governance without adult product positioning', () => {
+    const src = readSrc('src/app/page.tsx').toLowerCase()
+    expect(src).toContain('sensitive capability')
+    expect(src).toContain('app permission')
+    expect(src).not.toMatch(/\b(adult|girlfriend|companion|explicit)\b/)
   })
 
-  it('safety page exists with safety content', () => {
+  it('safety page exists with neutral safety content', () => {
     const src = readSrc('src/app/safety/page.tsx').toLowerCase()
     expect(src).toContain('gated')
-    expect(src).toContain('permission-gated')
-    expect(src).toContain('safety-controlled')
+    expect(src).toContain('permission-controlled')
+    expect(src).toContain('safety-first')
+    expect(src).toContain('voice rights')
   })
 
-  it('safety page mentions all prohibited categories', () => {
+  it('safety page lists prohibited use without public adult-product copy', () => {
     const src = readSrc('src/app/safety/page.tsx').toLowerCase()
     expect(src).toContain('minors')
     expect(src).toContain('non-consensual')
-    expect(src).toContain('celebrity')
-    expect(src).toContain('revenge')
-    expect(src).toContain('voice cloning')
+    expect(src).toContain('rights-violating')
+    expect(src).toContain('private data')
+    expect(src).not.toMatch(/\b(adult|girlfriend|companion|explicit)\b/)
   })
 
-  it('safety page is not sexually graphic', () => {
-    const src = readSrc('src/app/safety/page.tsx').toLowerCase()
-    expect(src).not.toContain('explicit sexual')
-    expect(src).not.toContain('pornograph')
-    expect(src).not.toContain('erotic content')
-  })
-
-  it('apps page marks adult creator as gated', () => {
+  it('apps page stays product-neutral', () => {
     const src = readSrc('src/app/apps/page.tsx').toLowerCase()
-    expect(src).toContain('gated')
-    expect(src).toContain('permission-gated')
-    expect(src).toContain('safety-controlled')
+    expect(src).toContain('creator')
+    expect(src).toContain('knowledge')
+    expect(src).toContain('thin apps')
+    expect(src).not.toMatch(/\b(adult|girlfriend|companion|explicit)\b/)
   })
 })
 

@@ -153,20 +153,17 @@ describe('hard cleanup and recovery gate', () => {
 
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Overview',
-      'Connected Apps',
       'Studio',
+      'Apps',
       'Capabilities',
-      'Campaigns',
-      'Assets',
-      'Agents',
-      'Memory',
-      'Knowledge/RAG',
-      'Approvals',
-      'Scheduler/Publishing',
-      'Adult Permissions',
+      'Assets & Jobs',
+      'Memory & Knowledge',
+      'Voice Agent',
       'Settings',
-      'System Monitoring',
+      'System',
     ])
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Marketing')
+    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Approvals')
+    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Scheduler/Publishing')
   })
 })

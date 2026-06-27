@@ -36,7 +36,6 @@ const platformLayers = [
 const appCategories = [
   'Marketing',
   'Creator',
-  'Companion',
   'Automation',
   'Research',
   'Customer service',
@@ -58,10 +57,10 @@ export default function HomePage() {
               Central <span className="text-blue-300">AI</span> capability platform
             </p>
             <h1 className="mt-5 max-w-4xl text-5xl font-black leading-none tracking-tight text-white sm:text-6xl lg:text-8xl">
-              <BrandName />
+              Intelligence Unleashed.
             </h1>
             <p className="mt-6 max-w-3xl text-xl font-semibold leading-8 text-slate-100 sm:text-2xl">
-              AmarktAI is a runtime for AI-powered apps that need reliable capabilities without owning heavy AI infrastructure.
+              Explore Infinite Intelligence. The Future is <BrandName />.
             </p>
             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300">
               Apps stay thin. They request capabilities. AmarktAI chooses the route, fallback, budget, quality, permissions, storage, memory, RAG, artifacts, approvals, and learning path.
@@ -204,9 +203,9 @@ export default function HomePage() {
       <section id="safety" className="bg-[#03050a] py-16 text-white">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-xs font-black uppercase tracking-[0.2em] text-cyan-300">Safety</p>
-          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight">permission-gated and safety-controlled where required.</h2>
+          <h2 className="mt-4 max-w-4xl text-4xl font-black tracking-tight">Permission-gated and safety-controlled where required.</h2>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">
-            Adult creator capability requests require consent, app permission, legal safety checks, and approved runtime routes before execution.
+            Sensitive capability requests require app permission, policy checks, and approved runtime routes before execution.
           </p>
         </div>
       </section>

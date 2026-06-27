@@ -1,11 +1,11 @@
 import Link from 'next/link'
-import { ArrowRight, BriefcaseBusiness, Headphones, Megaphone, Orbit, Search, Sparkles, Users, Workflow } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, GraduationCap, Headphones, Megaphone, Orbit, Search, Sparkles, Workflow } from 'lucide-react'
 import PublicShell from '@/components/public/PublicShell'
 
 const apps = [
   ['Marketing', 'Campaign planning, creative assets, approvals, publishing, analytics', Megaphone, 'Live workflow surface'],
-  ['Creator', 'Image, video, music, audio, avatar, document artifacts. Adult creator paths are gated, permission-gated, and safety-controlled.', Sparkles, 'Capability runtime'],
-  ['Companion', 'Memory, personality, retrieval, safety and permission gates', Users, 'App context layer'],
+  ['Creator', 'Image, video, music, audio, avatar, and document artifacts through governed capability requests.', Sparkles, 'Capability runtime'],
+  ['Knowledge', 'Memory, retrieval, safety settings, and response controls for app-specific knowledge experiences.', GraduationCap, 'App context layer'],
   ['Automation', 'Background jobs, scheduled tasks, handoffs, artifact references', Workflow, 'Worker-backed flows'],
   ['Research', 'Search, synthesis, retrieval, citations, app knowledge', Search, 'Research agent'],
   ['Customer service', 'Response drafts, FAQ retrieval, escalation summaries', Headphones, 'Service agent'],
@@ -23,7 +23,7 @@ export default function AppsPage() {
             Thin apps. Central AI runtime.
           </h1>
           <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
-            AmarktAI is not a single marketing app. It is the capability platform behind marketing, creator, companion, automation, research, customer service, and business apps. Apps never choose infrastructure routes.
+            AmarktAI is not a single marketing app. It is the capability platform behind marketing, creator, automation, research, customer service, knowledge, and business apps. Apps never choose infrastructure routes.
           </p>
         </div>
       </section>

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { SidebarNav } from './SidebarNav'
 import { TopBar } from './TopBar'
-import { MARKETING_NAV_ITEMS } from '@/lib/dashboard-marketing-nav'
+import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -38,10 +38,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [router])
 
   const activeItem =
-    MARKETING_NAV_ITEMS.find((item) => {
-      if (item.href === '/admin/dashboard/marketing') return pathname === item.href
+    DASHBOARD_NAV_ITEMS.find((item) => {
+      if (item.href === '/admin/dashboard') return pathname === item.href
       return pathname === item.href || pathname.startsWith(`${item.href}/`)
-    }) ?? MARKETING_NAV_ITEMS[0]
+    }) ?? DASHBOARD_NAV_ITEMS[0]
 
   const sidebar = (
     <SidebarNav

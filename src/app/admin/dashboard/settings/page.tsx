@@ -41,12 +41,12 @@ export default function SettingsPage() {
       {/* Admin quick links */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[
-          { href: '/admin/dashboard/providers', label: 'Providers / API Keys', desc: 'Configure approved runtime providers and run live tests' },
-          { href: '/admin/dashboard/adult-mode', label: 'Adult Permissions', desc: 'Age gate, consent, and rights checks' },
-          { href: '/admin/dashboard/vps-health', label: 'Storage & Artifact Status', desc: 'VPS readiness, disk, Qdrant, Redis' },
-          { href: '/admin/dashboard/publishing', label: 'Publishing Credentials', desc: 'Platform export and publishing status' },
-          { href: '/admin/dashboard/brand-memory', label: 'Brand Memory', desc: 'Brand profiles and guidelines' },
-          { href: '/admin/dashboard/rag', label: 'Knowledge Base', desc: 'RAG ingestion and query' },
+          { href: '/admin/dashboard/settings', label: 'Providers / API Keys', desc: 'Configure approved runtime providers and run live tests here only' },
+          { href: '/admin/dashboard/system', label: 'Storage & Artifact Status', desc: 'VPS readiness, disk, Qdrant, Redis' },
+          { href: '/admin/dashboard/memory', label: 'Memory & Knowledge', desc: 'Brand profiles, memory, and retrieval readiness' },
+          { href: '/admin/dashboard/assets', label: 'Assets & Jobs', desc: 'Generated outputs, jobs, approvals, and export references' },
+          { href: '/admin/dashboard/apps', label: 'Apps', desc: 'App profiles, policy state, and stored app context' },
+          { href: '/admin/dashboard/studio', label: 'Studio', desc: 'Run capability requests without provider or model selection' },
         ].map(({ href, label, desc }) => (
           <Link key={href} href={href} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
             <p className="font-black text-slate-200 text-sm">{label}</p>

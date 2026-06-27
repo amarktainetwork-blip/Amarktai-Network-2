@@ -77,7 +77,7 @@ export default function PlatformPage() {
             {[
               [Network, 'Execution network', 'routing, fallback, budget, quality, and proof'],
               [Gauge, 'Runtime knobs', 'budget tier, quality tier, safety gates'],
-              [Lock, 'Governance', 'approval state, permissions, adult mode gates'],
+              [Lock, 'Governance', 'approval state, permissions, and safety gates'],
               [CheckCircle2, 'Proof', 'selected runtime path shown only after execution'],
             ].map(([Icon, label, value]) => {
               const RowIcon = Icon as typeof Network

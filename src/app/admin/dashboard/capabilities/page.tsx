@@ -5,18 +5,18 @@ import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 
 export const dynamic = 'force-dynamic'
 
-type UiStatus = 'Working' | 'Wired, needs proof' | 'Blocked' | 'Missing'
+type UiStatus = 'Working' | 'Needs proof' | 'Blocked' | 'Missing'
 
 const STATUS_LABELS: Record<CapabilityRuntimeTruthEntry['status'], UiStatus> = {
   working: 'Working',
-  wired_unproven: 'Wired, needs proof',
+  wired_unproven: 'Needs proof',
   blocked: 'Blocked',
   missing: 'Missing',
 }
 
 const STATUS_TONE: Record<UiStatus, string> = {
   Working: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-200',
-  'Wired, needs proof': 'border-amber-300/20 bg-amber-300/10 text-amber-100',
+  'Needs proof': 'border-amber-300/20 bg-amber-300/10 text-amber-100',
   Blocked: 'border-red-300/20 bg-red-300/10 text-red-100',
   Missing: 'border-slate-600/50 bg-slate-800/80 text-slate-300',
 }
@@ -55,8 +55,8 @@ export default async function CapabilitiesPage() {
       </section>
 
       <section className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/60">
-        <div className="grid grid-cols-[1.1fr_0.85fr_0.9fr_0.8fr_1fr_1fr] gap-px bg-slate-800/70 text-xs">
-          {['Capability', 'Status', 'Providers', 'Route', 'Proof', 'Required fix'].map((heading) => (
+        <div className="grid grid-cols-[1.1fr_0.85fr_0.9fr_0.8fr_1.25fr] gap-px bg-slate-800/70 text-xs">
+          {['Capability', 'Status', 'Providers', 'Route', 'Required fix'].map((heading) => (
             <div key={heading} className="bg-slate-950/80 px-3 py-2 font-black uppercase tracking-[0.12em] text-slate-500">{heading}</div>
           ))}
           {capabilities.map((entry) => (
@@ -86,23 +86,15 @@ function CapabilityLine({
       <Cell><StatusPill status={status} /></Cell>
       <Cell>{entry.providerCandidates.length ? connected.length ? connected.join(', ') : entry.providerCandidates.join(', ') : 'Platform storage'}</Cell>
       <Cell>{entry.hasExecutionRoute ? 'Wired' : 'Missing'}</Cell>
-      <Cell>{proofLabel(entry)}</Cell>
       <Cell>{entry.blocker || entry.nextAction || 'No action required'}</Cell>
     </>
   )
 }
 
-function proofLabel(entry: CapabilityRuntimeTruthEntry) {
-  if (entry.proofStatus === 'passed') return 'Live proof passed'
-  if (entry.proofStatus === 'failed') return 'Live proof failed'
-  if (entry.proofStatus === 'route_only') return 'Execution route exists; proof still needed'
-  return 'Live proof not run'
-}
-
 function StatusPill({ status }: { status: UiStatus }) {
   const Icon =
     status === 'Working' ? CheckCircle2 :
-    status === 'Wired, needs proof' ? CircleDashed :
+    status === 'Needs proof' ? CircleDashed :
     status === 'Blocked' ? AlertTriangle :
     CircleSlash
   return (

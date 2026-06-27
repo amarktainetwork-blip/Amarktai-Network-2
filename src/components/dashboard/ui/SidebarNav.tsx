@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { ChevronRight, LogOut, Network } from 'lucide-react'
 import BrandName from '@/components/BrandName'
-import { MARKETING_NAV_ITEMS, type DashboardNavItem } from '@/lib/dashboard-marketing-nav'
+import { DASHBOARD_NAV_ITEMS, type DashboardNavItem } from '@/lib/dashboard-nav'
 
 export function SidebarNav({
   pathname,
@@ -19,14 +19,14 @@ export function SidebarNav({
   onNavClick?: () => void
 }) {
   const isActive = (href: string) =>
-    href === '/admin/dashboard/marketing'
+    href === '/admin/dashboard'
       ? pathname === href
       : pathname === href || pathname.startsWith(`${href}/`)
 
   return (
     <div className="flex h-full flex-col">
       <div className="px-5 py-6">
-        <Link href="/admin/dashboard/marketing" className="group block">
+        <Link href="/admin/dashboard" className="group block">
           <div className="flex items-center gap-3">
             <div className="relative grid h-11 w-11 place-items-center rounded-xl border border-slate-700 bg-slate-900 shadow-[0_0_28px_rgba(14,165,233,0.18)]">
               <Network className="h-5 w-5 text-sky-300" />
@@ -57,9 +57,9 @@ export function SidebarNav({
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Marketing dashboard navigation">
+      <nav className="flex-1 overflow-y-auto px-3 py-1" aria-label="Dashboard navigation">
         <div className="space-y-0.5">
-          {MARKETING_NAV_ITEMS.map((item: DashboardNavItem) => {
+          {DASHBOARD_NAV_ITEMS.map((item: DashboardNavItem) => {
             const active = isActive(item.href)
             return (
               <Link

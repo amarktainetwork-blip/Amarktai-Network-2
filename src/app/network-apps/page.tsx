@@ -10,7 +10,7 @@ export default function PublicNetworkAppsPage() {
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-cyan-200">Network Apps</p>
           <h1 className="mt-5 max-w-5xl text-4xl font-black leading-tight text-white sm:text-5xl lg:text-7xl">Connected business modules with honest readiness.</h1>
-          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">Each module has a clear purpose and an explicit status. Planned work is never presented as live.</p>
+          <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">Each module has a clear purpose and verified readiness state. Planned work is never presented as live.</p>
         </div>
       </section>
       <section className="bg-[var(--amarkt-obsidian)] py-20">
