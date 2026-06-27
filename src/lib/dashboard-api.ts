@@ -225,7 +225,7 @@ export async function requestChanges(id: string, notes: string): Promise<ApiResu
 // ── Providers (admin display only) ────────────────────────────────────────────
 
 export async function getProviderStatus(): Promise<ApiResult<ProviderStatusEntry[]>> {
-  const result = await apiFetch<unknown>('/api/admin/providers')
+  const result = await apiFetch<unknown>('/api/admin/providers/status')
   if (!result.ok) return { ok: false, data: null, error: result.error }
   return { ok: true, data: unwrapArray<ProviderStatusEntry>(result.data, 'providers'), error: null }
 }
@@ -233,6 +233,7 @@ export async function getProviderStatus(): Promise<ApiResult<ProviderStatusEntry
 export async function testProvider(key: string): Promise<ApiResult<{ ok: boolean; latencyMs?: number; error?: string }>> {
   return apiFetch('/api/admin/settings/test-provider', {
     method: 'POST',
-    body: JSON.stringify({ providerKey: key }),
+    // The shared test-provider route reads `key`, not `providerKey`
+    body: JSON.stringify({ key }),
   })
 }
