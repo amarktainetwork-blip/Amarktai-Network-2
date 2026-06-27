@@ -297,6 +297,44 @@ export function getProviderMeshNode(id: string) {
   return PROVIDER_MESH.find((node) => node.id === id)
 }
 
+const PROVIDER_MESH_ALIASES: Record<string, ProviderMeshId> = {
+  genx: 'genx',
+  'gen-x': 'genx',
+  'gen x': 'genx',
+  huggingface: 'huggingface',
+  'hugging-face': 'huggingface',
+  'hugging face': 'huggingface',
+  hf: 'huggingface',
+  mimo: 'mimo',
+  xiaomi: 'mimo',
+  'xiaomi-mimo': 'mimo',
+  'xiaomi mimo': 'mimo',
+  xiaomimimo: 'mimo',
+  groq: 'groq',
+  together: 'together',
+  'together-ai': 'together',
+  'together ai': 'together',
+}
+
+function normalizeProviderToken(input: string) {
+  return input.trim().toLowerCase().replaceAll('_', '-')
+}
+
+export function normalizeProviderMeshId(provider: string | null | undefined): ProviderMeshId | null {
+  if (!provider?.trim()) return null
+  const normalized = normalizeProviderToken(provider)
+  const candidate = PROVIDER_MESH_ALIASES[normalized] ?? normalized
+  return getProviderMeshNode(candidate) ? candidate as ProviderMeshId : null
+}
+
+export function requireProviderMeshId(provider: string): ProviderMeshId {
+  const normalized = normalizeProviderMeshId(provider)
+  if (!normalized) {
+    throw new Error(`Provider "${provider}" is not approved by the provider mesh.`)
+  }
+  return normalized
+}
+
 export function providersForCapability(
   capability: ProviderCapability,
   connectedProviderIds: readonly string[],

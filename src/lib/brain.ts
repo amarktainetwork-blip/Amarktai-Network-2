@@ -15,7 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { timingSafeEqual } from 'crypto'
 import { getDefaultModelForProvider, MODEL_REGISTRY } from '@/lib/model-registry'
 import { isUsableServiceKey } from '@/lib/service-vault'
-import { getProviderMeshNode, type ProviderMeshId } from '@/lib/provider-mesh'
+import { getProviderMeshNode, normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { getMeshCredential } from '@/lib/provider-mesh-status'
 
 // ── Request / Response Contracts ─────────────────────────────────────────────
@@ -166,10 +166,8 @@ export interface ProviderCallResult {
  *
  */
 export async function getVaultApiKey(providerKey: string): Promise<string | null> {
-  const normalized = providerKey === 'hf'
-    ? 'huggingface'
-    : providerKey
-  if (!getProviderMeshNode(normalized)) return null
+  const normalized = normalizeProviderMeshId(providerKey)
+  if (!normalized || !getProviderMeshNode(normalized)) return null
   return normalizeProviderApiKey(await getMeshCredential(normalized as ProviderMeshId))
 }
 /*
@@ -212,7 +210,8 @@ export async function callProvider(
   systemPrompt?: string,
 ): Promise<ProviderCallResult> {
   const start = Date.now()
-  const meshNode = getProviderMeshNode(providerKey)
+  const canonicalProviderKey = normalizeProviderMeshId(providerKey)
+  const meshNode = canonicalProviderKey ? getProviderMeshNode(canonicalProviderKey) : null
   if (!meshNode || meshNode.kind !== 'provider') {
     return {
       ok: false,
@@ -224,6 +223,7 @@ export async function callProvider(
     }
   }
 
+  providerKey = canonicalProviderKey!
   const meshApiKey = await getVaultApiKey(providerKey)
   if (!meshApiKey) {
     return {

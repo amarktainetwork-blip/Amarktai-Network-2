@@ -6,6 +6,7 @@ import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-stor
 import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'
 import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
 import { getCapabilityRuntimeTruthEntry, type CapabilityRuntimeTruthEntry } from '@/lib/capability-runtime-truth'
+import { normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { recordProviderResult } from '@/lib/provider-result-log'
 import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
 import { POST as assistantChatPost } from '@/app/api/admin/amarktai-assistant/chat/route'
@@ -40,6 +41,12 @@ type ExecuteBody = {
 
 type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'voice'
 type ProofMode = 'chat' | 'image' | 'music'
+
+const STUDIO_EXECUTABLE_PROVIDERS: Record<ProofMode, readonly ProviderMeshId[]> = {
+  chat: ['genx', 'groq', 'together', 'mimo', 'huggingface'],
+  image: ['genx', 'together'],
+  music: ['genx'],
+}
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
   return new NextRequest(new URL(path, 'http://studio.local'), {
@@ -220,6 +227,43 @@ async function preflightCapability(mode: StudioExecutionMode, capability: string
   return { truth, response: null, statusCode: 200 }
 }
 
+function selectStudioProvider(mode: StudioExecutionMode, truth?: CapabilityRuntimeTruthEntry | null): ProviderMeshId | null {
+  if (!truth || !['chat', 'image', 'music'].includes(mode)) return null
+  const supported = STUDIO_EXECUTABLE_PROVIDERS[mode as ProofMode]
+  for (const provider of truth.connectedProviderCandidates) {
+    const canonical = normalizeProviderMeshId(provider)
+    if (canonical && supported.includes(canonical)) return canonical
+  }
+  return null
+}
+
+function noConnectedStudioProviderResponse(
+  mode: StudioExecutionMode,
+  capability: string,
+  truth?: CapabilityRuntimeTruthEntry | null,
+) {
+  const supported = mode === 'chat' || mode === 'image' || mode === 'music'
+    ? STUDIO_EXECUTABLE_PROVIDERS[mode].join(', ')
+    : ''
+  return blockerResponse({
+    mode,
+    capability,
+    status: truth?.status ?? 'blocked',
+    blocker: `No connected provider supports Studio ${mode} execution through the current backend route. Supported mesh providers for this route: ${supported}.`,
+    nextAction: truth?.nextAction || `Connect and test one of: ${supported}.`,
+    proof: truth ? capabilityTruthProof(truth) : null,
+  })
+}
+
+function canonicalProviderValue(...values: unknown[]): ProviderMeshId | null {
+  for (const value of values) {
+    if (typeof value !== 'string') continue
+    const canonical = normalizeProviderMeshId(value)
+    if (canonical) return canonical
+  }
+  return null
+}
+
 function capabilityTruthProof(truth: CapabilityRuntimeTruthEntry) {
   return {
     capability: truth.capabilityId,
@@ -245,7 +289,8 @@ async function recordStudioProof(input: {
   routePath: string
   metadata?: Record<string, unknown>
 }) {
-  const provider = String(input.provider ?? 'runtime')
+  const canonicalProvider = normalizeProviderMeshId(String(input.provider ?? ''))
+  const provider = canonicalProvider ?? 'unknown'
   const model = String(input.model ?? '')
   const proof = {
     capability: input.capability,
@@ -257,6 +302,7 @@ async function recordStudioProof(input: {
     timestamp: new Date().toISOString(),
     proofStatus: input.success && input.executed ? 'passed' : 'failed',
   }
+  if (!canonicalProvider) return { ...proof, proofStatus: 'failed', error: 'Provider was not a canonical provider mesh ID.' }
   await recordProviderResult({
     appSlug: input.appSlug,
     provider,
@@ -347,6 +393,13 @@ export async function POST(request: NextRequest) {
   if (preflight?.response) {
     return NextResponse.json(preflight.response, { status: preflight.statusCode })
   }
+  const studioProvider = selectStudioProvider(mode, preflight?.truth)
+  if ((mode === 'chat' || mode === 'image' || mode === 'music') && !studioProvider) {
+    return NextResponse.json(
+      noConnectedStudioProviderResponse(mode, proofCapabilityId, preflight?.truth),
+      { status: 409 },
+    )
+  }
 
   if (tab === 'Avatar / Talking Video') {
     const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
@@ -357,7 +410,7 @@ export async function POST(request: NextRequest) {
   const route = routeLiveModel({
     capability,
     appSlug,
-    selectedProvider: 'auto',
+    selectedProvider: studioProvider ?? undefined,
     selectedModel: undefined,
     costMode: body.costMode ?? 'balanced',
     adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
@@ -393,7 +446,7 @@ export async function POST(request: NextRequest) {
       const responseRoute = data.route && typeof data.route === 'object'
         ? data.route as Record<string, unknown>
         : null
-      const selectedProvider = data.provider ?? responseRoute?.selectedProvider ?? route.selectedProvider
+      const selectedProvider = canonicalProviderValue(data.provider, responseRoute?.selectedProvider, route.selectedProvider)
       const selectedModel = data.model ?? responseRoute?.selectedModel ?? route.selectedModel
       const success = response.ok && data.success !== false && Boolean(output)
       const proof = await recordStudioProof({
@@ -483,7 +536,7 @@ export async function POST(request: NextRequest) {
         : null
       const tracked = localJob ? localMediaJobResponse(localJob) : null
       const success = Boolean(persisted?.success || tracked?.success)
-      const selectedProvider = persisted?.provider ?? data.provider ?? route.selectedProvider
+      const selectedProvider = canonicalProviderValue(persisted?.provider, data.provider, route.selectedProvider)
       const selectedModel = persisted?.model ?? data.model ?? route.selectedModel
       const proof = await recordStudioProof({
         mode: 'image',
@@ -628,7 +681,7 @@ export async function POST(request: NextRequest) {
       }))
       const data = await readJson(response)
       const success = Boolean(data.success)
-      const selectedProvider = data.provider ?? route.selectedProvider
+      const selectedProvider = canonicalProviderValue(data.provider, route.selectedProvider)
       const selectedModel = data.model ?? route.selectedModel
       const status = String(data.jobStatus ?? data.status ?? 'failed')
       const proof = await recordStudioProof({

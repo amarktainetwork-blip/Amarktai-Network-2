@@ -1,6 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { normalizeProviderMeshId, requireProviderMeshId } from '@/lib/provider-mesh'
+import { validateCapabilitySelection } from '@/lib/provider-capability-governance'
+import { routeLiveModel } from '@/lib/live-ai-routing'
 
 const root = process.cwd()
 
@@ -23,6 +26,7 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain("assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat'")
     expect(route).toContain("artifact: null")
     expect(route).toContain('noArtifact: true')
+    expect(route).not.toContain("selectedProvider: 'auto'")
   })
 
   it('preflights blocked capabilities and does not fabricate output', () => {
@@ -91,5 +95,47 @@ describe('Studio execution proof pack', () => {
     expect(studio).toContain('Resolved provider')
     expect(studio).toContain('Resolved model')
     expect(studio).toContain('No infrastructure selector is exposed')
+  })
+
+  it('normalizes only known provider aliases represented in the canonical mesh', () => {
+    expect(normalizeProviderMeshId('GenX')).toBe('genx')
+    expect(normalizeProviderMeshId('Hugging Face')).toBe('huggingface')
+    expect(normalizeProviderMeshId('hf')).toBe('huggingface')
+    expect(normalizeProviderMeshId('Together AI')).toBe('together')
+    expect(normalizeProviderMeshId('xiaomi')).toBe('mimo')
+    expect(normalizeProviderMeshId('replicate')).toBeNull()
+    expect(() => requireProviderMeshId('replicate')).toThrow('Provider "replicate" is not approved by the provider mesh.')
+  })
+
+  it('Studio chat automatic routing does not pass auto, display labels, or model IDs into mesh validation', () => {
+    const route = routeLiveModel({ capability: 'chat', selectedProvider: 'auto' })
+
+    expect(route.blockedReason).not.toBe('Provider is not approved by the provider mesh.')
+    expect(route.selectedProvider).toMatch(/^(genx|groq|together|mimo|huggingface)$/)
+    expect(normalizeProviderMeshId(route.selectedProvider)).toBe(route.selectedProvider)
+    expect(normalizeProviderMeshId(route.selectedModel)).toBeNull()
+  })
+
+  it('Studio image and music route through canonical provider mesh IDs', () => {
+    expect(routeLiveModel({ capability: 'image_generation', selectedProvider: 'Together AI' }).selectedProvider).toBe('together')
+    expect(routeLiveModel({ capability: 'music_generation', selectedProvider: 'GenX' }).selectedProvider).toBe('genx')
+  })
+
+  it('unknown provider still fails mesh approval while valid canonical providers do not', () => {
+    expect(routeLiveModel({
+      capability: 'chat',
+      selectedProvider: 'replicate',
+      selectedModel: 'legacy-model',
+    }).blockedReason).toBe('Provider is not approved by the provider mesh.')
+
+    for (const [capability, provider] of [
+      ['chat', 'genx'],
+      ['image_generation', 'genx'],
+      ['music_generation', 'genx'],
+    ] as const) {
+      const validation = validateCapabilitySelection({ capability, provider })
+      expect(validation.reason).not.toBe('Provider is not approved by the provider mesh.')
+      expect(validation.blockers).not.toContain('provider_not_approved')
+    }
   })
 })

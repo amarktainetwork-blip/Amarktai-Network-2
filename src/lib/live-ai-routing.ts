@@ -13,6 +13,7 @@ import {
   type GovernedCapability,
   type GovernedModel,
 } from '@/lib/provider-capability-governance'
+import { normalizeProviderMeshId } from '@/lib/provider-mesh'
 import { adultPolicyAllows, normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
 
 export type AiCapability =
@@ -169,6 +170,12 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
 export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const costMode = input.costMode ?? 'balanced'
   const appSlug = input.appSlug ?? 'dashboard'
+  const normalizedProvider = normalizeLiveProvider(input.selectedProvider)
+  if (normalizedProvider.error) return blocked(input, costMode, normalizedProvider.error)
+  const routeInput: LiveRouteInput = {
+    ...input,
+    selectedProvider: normalizedProvider.provider ?? undefined,
+  }
   const governedCapability = normalizeGovernedCapability(input.capability)
   if (!governedCapability) return blocked(input, costMode, `Unknown capability: ${input.capability}`)
   const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
@@ -178,12 +185,12 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   const governanceValidation = validateCapabilitySelection({
     appSlug,
     capability: governedCapability,
-    provider: input.selectedProvider,
+    provider: routeInput.selectedProvider,
     modelId: input.selectedModel,
     adultPolicyAllows: !input.capability.startsWith('adult_') || adultPolicyAllows(adultPolicy, input.capability),
     budgetAllows: typeof input.budgetRemainingUsd !== 'number' || input.budgetRemainingUsd >= COST_ESTIMATE[costMode],
   })
-  if (!governanceValidation.allowed && input.selectedProvider) {
+  if (!governanceValidation.allowed && routeInput.selectedProvider) {
     return blocked(input, costMode, governanceValidation.reason)
   }
 
@@ -191,7 +198,7 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
     return blocked(input, costMode, 'Estimated spend exceeds the remaining budget.')
   }
 
-  const explicit = explicitSelection(input)
+  const explicit = explicitSelection(routeInput)
   if (explicit) return explicit
 
   const candidates = modelCandidates(input.capability, costMode, input.requiresMedia)
@@ -213,6 +220,15 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
     costMode,
     appSlug,
   }
+}
+
+function normalizeLiveProvider(provider?: string | null): { provider: ApprovedProviderKey | null; error: string | null } {
+  if (!provider || provider === 'auto') return { provider: null, error: null }
+  const normalized = normalizeProviderMeshId(provider)
+  if (!normalized || !isApprovedAIProvider(normalized)) {
+    return { provider: null, error: 'Provider is not approved by the provider mesh.' }
+  }
+  return { provider: normalized as ApprovedProviderKey, error: null }
 }
 
 function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {

@@ -1,5 +1,5 @@
 import { STATIC_PROVIDER_MODELS } from '@/lib/ai-model-catalog'
-import { PROVIDER_MESH, type ProviderMeshId } from '@/lib/provider-mesh'
+import { PROVIDER_MESH, normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 
 export type RootWorkspaceIdentity = {
@@ -271,9 +271,10 @@ export function getModelsForCapability(
   capability: GovernedCapability,
   options: { approvedOnly?: boolean; routePresentOnly?: boolean; provider?: string } = {},
 ): GovernedModel[] {
+  const providerId = options.provider ? normalizeProviderMeshId(options.provider) : null
   return GOVERNED_MODELS.filter((model) =>
     model.capabilities.includes(capability)
-    && (!options.provider || model.provider === options.provider)
+    && (!options.provider || model.provider === providerId)
     && (!options.approvedOnly || model.approved)
     && (!options.routePresentOnly || model.routePresent),
   )
@@ -326,8 +327,9 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
   if ((capability.startsWith('adult_')) && !input.adultPolicyAllows) {
     return { allowed: false, capability, reason: 'Adult policy does not allow this capability.', blockers: ['adult_policy'] }
   }
-  const provider = input.provider ? PROVIDER_MESH.find((node) => node.id === input.provider) : null
-  if (input.provider && !provider) {
+  const providerId = input.provider ? normalizeProviderMeshId(input.provider) : null
+  const provider = providerId ? PROVIDER_MESH.find((node) => node.id === providerId) : null
+  if (input.provider && !providerId) {
     return { allowed: false, capability, reason: 'Provider is not approved by the provider mesh.', blockers: ['provider_not_approved'] }
   }
   const models = getModelsForCapability(capability, { approvedOnly: true, routePresentOnly: true })
