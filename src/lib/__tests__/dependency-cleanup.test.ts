@@ -287,4 +287,20 @@ describe('Open-source/local runtime paths', () => {
     expect(src).toContain('prisma.publishingResult')
     expect(src).toContain('prisma.campaignAnalytics')
   })
+
+  it('capability-registry.ts has no LIVE_PROVEN or proofStatus claims', () => {
+    const src = readSrc('src/lib/capability-registry.ts')
+    expect(src).not.toContain('LIVE_PROVEN')
+    expect(src).not.toContain('SOURCE_WIRED')
+    expect(src).not.toContain('proofStatus')
+    expect(src).not.toContain('ProofStatus')
+  })
+
+  it('provider-capability-map.ts has no LIVE_PROVEN or proofStatus claims', () => {
+    const src = readSrc('src/lib/provider-capability-map.ts')
+    expect(src).not.toContain('LIVE_PROVEN')
+    expect(src).not.toContain('SOURCE_WIRED')
+    expect(src).not.toContain('proofStatus')
+    expect(src).not.toContain('ProofStatus')
+  })
 })

@@ -1,9 +1,10 @@
 /**
  * @module capability-registry
- * @description Canonical capability registry for the AmarktAI Network.
+ * @description Capability metadata for the AmarktAI Network.
  *
- * This is the SINGLE SOURCE OF TRUTH for all capability routing.
- * Apps request capabilities. The runtime decides provider, model, endpoint.
+ * This file describes WHICH providers support each capability and what
+ * gates/requirements apply. It does NOT claim any capability is proven
+ * or working — runtime proof comes from capability-runtime-truth.ts only.
  *
  * ACTIVE PROVIDERS ONLY: genx, huggingface, together, groq, mimo
  */
@@ -37,14 +38,11 @@ export type CostTier = 'free' | 'very_low' | 'low' | 'medium' | 'high' | 'premiu
 
 export type QualityTier = 'basic' | 'standard' | 'high' | 'premium'
 
-export type ProofStatus = 'LIVE_PROVEN' | 'SOURCE_WIRED' | 'PARTIAL' | 'BLOCKED'
-
 export interface ProviderCapabilityEntry {
   provider: ProviderKey
   models: string[]
   costTier: CostTier
   qualityTier: QualityTier
-  proofStatus: ProofStatus
   endpoint?: string
   notes?: string
 }
@@ -60,7 +58,7 @@ export interface CapabilityDefinition {
   requiresSafeModeOff?: boolean
 }
 
-// ── Canonical Registry ────────────────────────────────────────────────────────
+// ── Capability Metadata Registry ──────────────────────────────────────────────
 
 export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = {
   chat: {
@@ -70,11 +68,11 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'text',
     outputType: 'text',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'huggingface', models: ['task:text'], costTier: 'free', qualityTier: 'basic', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'mimo', models: ['mimo-v2.5'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'huggingface', models: ['task:text'], costTier: 'free', qualityTier: 'basic' },
+      { provider: 'mimo', models: ['mimo-v2.5'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   code: {
@@ -84,10 +82,10 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'text',
     outputType: 'code',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'mimo', models: ['mimo-v2.5'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'mimo', models: ['mimo-v2.5'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   file_analysis: {
@@ -97,9 +95,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'text',
     outputType: 'text',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   research: {
@@ -109,9 +107,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'text',
     outputType: 'markdown',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['llama-3.3-70b-versatile'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'together', models: ['meta-llama/Llama-3-70b-chat-hf'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   image_generation: {
@@ -121,9 +119,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'image',
     outputType: 'image',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'huggingface', models: ['task:text-to-image'], costTier: 'free', qualityTier: 'basic', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'huggingface', models: ['task:text-to-image'], costTier: 'free', qualityTier: 'basic' },
     ],
   },
   image_edit: {
@@ -133,8 +131,8 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'image',
     outputType: 'image',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'SOURCE_WIRED' },
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'SOURCE_WIRED' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   video_generation: {
@@ -144,9 +142,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'video',
     outputType: 'video',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX video quota' },
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together video API short clips' },
-      { provider: 'huggingface', models: ['tencent/HunyuanVideo', 'Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B', 'THUDM/CogVideoX-5b', 'ByteDance/AnimateDiff-Lightning'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF video models; full-quality requires configured endpoint' },
+      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', notes: 'Requires GenX video quota' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', notes: 'Together video API short clips' },
+      { provider: 'huggingface', models: ['tencent/HunyuanVideo', 'Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B', 'THUDM/CogVideoX-5b', 'ByteDance/AnimateDiff-Lightning'], costTier: 'free', qualityTier: 'standard', notes: 'HF video models; full-quality requires configured endpoint' },
     ],
   },
   image_to_video: {
@@ -156,8 +154,8 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'video',
     outputType: 'video',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX video quota' },
-      { provider: 'huggingface', models: ['Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF image-to-video; requires configured endpoint' },
+      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', notes: 'Requires GenX video quota' },
+      { provider: 'huggingface', models: ['Lightricks/LTX-Video', 'Wan-AI/Wan2.1-T2V-14B'], costTier: 'free', qualityTier: 'standard', notes: 'HF image-to-video; requires configured endpoint' },
     ],
   },
   music_generation: {
@@ -167,8 +165,8 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'audio',
     outputType: 'audio',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Requires GenX Lyria quota' },
-      { provider: 'huggingface', models: ['facebook/musicgen-small', 'facebook/musicgen-medium', 'facebook/musicgen-large'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'MusicGen text-to-audio; segment-length audio only' },
+      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', notes: 'Requires GenX Lyria quota' },
+      { provider: 'huggingface', models: ['facebook/musicgen-small', 'facebook/musicgen-medium', 'facebook/musicgen-large'], costTier: 'free', qualityTier: 'standard', notes: 'MusicGen text-to-audio; segment-length audio only' },
     ],
   },
   tts: {
@@ -178,9 +176,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'audio',
     outputType: 'audio',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['playai-tts'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'huggingface', models: ['facebook/mms-tts-eng'], costTier: 'free', qualityTier: 'basic', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['playai-tts'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'huggingface', models: ['facebook/mms-tts-eng'], costTier: 'free', qualityTier: 'basic' },
     ],
   },
   stt: {
@@ -190,9 +188,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'audio',
     outputType: 'text',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'groq', models: ['whisper-large-v3'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'huggingface', models: ['openai/whisper-large-v3'], costTier: 'free', qualityTier: 'basic', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
+      { provider: 'groq', models: ['whisper-large-v3'], costTier: 'low', qualityTier: 'standard' },
+      { provider: 'huggingface', models: ['openai/whisper-large-v3'], costTier: 'free', qualityTier: 'basic' },
     ],
   },
   embeddings: {
@@ -202,8 +200,8 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'text',
     outputType: 'json',
     providers: [
-      { provider: 'huggingface', models: ['sentence-transformers/all-MiniLM-L6-v2'], costTier: 'free', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
-      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'huggingface', models: ['sentence-transformers/all-MiniLM-L6-v2'], costTier: 'free', qualityTier: 'standard' },
+      { provider: 'genx', models: ['auto'], costTier: 'medium', qualityTier: 'high' },
     ],
   },
   rag: {
@@ -213,7 +211,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'multimodal',
     outputType: 'text',
     providers: [
-      { provider: 'huggingface', models: ['sentence-transformers/all-MiniLM-L6-v2'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires Qdrant' },
+      { provider: 'huggingface', models: ['sentence-transformers/all-MiniLM-L6-v2'], costTier: 'free', qualityTier: 'standard', notes: 'Requires Qdrant' },
     ],
   },
   memory: {
@@ -223,7 +221,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'system',
     outputType: 'json',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'low', qualityTier: 'standard', proofStatus: 'LIVE_PROVEN' },
+      { provider: 'genx', models: ['auto'], costTier: 'low', qualityTier: 'standard' },
     ],
   },
   avatar_generation: {
@@ -233,9 +231,9 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     category: 'image',
     outputType: 'image',
     providers: [
-      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', proofStatus: 'PARTIAL', notes: 'Premium avatar image/video via GenX media API' },
-      { provider: 'huggingface', models: ['stabilityai/stable-diffusion-xl-base-1.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'HF avatar image via endpoint or serverless API. Set HF_AVATAR_IMAGE_ENDPOINT for dedicated endpoint.' },
-      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Together FLUX image for avatar generation. Cheap/balanced option.' },
+      { provider: 'genx', models: ['auto'], costTier: 'high', qualityTier: 'premium', notes: 'Premium avatar image/video via GenX media API' },
+      { provider: 'huggingface', models: ['stabilityai/stable-diffusion-xl-base-1.0', 'custom'], costTier: 'free', qualityTier: 'standard', notes: 'HF avatar image via endpoint or serverless API. Set HF_AVATAR_IMAGE_ENDPOINT for dedicated endpoint.' },
+      { provider: 'together', models: ['black-forest-labs/FLUX.1-schnell-Free'], costTier: 'low', qualityTier: 'standard', notes: 'Together FLUX image for avatar generation. Cheap/balanced option.' },
     ],
   },
   adult_text: {
@@ -247,7 +245,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'huggingface', models: ['custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_TEXT_ENDPOINT. Fallback: HF_ADULT_TEXT_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
+      { provider: 'huggingface', models: ['custom'], costTier: 'free', qualityTier: 'standard', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_TEXT_ENDPOINT. Fallback: HF_ADULT_TEXT_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
   adult_image: {
@@ -259,7 +257,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_IMAGE_ENDPOINT. Fallback: HF_ADULT_IMAGE_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
+      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_IMAGE_ENDPOINT. Fallback: HF_ADULT_IMAGE_ENDPOINT_FALLBACK. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
   adult_video: {
@@ -271,7 +269,7 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'huggingface', models: ['NSFW-API/NSFW_Wan_14b', 'custom'], costTier: 'free', qualityTier: 'basic', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_VIDEO_ENDPOINT. Fallback: HF_ADULT_VIDEO_ENDPOINT_FALLBACK. Experimental. GenX, Together, Groq, MiMo must not be used.' },
+      { provider: 'huggingface', models: ['NSFW-API/NSFW_Wan_14b', 'custom'], costTier: 'free', qualityTier: 'basic', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_VIDEO_ENDPOINT. Fallback: HF_ADULT_VIDEO_ENDPOINT_FALLBACK. Experimental. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
   adult_avatar: {
@@ -283,30 +281,21 @@ export const CAPABILITY_REGISTRY: Record<CapabilityKey, CapabilityDefinition> = 
     requiresAdultMode: true,
     requiresSafeModeOff: true,
     providers: [
-      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', proofStatus: 'PARTIAL', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_AVATAR_ENDPOINT. Fallback: HF_ADULT_AVATAR_ENDPOINT_FALLBACK. Supports realistic, anime, 3D, cartoon, fantasy styles. GenX, Together, Groq, MiMo must not be used.' },
+      { provider: 'huggingface', models: ['SG161222/RealVisXL_V4.0', 'custom'], costTier: 'free', qualityTier: 'standard', notes: 'Requires dedicated HF Inference Endpoint. Primary: HF_ADULT_AVATAR_ENDPOINT. Fallback: HF_ADULT_AVATAR_ENDPOINT_FALLBACK. Supports realistic, anime, 3D, cartoon, fantasy styles. GenX, Together, Groq, MiMo must not be used.' },
     ],
   },
 }
 
 // ── Registry Access Functions ─────────────────────────────────────────────────
 
-/**
- * Get capability definition by key.
- */
 export function getCapabilityDefinition(key: CapabilityKey): CapabilityDefinition | null {
   return CAPABILITY_REGISTRY[key] ?? null
 }
 
-/**
- * Get all capability definitions.
- */
 export function getAllCapabilities(): CapabilityDefinition[] {
   return Object.values(CAPABILITY_REGISTRY)
 }
 
-/**
- * Get providers for a capability, sorted by quality tier (highest first).
- */
 export function getProvidersForCapability(key: CapabilityKey): ProviderCapabilityEntry[] {
   const cap = CAPABILITY_REGISTRY[key]
   if (!cap) return []
@@ -316,9 +305,6 @@ export function getProvidersForCapability(key: CapabilityKey): ProviderCapabilit
   })
 }
 
-/**
- * Get the best provider for a capability based on quality and cost preferences.
- */
 export function getBestProvider(
   key: CapabilityKey,
   options?: {
@@ -343,16 +329,10 @@ export function getBestProvider(
   return filtered[0] ?? null
 }
 
-/**
- * Check if a capability requires adult mode.
- */
 export function requiresAdultMode(key: CapabilityKey): boolean {
   return CAPABILITY_REGISTRY[key]?.requiresAdultMode === true
 }
 
-/**
- * Check if a capability requires safeMode to be off.
- */
 export function requiresSafeModeOff(key: CapabilityKey): boolean {
   return CAPABILITY_REGISTRY[key]?.requiresSafeModeOff === true
 }
