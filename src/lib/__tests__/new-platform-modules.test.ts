@@ -329,14 +329,24 @@ describe('Smart Home Agent Framework', () => {
   })
 })
 
-// ── Dashboard Truth — new capability entries ──────────────────────────────────
+// ── Canonical truth functions ─────────────────────────────────────────────────
 
-describe('Dashboard Truth — new capability entries', () => {
-  it('dashboard-truth module should import without errors', async () => {
-    // Dynamic import to avoid DB initialization issues in tests
+describe('Canonical truth functions exist', () => {
+  it('dashboard-truth still exports getModelTruth and CAP_TO_MODEL_FLAG', async () => {
     const mod = await import('../dashboard-truth')
-    expect(typeof mod.getCapabilityTruth).toBe('function')
-    expect(typeof mod.getProviderTruth).toBe('function')
-    expect(typeof mod.getDashboardSummary).toBe('function')
+    expect(typeof mod.getModelTruth).toBe('function')
+    expect(typeof mod.CAP_TO_MODEL_FLAG).toBe('object')
+  })
+
+  it('canonical provider truth exports getProviderRuntimeTruth', async () => {
+    const mod = await import('../provider-runtime-truth')
+    expect(typeof mod.getProviderRuntimeTruth).toBe('function')
+    expect(typeof mod.getProviderRuntimeTruthEntry).toBe('function')
+  })
+
+  it('canonical capability truth exports getCapabilityRuntimeTruth', async () => {
+    const mod = await import('../capability-runtime-truth')
+    expect(typeof mod.getCapabilityRuntimeTruth).toBe('function')
+    expect(typeof mod.getCapabilityRuntimeTruthEntry).toBe('function')
   })
 })
