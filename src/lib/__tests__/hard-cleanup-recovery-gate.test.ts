@@ -158,7 +158,6 @@ describe('hard cleanup and recovery gate', () => {
       'Capabilities',
       'Assets & Jobs',
       'Memory & Knowledge',
-      'Voice Agent',
       'Settings',
       'System',
     ])

@@ -3,7 +3,7 @@
 import '@fontsource-variable/inter'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, ChevronRight, LogOut, Menu, Network, X } from 'lucide-react'
+import { Activity, ChevronRight, Headphones, LogOut, Menu, Mic, Network, SlidersHorizontal, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 import BrandName from '@/components/BrandName'
@@ -14,6 +14,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantVoice, setAssistantVoice] = useState('AmarktAI Voice')
   const [status, setStatus] = useState<HeaderStatus>({ appStatus: 'Checking readiness' })
   const [pulse, setPulse] = useState(false)
 
@@ -58,18 +60,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      {/* Logo */}
-      <div className="px-5 py-5">
+      <div className="px-4 py-4">
         <Link href="/admin/dashboard" className="group block">
-          <div className="flex items-center gap-3">
-            <div className="relative grid h-10 w-10 place-items-center rounded-xl border border-slate-700 bg-slate-900 shadow-[0_0_24px_rgba(14,165,233,0.16)]">
-              <Network className="h-5 w-5 text-sky-300" />
-              <span className="absolute inset-0 rounded-xl ring-1 ring-cyan-400/40 transition-all duration-700" style={{ boxShadow: pulse ? '0 0 14px 2px rgba(34,211,238,0.22)' : 'none' }} />
-            </div>
-            <div>
-              <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Dashboard</p>
-            </div>
+          <div className="flex items-center gap-2.5">
+            <Network className="h-4 w-4 text-cyan-300" />
+            <p className="text-sm font-black tracking-tight text-slate-100"><BrandName /></p>
           </div>
         </Link>
       </div>
@@ -163,7 +158,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <h1 className="truncate text-sm font-black tracking-tight text-slate-100">{activeItem.label}</h1>
               </div>
             </div>
-            <div className="hidden items-center gap-2 lg:flex">
+            <div className="flex items-center gap-2">
+              <VoiceAssistantButton
+                open={assistantOpen}
+                voice={assistantVoice}
+                onClick={() => setAssistantOpen((current) => !current)}
+              />
               <StatusChip icon={<Activity className="h-3 w-3" />} label={status.appStatus} />
             </div>
           </div>
@@ -183,8 +183,91 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="mx-auto w-full max-w-[1500px] flex-1 px-4 py-6 lg:px-6">
           {children}
         </main>
+        <VoiceAssistantPanel
+          open={assistantOpen}
+          voice={assistantVoice}
+          setVoice={setAssistantVoice}
+          onClose={() => setAssistantOpen(false)}
+        />
       </div>
     </div>
+  )
+}
+
+function VoiceAssistantButton({ open, voice, onClick }: { open: boolean; voice: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-dashboard-voice-assistant="trigger"
+      className={[
+        'inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-black transition',
+        open ? 'border-blue-400/30 bg-blue-400/12 text-blue-200' : 'border-slate-700/60 bg-slate-800/60 text-slate-300 hover:border-blue-400/25 hover:text-blue-200',
+      ].join(' ')}
+      aria-expanded={open}
+      aria-controls="dashboard-voice-assistant"
+    >
+      <Mic className="h-3.5 w-3.5 text-blue-400" />
+      <span className="hidden sm:inline">{voice}</span>
+      <span className="hidden rounded-full border border-amber-300/25 bg-amber-300/10 px-1.5 py-0.5 text-[9px] text-amber-200 md:inline">backend missing</span>
+    </button>
+  )
+}
+
+function VoiceAssistantPanel({
+  open,
+  voice,
+  setVoice,
+  onClose,
+}: {
+  open: boolean
+  voice: string
+  setVoice: (voice: string) => void
+  onClose: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <aside
+      id="dashboard-voice-assistant"
+      data-dashboard-voice-assistant="panel"
+      className="fixed bottom-5 right-5 z-50 w-[min(380px,calc(100vw-2rem))] rounded-2xl border border-slate-700/70 bg-slate-950/95 p-4 shadow-2xl shadow-black/40 backdrop-blur-xl"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-xl border border-blue-400/25 bg-blue-400/10 text-blue-300">
+            <Headphones className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-sm font-black text-white">Dashboard Assistant</p>
+            <p className="mt-0.5 text-xs font-bold text-amber-200">Voice backend not wired</p>
+          </div>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200" aria-label="Close assistant">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <label className="mt-4 block">
+        <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Voice shortcut
+        </span>
+        <select
+          value={voice}
+          onChange={(event) => setVoice(event.target.value)}
+          className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 outline-none focus:border-blue-400/50"
+        >
+          {['AmarktAI Voice', 'Calm Operator', 'Fast Assistant', 'Narrator'].map((option) => <option key={option}>{option}</option>)}
+        </select>
+      </label>
+
+      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+        <p className="text-xs leading-6 text-slate-400">
+          This compact assistant is ready for dashboard-wide reuse. Wire a session and streaming endpoint to enable speaking, listening, and app reuse.
+        </p>
+      </div>
+    </aside>
   )
 }
 

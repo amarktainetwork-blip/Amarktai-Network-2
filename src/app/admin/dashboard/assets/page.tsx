@@ -170,29 +170,56 @@ export default async function AssetsAndJobsPage() {
         </Panel>
 
         <Panel title="Jobs">
-          <div className="space-y-3">
-            {allJobs.length ? allJobs.map((job) => (
-              <article key={job.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="line-clamp-1 text-sm font-black text-white">{job.title}</p>
-                    <p className="mt-1 font-mono text-[11px] text-slate-600">{job.id}</p>
-                  </div>
-                  <StatusPill status={job.status} />
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <ProofRow label="Provider" value={job.provider} />
-                  <ProofRow label="Model" value={job.model} />
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {job.href ? <a href={job.href} className="text-xs font-black text-cyan-300">Open output</a> : <span className="text-xs font-bold text-slate-600">No output link yet</span>}
-                  <span className="text-xs font-bold text-slate-600">Retry uses the owning job endpoint when available.</span>
-                </div>
-              </article>
-            )) : (
-              <Empty text="No queued, running, failed, or completed jobs found." />
-            )}
-          </div>
+          {allJobs.length ? (
+            <div className="overflow-x-auto rounded-lg border border-slate-800">
+              <table className="min-w-full divide-y divide-slate-800 text-left text-xs">
+                <thead className="bg-slate-950/70 text-[10px] uppercase tracking-[0.12em] text-slate-500">
+                  <tr>
+                    <th className="px-3 py-2 font-black">Job</th>
+                    <th className="px-3 py-2 font-black">Status</th>
+                    <th className="px-3 py-2 font-black">Runtime</th>
+                    <th className="px-3 py-2 font-black">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 bg-slate-950/40">
+                  {allJobs.map((job) => (
+                    <tr key={job.id}>
+                      <td className="max-w-[18rem] px-3 py-3">
+                        <p className="line-clamp-1 font-black text-white">{job.title}</p>
+                        <p className="mt-1 font-mono text-[11px] text-slate-600">{job.id}</p>
+                      </td>
+                      <td className="px-3 py-3"><StatusPill status={job.status} /></td>
+                      <td className="px-3 py-3 text-slate-400">
+                        <p className="font-bold">{job.provider}</p>
+                        <p className="mt-1 text-slate-600">{job.model}</p>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          {job.href ? (
+                            <>
+                              <a href={job.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/8 px-2 py-1.5 font-black text-cyan-200">
+                                <ExternalLink className="h-3.5 w-3.5" /> Open
+                              </a>
+                              <a href={job.href} download className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 font-black text-slate-300">
+                                <Download className="h-3.5 w-3.5" /> Download
+                              </a>
+                            </>
+                          ) : (
+                            <span className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5 font-bold text-slate-600">No output</span>
+                          )}
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5 font-bold text-slate-500">
+                            <RefreshCw className="h-3.5 w-3.5" /> Retry from owner
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Empty text="No queued, running, failed, or completed jobs found." />
+          )}
         </Panel>
       </section>
     </div>
@@ -234,10 +261,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 function Metric({ icon, label, value }: { icon: React.ReactElement; label: string; value: string }) {
   return <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4"><span className="text-cyan-300 [&_svg]:h-5 [&_svg]:w-5">{icon}</span><p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 text-2xl font-black text-white">{value}</p></div>
-}
-
-function ProofRow({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-slate-800 bg-slate-950/55 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 text-xs font-bold text-slate-300">{value}</p></div>
 }
 
 function StatusPill({ status }: { status: string }) {

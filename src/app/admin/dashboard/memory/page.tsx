@@ -56,6 +56,19 @@ export default async function MemoryKnowledgePage() {
         </p>
       )}
 
+      <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="Memory and knowledge sections">
+        {[
+          ['Memory', '#memory'],
+          ['Brand', '#brand'],
+          ['Knowledge', '#knowledge'],
+          ['Scrapes', '#scrapes'],
+        ].map(([label, href]) => (
+          <a key={label} href={href} className="rounded-lg px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800 hover:text-white">
+            {label}
+          </a>
+        ))}
+      </nav>
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Metric icon={<Database />} label="Memory entries" value={String(snapshot.memoryEntries.length)} />
         <Metric icon={<Layers3 />} label="App profiles" value={String(snapshot.profiles.length)} />
@@ -64,7 +77,7 @@ export default async function MemoryKnowledgePage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel title="App and brand memory">
+        <Panel id="brand" title="Brand">
           <div className="space-y-3">
             {snapshot.profiles.length ? snapshot.profiles.map((profile) => (
               <article key={profile.appSlug} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
@@ -88,7 +101,7 @@ export default async function MemoryKnowledgePage() {
           </div>
         </Panel>
 
-        <Panel title="Recent memory records">
+        <Panel id="memory" title="Memory">
           <div className="space-y-3">
             {snapshot.memoryEntries.length ? snapshot.memoryEntries.map((entry) => (
               <article key={entry.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
@@ -109,7 +122,7 @@ export default async function MemoryKnowledgePage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <Panel title="RAG sources">
+        <Panel id="knowledge" title="Knowledge">
           <div className="space-y-3">
             {ragSources.length ? ragSources.map((source, index) => (
               <KnowledgeRow key={source.id ?? source.url ?? index} icon={<FileSearch />} title={source.title || source.url || 'RAG source'} status={`${source.chunksCount ?? 0} chunks`} detail={source.url || source.type || 'stored source'} />
@@ -119,7 +132,7 @@ export default async function MemoryKnowledgePage() {
           </div>
         </Panel>
 
-        <Panel title="Website scrape results">
+        <Panel id="scrapes" title="Scrapes">
           <div className="space-y-3">
             {scrapeResults.length ? scrapeResults.map((result, index) => (
               <KnowledgeRow key={result.id ?? result.url ?? index} icon={<Globe2 />} title={result.title || result.url || 'Scrape result'} status={result.status || 'stored'} detail={result.url || 'website scrape'} />
@@ -133,8 +146,8 @@ export default async function MemoryKnowledgePage() {
   )
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5"><h2 className="text-lg font-black text-white">{title}</h2><div className="mt-4">{children}</div></section>
+function Panel({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return <section id={id} className="rounded-lg border border-slate-800 bg-slate-900/60 p-5"><h2 className="text-lg font-black text-white">{title}</h2><div className="mt-4">{children}</div></section>
 }
 
 function Metric({ icon, label, value }: { icon: React.ReactElement; label: string; value: string }) {

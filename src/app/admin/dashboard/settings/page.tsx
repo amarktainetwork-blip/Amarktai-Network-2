@@ -1,7 +1,6 @@
 'use client'
 
-import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Eye, EyeOff, Loader2, Save, TestTube2 } from 'lucide-react'
 import type { SettingsTruthEntry } from '@/lib/platform-settings-truth'
 
@@ -10,9 +9,22 @@ type SettingsTruth = {
   connectedCount: number
 }
 
+type SettingsTab = 'providers' | 'infrastructure' | 'storage' | 'knowledge' | 'apps' | 'voice' | 'legal'
+
+const tabs: Array<{ id: SettingsTab; label: string; hint: string }> = [
+  { id: 'providers', label: 'Providers', hint: 'Model and media provider keys/tests' },
+  { id: 'infrastructure', label: 'Infrastructure', hint: 'GitHub, Webdock, browser, crawler, worker-adjacent tools' },
+  { id: 'storage', label: 'Storage', hint: 'Artifact and local VPS storage proof' },
+  { id: 'knowledge', label: 'Knowledge', hint: 'RAG, crawl, scrape, retrieval dependencies' },
+  { id: 'apps', label: 'Apps', hint: 'App profile setup hooks' },
+  { id: 'voice', label: 'Voice', hint: 'Voice defaults and future assistant routes' },
+  { id: 'legal', label: 'Legal/Safety', hint: 'Policy and safety switches' },
+]
+
 export default function SettingsPage() {
   const [truth, setTruth] = useState<SettingsTruth | null>(null)
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<SettingsTab>('providers')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -24,44 +36,79 @@ export default function SettingsPage() {
 
   useEffect(() => { void refresh() }, [refresh])
 
+  const entries = useMemo(() => groupEntries(truth?.entries ?? [], activeTab), [truth?.entries, activeTab])
+
   return (
-    <div className="space-y-5">
-      <section className="rounded-3xl border border-cyan-400/20 bg-[linear-gradient(135deg,rgba(8,20,34,.96),rgba(4,9,18,.92))] p-6 lg:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Settings</p>
-        <h1 className="mt-2 text-3xl font-black text-white">Connect capabilities once.</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-300">
-          Add a key, save it, then run a live test. A connection turns green only after the provider or local service responds successfully.
-        </p>
-        <div className="mt-5 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2 text-xs font-bold text-slate-300">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
-          {truth?.connectedCount ?? 0} live connections
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6 lg:p-8">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Settings</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white lg:text-5xl">Connection centre</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
+              Save secrets, test providers, and configure platform dependencies from one place. Provider key tests do not appear anywhere else in the dashboard.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-3 py-2 text-xs font-bold text-slate-300">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin text-cyan-300" /> : <CheckCircle2 className="h-4 w-4 text-emerald-300" />}
+            {truth?.connectedCount ?? 0} live connections
+          </div>
         </div>
       </section>
 
-      {/* Admin quick links */}
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          { href: '/admin/dashboard/settings', label: 'Providers / API Keys', desc: 'Configure approved runtime providers and run live tests here only' },
-          { href: '/admin/dashboard/system', label: 'Storage & Artifact Status', desc: 'VPS readiness, disk, Qdrant, Redis' },
-          { href: '/admin/dashboard/memory', label: 'Memory & Knowledge', desc: 'Brand profiles, memory, and retrieval readiness' },
-          { href: '/admin/dashboard/assets', label: 'Assets & Jobs', desc: 'Generated outputs, jobs, approvals, and export references' },
-          { href: '/admin/dashboard/apps', label: 'Apps', desc: 'App profiles, policy state, and stored app context' },
-          { href: '/admin/dashboard/studio', label: 'Studio', desc: 'Run capability requests without provider or model selection' },
-        ].map(({ href, label, desc }) => (
-          <Link key={href} href={href} className="rounded-2xl border border-slate-700/50 bg-slate-900/60 p-4 transition hover:border-cyan-500/20 hover:bg-slate-800/60">
-            <p className="font-black text-slate-200 text-sm">{label}</p>
-            <p className="mt-1 text-xs text-slate-500">{desc}</p>
-          </Link>
-        ))}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-2">
+        <div className="flex gap-2 overflow-x-auto" role="tablist" aria-label="Settings sections">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              id={`${tab.id}-tab`}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={[
+                'shrink-0 rounded-xl border px-4 py-3 text-left transition',
+                activeTab === tab.id ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-100' : 'border-transparent text-slate-500 hover:bg-slate-800/70 hover:text-slate-300',
+              ].join(' ')}
+            >
+              <span className="block text-xs font-black">{tab.label}</span>
+              <span className="mt-1 block max-w-44 text-[11px] leading-4 opacity-75">{tab.hint}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        {(truth?.entries ?? []).map((entry) => (
+      <section className="grid gap-4 lg:grid-cols-2" role="tabpanel" aria-labelledby={`${activeTab}-tab`}>
+        {entries.length ? entries.map((entry) => (
           <ConnectionCard key={entry.key} entry={entry} refresh={refresh} />
-        ))}
+        )) : (
+          <EmptySection tab={activeTab} />
+        )}
       </section>
     </div>
   )
+}
+
+function groupEntries(entries: SettingsTruthEntry[], tab: SettingsTab): SettingsTruthEntry[] {
+  if (tab === 'providers') return entries.filter((entry) => entry.kind === 'provider')
+  if (tab === 'storage') return entries.filter((entry) => entry.kind === 'storage' || entry.capabilities.some((capability) => capability.includes('artifact') || capability.includes('storage')))
+  if (tab === 'knowledge') return entries.filter((entry) => entry.capabilities.some((capability) => /(rag|research|crawl|scrape|retrieval|embedding)/i.test(capability)))
+  if (tab === 'infrastructure') {
+    const knowledgeEntries = new Set(groupEntries(entries, 'knowledge'))
+    return entries.filter((entry) => entry.kind === 'tool' && !knowledgeEntries.has(entry))
+  }
+  return []
+}
+
+function EmptySection({ tab }: { tab: SettingsTab }) {
+  const copy: Record<SettingsTab, string> = {
+    providers: 'No provider entries returned by the settings truth API.',
+    infrastructure: 'No infrastructure tool entries are available in the settings truth API.',
+    storage: 'No storage entry returned by the settings truth API.',
+    knowledge: 'No knowledge-specific connection entries are available yet.',
+    apps: 'App creation is not wired here yet. Use this section later for app profile defaults and template publishing.',
+    voice: 'Voice defaults are UI-ready. Session, streaming, and app reuse endpoints still need backend wiring.',
+    legal: 'Legal and safety controls remain backend-owned. Add editable policy controls only when the backend contract exists.',
+  }
+  return <p className="col-span-full rounded-2xl border border-slate-800 bg-slate-950/55 p-6 text-sm leading-7 text-slate-500">{copy[tab]}</p>
 }
 
 function ConnectionCard({ entry, refresh }: { entry: SettingsTruthEntry; refresh: () => Promise<void> }) {
@@ -114,23 +161,13 @@ function ConnectionCard({ entry, refresh }: { entry: SettingsTruthEntry; refresh
       : 'border-amber-400/25 bg-amber-400/10 text-amber-300'
 
   return (
-    <article className="rounded-2xl border border-slate-700/50 bg-slate-900/65 p-5">
+    <article className="rounded-2xl border border-slate-800 bg-slate-900/65 p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-black text-white">{entry.label}</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-400">
-            {entry.optional ? 'Optional connection.' : 'Platform connection.'} Unlocks {entry.unlocks}.
-          </p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">{entry.optional ? 'Optional connection.' : 'Platform connection.'} Unlocks {entry.unlocks || 'platform capability'}.</p>
         </div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black ${statusStyle}`}>{entry.status}</span>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {entry.capabilities.map((capability) => (
-          <span key={capability} className="rounded-full border border-slate-700 bg-slate-950/50 px-2 py-1 text-[10px] font-bold text-slate-400">
-            {capability.replaceAll('_', ' ')}
-          </span>
-        ))}
       </div>
 
       {entry.requiresSecret && (

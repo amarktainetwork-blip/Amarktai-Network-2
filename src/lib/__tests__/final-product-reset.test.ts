@@ -21,7 +21,6 @@ const finalDashboardRoutes = [
   'app/admin/dashboard/settings/page.tsx',
   'app/admin/dashboard/studio/page.tsx',
   'app/admin/dashboard/system/page.tsx',
-  'app/admin/dashboard/voice-agent/page.tsx',
 ] as const
 
 const deletedDashboardRouteDirs = [
@@ -44,13 +43,14 @@ const deletedDashboardRouteDirs = [
   'publishing',
   'rag',
   'scheduler',
+  'voice-agent',
   'vps-health',
   'workbench',
   'workspace',
 ] as const
 
 describe('final product reset dashboard topology', () => {
-  it('keeps exactly the nine final dashboard nav sections', () => {
+  it('keeps exactly the final dashboard nav sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
       'Overview',
       'Studio',
@@ -58,7 +58,6 @@ describe('final product reset dashboard topology', () => {
       'Capabilities',
       'Assets & Jobs',
       'Memory & Knowledge',
-      'Voice Agent',
       'Settings',
       'System',
     ])
@@ -69,11 +68,10 @@ describe('final product reset dashboard topology', () => {
       '/admin/dashboard/capabilities',
       '/admin/dashboard/assets',
       '/admin/dashboard/memory',
-      '/admin/dashboard/voice-agent',
       '/admin/dashboard/settings',
       '/admin/dashboard/system',
     ])
-    expect(DASHBOARD_NAV_ITEMS).toHaveLength(9)
+    expect(DASHBOARD_NAV_ITEMS).toHaveLength(8)
   })
 
   it('deletes duplicate dashboard UI route directories instead of hiding them', () => {
@@ -86,7 +84,7 @@ describe('final product reset dashboard topology', () => {
   })
 
   it('does not link active dashboard UI back to deleted dashboard routes', () => {
-    const deletedRoutePattern = /\/admin\/dashboard\/(adult-mode|agents|analytics|app-builder|approvals|apps-agents|avatars|brand-memory|campaigns|command|marketing|memory-learning|network-apps|operations|outputs|providers|publishing|rag|scheduler|vps-health|workbench|workspace)\b/
+    const deletedRoutePattern = /\/admin\/dashboard\/(adult-mode|agents|analytics|app-builder|approvals|apps-agents|avatars|brand-memory|campaigns|command|marketing|memory-learning|network-apps|operations|outputs|providers|publishing|rag|scheduler|voice-agent|vps-health|workbench|workspace)\b/
     const activeUiFiles = [
       'lib/dashboard-nav.ts',
       'components/dashboard/CommandCenter.tsx',
@@ -125,11 +123,66 @@ describe('final product reset truth and provider controls', () => {
   })
 
   it('removes fake readiness language from active dashboard UI', () => {
-    const forbidden = [/none \/ route ready/i, /route ready/i, /Key no/i, /Endpoint no/i, /Provider Settings/i]
+    const forbidden = [/none \/ route ready/i, /route ready/i, /Key no/i, /Endpoint no/i, /fake available/i, /Provider Settings/i]
     for (const file of ['app/admin/dashboard/page.tsx', ...finalDashboardRoutes]) {
       const pageSource = source(file)
       for (const pattern of forbidden) expect(pageSource, `${file} ${pattern}`).not.toMatch(pattern)
     }
+  })
+
+  it('keeps Overview limited to real summary blocks', () => {
+    const overview = source('app/admin/dashboard/page.tsx')
+    for (const required of [
+      'VPS / Webdock',
+      'Connected apps',
+      'Provider health',
+      'Capabilities',
+      'Active jobs',
+      'Recent Critical Failures Only',
+    ]) {
+      expect(overview).toContain(required)
+    }
+    for (const forbidden of [/Capability Console/i, /Campaigns/i, /Agents/i, /TestTube2/, /\/api\/admin\/settings\/test-provider/, /adult endpoint/i]) {
+      expect(overview).not.toMatch(forbidden)
+    }
+  })
+
+  it('keeps Studio chat-first without provider or model selectors', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+    expect(studio).toContain('data-studio-task-selector')
+    for (const task of ['Chat', 'Image', 'Video', 'Long-form Video', 'Music', 'Voice/TTS', 'STT', 'Avatar', 'RAG/Research', 'Campaign']) {
+      expect(studio).toContain(task)
+    }
+    expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
+  })
+
+  it('keeps Studio route details collapsed by default', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+    expect(studio).toContain('<details')
+    expect(studio).not.toMatch(/<details\s+open/i)
+  })
+
+  it('keeps planned app templates separate from connected apps', () => {
+    const apps = source('app/admin/dashboard/apps/page.tsx')
+    expect(apps).toContain('No apps connected yet')
+    expect(apps).toContain('Templates / next apps')
+    expect(apps).toContain('Template only, not connected')
+  })
+
+  it('keeps Memory & Knowledge split into the requested sections', () => {
+    const memory = source('app/admin/dashboard/memory/page.tsx')
+    for (const section of ['Memory', 'Brand', 'Knowledge', 'Scrapes']) {
+      expect(memory).toContain(section)
+    }
+  })
+
+  it('keeps System focused on VPS, services, worker, logs, and database', () => {
+    const system = source('app/admin/dashboard/system/page.tsx')
+    for (const section of ['VPS', 'Services', 'Worker', 'Logs', 'Database']) {
+      expect(system).toContain(section)
+    }
+    expect(system).not.toContain('getDashboardRuntimeTruth')
+    expect(system).not.toMatch(/runtime\?\.(providers|blockers)|getCapabilityRuntimeTruth|CapabilityLine/i)
   })
 })
 
@@ -156,10 +209,12 @@ describe('final product reset public website positioning', () => {
     expect(brand).toContain('text-blue-400')
   })
 
-  it('keeps Voice Agent honest when backend streaming is not wired', () => {
-    const voice = source('app/admin/dashboard/voice-agent/page.tsx')
-    expect(voice).toContain('Not wired yet')
-    expect(voice).toContain('/api/admin/voice-agent/session')
-    expect(voice).not.toMatch(/\bworking\b.*\bvoice agent\b/i)
+  it('integrates the voice assistant into the dashboard layout instead of nav', () => {
+    const layout = source('app/admin/dashboard/layout.tsx')
+    expect(layout).toContain('data-dashboard-voice-assistant')
+    expect(layout).toContain('dashboard-voice-assistant')
+    expect(layout).toContain('Voice backend not wired')
+    expect(exists('app/admin/dashboard/voice-agent')).toBe(false)
+    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Voice Agent')
   })
 })
