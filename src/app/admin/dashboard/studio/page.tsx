@@ -37,6 +37,9 @@ type StudioResult = {
   provider?: string
   model?: string
   artifactId?: string
+  artifactUrl?: string
+  jobUrl?: string
+  outputUrl?: string
   blocker?: string
 }
 
@@ -63,11 +66,28 @@ export default function StudioPage() {
   const [longVideoMusic, setLongVideoMusic] = useState('on')
   const [longVideoStitching, setLongVideoStitching] = useState('on')
   const [musicGenre, setMusicGenre] = useState('cinematic pop')
+  const [musicGenre2, setMusicGenre2] = useState('')
+  const [musicGenre3, setMusicGenre3] = useState('')
+  const [musicGenre4, setMusicGenre4] = useState('')
+  const [musicGenre5, setMusicGenre5] = useState('')
   const [musicMood, setMusicMood] = useState('uplifting')
   const [musicVocals, setMusicVocals] = useState('female vocal')
+  const [musicBpm, setMusicBpm] = useState('0')
+  const [musicLanguage, setMusicLanguage] = useState('English')
   const [musicDuration, setMusicDuration] = useState('180s')
   const [musicCount, setMusicCount] = useState('1')
   const [lyrics, setLyrics] = useState('')
+  const [musicIntro, setMusicIntro] = useState('')
+  const [musicVerse, setMusicVerse] = useState('')
+  const [musicChorus, setMusicChorus] = useState('')
+  const [musicBridge, setMusicBridge] = useState('')
+  const [musicOutro, setMusicOutro] = useState('')
+  const [musicVideoEnabled, setMusicVideoEnabled] = useState('off')
+  const [musicVideoVisualStyle, setMusicVideoVisualStyle] = useState('')
+  const [musicVideoStoryConcept, setMusicVideoStoryConcept] = useState('')
+  const [musicVideoAspectRatio, setMusicVideoAspectRatio] = useState('16:9')
+  const [musicVideoDuration, setMusicVideoDuration] = useState('180s')
+  const [musicVideoSceneCount, setMusicVideoSceneCount] = useState('6')
   const [voiceStyle, setVoiceStyle] = useState('calm assistant')
   const [voiceSpeed, setVoiceSpeed] = useState('normal')
   const [voiceCloneName, setVoiceCloneName] = useState('')
@@ -113,36 +133,36 @@ export default function StudioPage() {
     const userMessage = prompt.trim()
     setMessages((current) => [...current, { role: 'user', content: userMessage }])
     setPrompt('')
-    const response = await fetch('/api/admin/amarktai-assistant/stream', {
+    const response = await fetch('/api/admin/studio/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMessage, capability: task.capability, appSlug, costMode, qualityTier }),
+      body: JSON.stringify({
+        tab: task.tab,
+        mode: 'chat',
+        prompt: userMessage,
+        appSlug,
+        costMode,
+        qualityTier,
+        controls: buildControls(task.id),
+      }),
     })
-    if (!response.ok || !response.body) throw new Error('Chat route is not available')
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let answer = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const chunk = decoder.decode(value)
-      for (const line of chunk.split('\n')) {
-        if (!line.startsWith('data:')) continue
-        const raw = line.slice(5).trim()
-        if (!raw || raw === '[DONE]') continue
-        const parsed = JSON.parse(raw) as { content?: string; status?: string }
-        if (parsed.status) setStatus(parsed.status)
-        if (parsed.content) answer += parsed.content
-      }
-    }
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || data.success === false || data.ok === false) throw new Error(data.blocker ?? data.error ?? 'Chat route is not available')
+    const answer = String(data.output ?? data.result?.output ?? 'No response returned.')
     setMessages((current) => [...current, { role: 'assistant', content: answer || 'No response returned.' }])
-    setResult({ text: answer || 'No response returned.', status: 'completed' })
+    setResult({
+      text: answer || 'No response returned.',
+      status: String(data.status ?? 'completed'),
+      provider: data.selectedProvider ?? data.provider,
+      model: data.selectedModel ?? data.model,
+    })
     setStatus('Completed')
   }
 
   async function runCapability() {
     const payload = {
       tab: task.tab,
+      mode: task.id,
       capability: task.capability,
       prompt,
       appSlug,
@@ -165,6 +185,9 @@ export default function StudioPage() {
       provider: data.provider ?? data.result?.provider,
       model: data.model ?? data.result?.model,
       artifactId: data.artifactId ?? data.artifact?.id,
+      artifactUrl: firstString(data.storageUrl, data.artifact?.storageUrl),
+      jobUrl: firstString(data.pollUrl, data.job?.pollUrl),
+      outputUrl: firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl),
     })
     setStatus('Completed')
     setPrompt('')
@@ -199,7 +222,30 @@ export default function StudioPage() {
     if (id === 'image') return { size: imageSize, style: imageStyle, count: imageCount, references: 'reference image upload' }
     if (id === 'video') return { duration: videoDuration, format: videoFormat, style: videoStyle, count: videoCount, referenceImage: 'reference image upload' }
     if (id === 'long-video') return { duration: videoDuration, format: videoFormat, style: videoStyle, sceneCount, music: longVideoMusic, voice: longVideoVoice, stitching: longVideoStitching }
-    if (id === 'music') return { genre: musicGenre, mood: musicMood, vocals: musicVocals, duration: musicDuration, count: musicCount, lyrics }
+    if (id === 'music') return {
+      genre: musicGenre,
+      genres: [musicGenre, musicGenre2, musicGenre3, musicGenre4, musicGenre5].filter(Boolean).slice(0, 5),
+      mood: musicMood,
+      vocals: musicVocals,
+      vocalStyle: musicVocals,
+      instrumental: musicVocals === 'instrumental_only' ? 'on' : 'off',
+      bpm: musicBpm,
+      language: musicLanguage,
+      duration: musicDuration,
+      count: musicCount,
+      lyrics,
+      intro: musicIntro,
+      verse: musicVerse,
+      chorus: musicChorus,
+      bridge: musicBridge,
+      outro: musicOutro,
+      musicVideoEnabled,
+      musicVideoVisualStyle,
+      musicVideoStoryConcept,
+      musicVideoAspectRatio,
+      musicVideoDuration,
+      musicVideoSceneCount,
+    }
     if (id === 'tts') return { voice: voiceStyle, speed: voiceSpeed, style: voiceStyle, voiceCloneName, voiceCloneConsent, voiceClonePhrase }
     if (id === 'avatar') return { library: avatarLibrary, persona: true, consistencyReference: avatarConsistency, voice: voiceStyle, mode: avatarMode }
     if (id === 'research') return { sourceUrl, query: prompt }
@@ -280,14 +326,20 @@ export default function StudioPage() {
               task={task.id}
               values={{
                 imageSize, imageStyle, imageCount, videoDuration, videoFormat, videoStyle, videoCount, sceneCount,
-                longVideoVoice, longVideoMusic, longVideoStitching, musicGenre, musicMood, musicVocals, musicDuration,
-                musicCount, lyrics, voiceStyle, voiceSpeed, voiceCloneName, voiceCloneConsent, voiceClonePhrase,
+                longVideoVoice, longVideoMusic, longVideoStitching, musicGenre, musicGenre2, musicGenre3, musicGenre4,
+                musicGenre5, musicMood, musicVocals, musicBpm, musicLanguage, musicDuration, musicCount, lyrics,
+                musicIntro, musicVerse, musicChorus, musicBridge, musicOutro, musicVideoEnabled, musicVideoVisualStyle,
+                musicVideoStoryConcept, musicVideoAspectRatio, musicVideoDuration, musicVideoSceneCount,
+                voiceStyle, voiceSpeed, voiceCloneName, voiceCloneConsent, voiceClonePhrase,
                 sourceUrl, campaignChannels, campaignDays, campaignAssetTypes, appSlug, avatarLibrary, avatarMode, avatarConsistency,
               }}
               setters={{
                 setImageSize, setImageStyle, setImageCount, setVideoDuration, setVideoFormat, setVideoStyle, setVideoCount,
-                setSceneCount, setLongVideoVoice, setLongVideoMusic, setLongVideoStitching, setMusicGenre, setMusicMood,
-                setMusicVocals, setMusicDuration, setMusicCount, setLyrics, setVoiceStyle, setVoiceSpeed, setVoiceCloneName,
+                setSceneCount, setLongVideoVoice, setLongVideoMusic, setLongVideoStitching, setMusicGenre, setMusicGenre2,
+                setMusicGenre3, setMusicGenre4, setMusicGenre5, setMusicMood, setMusicVocals, setMusicBpm, setMusicLanguage,
+                setMusicDuration, setMusicCount, setLyrics, setMusicIntro, setMusicVerse, setMusicChorus, setMusicBridge,
+                setMusicOutro, setMusicVideoEnabled, setMusicVideoVisualStyle, setMusicVideoStoryConcept, setMusicVideoAspectRatio,
+                setMusicVideoDuration, setMusicVideoSceneCount, setVoiceStyle, setVoiceSpeed, setVoiceCloneName,
                 setVoiceCloneConsent, setVoiceClonePhrase, setSourceUrl, setCampaignChannels, setCampaignDays, setCampaignAssetTypes,
                 setAppSlug, setAvatarLibrary, setAvatarMode, setAvatarConsistency,
               }}
@@ -324,6 +376,9 @@ export default function StudioPage() {
                 {result.provider && <Proof label="Resolved provider" value={result.provider} />}
                 {result.model && <Proof label="Resolved model" value={result.model} />}
                 {result.artifactId && <Proof label="Artifact" value={result.artifactId} />}
+                {result.artifactUrl && <ProofLink label="Artifact link" value={result.artifactUrl} />}
+                {result.jobUrl && <ProofLink label="Job link" value={result.jobUrl} />}
+                {result.outputUrl && <ProofLink label="Output link" value={result.outputUrl} />}
                 {result.blocker && <Proof label="Blocker" value={result.blocker} />}
               </div>
             ) : (
@@ -366,7 +421,8 @@ function TaskControls({
     return <ControlGrid><Field label="Scene count"><Select value={values.sceneCount} onChange={setters.setSceneCount} options={['4', '6', '8', '12']} /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['1m30s', '3m', '5m', '10m']} /></Field><Field label="Voice toggle"><Select value={values.longVideoVoice} onChange={setters.setLongVideoVoice} options={['on', 'off']} /></Field><Field label="Music toggle"><Select value={values.longVideoMusic} onChange={setters.setLongVideoMusic} options={['on', 'off']} /></Field><Field label="Stitching option"><Select value={values.longVideoStitching} onChange={setters.setLongVideoStitching} options={['on', 'off']} /></Field></ControlGrid>
   }
   if (task === 'music') {
-    return <ControlGrid><Field label="Genre"><Select value={values.musicGenre} onChange={setters.setMusicGenre} options={['cinematic pop', 'gospel', 'rnb', 'reggae', 'rock', 'rap', 'ambient']} /></Field><Field label="Mood"><Select value={values.musicMood} onChange={setters.setMusicMood} options={['uplifting', 'calm', 'dramatic', 'romantic', 'dark', 'energetic']} /></Field><Field label="Instrumental / vocal"><Select value={values.musicVocals} onChange={setters.setMusicVocals} options={['instrumental_only', 'female vocal', 'male vocal', 'duet', 'choir']} /></Field><Field label="Duration"><Select value={values.musicDuration} onChange={setters.setMusicDuration} options={['120s', '180s', '240s', '300s']} /></Field><Field label="Number of songs"><Select value={values.musicCount} onChange={setters.setMusicCount} options={['1', '2', '3']} /></Field><Field label="Lyrics textarea"><textarea value={values.lyrics} onChange={(event) => setters.setLyrics(event.target.value)} rows={3} className="dashboard-input min-h-24 resize-y" /></Field></ControlGrid>
+    const genreOptions = ['', 'cinematic pop', 'pop', 'cinematic', 'gospel', 'rnb', 'reggae', 'rock', 'rap', 'ambient', 'afrobeats', 'amapiano', 'edm', 'jazz']
+    return <ControlGrid><Field label="Genre 1"><Select value={values.musicGenre} onChange={setters.setMusicGenre} options={genreOptions.filter(Boolean)} /></Field><Field label="Genre 2"><Select value={values.musicGenre2} onChange={setters.setMusicGenre2} options={genreOptions} /></Field><Field label="Genre 3"><Select value={values.musicGenre3} onChange={setters.setMusicGenre3} options={genreOptions} /></Field><Field label="Genre 4"><Select value={values.musicGenre4} onChange={setters.setMusicGenre4} options={genreOptions} /></Field><Field label="Genre 5"><Select value={values.musicGenre5} onChange={setters.setMusicGenre5} options={genreOptions} /></Field><Field label="Mood"><Select value={values.musicMood} onChange={setters.setMusicMood} options={['uplifting', 'calm', 'dramatic', 'romantic', 'dark', 'energetic', 'nostalgic']} /></Field><Field label="Instrumental / vocal"><Select value={values.musicVocals} onChange={setters.setMusicVocals} options={['instrumental_only', 'female_lead', 'male_lead', 'choir', 'rap', 'spoken_word']} /></Field><Field label="BPM"><Input value={values.musicBpm} onChange={setters.setMusicBpm} /></Field><Field label="Language"><Input value={values.musicLanguage} onChange={setters.setMusicLanguage} /></Field><Field label="Duration"><Select value={values.musicDuration} onChange={setters.setMusicDuration} options={['180s', '240s', '300s', '360s']} /></Field><Field label="Number of songs"><Select value={values.musicCount} onChange={setters.setMusicCount} options={['1', '2', '3', '4']} /></Field><Field label="Intro"><Input value={values.musicIntro} onChange={setters.setMusicIntro} /></Field><Field label="Verse"><Input value={values.musicVerse} onChange={setters.setMusicVerse} /></Field><Field label="Chorus"><Input value={values.musicChorus} onChange={setters.setMusicChorus} /></Field><Field label="Bridge"><Input value={values.musicBridge} onChange={setters.setMusicBridge} /></Field><Field label="Outro"><Input value={values.musicOutro} onChange={setters.setMusicOutro} /></Field><Field label="Music-video handoff"><Select value={values.musicVideoEnabled} onChange={setters.setMusicVideoEnabled} options={['off', 'on']} /></Field><Field label="Visual style"><Input value={values.musicVideoVisualStyle} onChange={setters.setMusicVideoVisualStyle} /></Field><Field label="Story concept"><Input value={values.musicVideoStoryConcept} onChange={setters.setMusicVideoStoryConcept} /></Field><Field label="Video aspect"><Select value={values.musicVideoAspectRatio} onChange={setters.setMusicVideoAspectRatio} options={['16:9', '9:16', '1:1']} /></Field><Field label="Video duration target"><Select value={values.musicVideoDuration} onChange={setters.setMusicVideoDuration} options={['180s', '240s', '300s', '360s']} /></Field><Field label="Video scene count"><Select value={values.musicVideoSceneCount} onChange={setters.setMusicVideoSceneCount} options={['4', '6', '8', '12']} /></Field><Field label="Lyrics textarea"><textarea value={values.lyrics} onChange={(event) => setters.setLyrics(event.target.value)} rows={3} className="dashboard-input min-h-24 resize-y" /></Field></ControlGrid>
   }
   if (task === 'tts') {
     return <ControlGrid><Field label="Voice selector"><Select value={values.voiceStyle} onChange={setters.setVoiceStyle} options={['AmarktAI Neutral', 'AmarktAI Warm', 'AmarktAI Premium', 'Calm Operator']} /></Field><Field label="Speed / style"><Select value={values.voiceSpeed} onChange={setters.setVoiceSpeed} options={['slow', 'normal', 'fast']} /></Field><Field label="Voice sample upload"><FileInput dataAttr="voice-clone-upload" /></Field><Field label="Clone name"><Input value={values.voiceCloneName} onChange={setters.setVoiceCloneName} placeholder="Disabled until clone route exists" /></Field><Field label="Consent / rights"><Select value={values.voiceCloneConsent} onChange={setters.setVoiceCloneConsent} options={['no', 'yes']} /></Field><Field label="Test phrase"><Input value={values.voiceClonePhrase} onChange={setters.setVoiceClonePhrase} /></Field><div className="md:col-span-3 rounded-xl border border-amber-300/20 bg-amber-300/8 p-3 text-xs font-bold text-amber-200">Voice clone save is disabled: missing route `/api/admin/voice/clone`.</div></ControlGrid>
@@ -410,6 +466,10 @@ function Proof({ label, value }: { label: string; value: string }) {
   return <div className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><p className="mt-1 break-words text-xs font-bold text-slate-300">{value}</p></div>
 }
 
+function ProofLink({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p><a href={value} target="_blank" rel="noreferrer" className="mt-1 block break-words text-xs font-bold text-cyan-200 hover:text-cyan-100">{value}</a></div>
+}
+
 function summarizeResult(data: Record<string, unknown>) {
   const result = toRecord(data.result)
   const artifact = toRecord(data.artifact)
@@ -424,4 +484,8 @@ function summarizeResult(data: Record<string, unknown>) {
 
 function toRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null
+}
+
+function firstString(...values: unknown[]) {
+  return values.find((value): value is string => typeof value === 'string' && value.length > 0)
 }
