@@ -162,18 +162,84 @@ describe('final product reset truth and provider controls', () => {
     expect(studio).not.toMatch(/<details\s+open/i)
   })
 
+  it('keeps Studio wired to existing execution routes and required controls', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+    const execute = source('app/api/admin/studio/execute/route.ts')
+    expect(studio).toContain('/api/admin/studio/stt')
+    expect(execute).toContain('/api/brain/video-generate')
+    expect(execute).toContain('/api/admin/music-studio')
+    expect(execute).toContain('/api/brain/tts')
+    expect(execute).toContain('/api/brain/avatar-video')
+
+    for (const label of [
+      'Reference image upload',
+      'Edit mode',
+      'Number of images',
+      'Target duration',
+      'Number of videos',
+      'Scene count',
+      'Voice toggle',
+      'Music toggle',
+      'Stitching option',
+      'Lyrics textarea',
+      'Number of songs',
+      'Voice sample upload',
+      'Clone name',
+      'Consent / rights',
+      'Test phrase',
+      'Audio upload',
+      'Avatar library',
+      'Create avatar',
+      'Consistency toggle',
+      'URL input for scrape',
+      'Document upload',
+      'Asset type selector',
+    ]) {
+      expect(studio).toContain(label)
+    }
+  })
+
+  it('keeps Studio upload controls real and duration/count controls broad enough', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+    for (const upload of [
+      'image-reference-upload',
+      'video-reference-upload',
+      'stt-audio',
+      'avatar-reference-upload',
+      'rag-document-upload',
+      'voice-clone-upload',
+    ]) {
+      expect(studio).toContain(upload)
+    }
+    expect(studio).toContain('1m30s')
+    expect(studio).toContain('180s')
+    expect(studio).toContain('300s')
+    expect(studio).toContain('setMusicCount')
+  })
+
   it('keeps planned app templates separate from connected apps', () => {
     const apps = source('app/admin/dashboard/apps/page.tsx')
+    const addApp = source('components/dashboard/AddAppFlow.tsx')
     expect(apps).toContain('No apps connected yet')
     expect(apps).toContain('Templates / next apps')
     expect(apps).toContain('Template only, not connected')
+    expect(apps).toContain('<AddAppFlow />')
+    expect(addApp).toContain('/api/admin/app-profiles')
+    expect(addApp).toContain('Allowed capability categories')
+    expect(addApp).toContain('Storage / artifact scope')
   })
 
   it('keeps Memory & Knowledge split into the requested sections', () => {
     const memory = source('app/admin/dashboard/memory/page.tsx')
-    for (const section of ['Memory', 'Brand', 'Knowledge', 'Scrapes']) {
+    const tools = source('components/dashboard/MemoryKnowledgeTools.tsx')
+    for (const section of ['User Memory', 'App Memory', 'Brand Memory', 'Knowledge/RAG', 'Website Scrapes']) {
       expect(memory).toContain(section)
     }
+    expect(memory).toContain('<MemoryKnowledgeTools />')
+    expect(tools).toContain('/api/admin/research/url')
+    expect(tools).toContain('/api/admin/rag/ingest')
+    expect(tools).toContain('/api/admin/rag/query')
+    expect(tools).toContain('data-knowledge-document-upload')
   })
 
   it('keeps System focused on VPS, services, worker, logs, and database', () => {
@@ -203,6 +269,17 @@ describe('final product reset public website positioning', () => {
     for (const page of publicPages) expect(source(page), page).not.toMatch(forbidden)
   })
 
+  it('keeps the public website positioned as the AmarktAI Network runtime platform', () => {
+    const home = source('app/page.tsx')
+    const features = source('app/features/page.tsx')
+    expect(home).toContain('Intelligence Unleashed.')
+    expect(home).toContain('Explore Infinite Intelligence. The Future is')
+    expect(home).toContain('Apps stay thin')
+    expect(home).toContain('providers/capabilities')
+    expect(features).toContain('capability requests')
+    expect(features).toContain('runtime')
+  })
+
   it('keeps the AI part of AmarktAI separately stylable and blue', () => {
     const brand = source('components/BrandName.tsx')
     expect(brand).toContain('data-brand-ai="true"')
@@ -214,6 +291,9 @@ describe('final product reset public website positioning', () => {
     expect(layout).toContain('data-dashboard-voice-assistant')
     expect(layout).toContain('dashboard-voice-assistant')
     expect(layout).toContain('Voice backend not wired')
+    expect(layout).toContain('/api/admin/voice/options')
+    expect(layout).toContain('/api/admin/voice/preview')
+    expect(layout).toContain('/api/realtime/session')
     expect(exists('app/admin/dashboard/voice-agent')).toBe(false)
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Voice Agent')
   })

@@ -262,9 +262,18 @@ function VoiceAssistantPanel({
         </select>
       </label>
 
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <button type="button" className="rounded-xl border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-xs font-black text-blue-200">
+          Preview via /api/admin/voice/preview
+        </button>
+        <button type="button" disabled className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-500">
+          Mic stream disabled: /api/realtime/session
+        </button>
+      </div>
+
       <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
         <p className="text-xs leading-6 text-slate-400">
-          This compact assistant is ready for dashboard-wide reuse. Wire a session and streaming endpoint to enable speaking, listening, and app reuse.
+          Memory indicator: dashboard memory route present at /api/admin/amarktai-assistant/memory. Voice options route present at /api/admin/voice/options. Realtime speaking/listening returns not available until /api/realtime/session is wired.
         </p>
       </div>
     </aside>

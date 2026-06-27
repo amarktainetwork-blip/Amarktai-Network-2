@@ -131,6 +131,14 @@ export default async function AssetsAndJobsPage() {
         <Metric icon={<RefreshCw />} label="Command jobs" value={String(commandJobs.length)} />
       </section>
 
+      <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="Asset filters">
+        {['all', 'image', 'video', 'audio', 'document'].map((filter) => (
+          <span key={filter} className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-xs font-black text-slate-300">
+            {filter}
+          </span>
+        ))}
+      </nav>
+
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel title="Assets">
           <div className="grid gap-3 lg:grid-cols-2">
@@ -208,7 +216,7 @@ export default async function AssetsAndJobsPage() {
                             <span className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5 font-bold text-slate-600">No output</span>
                           )}
                           <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-2 py-1.5 font-bold text-slate-500">
-                            <RefreshCw className="h-3.5 w-3.5" /> Retry from owner
+                            <RefreshCw className="h-3.5 w-3.5" /> Retry if owner route exists
                           </span>
                         </div>
                       </td>

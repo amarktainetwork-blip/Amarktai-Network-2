@@ -9,12 +9,13 @@ type SettingsTruth = {
   connectedCount: number
 }
 
-type SettingsTab = 'providers' | 'infrastructure' | 'storage' | 'knowledge' | 'apps' | 'voice' | 'legal'
+type SettingsTab = 'providers' | 'infrastructure' | 'storage' | 'webdock' | 'knowledge' | 'apps' | 'voice' | 'legal'
 
 const tabs: Array<{ id: SettingsTab; label: string; hint: string }> = [
   { id: 'providers', label: 'Providers', hint: 'Model and media provider keys/tests' },
   { id: 'infrastructure', label: 'Infrastructure', hint: 'GitHub, Webdock, browser, crawler, worker-adjacent tools' },
   { id: 'storage', label: 'Storage', hint: 'Artifact and local VPS storage proof' },
+  { id: 'webdock', label: 'Webdock', hint: 'VPS access, deployment target, and server diagnostics' },
   { id: 'knowledge', label: 'Knowledge', hint: 'RAG, crawl, scrape, retrieval dependencies' },
   { id: 'apps', label: 'Apps', hint: 'App profile setup hooks' },
   { id: 'voice', label: 'Voice', hint: 'Voice defaults and future assistant routes' },
@@ -90,6 +91,7 @@ export default function SettingsPage() {
 function groupEntries(entries: SettingsTruthEntry[], tab: SettingsTab): SettingsTruthEntry[] {
   if (tab === 'providers') return entries.filter((entry) => entry.kind === 'provider')
   if (tab === 'storage') return entries.filter((entry) => entry.kind === 'storage' || entry.capabilities.some((capability) => capability.includes('artifact') || capability.includes('storage')))
+  if (tab === 'webdock') return entries.filter((entry) => /webdock|vps|server/i.test([entry.key, entry.label, entry.unlocks, ...entry.capabilities].join(' ')))
   if (tab === 'knowledge') return entries.filter((entry) => entry.capabilities.some((capability) => /(rag|research|crawl|scrape|retrieval|embedding)/i.test(capability)))
   if (tab === 'infrastructure') {
     const knowledgeEntries = new Set(groupEntries(entries, 'knowledge'))
@@ -103,10 +105,11 @@ function EmptySection({ tab }: { tab: SettingsTab }) {
     providers: 'No provider entries returned by the settings truth API.',
     infrastructure: 'No infrastructure tool entries are available in the settings truth API.',
     storage: 'No storage entry returned by the settings truth API.',
+    webdock: 'No Webdock-specific entry is available from the settings truth API. VPS diagnostics remain visible in System.',
     knowledge: 'No knowledge-specific connection entries are available yet.',
-    apps: 'App creation is not wired here yet. Use this section later for app profile defaults and template publishing.',
-    voice: 'Voice defaults are UI-ready. Session, streaming, and app reuse endpoints still need backend wiring.',
-    legal: 'Legal and safety controls remain backend-owned. Add editable policy controls only when the backend contract exists.',
+    apps: 'App profile creation is wired from the Apps page through /api/admin/app-profiles. Use this section later for defaults and template publishing.',
+    voice: 'Voice library options and preview routes exist at /api/admin/voice/options and /api/admin/voice/preview. Realtime sessions remain unavailable at /api/realtime/session.',
+    legal: 'Legal and safety controls are authenticated dashboard-only. Adult policy tests/settings remain behind /api/admin/settings/test-adult and related settings routes.',
   }
   return <p className="col-span-full rounded-2xl border border-slate-800 bg-slate-950/55 p-6 text-sm leading-7 text-slate-500">{copy[tab]}</p>
 }

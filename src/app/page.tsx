@@ -63,7 +63,7 @@ export default function HomePage() {
               Explore Infinite Intelligence. The Future is <BrandName />.
             </p>
             <p className="mt-5 max-w-3xl text-base leading-8 text-slate-300">
-              Apps stay thin. They request capabilities. AmarktAI chooses the route, fallback, budget, quality, permissions, storage, memory, RAG, artifacts, approvals, and learning path.
+              Apps stay thin. They request capabilities. AmarktAI chooses the providers/capabilities path, route, fallback, budget, quality, permissions, storage, memory, RAG, artifacts, approvals, and learning path.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/admin/login" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-[0_0_28px_rgba(37,99,235,0.28)] transition hover:bg-blue-500">

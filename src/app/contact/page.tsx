@@ -52,7 +52,7 @@ export default function ContactPage() {
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--amarkt-dim)]">Contact</p>
           <h1 className="mt-5 max-w-5xl text-5xl font-semibold leading-tight text-balance text-white lg:text-7xl">
-            Let’s talk about what you want to build, connect, or improve.
+            Let us talk about what you want to build, connect, or improve.
           </h1>
           <p className="mt-7 max-w-2xl text-base leading-8 text-[var(--amarkt-muted)] sm:text-lg">
             Share the outcome, app, workflow, or operating challenge that matters. A human operator will review the request and respond.

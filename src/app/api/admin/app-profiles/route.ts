@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
         'budgetSensitivity', 'latencySensitivity', 'allowedModels',
         'fallbackChain', 'enabledCapabilities', 'enabledAgents',
         'safeMode', 'adultMode', 'suggestiveMode',
+        'memoryNamespace', 'retrievalNamespace',
       ]
       for (const field of allowedFields) {
         if (body[field] !== undefined) data[field] = body[field]

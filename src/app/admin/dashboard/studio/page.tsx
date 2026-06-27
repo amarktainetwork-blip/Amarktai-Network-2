@@ -53,16 +53,34 @@ export default function StudioPage() {
 
   const [imageSize, setImageSize] = useState('1024x1024')
   const [imageStyle, setImageStyle] = useState('premium realistic')
-  const [videoDuration, setVideoDuration] = useState('8s')
+  const [imageCount, setImageCount] = useState('1')
+  const [videoDuration, setVideoDuration] = useState('1m30s')
   const [videoFormat, setVideoFormat] = useState('16:9')
+  const [videoStyle, setVideoStyle] = useState('cinematic')
+  const [videoCount, setVideoCount] = useState('1')
+  const [sceneCount, setSceneCount] = useState('6')
+  const [longVideoVoice, setLongVideoVoice] = useState('on')
+  const [longVideoMusic, setLongVideoMusic] = useState('on')
+  const [longVideoStitching, setLongVideoStitching] = useState('on')
   const [musicGenre, setMusicGenre] = useState('cinematic pop')
+  const [musicMood, setMusicMood] = useState('uplifting')
   const [musicVocals, setMusicVocals] = useState('female vocal')
   const [musicDuration, setMusicDuration] = useState('180s')
+  const [musicCount, setMusicCount] = useState('1')
+  const [lyrics, setLyrics] = useState('')
   const [voiceStyle, setVoiceStyle] = useState('calm assistant')
   const [voiceSpeed, setVoiceSpeed] = useState('normal')
+  const [voiceCloneName, setVoiceCloneName] = useState('')
+  const [voiceCloneConsent, setVoiceCloneConsent] = useState('no')
+  const [voiceClonePhrase, setVoiceClonePhrase] = useState('Welcome to AmarktAI Network.')
   const [sourceUrl, setSourceUrl] = useState('')
   const [campaignChannels, setCampaignChannels] = useState('web, social, email')
   const [campaignDays, setCampaignDays] = useState('14')
+  const [campaignAssetTypes, setCampaignAssetTypes] = useState('copy, image, document')
+  const [avatarLibrary, setAvatarLibrary] = useState('default')
+  const [avatarMode, setAvatarMode] = useState('video')
+  const [avatarConsistency, setAvatarConsistency] = useState('on')
+  const [sttFile, setSttFile] = useState<File | null>(null)
 
   const task = useMemo(() => TASKS.find((item) => item.id === taskId) ?? TASKS[0], [taskId])
   const routeInfo = STUDIO_ROUTE_MAP[task.tab]
@@ -153,19 +171,39 @@ export default function StudioPage() {
   }
 
   async function runTranscription() {
-    setResult({ text: 'Upload/record support is waiting on the STT media input contract.', status: 'blocked', blocker: 'STT input contract missing' })
-    setStatus('STT input contract missing')
+    if (!sttFile) {
+      const message = 'Audio file is required for /api/admin/studio/stt'
+      setResult({ text: message, status: 'blocked', blocker: message })
+      setStatus(message)
+      return
+    }
+    const form = new FormData()
+    form.append('file', sttFile)
+    form.append('appSlug', appSlug)
+    const response = await fetch('/api/admin/studio/stt', { method: 'POST', body: form })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'STT execution failed')
+    const transcript = typeof data.result?.transcript === 'string' ? data.result.transcript : summarizeResult(data)
+    setMessages((current) => [...current, { role: 'user', content: `Transcribe ${sttFile.name}` }, { role: 'assistant', content: transcript }])
+    setResult({
+      text: transcript,
+      status: String(data.result?.status ?? 'completed'),
+      provider: data.result?.provider,
+      model: data.result?.model,
+      artifactId: data.artifact?.id,
+    })
+    setStatus('Completed')
   }
 
   function buildControls(id: TaskId) {
-    if (id === 'image') return { size: imageSize, style: imageStyle, references: 'composer attachments' }
-    if (id === 'video') return { duration: videoDuration, format: videoFormat, referenceImage: 'optional', scenes: 'single short scene' }
-    if (id === 'long-video') return { duration: videoDuration, format: videoFormat, script: true, scenes: true, music: true, voice: true, stitching: true }
-    if (id === 'music') return { genre: musicGenre, vocals: musicVocals, duration: musicDuration, lyrics: true }
-    if (id === 'tts') return { voice: voiceStyle, speed: voiceSpeed, style: voiceStyle }
-    if (id === 'avatar') return { persona: true, consistencyReference: true, voice: voiceStyle, animation: true }
+    if (id === 'image') return { size: imageSize, style: imageStyle, count: imageCount, references: 'reference image upload' }
+    if (id === 'video') return { duration: videoDuration, format: videoFormat, style: videoStyle, count: videoCount, referenceImage: 'reference image upload' }
+    if (id === 'long-video') return { duration: videoDuration, format: videoFormat, style: videoStyle, sceneCount, music: longVideoMusic, voice: longVideoVoice, stitching: longVideoStitching }
+    if (id === 'music') return { genre: musicGenre, mood: musicMood, vocals: musicVocals, duration: musicDuration, count: musicCount, lyrics }
+    if (id === 'tts') return { voice: voiceStyle, speed: voiceSpeed, style: voiceStyle, voiceCloneName, voiceCloneConsent, voiceClonePhrase }
+    if (id === 'avatar') return { library: avatarLibrary, persona: true, consistencyReference: avatarConsistency, voice: voiceStyle, mode: avatarMode }
     if (id === 'research') return { sourceUrl, query: prompt }
-    if (id === 'campaign') return { appSlug, channels: campaignChannels, days: campaignDays, assetTypes: 'image, copy, document' }
+    if (id === 'campaign') return { appSlug, channels: campaignChannels, days: campaignDays, assetTypes: campaignAssetTypes }
     return {}
   }
 
@@ -238,7 +276,23 @@ export default function StudioPage() {
           </div>
 
           <div className="border-t border-slate-800 p-4">
-            <TaskControls task={task.id} values={{ imageSize, imageStyle, videoDuration, videoFormat, musicGenre, musicVocals, musicDuration, voiceStyle, voiceSpeed, sourceUrl, campaignChannels, campaignDays, appSlug }} setters={{ setImageSize, setImageStyle, setVideoDuration, setVideoFormat, setMusicGenre, setMusicVocals, setMusicDuration, setVoiceStyle, setVoiceSpeed, setSourceUrl, setCampaignChannels, setCampaignDays, setAppSlug }} />
+            <TaskControls
+              task={task.id}
+              values={{
+                imageSize, imageStyle, imageCount, videoDuration, videoFormat, videoStyle, videoCount, sceneCount,
+                longVideoVoice, longVideoMusic, longVideoStitching, musicGenre, musicMood, musicVocals, musicDuration,
+                musicCount, lyrics, voiceStyle, voiceSpeed, voiceCloneName, voiceCloneConsent, voiceClonePhrase,
+                sourceUrl, campaignChannels, campaignDays, campaignAssetTypes, appSlug, avatarLibrary, avatarMode, avatarConsistency,
+              }}
+              setters={{
+                setImageSize, setImageStyle, setImageCount, setVideoDuration, setVideoFormat, setVideoStyle, setVideoCount,
+                setSceneCount, setLongVideoVoice, setLongVideoMusic, setLongVideoStitching, setMusicGenre, setMusicMood,
+                setMusicVocals, setMusicDuration, setMusicCount, setLyrics, setVoiceStyle, setVoiceSpeed, setVoiceCloneName,
+                setVoiceCloneConsent, setVoiceClonePhrase, setSourceUrl, setCampaignChannels, setCampaignDays, setCampaignAssetTypes,
+                setAppSlug, setAvatarLibrary, setAvatarMode, setAvatarConsistency,
+              }}
+              setSttFile={setSttFile}
+            />
             <div className="mt-3 flex gap-2">
               <textarea
                 value={prompt}
@@ -295,34 +349,39 @@ function TaskControls({
   task,
   values,
   setters,
+  setSttFile,
 }: {
   task: TaskId
   values: Record<string, string>
   setters: Record<string, (value: string) => void>
+  setSttFile: (file: File | null) => void
 }) {
   if (task === 'image') {
-    return <ControlGrid><Field label="Size"><Select value={values.imageSize} onChange={setters.setImageSize} options={['1024x1024', '768x1024', '1024x768']} /></Field><Field label="Style"><Input value={values.imageStyle} onChange={setters.setImageStyle} /></Field><Field label="References"><Input value="Attach in prompt" readOnly /></Field></ControlGrid>
+    return <ControlGrid><Field label="Reference image upload"><FileInput dataAttr="image-reference-upload" /></Field><Field label="Aspect / size"><Select value={values.imageSize} onChange={setters.setImageSize} options={['1024x1024', '768x1024', '1024x768', '1536x1024']} /></Field><Field label="Style"><Input value={values.imageStyle} onChange={setters.setImageStyle} /></Field><Field label="Number of images"><Select value={values.imageCount} onChange={setters.setImageCount} options={['1', '2', '4']} /></Field><Field label="Edit mode"><Select value="generate" onChange={() => undefined} options={['generate', 'edit reference image']} /></Field></ControlGrid>
   }
-  if (task === 'video' || task === 'long-video') {
-    return <ControlGrid><Field label="Duration"><Input value={values.videoDuration} onChange={setters.setVideoDuration} /></Field><Field label="Format"><Select value={values.videoFormat} onChange={setters.setVideoFormat} options={['16:9', '9:16', '1:1']} /></Field><Field label="Scenes"><Input value={task === 'long-video' ? 'script, scenes, music, voice, stitching' : 'short scene'} readOnly /></Field></ControlGrid>
+  if (task === 'video') {
+    return <ControlGrid><Field label="Reference image upload"><FileInput dataAttr="video-reference-upload" /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['30s', '1m30s', '3m', '5m']} /></Field><Field label="Aspect"><Select value={values.videoFormat} onChange={setters.setVideoFormat} options={['16:9', '9:16', '1:1']} /></Field><Field label="Style"><Input value={values.videoStyle} onChange={setters.setVideoStyle} /></Field><Field label="Number of videos"><Select value={values.videoCount} onChange={setters.setVideoCount} options={['1', '2', '3']} /></Field></ControlGrid>
+  }
+  if (task === 'long-video') {
+    return <ControlGrid><Field label="Scene count"><Select value={values.sceneCount} onChange={setters.setSceneCount} options={['4', '6', '8', '12']} /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['1m30s', '3m', '5m', '10m']} /></Field><Field label="Voice toggle"><Select value={values.longVideoVoice} onChange={setters.setLongVideoVoice} options={['on', 'off']} /></Field><Field label="Music toggle"><Select value={values.longVideoMusic} onChange={setters.setLongVideoMusic} options={['on', 'off']} /></Field><Field label="Stitching option"><Select value={values.longVideoStitching} onChange={setters.setLongVideoStitching} options={['on', 'off']} /></Field></ControlGrid>
   }
   if (task === 'music') {
-    return <ControlGrid><Field label="Genre"><Input value={values.musicGenre} onChange={setters.setMusicGenre} /></Field><Field label="Lyrics / vocals"><Input value={values.musicVocals} onChange={setters.setMusicVocals} /></Field><Field label="Duration"><Input value={values.musicDuration} onChange={setters.setMusicDuration} /></Field></ControlGrid>
+    return <ControlGrid><Field label="Genre"><Select value={values.musicGenre} onChange={setters.setMusicGenre} options={['cinematic pop', 'gospel', 'rnb', 'reggae', 'rock', 'rap', 'ambient']} /></Field><Field label="Mood"><Select value={values.musicMood} onChange={setters.setMusicMood} options={['uplifting', 'calm', 'dramatic', 'romantic', 'dark', 'energetic']} /></Field><Field label="Instrumental / vocal"><Select value={values.musicVocals} onChange={setters.setMusicVocals} options={['instrumental_only', 'female vocal', 'male vocal', 'duet', 'choir']} /></Field><Field label="Duration"><Select value={values.musicDuration} onChange={setters.setMusicDuration} options={['120s', '180s', '240s', '300s']} /></Field><Field label="Number of songs"><Select value={values.musicCount} onChange={setters.setMusicCount} options={['1', '2', '3']} /></Field><Field label="Lyrics textarea"><textarea value={values.lyrics} onChange={(event) => setters.setLyrics(event.target.value)} rows={3} className="dashboard-input min-h-24 resize-y" /></Field></ControlGrid>
   }
   if (task === 'tts') {
-    return <ControlGrid><Field label="Voice"><Input value={values.voiceStyle} onChange={setters.setVoiceStyle} /></Field><Field label="Speed"><Select value={values.voiceSpeed} onChange={setters.setVoiceSpeed} options={['slow', 'normal', 'fast']} /></Field></ControlGrid>
+    return <ControlGrid><Field label="Voice selector"><Select value={values.voiceStyle} onChange={setters.setVoiceStyle} options={['AmarktAI Neutral', 'AmarktAI Warm', 'AmarktAI Premium', 'Calm Operator']} /></Field><Field label="Speed / style"><Select value={values.voiceSpeed} onChange={setters.setVoiceSpeed} options={['slow', 'normal', 'fast']} /></Field><Field label="Voice sample upload"><FileInput dataAttr="voice-clone-upload" /></Field><Field label="Clone name"><Input value={values.voiceCloneName} onChange={setters.setVoiceCloneName} placeholder="Disabled until clone route exists" /></Field><Field label="Consent / rights"><Select value={values.voiceCloneConsent} onChange={setters.setVoiceCloneConsent} options={['no', 'yes']} /></Field><Field label="Test phrase"><Input value={values.voiceClonePhrase} onChange={setters.setVoiceClonePhrase} /></Field><div className="md:col-span-3 rounded-xl border border-amber-300/20 bg-amber-300/8 p-3 text-xs font-bold text-amber-200">Voice clone save is disabled: missing route `/api/admin/voice/clone`.</div></ControlGrid>
   }
   if (task === 'stt') {
-    return <ControlGrid><Field label="Audio input"><Input value="Upload/record control pending backend media contract" readOnly /></Field></ControlGrid>
+    return <ControlGrid><Field label="Audio upload"><input type="file" accept="audio/*" data-studio-upload="stt-audio" onChange={(event) => setSttFile(event.target.files?.[0] ?? null)} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-200" /></Field><Field label="Transcript output"><Input value="/api/admin/studio/stt saves transcript artifacts" readOnly /></Field></ControlGrid>
   }
   if (task === 'avatar') {
-    return <ControlGrid><Field label="Persona"><Input value="Describe in prompt" readOnly /></Field><Field label="Voice"><Input value={values.voiceStyle} onChange={setters.setVoiceStyle} /></Field><Field label="Animation"><Input value="Talking video" readOnly /></Field></ControlGrid>
+    return <ControlGrid><Field label="Avatar library"><Select value={values.avatarLibrary} onChange={setters.setAvatarLibrary} options={['default', 'brand-library', 'app-library']} /></Field><Field label="Create avatar"><button type="button" className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-black text-slate-200">Create avatar</button></Field><Field label="Reference image upload"><FileInput dataAttr="avatar-reference-upload" /></Field><Field label="Voice selector"><Select value={values.voiceStyle} onChange={setters.setVoiceStyle} options={['AmarktAI Neutral', 'AmarktAI Warm', 'Calm Operator']} /></Field><Field label="Image / video mode"><Select value={values.avatarMode} onChange={setters.setAvatarMode} options={['image', 'video']} /></Field><Field label="Consistency toggle"><Select value={values.avatarConsistency} onChange={setters.setAvatarConsistency} options={['on', 'off']} /></Field></ControlGrid>
   }
   if (task === 'research') {
-    return <ControlGrid><Field label="Source URL / docs"><Input value={values.sourceUrl} onChange={setters.setSourceUrl} placeholder="https://..." /></Field></ControlGrid>
+    return <ControlGrid><Field label="URL input for scrape"><Input value={values.sourceUrl} onChange={setters.setSourceUrl} placeholder="https://..." /></Field><Field label="Document upload"><FileInput dataAttr="rag-document-upload" /></Field><Field label="Mode"><Select value="query" onChange={() => undefined} options={['scrape', 'ingest', 'query']} /></Field><Field label="Result preview"><Input value="Preview appears in the chat/output panel" readOnly /></Field></ControlGrid>
   }
   if (task === 'campaign') {
-    return <ControlGrid><Field label="App / brand context"><Input value={values.appSlug} onChange={setters.setAppSlug} /></Field><Field label="Channels"><Input value={values.campaignChannels} onChange={setters.setCampaignChannels} /></Field><Field label="Days"><Input value={values.campaignDays} onChange={setters.setCampaignDays} /></Field></ControlGrid>
+    return <ControlGrid><Field label="App / brand context"><Input value={values.appSlug} onChange={setters.setAppSlug} /></Field><Field label="Days"><Select value={values.campaignDays} onChange={setters.setCampaignDays} options={['7', '14', '30', '60']} /></Field><Field label="Channels"><Input value={values.campaignChannels} onChange={setters.setCampaignChannels} /></Field><Field label="Asset type selector"><Input value={values.campaignAssetTypes} onChange={setters.setCampaignAssetTypes} /></Field></ControlGrid>
   }
   return null
 }
@@ -341,6 +400,10 @@ function Input({ value, onChange, placeholder, readOnly }: { value: string; onCh
 
 function Select({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: string[] }) {
   return <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 outline-none focus:border-cyan-400/50">{options.map((option) => <option key={option}>{option}</option>)}</select>
+}
+
+function FileInput({ dataAttr }: { dataAttr: string }) {
+  return <input type="file" data-studio-upload={dataAttr} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-200" />
 }
 
 function Proof({ label, value }: { label: string; value: string }) {

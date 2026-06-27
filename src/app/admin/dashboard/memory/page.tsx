@@ -2,6 +2,7 @@ import type React from 'react'
 import { Database, FileSearch, Globe2, Layers3, Search } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { listRecords } from '@/lib/local-json-store'
+import MemoryKnowledgeTools from '@/components/dashboard/MemoryKnowledgeTools'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,10 +59,11 @@ export default async function MemoryKnowledgePage() {
 
       <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="Memory and knowledge sections">
         {[
-          ['Memory', '#memory'],
-          ['Brand', '#brand'],
-          ['Knowledge', '#knowledge'],
-          ['Scrapes', '#scrapes'],
+          ['User Memory', '#user-memory'],
+          ['App Memory', '#app-memory'],
+          ['Brand Memory', '#brand-memory'],
+          ['Knowledge/RAG', '#knowledge-rag'],
+          ['Website Scrapes', '#website-scrapes'],
         ].map(([label, href]) => (
           <a key={label} href={href} className="rounded-lg px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800 hover:text-white">
             {label}
@@ -76,8 +78,10 @@ export default async function MemoryKnowledgePage() {
         <Metric icon={<Globe2 />} label="Scrape results" value={String(scrapeResults.length)} />
       </section>
 
+      <MemoryKnowledgeTools />
+
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-        <Panel id="brand" title="Brand">
+        <Panel id="brand-memory" title="Brand Memory">
           <div className="space-y-3">
             {snapshot.profiles.length ? snapshot.profiles.map((profile) => (
               <article key={profile.appSlug} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
@@ -101,7 +105,7 @@ export default async function MemoryKnowledgePage() {
           </div>
         </Panel>
 
-        <Panel id="memory" title="Memory">
+        <Panel id="user-memory" title="User Memory">
           <div className="space-y-3">
             {snapshot.memoryEntries.length ? snapshot.memoryEntries.map((entry) => (
               <article key={entry.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
@@ -122,7 +126,23 @@ export default async function MemoryKnowledgePage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
-        <Panel id="knowledge" title="Knowledge">
+        <Panel id="app-memory" title="App Memory">
+          <div className="space-y-3">
+            {snapshot.profiles.length ? snapshot.profiles.map((profile) => (
+              <KnowledgeRow
+                key={profile.appSlug}
+                icon={<Layers3 />}
+                title={profile.appName || profile.appSlug}
+                status={profile.memoryNamespace || 'not set'}
+                detail={`RAG: ${profile.retrievalNamespace || 'not set'}`}
+              />
+            )) : (
+              <Empty text="No app memory profiles found." />
+            )}
+          </div>
+        </Panel>
+
+        <Panel id="knowledge-rag" title="Knowledge/RAG">
           <div className="space-y-3">
             {ragSources.length ? ragSources.map((source, index) => (
               <KnowledgeRow key={source.id ?? source.url ?? index} icon={<FileSearch />} title={source.title || source.url || 'RAG source'} status={`${source.chunksCount ?? 0} chunks`} detail={source.url || source.type || 'stored source'} />
@@ -132,7 +152,7 @@ export default async function MemoryKnowledgePage() {
           </div>
         </Panel>
 
-        <Panel id="scrapes" title="Scrapes">
+        <Panel id="website-scrapes" title="Website Scrapes">
           <div className="space-y-3">
             {scrapeResults.length ? scrapeResults.map((result, index) => (
               <KnowledgeRow key={result.id ?? result.url ?? index} icon={<Globe2 />} title={result.title || result.url || 'Scrape result'} status={result.status || 'stored'} detail={result.url || 'website scrape'} />

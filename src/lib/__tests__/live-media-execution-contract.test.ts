@@ -161,6 +161,7 @@ describe('live media route contracts', () => {
     const studio = read('app/api/admin/studio/execute/route.ts')
     expect(studio).toContain("if (tab === 'Video') return 'video_generation'")
     expect(studio).toContain('pollUrl: tracked?.pollUrl ?? null')
-    expect(studio).toContain("vocalStyle: 'instrumental_only'")
+    expect(studio).toContain("vocalStyle: stringControl(controls, 'vocals', 'instrumental_only')")
+    expect(studio).toContain("durationSeconds: durationSeconds(stringControl(controls, 'duration', '180s'), 180)")
   })
 })

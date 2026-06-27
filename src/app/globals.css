@@ -135,6 +135,26 @@ select {
   box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.22);
 }
 
+.dashboard-input,
+.studio-select {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(51 65 85);
+  background: rgb(2 6 23);
+  padding: 0.625rem 0.75rem;
+  color: rgb(226 232 240);
+  outline: none;
+}
+
+.dashboard-input::placeholder {
+  color: rgb(71 85 105);
+}
+
+.dashboard-input:focus,
+.studio-select:focus {
+  border-color: rgb(34 211 238 / 0.5);
+}
+
 .text-balance {
   text-wrap: balance;
 }

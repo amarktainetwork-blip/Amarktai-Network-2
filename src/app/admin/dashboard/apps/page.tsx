@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type React from 'react'
 import { AppWindow, Database, FolderOpen, HeartPulse, Megaphone, Plus, ShieldCheck } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import AddAppFlow from '@/components/dashboard/AddAppFlow'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,7 +78,7 @@ export default async function AppsPage() {
               Real connected app profiles appear here. Templates are separated below and are not counted as connected until an app profile exists.
             </p>
           </div>
-          <Link href="/admin/dashboard/settings#apps" className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-200">
+          <Link href="#add-app" className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-200">
             <Plus className="h-4 w-4" />
             Add App
           </Link>
@@ -121,7 +122,7 @@ export default async function AppsPage() {
               <p className="mx-auto mt-2 max-w-lg text-sm leading-7 text-slate-500">
                 Add an app profile when a real app is ready to request capabilities from the runtime.
               </p>
-              <Link href="/admin/dashboard/settings#apps" className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-2.5 text-sm font-black text-cyan-200">
+              <Link href="#add-app" className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan-300/25 bg-cyan-300/10 px-4 py-2.5 text-sm font-black text-cyan-200">
                 <Plus className="h-4 w-4" />
                 Add App
               </Link>
@@ -129,6 +130,8 @@ export default async function AppsPage() {
           )}
         </div>
       </section>
+
+      <AddAppFlow />
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
         <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Templates / next apps</p>

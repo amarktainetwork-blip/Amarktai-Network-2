@@ -32,6 +32,7 @@ type ExecuteBody = {
   voiceId?: string
   size?: string
   style?: string
+  controls?: Record<string, unknown>
 }
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -97,6 +98,21 @@ function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
   return 'chat'
 }
 
+function stringControl(controls: Record<string, unknown>, key: string, fallback: string) {
+  const value = controls[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback
+}
+
+function durationSeconds(value: string, fallback: number) {
+  const trimmed = value.trim().toLowerCase()
+  const minuteMatch = trimmed.match(/^(\d+)m(?:(\d+)s)?$/)
+  if (minuteMatch) return (Number(minuteMatch[1]) * 60) + Number(minuteMatch[2] ?? 0)
+  const secondsMatch = trimmed.match(/^(\d+)s$/)
+  if (secondsMatch) return Number(secondsMatch[1])
+  const numeric = Number(trimmed)
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
+}
+
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session.isLoggedIn) return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
@@ -114,6 +130,7 @@ export async function POST(request: NextRequest) {
   const tab = body.tab
   const prompt = body.prompt?.trim() ?? ''
   const appSlug = body.appSlug?.trim() || 'amarktai-network'
+  const controls = body.controls ?? {}
   if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
   if (!prompt) return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
 
@@ -175,7 +192,8 @@ export async function POST(request: NextRequest) {
       }
       const response = await imagePost(jsonRequest('/api/brain/image', {
         prompt,
-        size: body.size ?? '1024x1024',
+        size: body.size ?? stringControl(controls, 'size', '1024x1024'),
+        style: body.style ?? stringControl(controls, 'style', 'premium realistic'),
         providerOverride: route.selectedProvider,
         modelOverride: route.selectedModel,
       }))
@@ -239,9 +257,9 @@ export async function POST(request: NextRequest) {
         : 'genx'
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {
         prompt,
-        style: body.style ?? 'cinematic',
-        duration: 4,
-        aspectRatio: '16:9',
+        style: body.style ?? stringControl(controls, 'style', 'cinematic'),
+        duration: durationSeconds(stringControl(controls, 'duration', '90s'), 90),
+        aspectRatio: stringControl(controls, 'format', '16:9'),
         appSlug,
         provider,
         model: route.selectedModel,
@@ -272,9 +290,12 @@ export async function POST(request: NextRequest) {
         request: {
           appSlug,
           theme: prompt,
-          genre: 'cinematic',
-          genres: ['cinematic'],
-          vocalStyle: 'instrumental_only',
+          genre: stringControl(controls, 'genre', 'cinematic'),
+          genres: [stringControl(controls, 'genre', 'cinematic')],
+          mood: stringControl(controls, 'mood', 'uplifting'),
+          vocalStyle: stringControl(controls, 'vocals', 'instrumental_only'),
+          existingLyrics: stringControl(controls, 'lyrics', ''),
+          durationSeconds: durationSeconds(stringControl(controls, 'duration', '180s'), 180),
           prompt,
           provider: route.selectedProvider,
           model: route.selectedModel,
@@ -309,7 +330,8 @@ export async function POST(request: NextRequest) {
         text: prompt,
         provider,
         model: provider === 'auto' ? undefined : route.selectedModel,
-        voiceId: body.voiceId,
+        voiceId: body.voiceId ?? stringControl(controls, 'voice', ''),
+        speed: stringControl(controls, 'speed', 'normal'),
         appSlug,
         capability,
       }))
