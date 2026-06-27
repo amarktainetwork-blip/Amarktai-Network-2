@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({})) as { key?: string }
   const node = getProviderMeshNode(body.key || '')
-  if (!node) return NextResponse.json({ success: false, error: 'Unknown connection' }, { status: 404 })
+  if (!node) return NextResponse.json({ success: false, error: 'Unsupported connection' }, { status: 404 })
   const localRuntime = ['local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg', 'storage'].includes(node.id)
   if (!localRuntime && node.envAliases.length > 0 && !await getMeshCredential(node.id)) {
     return NextResponse.json({

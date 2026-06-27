@@ -1,9 +1,8 @@
 import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
+import { getCapabilityRuntimeTruth, type CapabilityRuntimeTruthEntry } from '@/lib/capability-runtime-truth'
 import { getServiceConfigField } from '@/lib/service-vault'
 import { checkWritable, listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { LIVE_GENX_MODEL_COUNT } from '@/lib/provider-capability-governance'
-import type { ProviderCapability } from '@/lib/provider-mesh'
-import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
 
 export interface GenXRuntimeStatus {
   configured: boolean
@@ -158,67 +157,79 @@ export async function getGenXRuntimeStatus(): Promise<GenXRuntimeStatus> {
 }
 
 export async function getAdultCapabilityGate(providers: ProviderRuntimeEntry[]): Promise<AdultCapabilityGate> {
-  const adultRoutes = [
-    MEDIA_CAPABILITY_ROUTES.adult_text,
-    MEDIA_CAPABILITY_ROUTES.adult_image,
-    MEDIA_CAPABILITY_ROUTES.adult_video,
-    MEDIA_CAPABILITY_ROUTES.adult_voice,
-  ]
-  const compatibleProviderIds = new Set(adultRoutes.flatMap((route) => route.providers.map((entry) => entry.provider)))
-  const approved = providers.filter((provider) => provider.connected && compatibleProviderIds.has(provider.key as never))
+  const canonical = await getCapabilityRuntimeTruth()
+  const adultCapabilities = canonical.filter((entry) => entry.capabilityId.startsWith('adult_') || entry.capabilityId === 'voice_clone')
+  const approved = providers.filter((provider) =>
+    provider.connected && adultCapabilities.some((entry) => entry.connectedProviderCandidates.includes(provider.key)),
+  )
+  const configured = providers.filter((provider) =>
+    provider.configured && adultCapabilities.some((entry) => entry.providerCandidates.includes(provider.key)),
+  )
+  const firstWorking = adultCapabilities.find((entry) => entry.status === 'working')
+  const firstFailed = adultCapabilities.find((entry) => entry.proofStatus === 'failed')
+  const firstBlocked = adultCapabilities.find((entry) => entry.status === 'blocked')
+  const firstWired = adultCapabilities.find((entry) => entry.status === 'wired_unproven')
   const lastTestStatus = await getServiceConfigField('adult_mode', 'lastTestStatus', '').catch(() => null) ?? ''
   const lastError = await getServiceConfigField('adult_mode', 'lastError', '').catch(() => null) ?? ''
   const selectedProvider = approved[0]?.key ?? null
-  const providerAvailable = approved.length > 0
-  const selectedModel = selectedProvider
-    ? adultRoutes.flatMap((route) => route.providers).find((entry) => entry.provider === selectedProvider)?.model ?? null
-    : null
+  const providerAvailable = Boolean(firstWorking)
+  const blocker =
+    firstWorking ? null :
+    firstFailed?.blocker || firstBlocked?.blocker || firstWired?.blocker ||
+    'No adult capability has passed key, endpoint, permission, route, and storage checks.'
   return {
-    status: providerAvailable ? 'ready' : 'not_wired',
-    blocker: providerAvailable ? null : 'No connected provider/model route can create and persist adult text, image, video, or voice output.',
+    status: providerAvailable
+      ? 'ready'
+      : firstFailed
+        ? 'provider_failed'
+        : configured.length > 0
+          ? 'needs_provider_test'
+          : 'not_wired',
+    blocker,
     providerAvailable,
     testPassed: providerAvailable,
     globalEnabled: true,
     enabled: true,
     selectedProvider,
-    selectedModel,
+    selectedModel: null,
     allowedCategories: ['legal_adult_text', 'legal_adult_image', 'legal_adult_video', 'legal_adult_voice'],
     blockedCategories: ['minors', 'age_ambiguous', 'non_consensual', 'real_person_sexual_deepfakes', 'illegal_content'],
     lastTestStatus: lastTestStatus || null,
     lastError: lastError || null,
-    configuredProviders: approved.map((provider) => provider.key),
+    configuredProviders: configured.map((provider) => provider.key),
   }
 }
 
-const CAPABILITY_ROWS: Array<{ name: string; capabilities: ProviderCapability[] }> = [
-  { name: 'Text / Chat', capabilities: ['text'] },
-  { name: 'Coding Agent', capabilities: ['code'] },
-  { name: 'Image Generation', capabilities: ['image'] },
-  { name: 'Video Generation', capabilities: ['video'] },
-  { name: 'Voice TTS', capabilities: ['tts'] },
-  { name: 'STT / Transcription', capabilities: ['stt'] },
-  { name: 'Music Generation', capabilities: ['music'] },
-  { name: 'Embeddings', capabilities: ['embeddings'] },
-  { name: 'Web Crawler / Research', capabilities: ['crawl'] },
-  { name: 'Repo / GitHub', capabilities: ['repo'] },
-]
+const LEGACY_CAPABILITY_NAMES: Record<string, string> = {
+  chat: 'Text / Chat',
+  reasoning_code: 'Coding Agent',
+  image_generation: 'Image Generation',
+  video_generation: 'Video Generation',
+  tts: 'Voice TTS',
+  stt: 'STT / Transcription',
+  music_generation: 'Music Generation',
+  embeddings: 'Embeddings',
+  website_scraping: 'Web Crawler / Research',
+}
+
+function mapCanonicalCapabilityStatus(status: CapabilityRuntimeTruthEntry['status']): CapabilityStatus {
+  if (status === 'working') return 'available'
+  if (status === 'missing') return 'not_implemented'
+  return 'blocked'
+}
 
 export async function getCapabilityStatus(
   _genxConfigured: boolean,
-  providers: ProviderRuntimeEntry[],
+  _providers: ProviderRuntimeEntry[],
 ): Promise<CapabilityRuntimeEntry[]> {
-  return CAPABILITY_ROWS.map((row) => {
-    const connected = providers.filter((provider) =>
-      provider.connected && row.capabilities.some((capability) => provider.capabilities?.includes(capability)),
-    )
-    return {
-      name: row.name,
-      status: connected.length ? 'available' as const : 'blocked' as const,
-      blocker: connected.length ? null : `No tested approved connection provides ${row.capabilities.join(' or ')}.`,
-      models: connected.map((provider) => provider.displayName),
-      nextAction: connected.length ? null : 'Add the required key or local tool in Settings, then run its live test.',
-    }
-  })
+  const canonical = await getCapabilityRuntimeTruth()
+  return canonical.map((entry) => ({
+    name: LEGACY_CAPABILITY_NAMES[entry.capabilityId] ?? entry.label,
+    status: mapCanonicalCapabilityStatus(entry.status),
+    blocker: entry.blocker || null,
+    models: entry.connectedProviderCandidates,
+    nextAction: entry.nextAction || null,
+  }))
 }
 
 export async function getModelCatalogueStatus(): Promise<{ modelCount: number; source: 'live' | 'static' }> {

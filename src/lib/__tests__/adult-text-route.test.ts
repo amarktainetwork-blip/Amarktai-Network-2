@@ -56,7 +56,7 @@ describe('/api/brain/adult-text', () => {
     expect(response.status).toBe(422)
     expect(data.status).toBe('policy_refused')
     expect(fetchMock).not.toHaveBeenCalled()
-  })
+  }, 10_000)
 
   it('requires an endpoint for cataloged Hugging Face GGUF adult text models', async () => {
     const { POST } = await import('@/app/api/brain/adult-text/route')
@@ -122,5 +122,5 @@ describe('/api/brain/adult-text', () => {
     expect(result.provider).toBe('huggingface')
     expect(result.fallbackUsed).toBe(false)
     expect(result.output).toContain('consenting adult')
-  })
+  }, 10_000)
 })

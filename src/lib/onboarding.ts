@@ -53,8 +53,8 @@ const ONBOARDING_STEPS = [
   {
     id: 'provider_setup',
     label: 'Configure AI Provider',
-    description: 'Add at least one AI provider API key (e.g., OpenAI, Groq, DeepSeek).',
-    route: '/admin/dashboard/operations',
+    description: 'Add and test at least one approved AI provider key.',
+    route: '/admin/dashboard/capabilities',
   },
   {
     id: 'first_app',
@@ -66,7 +66,7 @@ const ONBOARDING_STEPS = [
     id: 'health_check',
     label: 'Verify Provider Health',
     description: 'Confirm at least one AI provider is responding correctly.',
-    route: '/admin/dashboard/operations',
+    route: '/admin/dashboard/capabilities',
   },
 ] as const
 

@@ -13,7 +13,7 @@ describe('final dashboard source-of-truth wiring', () => {
       '/admin/dashboard',
       '/admin/dashboard/network-apps',
       '/admin/dashboard/studio',
-      '/admin/dashboard/operations',
+      '/admin/dashboard/capabilities',
       '/admin/dashboard/campaigns',
       '/admin/dashboard/assets',
       '/admin/dashboard/agents',
@@ -46,7 +46,8 @@ describe('final dashboard source-of-truth wiring', () => {
     expect(page).toContain('entry.testRoute')
     expect(page).toContain('await refresh()')
     expect(page).toContain('Live test passed')
-    expect(truth).toContain('configured && notes.lastTestPassed')
+    expect(truth).toContain("from '@/lib/provider-runtime-truth'")
+    expect(truth).toContain('truth.connected')
   })
 
   it('Workspace selects connected providers and starts real media routes', () => {

@@ -43,7 +43,7 @@ describe('Phase 1 platform truth stabilization', () => {
       '/admin/dashboard',
       '/admin/dashboard/network-apps',
       '/admin/dashboard/studio',
-      '/admin/dashboard/operations',
+      '/admin/dashboard/capabilities',
       '/admin/dashboard/campaigns',
       '/admin/dashboard/assets',
       '/admin/dashboard/agents',
@@ -139,8 +139,8 @@ describe('Phase 1 platform truth stabilization', () => {
     ])
     expect(normalizeAdultPolicy('full_adult')).toBe('full_adult_app_mode')
     const runtimeTruth = read('lib/runtime-capability-truth.ts')
-    expect(runtimeTruth).toContain('No connected provider/model route can create and persist adult text, image, video, or voice output.')
-    expect(runtimeTruth).not.toContain('ADULT_MODE_ENABLED=true')
+    expect(runtimeTruth).toContain('getCapabilityRuntimeTruth')
+    expect(runtimeTruth).not.toContain('No connected provider/model route can create and persist adult text, image, video, or voice output.')
   })
 
   it('fixes Firecrawl as a research tool endpoint, not an AI provider endpoint', () => {

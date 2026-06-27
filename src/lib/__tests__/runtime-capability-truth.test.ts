@@ -133,8 +133,9 @@ describe('adult mode', () => {
     const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
     const truth = await getDashboardRuntimeTruth()
 
-    expect(truth.adultGate.providerAvailable).toBe(true)
-    expect(truth.adultGate.status).toBe('ready')
+    expect(truth.adultGate.providerAvailable).toBe(false)
+    expect(truth.adultGate.status).toBe('needs_provider_test')
+    expect(truth.adultGate.blocker).toContain('requires_endpoint')
     expect(truth.adultGate.configuredProviders).toContain('huggingface')
   })
 
@@ -162,7 +163,8 @@ describe('adult mode', () => {
     const { getDashboardRuntimeTruth } = await import('@/lib/runtime-capability-truth')
     const truth = await getDashboardRuntimeTruth()
 
-    expect(truth.adultGate.providerAvailable).toBe(true)
+    expect(truth.adultGate.providerAvailable).toBe(false)
+    expect(truth.adultGate.status).toBe('needs_provider_test')
     expect(truth.adultGate.configuredProviders).toContain('huggingface')
   })
 
@@ -198,7 +200,7 @@ describe('adult mode', () => {
 // ── configured_with_last_error status ────────────────────────────────────────
 
 describe('adult gate ignores the obsolete separate adult live-test gate', () => {
-  it('remains ready when the provider passed but the legacy adult test failed', async () => {
+  it('does not become ready from a provider key when dedicated adult endpoint proof is missing', async () => {
     vi.doMock('@/lib/prisma', () => ({
       prisma: {
         integrationConfig: {
@@ -233,9 +235,9 @@ describe('adult gate ignores the obsolete separate adult live-test gate', () => 
     }
     const gate = await getAdultCapabilityGate([huggingFaceProvider])
 
-    expect(gate.status).toBe('ready')
-    expect(gate.testPassed).toBe(true)
-    expect(gate.providerAvailable).toBe(true)
-    expect(gate.blocker).toBeNull()
+    expect(gate.status).toBe('needs_provider_test')
+    expect(gate.testPassed).toBe(false)
+    expect(gate.providerAvailable).toBe(false)
+    expect(gate.blocker).toMatch(/live test|requires_endpoint/)
   })
 })

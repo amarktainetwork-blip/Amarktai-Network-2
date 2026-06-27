@@ -91,11 +91,11 @@ describe('provider capability governance', () => {
     expect(validateCapabilitySelection({ capability: 'adult_image', adultPolicyAllows: false }).blockers).toContain('adult_policy')
   })
 
-  it('surfaces governance truth in Settings, Operations, and model catalog routes', () => {
+  it('surfaces governance truth in Settings, Capabilities, and model catalog routes', () => {
     expect(read('app/admin/dashboard/settings/page.tsx')).toContain('Connect capabilities once')
-    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Runtime capability matrix')
-    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Storage/Permission')
-    expect(read('app/admin/dashboard/operations/page.tsx')).toContain('Proof')
+    expect(read('app/admin/dashboard/capabilities/page.tsx')).toContain('getCapabilityRuntimeTruth')
+    expect(read('app/admin/dashboard/capabilities/page.tsx')).toContain('Wired, needs proof')
+    expect(read('app/admin/dashboard/operations/page.tsx')).toContain("redirect('/admin/dashboard/capabilities')")
     expect(read('app/api/admin/ai-model-catalog/route.ts')).toContain('rootWorkspaceHasFullAccess')
     expect(read('app/api/admin/provider-governance/route.ts')).toContain('capabilityGovernance')
   })

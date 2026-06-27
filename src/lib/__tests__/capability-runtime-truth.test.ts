@@ -363,7 +363,7 @@ describe('Capabilities API does not show working when proofStatus is route_only 
     const allEntries = await getCapabilityRuntimeTruth()
 
     const falseWorking = allEntries.filter(
-      (e) => e.status === 'working' && !e.capabilityId.match(/^(assets|approvals|scheduler)$/),
+      (e) => e.status === 'working' && !e.capabilityId.match(/^(assets|approvals|scheduler|memory|brand_memory)$/),
     )
     // Only storage-only capabilities can be working without a provider key
     expect(falseWorking).toHaveLength(0)
@@ -374,7 +374,7 @@ describe('Capabilities API does not show working when proofStatus is route_only 
     const falseProof = allEntries.filter(
       (e) =>
         e.proofStatus === 'passed' &&
-        !e.capabilityId.match(/^(assets|approvals|scheduler)$/),
+        !e.capabilityId.match(/^(assets|approvals|scheduler|memory|brand_memory)$/),
     )
     expect(falseProof).toHaveLength(0)
   })

@@ -18,7 +18,7 @@ export const PLATFORM_ROUTE_TRUTH: readonly PlatformRouteTruth[] = [
       '/admin/dashboard/workbench',
       '/admin/dashboard/apps-agents',
       '/admin/dashboard/memory-learning',
-      '/admin/dashboard/operations',
+      '/admin/dashboard/capabilities',
       '/admin/dashboard/settings',
     ],
     purpose: 'The six final dashboard sections.',

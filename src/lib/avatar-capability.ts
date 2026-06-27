@@ -6,7 +6,7 @@
  * This module handles ALL non-adult avatar generation.
  *
  * Providers:
- *   genx        — premium avatar image/video (SOURCE_WIRED)
+ *   genx        — premium avatar image/video helper, still runtime-proof gated
  *   huggingface — avatar image via HF Inference Endpoint/API
  *   together    — avatar image via Together FLUX/image models (cheap/balanced)
  *   groq/mimo   — text/profile/personality generation only, no image/video claim

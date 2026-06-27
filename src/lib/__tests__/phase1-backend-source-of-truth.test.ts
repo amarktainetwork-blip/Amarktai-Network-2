@@ -30,7 +30,8 @@ describe('Phase 1 backend source of truth', () => {
   it('guards Settings tests with provider mesh IDs', () => {
     const source = read('app/api/admin/settings/test-provider/route.ts')
     expect(source).toContain("getProviderMeshNode(body.key || '')")
-    expect(source).toContain('Unknown connection')
+    expect(source).toContain('Unsupported connection')
+    expect(source).not.toContain('Unknown connection')
     expect(source).not.toContain("case 'replicate'")
     expect(source).not.toContain("case 'fal'")
   })
