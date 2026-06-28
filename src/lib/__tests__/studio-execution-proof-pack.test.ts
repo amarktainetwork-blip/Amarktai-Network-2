@@ -24,6 +24,8 @@ describe('Studio execution proof pack', () => {
 
     expect(route).toContain("mode === 'chat'")
     expect(route).toContain("assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat'")
+    expect(route).toContain('providerOverride: route.selectedProvider')
+    expect(route).toContain('modelOverride: route.selectedModel')
     expect(route).toContain("artifact: null")
     expect(route).toContain('noArtifact: true')
     expect(route).not.toContain("selectedProvider: 'auto'")
@@ -38,14 +40,19 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain('nextAction')
   })
 
-  it('image execution records artifact proof after real persistence', () => {
+  it('image execution returns processing for async jobs and only records passed proof after real persistence', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
+    const studio = source('app/admin/dashboard/studio/page.tsx')
 
     expect(route).toContain("mode: 'image'")
     expect(route).toContain("routePath: '/api/brain/image'")
     expect(route).toContain('persistCanonicalMediaResult')
     expect(route).toContain('recordStudioProof')
-    expect(route).toContain('artifactId: persisted?.artifactId ?? null')
+    expect(route).toContain("const completed = Boolean(persisted?.success && persisted.status === 'completed')")
+    expect(route).toContain("proofStatus: processing ? 'processing' : 'failed'")
+    expect(studio).toContain('pollStudioJob')
+    expect(studio).toContain("Job completed but no artifact was returned/saved.")
+    expect(studio).toContain("result.status === 'completed'")
   })
 
   it('music execution accepts up to five genres and supports 3+ minute duration', () => {
@@ -74,18 +81,25 @@ describe('Studio execution proof pack', () => {
       'productionNotes',
       'musicVideoHandoff',
       'requestProof',
+      "const completed = ['completed', 'succeeded'].includes(status)",
+      "proofStatus: processing ? 'processing' : 'failed'",
     ]) {
       expect(route).toContain(required)
     }
   })
 
-  it('successful image and music executions write runtime proof to provider result logs', () => {
+  it('successful image and music executions write runtime proof only for completed output', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
+    const jobs = source('lib/media-job-store.ts')
 
     expect(route).toContain('recordProviderResult')
     expect(route).toContain("proofStatus: input.success && input.executed ? 'passed' : 'failed'")
     expect(route).toContain("capability: 'image_generation'")
     expect(route).toContain("capability: 'music_generation'")
+    expect(route).toContain("success: true")
+    expect(route).toContain("Poll the job until completed.")
+    expect(jobs).toContain("source: 'media_job_poll'")
+    expect(jobs).toContain("proofStatus: persisted.artifactId ? 'passed' : 'failed'")
   })
 
   it('Studio UI has no provider or model selector and only displays selected route after execution', () => {
@@ -95,6 +109,20 @@ describe('Studio execution proof pack', () => {
     expect(studio).toContain('Resolved provider')
     expect(studio).toContain('Resolved model')
     expect(studio).toContain('No infrastructure selector is exposed')
+    expect(studio).toContain('Active jobs')
+    expect(studio).toContain('Recent artifacts')
+    expect(studio).toContain('<audio src={result.outputUrl} controls')
+    expect(studio).toContain('<img src={result.outputUrl}')
+  })
+
+  it('Studio UI does not show Completed while proof or job status is processing', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+
+    expect(studio).toContain("if (['queued', 'pending', 'processing', 'running', 'in-progress'].includes(status)) return 'processing'")
+    expect(studio).toContain("status === 'processing'")
+    expect(studio).toContain("setStatus(initial.status)")
+    expect(studio).not.toContain("setStatus('Completed')")
+    expect(studio).not.toContain("status: String(data.jobStatus")
   })
 
   it('normalizes only known provider aliases represented in the canonical mesh', () => {

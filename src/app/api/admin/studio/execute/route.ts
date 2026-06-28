@@ -275,6 +275,29 @@ function capabilityTruthProof(truth: CapabilityRuntimeTruthEntry) {
   }
 }
 
+function studioProofSnapshot(input: {
+  capability: string
+  provider?: unknown
+  model?: unknown
+  route: string
+  artifactId?: unknown
+  jobId?: unknown
+  proofStatus: 'processing' | 'passed' | 'failed'
+  error?: unknown
+}) {
+  return {
+    capability: input.capability,
+    provider: normalizeProviderMeshId(String(input.provider ?? '')) ?? 'unknown',
+    model: typeof input.model === 'string' ? input.model : '',
+    route: input.route,
+    artifactId: typeof input.artifactId === 'string' ? input.artifactId : null,
+    jobId: typeof input.jobId === 'string' ? input.jobId : null,
+    timestamp: new Date().toISOString(),
+    proofStatus: input.proofStatus,
+    error: typeof input.error === 'string' ? input.error : null,
+  }
+}
+
 async function recordStudioProof(input: {
   mode: ProofMode
   capability: string
@@ -433,6 +456,8 @@ export async function POST(request: NextRequest) {
       const response = await assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat', {
         message: prompt,
         capability: 'chat',
+        providerOverride: route.selectedProvider,
+        modelOverride: route.selectedModel,
         costMode: body.costMode ?? 'balanced',
         metadata: {
           appSlug,
@@ -535,27 +560,40 @@ export async function POST(request: NextRequest) {
         })
         : null
       const tracked = localJob ? localMediaJobResponse(localJob) : null
-      const success = Boolean(persisted?.success || tracked?.success)
+      const completed = Boolean(persisted?.success && persisted.status === 'completed')
+      const processing = Boolean(tracked)
+      const success = completed || processing
       const selectedProvider = canonicalProviderValue(persisted?.provider, data.provider, route.selectedProvider)
       const selectedModel = persisted?.model ?? data.model ?? route.selectedModel
-      const proof = await recordStudioProof({
-        mode: 'image',
-        capability: 'image_generation',
-        appSlug,
-        provider: selectedProvider,
-        model: selectedModel,
-        success,
-        executed: success,
-        artifactId: persisted?.artifactId ?? null,
-        artifactPath: persisted?.storageUrl ?? null,
-        jobId: tracked?.jobId ?? persisted?.jobId ?? null,
-        routePath: '/api/brain/image',
-        metadata: {
-          source: 'studio_execute',
-          truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null,
-          responseShapeKeys: persisted?.responseShapeKeys ?? Object.keys(data).sort(),
-        },
-      })
+      const proof = completed
+        ? await recordStudioProof({
+          mode: 'image',
+          capability: 'image_generation',
+          appSlug,
+          provider: selectedProvider,
+          model: selectedModel,
+          success: true,
+          executed: true,
+          artifactId: persisted?.artifactId ?? null,
+          artifactPath: persisted?.storageUrl ?? null,
+          jobId: tracked?.jobId ?? persisted?.jobId ?? null,
+          routePath: '/api/brain/image',
+          metadata: {
+            source: 'studio_execute',
+            truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null,
+            responseShapeKeys: persisted?.responseShapeKeys ?? Object.keys(data).sort(),
+          },
+        })
+        : studioProofSnapshot({
+          capability: 'image_generation',
+          provider: selectedProvider,
+          model: selectedModel,
+          route: '/api/brain/image',
+          artifactId: null,
+          jobId: tracked?.jobId ?? persisted?.jobId ?? null,
+          proofStatus: processing ? 'processing' : 'failed',
+          error: tracked ? null : persisted?.blocker ?? data.error ?? null,
+        })
       const status = tracked?.jobStatus ?? persisted?.status ?? 'failed'
       return NextResponse.json(structuredResult({
         ok: success,
@@ -574,7 +612,7 @@ export async function POST(request: NextRequest) {
         selectedModel,
         proof,
         blocker: tracked ? null : persisted?.blocker ?? data.error ?? null,
-        nextAction: success ? 'Open the artifact or poll the job until completed.' : persisted?.blocker ?? data.error ?? 'Image provider returned no persisted artifact.',
+        nextAction: completed ? 'Open the artifact.' : processing ? 'Poll the job until completed.' : persisted?.blocker ?? data.error ?? 'Image provider returned no persisted artifact.',
         extra: {
           ...tracked,
           jobStatus: status,
@@ -680,32 +718,46 @@ export async function POST(request: NextRequest) {
         },
       }))
       const data = await readJson(response)
-      const success = Boolean(data.success)
+      const status = String(data.jobStatus ?? data.status ?? 'failed')
+      const completed = ['completed', 'succeeded'].includes(status)
+        && Boolean(data.artifactId || data.storageUrl || data.audioUrl || data.musicUrl)
+      const processing = ['queued', 'processing', 'submitted'].includes(status)
+      const success = completed || processing
       const selectedProvider = canonicalProviderValue(data.provider, route.selectedProvider)
       const selectedModel = data.model ?? route.selectedModel
-      const status = String(data.jobStatus ?? data.status ?? 'failed')
-      const proof = await recordStudioProof({
-        mode: 'music',
-        capability: 'music_generation',
-        appSlug,
-        provider: selectedProvider,
-        model: selectedModel,
-        success,
-        executed: success,
-        artifactId: data.artifactId ?? null,
-        artifactPath: data.storageUrl ?? null,
-        jobId: data.jobId ?? null,
-        routePath: '/api/admin/music-studio',
-        metadata: {
-          source: 'studio_execute',
-          truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null,
-          genres,
-          durationSeconds: duration,
-          bpm,
-          songStructure,
-          musicVideoHandoff,
-        },
-      })
+      const proof = completed
+        ? await recordStudioProof({
+          mode: 'music',
+          capability: 'music_generation',
+          appSlug,
+          provider: selectedProvider,
+          model: selectedModel,
+          success: true,
+          executed: true,
+          artifactId: data.artifactId ?? null,
+          artifactPath: data.storageUrl ?? null,
+          jobId: data.jobId ?? null,
+          routePath: '/api/admin/music-studio',
+          metadata: {
+            source: 'studio_execute',
+            truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null,
+            genres,
+            durationSeconds: duration,
+            bpm,
+            songStructure,
+            musicVideoHandoff,
+          },
+        })
+        : studioProofSnapshot({
+          capability: 'music_generation',
+          provider: selectedProvider,
+          model: selectedModel,
+          route: '/api/admin/music-studio',
+          artifactId: null,
+          jobId: data.jobId ?? null,
+          proofStatus: processing ? 'processing' : 'failed',
+          error: data.blocker ?? data.error ?? null,
+        })
       return NextResponse.json(structuredResult({
         ok: success,
         mode: 'music',
@@ -718,7 +770,7 @@ export async function POST(request: NextRequest) {
         selectedModel,
         proof,
         blocker: data.blocker ?? data.error ?? null,
-        nextAction: success ? 'Open the artifact or poll the job until completed.' : data.blocker ?? data.error ?? 'Music provider did not return audio or a trackable job.',
+        nextAction: completed ? 'Open the artifact.' : processing ? 'Poll the job until completed.' : data.blocker ?? data.error ?? 'Music provider did not return audio or a trackable job.',
         extra: {
           ...data,
           jobStatus: status,

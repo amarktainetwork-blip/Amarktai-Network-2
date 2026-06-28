@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => {
     records,
     getGenXJobStatus: vi.fn(),
     persistCanonicalMediaResult: vi.fn(),
+    recordProviderResult: vi.fn(async () => null),
   }
 })
 
@@ -40,6 +41,10 @@ vi.mock('@/lib/canonical-media-artifact', () => ({
   persistCanonicalMediaResult: mocks.persistCanonicalMediaResult,
 }))
 
+vi.mock('@/lib/provider-result-log', () => ({
+  recordProviderResult: mocks.recordProviderResult,
+}))
+
 import {
   createLocalMediaJob,
   localMediaJobResponse,
@@ -56,6 +61,8 @@ beforeEach(() => {
   mocks.records.clear()
   mocks.getGenXJobStatus.mockReset()
   mocks.persistCanonicalMediaResult.mockReset()
+  mocks.recordProviderResult.mockReset()
+  mocks.recordProviderResult.mockResolvedValue(null)
 })
 
 describe('local media job lifecycle', () => {
@@ -79,6 +86,7 @@ describe('local media job lifecycle', () => {
       providerJobId: 'provider-job-1',
       pollUrl: '/api/brain/media-jobs/local-media-job-1',
       artifactId: null,
+      proof: expect.objectContaining({ proofStatus: 'processing' }),
     })
   })
 
@@ -118,6 +126,15 @@ describe('local media job lifecycle', () => {
       provider: 'genx',
       traceId: 'media-job-local-media-job-1',
     }))
+    expect(mocks.recordProviderResult).toHaveBeenCalledWith(expect.objectContaining({
+      capability: 'music_generation',
+      provider: 'genx',
+      artifactId: 'artifact-1',
+      metadata: expect.objectContaining({ proofStatus: 'passed' }),
+    }))
+    expect(localMediaJobResponse(completed!)).toMatchObject({
+      proof: expect.objectContaining({ proofStatus: 'passed', artifactId: 'artifact-1' }),
+    })
   })
 
   it('fails stale jobs instead of leaving them processing forever', async () => {
@@ -142,6 +159,9 @@ describe('local media job lifecycle', () => {
     expect(failed).toMatchObject({ status: 'failed' })
     expect(failed?.error).toContain('15 minutes')
     expect(mocks.getGenXJobStatus).not.toHaveBeenCalled()
+    expect(localMediaJobResponse(failed!)).toMatchObject({
+      proof: expect.objectContaining({ proofStatus: 'failed' }),
+    })
   })
 })
 
@@ -161,6 +181,7 @@ describe('live media route contracts', () => {
     const studio = read('app/api/admin/studio/execute/route.ts')
     expect(studio).toContain("if (tab === 'Video') return 'video_generation'")
     expect(studio).toContain('pollUrl: tracked?.pollUrl ?? null')
+    expect(studio).toContain("proofStatus: processing ? 'processing' : 'failed'")
     expect(studio).toContain("const vocalStyle = stringControl(controls, 'vocalStyle', stringControl(controls, 'vocals', 'instrumental_only'))")
     expect(studio).toContain("const duration = Math.max(180, durationSeconds(stringControl(controls, 'duration', '180s'), 180))")
     expect(studio).toContain("stringArrayControl(controls, 'genres'")

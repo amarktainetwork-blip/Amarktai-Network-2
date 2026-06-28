@@ -31,15 +31,26 @@ const TASKS: StudioTask[] = [
 ]
 
 type StudioMessage = { role: 'user' | 'assistant'; content: string }
+type StudioExecutionState = 'idle' | 'validating' | 'submitted' | 'processing' | 'completed' | 'failed'
 type StudioResult = {
   text: string
-  status: string
+  status: StudioExecutionState
+  mediaType?: 'image' | 'audio' | 'music' | 'video'
   provider?: string
   model?: string
   artifactId?: string
   artifactUrl?: string
   jobUrl?: string
   outputUrl?: string
+  blocker?: string
+}
+type ActiveStudioJob = {
+  id: string
+  pollUrl: string
+  taskId: TaskId
+  status: StudioExecutionState
+  provider?: string
+  model?: string
   blocker?: string
 }
 
@@ -51,8 +62,10 @@ export default function StudioPage() {
   const [appSlug, setAppSlug] = useState('amarktai-network')
   const [messages, setMessages] = useState<StudioMessage[]>([])
   const [result, setResult] = useState<StudioResult | null>(null)
+  const [activeJobs, setActiveJobs] = useState<ActiveStudioJob[]>([])
+  const [recentArtifacts, setRecentArtifacts] = useState<StudioResult[]>([])
   const [running, setRunning] = useState(false)
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<StudioExecutionState>('idle')
 
   const [imageSize, setImageSize] = useState('1024x1024')
   const [imageStyle, setImageStyle] = useState('premium realistic')
@@ -109,7 +122,7 @@ export default function StudioPage() {
   async function submit() {
     if (!canSubmit || running) return
     setRunning(true)
-    setStatus('Running')
+    setStatus('validating')
     setResult(null)
 
     try {
@@ -122,8 +135,8 @@ export default function StudioPage() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Studio execution failed'
-      setStatus(message)
-      setResult({ text: message, status: 'blocked', blocker: message })
+      setStatus('failed')
+      setResult({ text: message, status: 'failed', blocker: message })
     } finally {
       setRunning(false)
     }
@@ -152,11 +165,11 @@ export default function StudioPage() {
     setMessages((current) => [...current, { role: 'assistant', content: answer || 'No response returned.' }])
     setResult({
       text: answer || 'No response returned.',
-      status: String(data.status ?? 'completed'),
+      status: normalizeExecutionState(data.status ?? 'completed'),
       provider: data.selectedProvider ?? data.provider,
       model: data.selectedModel ?? data.model,
     })
-    setStatus('Completed')
+    setStatus('completed')
   }
 
   async function runCapability() {
@@ -177,27 +190,80 @@ export default function StudioPage() {
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok || data.success === false) throw new Error(data.error ?? data.result?.error ?? 'Execution is not wired for this task')
-    const text = summarizeResult(data)
+    const initial = normalizeStudioResult(data, task.id)
+    const text = initial.text
     setMessages((current) => [...current, { role: 'user', content: prompt }, { role: 'assistant', content: text }])
-    setResult({
-      text,
-      status: String(data.jobStatus ?? data.status ?? data.result?.status ?? 'completed'),
-      provider: data.provider ?? data.result?.provider,
-      model: data.model ?? data.result?.model,
-      artifactId: data.artifactId ?? data.artifact?.id,
-      artifactUrl: firstString(data.storageUrl, data.artifact?.storageUrl),
-      jobUrl: firstString(data.pollUrl, data.job?.pollUrl),
-      outputUrl: firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl),
-    })
-    setStatus('Completed')
+    setResult(initial)
+    setStatus(initial.status)
+    if (initial.artifactId) rememberArtifact(initial)
+    if (initial.status === 'processing' && initial.jobUrl) {
+      const jobId = initial.jobUrl.split('/').filter(Boolean).pop() ?? initial.jobUrl
+      const activeJob = {
+        id: jobId,
+        pollUrl: initial.jobUrl,
+        taskId: task.id,
+        status: 'processing' as const,
+        provider: initial.provider,
+        model: initial.model,
+      }
+      setActiveJobs((current) => upsertActiveJob(current, activeJob))
+      void pollStudioJob(activeJob)
+    }
     setPrompt('')
+  }
+
+  async function pollStudioJob(job: ActiveStudioJob) {
+    const maxPolls = 120
+    for (let attempt = 0; attempt < maxPolls; attempt += 1) {
+      await sleep(attempt === 0 ? 1000 : 3000)
+      const response = await fetch(job.pollUrl, { cache: 'no-store' })
+      const data = await response.json().catch(() => ({}))
+      const hydrated = normalizeStudioResult(data, job.taskId)
+      const nextStatus = hydrated.status === 'submitted' ? 'processing' : hydrated.status
+      setActiveJobs((current) => upsertActiveJob(current, {
+        ...job,
+        status: nextStatus,
+        provider: hydrated.provider ?? job.provider,
+        model: hydrated.model ?? job.model,
+        blocker: hydrated.blocker,
+      }))
+      setResult(hydrated)
+      setStatus(nextStatus)
+      if (nextStatus === 'completed') {
+        if (!hydrated.artifactId && !hydrated.outputUrl) {
+          const blocker = 'Job completed but no artifact was returned/saved.'
+          const failed = { ...hydrated, status: 'failed' as const, blocker, text: blocker }
+          setResult(failed)
+          setStatus('failed')
+          setMessages((current) => [...current, { role: 'assistant', content: blocker }])
+          return
+        }
+        rememberArtifact(hydrated)
+        setMessages((current) => [...current, { role: 'assistant', content: hydrated.text }])
+        return
+      }
+      if (nextStatus === 'failed') {
+        const blocker = hydrated.blocker ?? 'Media job failed.'
+        setMessages((current) => [...current, { role: 'assistant', content: blocker }])
+        return
+      }
+    }
+    const blocker = 'Media job timed out before completion.'
+    setActiveJobs((current) => upsertActiveJob(current, { ...job, status: 'failed', blocker }))
+    setResult({ text: blocker, status: 'failed', blocker, provider: job.provider, model: job.model, jobUrl: job.pollUrl })
+    setStatus('failed')
+  }
+
+  function rememberArtifact(item: StudioResult) {
+    if (!item.artifactId) return
+    setRecentArtifacts((current) => [item, ...current.filter((entry) => entry.artifactId !== item.artifactId)].slice(0, 5))
   }
 
   async function runTranscription() {
     if (!sttFile) {
       const message = 'Audio file is required for /api/admin/studio/stt'
-      setResult({ text: message, status: 'blocked', blocker: message })
-      setStatus(message)
+      setResult({ text: message, status: 'failed', blocker: message })
+      setStatus('failed')
       return
     }
     const form = new FormData()
@@ -210,12 +276,12 @@ export default function StudioPage() {
     setMessages((current) => [...current, { role: 'user', content: `Transcribe ${sttFile.name}` }, { role: 'assistant', content: transcript }])
     setResult({
       text: transcript,
-      status: String(data.result?.status ?? 'completed'),
+      status: normalizeExecutionState(data.result?.status ?? 'completed'),
       provider: data.result?.provider,
       model: data.result?.model,
       artifactId: data.artifact?.id,
     })
-    setStatus('Completed')
+    setStatus('completed')
   }
 
   function buildControls(id: TaskId) {
@@ -363,11 +429,24 @@ export default function StudioPage() {
                 {running ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </button>
             </div>
-            {status && <p className="mt-3 text-xs font-bold text-slate-500">{status}</p>}
+            {status !== 'idle' && <p className="mt-3 text-xs font-bold text-slate-500">{labelState(status)}</p>}
           </div>
         </div>
 
         <aside className="space-y-4">
+          {result?.outputUrl && result.status === 'completed' && (
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Preview</p>
+              {result.mediaType === 'image' ? (
+                <img src={result.outputUrl} alt="Generated Studio output" className="mt-4 aspect-square w-full rounded-xl border border-slate-800 object-cover" />
+              ) : result.mediaType === 'audio' || result.mediaType === 'music' ? (
+                <audio src={result.outputUrl} controls className="mt-4 w-full" />
+              ) : (
+                <a href={result.outputUrl} target="_blank" rel="noreferrer" className="mt-4 block break-words text-sm font-bold text-cyan-200 hover:text-cyan-100">{result.outputUrl}</a>
+              )}
+            </section>
+          )}
+
           <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Execution proof</p>
             {result ? (
@@ -385,6 +464,35 @@ export default function StudioPage() {
               <p className="mt-4 text-sm leading-7 text-slate-500">Proof appears after a real execution result. No infrastructure selector is exposed.</p>
             )}
           </section>
+
+          {activeJobs.length > 0 && (
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Active jobs</p>
+              <div className="mt-4 space-y-2">
+                {activeJobs.map((job) => (
+                  <div key={job.id} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
+                    <p className="text-xs font-black text-slate-300">{job.taskId}</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">{labelState(job.status)}</p>
+                    {job.blocker && <p className="mt-1 text-xs font-bold text-rose-200">{job.blocker}</p>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {recentArtifacts.length > 0 && (
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Recent artifacts</p>
+              <div className="mt-4 space-y-2">
+                {recentArtifacts.map((artifact) => (
+                  <div key={artifact.artifactId} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
+                    <p className="text-xs font-black text-slate-300">{artifact.artifactId}</p>
+                    {artifact.artifactUrl && <a href={artifact.artifactUrl} target="_blank" rel="noreferrer" className="mt-1 block break-words text-xs font-bold text-cyan-200 hover:text-cyan-100">Open artifact</a>}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <details className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
             <summary className="cursor-pointer text-sm font-black text-slate-300">Advanced route details</summary>
@@ -480,6 +588,77 @@ function summarizeResult(data: Record<string, unknown>) {
   if (typeof artifact?.id === 'string') return `Artifact saved: ${artifact.id}`
   if (typeof data.pollUrl === 'string') return `Job created: ${data.pollUrl}`
   return 'Execution completed. Check Assets & Jobs for saved references.'
+}
+
+function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): StudioResult {
+  const result = toRecord(data.result)
+  const artifact = toRecord(data.artifact)
+  const job = toRecord(data.job)
+  const rawState = data.jobStatus ?? data.status ?? result?.status
+  let status = normalizeExecutionState(rawState)
+  const mediaType = taskId === 'image'
+    ? 'image'
+    : taskId === 'music'
+      ? 'music'
+      : taskId === 'video' || taskId === 'long-video'
+        ? 'video'
+        : undefined
+  const artifactId = firstString(data.artifactId, artifact?.id, result?.artifactId)
+  const artifactUrl = firstString(data.storageUrl, data.mediaUrl, artifact?.storageUrl, result?.storageUrl)
+  const outputUrl = firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.musicUrl, result?.audioUrl, result?.mediaUrl)
+  const jobUrl = firstString(data.pollUrl, job?.pollUrl, result?.pollUrl)
+  const blocker = firstString(data.blocker, data.error, result?.blocker, result?.error)
+
+  if (['image', 'music'].includes(taskId) && status === 'completed' && !artifactId && !outputUrl) {
+    status = 'failed'
+  }
+
+  return {
+    text: status === 'processing'
+      ? `Job submitted: ${jobUrl ?? 'polling active'}`
+      : status === 'failed'
+        ? blocker ?? summarizeResult(data)
+        : summarizeResult(data),
+    status,
+    mediaType,
+    provider: firstString(data.selectedProvider, data.provider, result?.selectedProvider, result?.provider),
+    model: firstString(data.selectedModel, data.model, result?.selectedModel, result?.model),
+    artifactId,
+    artifactUrl,
+    jobUrl,
+    outputUrl,
+    blocker: status === 'failed'
+      ? blocker ?? (['image', 'music'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
+      : blocker,
+  }
+}
+
+function normalizeExecutionState(value: unknown): StudioExecutionState {
+  const status = String(value ?? '').toLowerCase().replaceAll('_', '-')
+  if (['queued', 'pending', 'processing', 'running', 'in-progress'].includes(status)) return 'processing'
+  if (['submitted', 'accepted'].includes(status)) return 'submitted'
+  if (['completed', 'complete', 'succeeded', 'success', 'generated'].includes(status)) return 'completed'
+  if (['failed', 'error', 'cancelled', 'canceled', 'timed-out', 'timeout'].includes(status)) return 'failed'
+  if (status === 'validating') return 'validating'
+  return 'completed'
+}
+
+function labelState(value: StudioExecutionState) {
+  if (value === 'idle') return 'Idle'
+  if (value === 'validating') return 'Validating'
+  if (value === 'submitted') return 'Submitted'
+  if (value === 'processing') return 'Processing'
+  if (value === 'failed') return 'Failed'
+  return 'Completed'
+}
+
+function upsertActiveJob(current: ActiveStudioJob[], next: ActiveStudioJob) {
+  const existing = current.filter((job) => job.id !== next.id)
+  return [next, ...existing].slice(0, 8)
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function toRecord(value: unknown): Record<string, unknown> | null {

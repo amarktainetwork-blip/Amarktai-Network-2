@@ -7,6 +7,7 @@ import {
   updateRecord,
 } from '@/lib/local-json-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
+import { recordProviderResult } from '@/lib/provider-result-log'
 
 export type LocalMediaJobStatus = 'queued' | 'processing' | 'completed' | 'failed'
 export type LocalMediaType = 'image' | 'audio' | 'music' | 'video'
@@ -142,6 +143,24 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         localJobId: job.id,
       },
     })
+    await recordProviderResult({
+      appSlug: job.appSlug,
+      provider: job.provider,
+      model: job.model,
+      capability: job.capability,
+      success: Boolean(persisted.artifactId),
+      executed: Boolean(persisted.artifactId),
+      latencyMs: 0,
+      contentType: job.type,
+      artifactId: persisted.artifactId ?? undefined,
+      artifactPath: persisted.storageUrl ?? undefined,
+      metadata: {
+        source: 'media_job_poll',
+        localJobId: job.id,
+        providerJobId: job.providerJobId,
+        proofStatus: persisted.artifactId ? 'passed' : 'failed',
+      },
+    }).catch(() => null)
     return saveJob(job, {
       status: 'completed',
       artifactId: persisted.artifactId,
@@ -163,6 +182,7 @@ export function localMediaJobResponse(job: LocalMediaJob) {
   const completed = job.status === 'completed' && Boolean(job.artifactId && (job.storageUrl || job.mediaUrl))
   const trackable = job.status === 'queued' || job.status === 'processing'
   const pollUrl = `/api/brain/media-jobs/${job.id}`
+  const proofStatus = completed ? 'passed' : trackable ? 'processing' : 'failed'
   return {
     success: completed || trackable,
     executed: completed || trackable,
@@ -186,6 +206,18 @@ export function localMediaJobResponse(job: LocalMediaJob) {
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
     completedAt: job.completedAt,
+    proof: {
+      capability: job.capability,
+      provider: job.provider,
+      model: job.model,
+      route: pollUrl,
+      artifactId: job.artifactId,
+      jobId: job.id,
+      providerJobId: job.providerJobId,
+      timestamp: job.updatedAt,
+      proofStatus,
+      error: job.error,
+    },
     job,
   }
 }
