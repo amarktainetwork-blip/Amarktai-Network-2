@@ -43,10 +43,11 @@ type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'voic
 type ProofMode = 'chat' | 'image' | 'music'
 
 const STUDIO_EXECUTABLE_PROVIDERS: Record<ProofMode, readonly ProviderMeshId[]> = {
-  chat: ['genx', 'groq', 'together', 'mimo', 'huggingface'],
+  chat: ['groq', 'together', 'mimo', 'genx', 'huggingface'],
   image: ['genx', 'together'],
   music: ['genx'],
 }
+const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'mimo', 'groq', 'together', 'huggingface']
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
   return new NextRequest(new URL(path, 'http://studio.local'), {
@@ -227,12 +228,24 @@ async function preflightCapability(mode: StudioExecutionMode, capability: string
   return { truth, response: null, statusCode: 200 }
 }
 
-function selectStudioProvider(mode: StudioExecutionMode, truth?: CapabilityRuntimeTruthEntry | null): ProviderMeshId | null {
+function effectiveStudioCostMode(body: ExecuteBody) {
+  if (body.costMode === 'premium' || body.qualityTier === 'high' || body.qualityTier === 'premium') return 'premium'
+  if (body.costMode === 'cheap' || body.qualityTier === 'basic') return 'cheap'
+  return 'balanced'
+}
+
+function selectStudioProvider(
+  mode: StudioExecutionMode,
+  truth?: CapabilityRuntimeTruthEntry | null,
+  costMode: 'cheap' | 'balanced' | 'premium' = 'balanced',
+): ProviderMeshId | null {
   if (!truth || !['chat', 'image', 'music'].includes(mode)) return null
-  const supported = STUDIO_EXECUTABLE_PROVIDERS[mode as ProofMode]
-  for (const provider of truth.connectedProviderCandidates) {
-    const canonical = normalizeProviderMeshId(provider)
-    if (canonical && supported.includes(canonical)) return canonical
+  const connected = new Set(truth.connectedProviderCandidates.map((provider) => normalizeProviderMeshId(provider)).filter(Boolean))
+  const supported = mode === 'chat' && costMode === 'premium'
+    ? STUDIO_PREMIUM_CHAT_PROVIDERS
+    : STUDIO_EXECUTABLE_PROVIDERS[mode as ProofMode]
+  for (const provider of supported) {
+    if (connected.has(provider)) return provider
   }
   return null
 }
@@ -411,12 +424,13 @@ export async function POST(request: NextRequest) {
 
   const capability = normalizeCapability(tab, body.mode)
   const mode = normalizeMode(body.mode, tab)
+  const costMode = effectiveStudioCostMode(body)
   const proofCapabilityId = proofCapability(mode, capability)
   const preflight = await preflightCapability(mode, proofCapabilityId)
   if (preflight?.response) {
     return NextResponse.json(preflight.response, { status: preflight.statusCode })
   }
-  const studioProvider = selectStudioProvider(mode, preflight?.truth)
+  const studioProvider = selectStudioProvider(mode, preflight?.truth, costMode)
   if ((mode === 'chat' || mode === 'image' || mode === 'music') && !studioProvider) {
     return NextResponse.json(
       noConnectedStudioProviderResponse(mode, proofCapabilityId, preflight?.truth),
@@ -435,7 +449,7 @@ export async function POST(request: NextRequest) {
     appSlug,
     selectedProvider: studioProvider ?? undefined,
     selectedModel: undefined,
-    costMode: body.costMode ?? 'balanced',
+    costMode,
     adultPolicy: (body.adultPolicy ?? 'off') as AdultPolicyValue,
     requiresMedia: ['image', 'video', 'adult_image', 'adult_video', 'adult_voice', 'music_generation', 'tts'].includes(capability),
   })
@@ -458,12 +472,18 @@ export async function POST(request: NextRequest) {
         capability: 'chat',
         providerOverride: route.selectedProvider,
         modelOverride: route.selectedModel,
-        costMode: body.costMode ?? 'balanced',
+        costMode,
         metadata: {
           appSlug,
           workspaceId: body.workspaceId,
           brandId: body.brandId,
           studio: true,
+          routingPolicy: {
+            budget: body.costMode ?? 'balanced',
+            qualityTier: body.qualityTier ?? 'standard',
+            effectiveCostMode: costMode,
+            reason: route.reason,
+          },
         },
       }))
       const data = await readJson(response)
@@ -497,7 +517,16 @@ export async function POST(request: NextRequest) {
         proof,
         blocker: success ? null : data.error ?? 'Chat runtime returned no output.',
         nextAction: success ? null : 'Check provider configuration and retry the Studio chat request.',
-        extra: { result: data, route: data.route ?? route },
+        extra: {
+          result: data,
+          route: data.route ?? route,
+          routingPolicy: {
+            budget: body.costMode ?? 'balanced',
+            qualityTier: body.qualityTier ?? 'standard',
+            effectiveCostMode: costMode,
+            reason: route.reason,
+          },
+        },
       }), { status: success ? 200 : response.status })
     }
 

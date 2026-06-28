@@ -318,6 +318,7 @@ function governedCandidates(capability: AiCapability): ProviderModelOption[] {
 }
 
 function governedModelToProviderOption(model: GovernedModel): ProviderModelOption {
+  const staticModel = STATIC_PROVIDER_MODELS[model.provider]?.find((entry) => entry.modelId === model.modelId)
   const modality = model.capabilities.includes('image_generation') || model.capabilities.includes('image_editing')
     ? 'image'
     : model.capabilities.includes('video_generation') || model.capabilities.includes('image_to_video')
@@ -343,7 +344,7 @@ function governedModelToProviderOption(model: GovernedModel): ProviderModelOptio
     family: model.providerLabel,
     modalities: [modality as ProviderModelOption['modalities'][number]],
     roles: [role as ProviderModelOption['roles'][number]],
-    costTier: model.provider === 'genx' ? 'medium' : 'unknown',
+    costTier: staticModel?.costTier ?? (model.provider === 'genx' ? 'medium' : 'low'),
     source: 'custom_supported',
     enabled: model.status !== 'available_not_wired' && model.status !== 'blocked',
     notes: model.notes,

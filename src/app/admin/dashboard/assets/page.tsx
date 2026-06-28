@@ -1,6 +1,7 @@
 import type React from 'react'
 import { Archive, Download, ExternalLink, FileAudio, FileImage, FileText, Music, RefreshCw, Video } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
+import { listArtifacts, type ArtifactRecord } from '@/lib/artifact-store'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +12,10 @@ type LocalArtifact = {
   type?: string
   status?: string
   storageUrl?: string
+  storagePath?: string
+  provider?: string
+  model?: string
+  metadata?: Record<string, unknown>
   url?: string
   path?: string
   createdAt?: string
@@ -49,7 +54,7 @@ type DbVideoJob = {
 
 async function getSnapshot() {
   try {
-    const [assets, videoJobs] = await Promise.all([
+    const [assets, videoJobs, artifactResult] = await Promise.all([
       prisma.generatedAsset.findMany({
         take: 40,
         orderBy: { createdAt: 'desc' },
@@ -71,10 +76,11 @@ async function getSnapshot() {
         orderBy: { createdAt: 'desc' },
         select: { id: true, prompt: true, status: true, provider: true, modelId: true, resultUrl: true, createdAt: true },
       }),
+      listArtifacts({ limit: 40 }),
     ])
-    return { database: 'working' as const, error: null, assets, videoJobs }
+    return { database: 'working' as const, error: null, assets, videoJobs, artifacts: artifactResult.artifacts }
   } catch (error) {
-    return { database: 'failed' as const, error: error instanceof Error ? error.message : 'Database unavailable', assets: [] as DbAsset[], videoJobs: [] as DbVideoJob[] }
+    return { database: 'failed' as const, error: error instanceof Error ? error.message : 'Database unavailable', assets: [] as DbAsset[], videoJobs: [] as DbVideoJob[], artifacts: [] as ArtifactRecord[] }
   }
 }
 
@@ -125,7 +131,7 @@ export default async function AssetsAndJobsPage() {
       )}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={<FileImage />} label="Generated assets" value={String(snapshot.assets.length)} />
+        <Metric icon={<FileImage />} label="Generated assets" value={String(snapshot.assets.length + snapshot.artifacts.length)} />
         <Metric icon={<Video />} label="Video jobs" value={String(snapshot.videoJobs.length)} />
         <Metric icon={<Archive />} label="Local artifacts" value={String(localArtifacts.length)} />
         <Metric icon={<RefreshCw />} label="Command jobs" value={String(commandJobs.length)} />
@@ -142,8 +148,8 @@ export default async function AssetsAndJobsPage() {
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel title="Assets">
           <div className="grid gap-3 lg:grid-cols-2">
-            {[...snapshot.assets.map(assetFromDb), ...localArtifacts.map(assetFromLocal)].length ? (
-              [...snapshot.assets.map(assetFromDb), ...localArtifacts.map(assetFromLocal)].map((asset) => (
+            {[...snapshot.assets.map(assetFromDb), ...snapshot.artifacts.map(assetFromCanonical), ...localArtifacts.map(assetFromLocal)].length ? (
+              [...snapshot.assets.map(assetFromDb), ...snapshot.artifacts.map(assetFromCanonical), ...localArtifacts.map(assetFromLocal)].map((asset) => (
                 <article key={asset.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
                   <div className="flex items-start gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-800 bg-slate-900 text-cyan-300">
@@ -155,6 +161,12 @@ export default async function AssetsAndJobsPage() {
                         <StatusPill status={asset.status} />
                       </div>
                       <p className="mt-1 text-xs text-slate-500">{asset.type}</p>
+                      <p className="mt-1 text-xs text-slate-600">{asset.createdAt}</p>
+                      {(asset.provider || asset.model) && (
+                        <p className="mt-2 text-xs font-bold text-slate-500">{asset.provider || 'runtime'} / {asset.model || 'model selected at runtime'}</p>
+                      )}
+                      {asset.capability && <p className="mt-1 text-xs font-bold text-slate-600">{asset.capability}</p>}
+                      {asset.brokenReason && <p className="mt-2 rounded-lg border border-red-300/20 bg-red-300/10 px-2 py-1.5 text-xs font-bold text-red-100">{asset.brokenReason}</p>}
                       <div className="mt-3 flex flex-wrap gap-2">
                         {asset.href ? (
                           <a href={asset.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1.5 text-xs font-black text-cyan-200">
@@ -241,16 +253,49 @@ function assetFromDb(asset: DbAsset) {
     type: asset.assetType,
     status: asset.approvalStatus || asset.status,
     href: asset.resultUrl ?? asset.thumbnailUrl ?? (asset.resultFilePath ? `/api/artifacts/file/${asset.resultFilePath}` : ''),
+    provider: asset.runtimeSelectedProvider,
+    model: asset.runtimeSelectedModel,
+    capability: asset.assetType,
+    createdAt: asset.createdAt.toISOString(),
+    brokenReason: '',
   }
 }
 
-function assetFromLocal(artifact: LocalArtifact) {
+function assetFromCanonical(artifact: ArtifactRecord) {
+  const externalPrimaryUrl = /^https?:\/\//i.test(artifact.storageUrl)
+  const missingFile = !artifact.storagePath || !artifact.storageUrl
   return {
     id: artifact.id,
     title: artifact.title || artifact.id,
     type: artifact.type || 'artifact',
-    status: artifact.status || 'stored',
-    href: artifact.storageUrl || artifact.url || artifact.path || '',
+    status: missingFile || externalPrimaryUrl ? 'broken' : artifact.status || 'stored',
+    href: missingFile || externalPrimaryUrl ? '' : artifact.storageUrl,
+    provider: artifact.provider,
+    model: artifact.model,
+    capability: typeof artifact.metadata.capability === 'string' ? artifact.metadata.capability : artifact.subType,
+    createdAt: artifact.createdAt.toISOString(),
+    brokenReason: missingFile
+      ? 'Broken asset: metadata exists but no platform file is saved.'
+      : externalPrimaryUrl
+        ? 'Broken asset: provider URL was not ingested into platform storage.'
+        : '',
+  }
+}
+
+function assetFromLocal(artifact: LocalArtifact) {
+  const href = artifact.storageUrl || artifact.url || artifact.path || ''
+  const externalPrimaryUrl = /^https?:\/\//i.test(href)
+  return {
+    id: artifact.id,
+    title: artifact.title || artifact.id,
+    type: artifact.type || 'artifact',
+    status: externalPrimaryUrl ? 'broken' : artifact.status || 'stored',
+    href: externalPrimaryUrl ? '' : href,
+    provider: artifact.provider ?? '',
+    model: artifact.model ?? '',
+    capability: typeof artifact.metadata?.capability === 'string' ? artifact.metadata.capability : '',
+    createdAt: artifact.createdAt ?? '',
+    brokenReason: externalPrimaryUrl ? 'Broken asset: provider URL was not ingested into platform storage.' : '',
   }
 }
 

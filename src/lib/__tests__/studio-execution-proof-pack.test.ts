@@ -67,6 +67,28 @@ describe('Studio execution proof pack', () => {
     expect(studio).toContain('360s')
   })
 
+  it('Studio preview uses platform artifact URLs instead of provider file URLs', () => {
+    const studio = source('app/admin/dashboard/studio/page.tsx')
+
+    expect(studio).toContain("isPlatformArtifactUrl(rawOutputUrl)")
+    expect(studio).toContain("return value.startsWith('/api/artifacts/file/')")
+    expect(studio).toContain("Job completed but no platform artifact was returned/saved.")
+    expect(studio).toContain('<audio src={result.outputUrl} controls')
+    expect(studio).toContain('<img src={result.outputUrl}')
+    expect(studio).not.toContain('Generated Studio output')
+  })
+
+  it('Assets page lists canonical artifacts and marks external provider URLs as broken', () => {
+    const assets = source('app/admin/dashboard/assets/page.tsx')
+
+    expect(assets).toContain('listArtifacts')
+    expect(assets).toContain('assetFromCanonical')
+    expect(assets).toContain('Broken asset: provider URL was not ingested into platform storage.')
+    expect(assets).toContain('Broken asset: metadata exists but no platform file is saved.')
+    expect(assets).toContain('artifact.storageUrl')
+    expect(assets).toContain('artifact.storagePath')
+  })
+
   it('music execution forwards lyrics, structure, vocals, mood, BPM, count, and backend payload metadata', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
 
@@ -100,6 +122,7 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain("Poll the job until completed.")
     expect(jobs).toContain("source: 'media_job_poll'")
     expect(jobs).toContain("proofStatus: persisted.artifactId ? 'passed' : 'failed'")
+    expect(jobs).toContain('Provider completed but artifact ingestion failed')
   })
 
   it('Studio UI has no provider or model selector and only displays selected route after execution', () => {
@@ -123,6 +146,22 @@ describe('Studio execution proof pack', () => {
     expect(studio).toContain("setStatus(initial.status)")
     expect(studio).not.toContain("setStatus('Completed')")
     expect(studio).not.toContain("status: String(data.jobStatus")
+  })
+
+  it('Studio chat routing respects budget and quality policy', () => {
+    const route = source('app/api/admin/studio/execute/route.ts')
+    const routing = source('lib/live-ai-routing.ts')
+    const balanced = routeLiveModel({ capability: 'chat', costMode: 'balanced' })
+    const premium = routeLiveModel({ capability: 'chat', costMode: 'premium' })
+
+    expect(route).toContain("chat: ['groq', 'together', 'mimo', 'genx', 'huggingface']")
+    expect(route).toContain('STUDIO_PREMIUM_CHAT_PROVIDERS')
+    expect(route).toContain('effectiveStudioCostMode')
+    expect(route).toContain('routingPolicy')
+    expect(routing).toContain('staticModel?.costTier')
+    expect(balanced.selectedModel).not.toBe('mimo-v2.5-pro')
+    expect(balanced.selectedModel).not.toBe('auto:coding-best')
+    expect(premium.selectedModel).toBeTruthy()
   })
 
   it('normalizes only known provider aliases represented in the canonical mesh', () => {

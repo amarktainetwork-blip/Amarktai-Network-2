@@ -163,6 +163,39 @@ describe('local media job lifecycle', () => {
       proof: expect.objectContaining({ proofStatus: 'failed' }),
     })
   })
+
+  it('fails completed provider jobs when artifact ingestion fails', async () => {
+    createLocalMediaJob({
+      capability: 'image_generation',
+      appSlug: 'amarktai-network',
+      type: 'image',
+      subType: 'studio_image',
+      title: 'Image',
+      prompt: 'A glass city',
+      provider: 'genx',
+      model: 'gpt-image-2',
+      providerJobId: 'provider-job-4',
+    })
+    mocks.getGenXJobStatus.mockResolvedValue({
+      id: 'provider-job-4',
+      status: 'completed',
+      resultUrl: 'https://query.genx.sh/api/v1/jobs/provider-job-4/file',
+    })
+    mocks.persistCanonicalMediaResult.mockRejectedValue(new Error('remote media fetch failed with HTTP 403'))
+
+    const failed = await pollLocalMediaJob('local-media-job-1')
+
+    expect(failed).toMatchObject({
+      status: 'failed',
+      artifactId: null,
+      storageUrl: null,
+      error: 'Provider completed but artifact ingestion failed: remote media fetch failed with HTTP 403',
+    })
+    expect(localMediaJobResponse(failed!)).toMatchObject({
+      blocker: 'Provider completed but artifact ingestion failed: remote media fetch failed with HTTP 403',
+      proof: expect.objectContaining({ proofStatus: 'failed' }),
+    })
+  })
 })
 
 describe('live media route contracts', () => {

@@ -438,7 +438,7 @@ export default function StudioPage() {
             <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Preview</p>
               {result.mediaType === 'image' ? (
-                <img src={result.outputUrl} alt="Generated Studio output" className="mt-4 aspect-square w-full rounded-xl border border-slate-800 object-cover" />
+                <img src={result.outputUrl} alt="Studio image preview" className="mt-4 aspect-square w-full rounded-xl border border-slate-800 object-cover" />
               ) : result.mediaType === 'audio' || result.mediaType === 'music' ? (
                 <audio src={result.outputUrl} controls className="mt-4 w-full" />
               ) : (
@@ -605,11 +605,12 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
         : undefined
   const artifactId = firstString(data.artifactId, artifact?.id, result?.artifactId)
   const artifactUrl = firstString(data.storageUrl, data.mediaUrl, artifact?.storageUrl, result?.storageUrl)
-  const outputUrl = firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.musicUrl, result?.audioUrl, result?.mediaUrl)
+  const rawOutputUrl = firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.musicUrl, result?.audioUrl, result?.mediaUrl)
+  const outputUrl = rawOutputUrl && isPlatformArtifactUrl(rawOutputUrl) ? rawOutputUrl : undefined
   const jobUrl = firstString(data.pollUrl, job?.pollUrl, result?.pollUrl)
   const blocker = firstString(data.blocker, data.error, result?.blocker, result?.error)
 
-  if (['image', 'music'].includes(taskId) && status === 'completed' && !artifactId && !outputUrl) {
+  if (['image', 'music'].includes(taskId) && status === 'completed' && (!artifactId || !outputUrl)) {
     status = 'failed'
   }
 
@@ -624,11 +625,13 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
     provider: firstString(data.selectedProvider, data.provider, result?.selectedProvider, result?.provider),
     model: firstString(data.selectedModel, data.model, result?.selectedModel, result?.model),
     artifactId,
-    artifactUrl,
+    artifactUrl: artifactUrl && isPlatformArtifactUrl(artifactUrl) ? artifactUrl : undefined,
     jobUrl,
     outputUrl,
     blocker: status === 'failed'
-      ? blocker ?? (['image', 'music'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
+      ? blocker ?? (rawOutputUrl && !isPlatformArtifactUrl(rawOutputUrl)
+        ? 'Job completed but no platform artifact was returned/saved.'
+        : ['image', 'music'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
       : blocker,
   }
 }
@@ -667,4 +670,8 @@ function toRecord(value: unknown): Record<string, unknown> | null {
 
 function firstString(...values: unknown[]) {
   return values.find((value): value is string => typeof value === 'string' && value.length > 0)
+}
+
+function isPlatformArtifactUrl(value: string) {
+  return value.startsWith('/api/artifacts/file/')
 }

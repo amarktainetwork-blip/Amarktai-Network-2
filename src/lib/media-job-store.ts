@@ -172,7 +172,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
   } catch (error) {
     return saveJob(job, {
       status: 'failed',
-      error: `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      error: `Provider completed but artifact ingestion failed: ${error instanceof Error ? error.message : 'unknown error'}`,
       completedAt: new Date().toISOString(),
     })
   }
