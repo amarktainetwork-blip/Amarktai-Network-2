@@ -313,8 +313,9 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
       if (!isV1ProductionAIProviderKey(model.provider)) return false
       if (capability.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(capability)) return false
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
-      if (capability === 'adult_text') return ['genx', 'together', 'huggingface'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
-      if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
+      // Adult routes must NEVER use GenX. HF primary; Together only when explicitly enabled.
+      if (capability === 'adult_text') return model.provider === 'huggingface' || (model.provider === 'together' && isTogetherAdultFallbackEnabled(capability))
+      if (capability === 'adult_image') return model.provider === 'huggingface' || (model.provider === 'together' && isTogetherAdultFallbackEnabled(capability))
       if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
       if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'genx'
       if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'huggingface'
@@ -336,6 +337,9 @@ function governedCandidates(capability: AiCapability): ProviderModelOption[] {
   if (!normalized) return []
   return getModelsForCapability(normalized)
     .filter((model) => isV1ProductionAIProviderKey(model.provider))
+    // Adult routes must never use GenX
+    .filter((model) => !(normalized.startsWith('adult_') && model.provider === 'genx'))
+    // Together adult only when explicitly gate-enabled
     .filter((model) => !(normalized.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(normalized)))
     .map(governedModelToProviderOption)
 }

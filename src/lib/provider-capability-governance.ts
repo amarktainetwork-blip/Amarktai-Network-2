@@ -363,6 +363,15 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
       blockers: ['provider_backend_disabled'],
     }
   }
+  // GenX must never handle adult capabilities — HF dedicated endpoints are the only valid path.
+  if (capability.startsWith('adult_') && providerId === 'genx') {
+    return {
+      allowed: false,
+      capability,
+      reason: 'GenX is not permitted for adult capabilities. Use Hugging Face dedicated endpoints (HF_ADULT_*_ENDPOINT).',
+      blockers: ['adult_provider_forbidden'],
+    }
+  }
   if (capability.startsWith('adult_') && providerId === 'together' && !isTogetherAdultFallbackEnabled(capability)) {
     return {
       allowed: false,

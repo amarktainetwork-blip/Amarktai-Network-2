@@ -52,7 +52,8 @@ type StudioChatProvider = 'groq' | 'together' | 'genx' | 'huggingface'
 
 const STUDIO_EXECUTABLE_PROVIDERS: Record<RouteProofMode, readonly ProviderMeshId[]> = {
   chat: ['groq', 'together', 'genx', 'huggingface'],
-  image: ['genx', 'together'],
+  // Together is preferred for standard image (cheaper, FLUX); GenX is fallback
+  image: ['together', 'genx'],
   music: ['genx'],
 }
 const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'groq', 'together', 'huggingface']
