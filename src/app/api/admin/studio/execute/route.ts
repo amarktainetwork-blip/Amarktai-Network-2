@@ -48,20 +48,19 @@ type ExecuteBody = {
 type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'long_video' | 'image_to_video' | 'voice' | 'avatar'
 type RouteProofMode = 'chat' | 'image' | 'music'
 type ProofMode = RouteProofMode | 'video' | 'avatar'
-type StudioChatProvider = 'groq' | 'together' | 'mimo' | 'genx' | 'huggingface'
+type StudioChatProvider = 'groq' | 'together' | 'genx' | 'huggingface'
 
 const STUDIO_EXECUTABLE_PROVIDERS: Record<RouteProofMode, readonly ProviderMeshId[]> = {
-  chat: ['groq', 'together', 'mimo', 'genx', 'huggingface'],
+  chat: ['groq', 'together', 'genx', 'huggingface'],
   image: ['genx', 'together'],
   music: ['genx'],
 }
-const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'mimo', 'groq', 'together', 'huggingface']
+const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'groq', 'together', 'huggingface']
 const STUDIO_CHAT_EXECUTION_MODELS = {
   genx: 'gpt-5.4-mini',
   groq: 'llama-3.3-70b-versatile',
   together: 'meta-llama/Llama-3-70b-chat-hf',
   huggingface: 'meta-llama/Llama-3-8b-chat-hf',
-  mimo: 'mimo-v2.5',
 } satisfies Record<StudioChatProvider, string>
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -945,9 +944,18 @@ export async function POST(request: NextRequest) {
           route,
         }), { status: 400 })
       }
-      const provider = route.selectedProvider === 'genx'
-        ? route.selectedProvider
-        : 'genx'
+      if (route.selectedProvider !== 'genx') {
+        const blocker = `${route.selectedProvider ?? 'Selected provider'} is selected by routing for ${mode}, but /api/brain/video-generate is currently wired only to GenX video execution. No silent GenX fallback was applied.`
+        return NextResponse.json(blockerResponse({
+          mode,
+          capability: mode === 'image_to_video' ? 'image_to_video' : 'video_generation',
+          status: 'blocked',
+          blocker,
+          nextAction: 'Wire this provider into /api/brain/video-generate or let routing select GenX for this capability.',
+          route,
+        }), { status: 409 })
+      }
+      const provider = route.selectedProvider
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {
         prompt,
         style,

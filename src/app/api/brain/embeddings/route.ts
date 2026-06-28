@@ -89,7 +89,58 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Provider 2: GenX OpenAI-compatible embeddings (fallback) ──────────
+    // Provider 2: Together OpenAI-compatible embeddings (fallback)
+    const togetherKey = await getVaultApiKey('together');
+    if (togetherKey) {
+      const togetherModel = requestedModel ?? 'BAAI/bge-large-en-v1.5';
+      try {
+        const response = await fetch('https://api.together.xyz/v1/embeddings', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${togetherKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ model: togetherModel, input }),
+          signal: AbortSignal.timeout(30_000),
+        });
+
+        if (response.ok) {
+          const data = (await response.json()) as {
+            data?: Array<{ embedding?: number[]; index?: number }>;
+            model?: string;
+            usage?: { prompt_tokens?: number; total_tokens?: number };
+          };
+          const embeddings = data.data?.map((d) => d.embedding).filter((embedding): embedding is number[] => Array.isArray(embedding)) ?? [];
+          if (embeddings.length > 0) {
+            return NextResponse.json({
+              executed: true,
+              embeddings,
+              provider: 'together',
+              model: data.model ?? togetherModel,
+              dimensions: embeddings[0]?.length ?? 0,
+              usage: data.usage,
+              capability: 'embeddings',
+            });
+          }
+        } else {
+          const errBody = (await response.json().catch(() => ({}))) as {
+            error?: { message?: string } | string;
+          };
+          const message = typeof errBody.error === 'string'
+            ? errBody.error
+            : errBody.error?.message;
+          console.warn(
+            `[brain/embeddings] Together ${togetherModel} failed: ${message ?? response.status}`,
+          );
+        }
+      } catch (err) {
+        console.warn(
+          '[brain/embeddings] Together call failed:',
+          err instanceof Error ? err.message : err,
+        );
+      }
+    }
+
     try {
       const { resolveGenXConfig } = await import('@/lib/genx-client');
       const { apiUrl, apiKey, configured } = await resolveGenXConfig();
@@ -146,8 +197,8 @@ export async function POST(request: NextRequest) {
         error:
           'No embeddings provider is configured. ' +
           'Add an API key via Admin → AI Providers. ' +
-          'Supported: HuggingFace (sentence-transformers/all-MiniLM-L6-v2), GenX.',
-        providers_checked: ['huggingface', 'genx'],
+          'Supported: HuggingFace (sentence-transformers/all-MiniLM-L6-v2), Together, GenX.',
+        providers_checked: ['huggingface', 'together', 'genx'],
         capability: 'embeddings',
       },
       { status: 503 },

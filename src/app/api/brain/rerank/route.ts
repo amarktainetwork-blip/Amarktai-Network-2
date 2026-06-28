@@ -7,13 +7,17 @@ const ALLOWED_HF_RERANK_MODELS = [
   'BAAI/bge-reranker-base',
   'BAAI/bge-reranker-large',
 ] as const
+const ALLOWED_TOGETHER_RERANK_MODELS = [
+  'Salesforce/Llama-Rank-V1',
+  'BAAI/bge-reranker-base',
+] as const
 
 const RequestSchema = z.object({
   query: z.string().min(1).max(2048),
   documents: z.array(z.string().min(1).max(4096)).min(1).max(100),
   maxResults: z.number().int().min(1).max(100).optional(),
   model: z.string().optional(),
-  provider: z.enum(['huggingface', 'auto']).optional().default('auto'),
+  provider: z.enum(['huggingface', 'together', 'auto']).optional().default('auto'),
 })
 
 async function rerankWithHuggingFace(
@@ -48,6 +52,49 @@ async function rerankWithHuggingFace(
   }))
 }
 
+async function rerankWithTogether(
+  query: string,
+  documents: string[],
+  apiKey: string,
+  modelId: string,
+  maxResults?: number,
+): Promise<Array<{ score: number; index: number }>> {
+  const safeModel = ALLOWED_TOGETHER_RERANK_MODELS.find((m) => m === modelId)
+    ?? ALLOWED_TOGETHER_RERANK_MODELS[0]
+
+  const response = await fetch('https://api.together.xyz/v1/rerank', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: safeModel,
+      query,
+      documents,
+      top_n: maxResults ?? documents.length,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  })
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '')
+    throw new Error(`Together reranking failed (${response.status}): ${errText}`)
+  }
+
+  const data = await response.json() as {
+    results?: Array<{ index?: number; relevance_score?: number; score?: number }>
+  }
+  if (!Array.isArray(data.results)) throw new Error('Unexpected Together response format for reranking')
+
+  return data.results.map((item, fallbackIndex) => ({
+    index: typeof item.index === 'number' ? item.index : fallbackIndex,
+    score: typeof item.relevance_score === 'number'
+      ? item.relevance_score
+      : item.score ?? 0,
+  }))
+}
+
 export async function POST(req: Request): Promise<NextResponse> {
   const startTime = Date.now()
   const body = await req.json().catch(() => null)
@@ -60,7 +107,54 @@ export async function POST(req: Request): Promise<NextResponse> {
     )
   }
 
-  const { query, documents, maxResults, model } = parsed.data
+  const { query, documents, maxResults, model, provider } = parsed.data
+
+  if (provider === 'together' || provider === 'auto') {
+    const togetherApiKey = await getVaultApiKey('together')
+    if (togetherApiKey) {
+      const togetherModel = model && ALLOWED_TOGETHER_RERANK_MODELS.includes(model as typeof ALLOWED_TOGETHER_RERANK_MODELS[number])
+        ? model
+        : ALLOWED_TOGETHER_RERANK_MODELS[0]
+      try {
+        const scores = await rerankWithTogether(query, documents, togetherApiKey, togetherModel, maxResults)
+        const ranked = scores
+          .map((score) => ({
+            document: documents[score.index] ?? '',
+            score: score.score,
+            originalIndex: score.index,
+          }))
+          .filter((entry) => entry.document)
+          .sort((a, b) => b.score - a.score)
+
+        return NextResponse.json({
+          capability: 'reranking',
+          executed: true,
+          query,
+          ranked: maxResults ? ranked.slice(0, maxResults) : ranked,
+          provider: 'together',
+          model: togetherModel,
+          latencyMs: Date.now() - startTime,
+        })
+      } catch (error) {
+        if (provider === 'together') {
+          return NextResponse.json({
+            capability: 'reranking',
+            executed: false,
+            error: error instanceof Error ? error.message : 'Together reranking failed',
+            query,
+          }, { status: 503 })
+        }
+      }
+    } else if (provider === 'together') {
+      return NextResponse.json({
+        capability: 'reranking',
+        executed: false,
+        error: 'No Together reranking provider available. Configure Together.',
+        query,
+      }, { status: 503 })
+    }
+  }
+
   const apiKey = await getVaultApiKey('huggingface')
   if (!apiKey) {
     return NextResponse.json({

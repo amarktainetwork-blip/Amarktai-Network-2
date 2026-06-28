@@ -252,7 +252,7 @@ describe('Studio execution proof pack', () => {
     const balanced = routeLiveModel({ capability: 'chat', costMode: 'balanced' })
     const premium = routeLiveModel({ capability: 'chat', costMode: 'premium' })
 
-    expect(route).toContain("chat: ['groq', 'together', 'mimo', 'genx', 'huggingface']")
+    expect(route).toContain("chat: ['groq', 'together', 'genx', 'huggingface']")
     expect(route).toContain('STUDIO_PREMIUM_CHAT_PROVIDERS')
     expect(route).toContain('effectiveStudioCostMode')
     expect(route).toContain('routingPolicy')
@@ -279,7 +279,7 @@ describe('Studio execution proof pack', () => {
     const sourceText = source('app/api/admin/studio/execute/route.ts')
 
     expect(route.blockedReason).not.toBe('Provider is not approved by the provider mesh.')
-    expect(route.selectedProvider).toMatch(/^(genx|groq|together|mimo|huggingface)$/)
+    expect(route.selectedProvider).toMatch(/^(genx|groq|together|huggingface)$/)
     expect(normalizeProviderMeshId(route.selectedProvider)).toBe(route.selectedProvider)
     expect(normalizeProviderMeshId(route.selectedModel)).toBeNull()
     expect(sourceText).toContain("if (!value || value === 'auto' || value.startsWith('auto:') || value.startsWith('task:'))")
@@ -302,6 +302,16 @@ describe('Studio execution proof pack', () => {
   it('Studio image and music route through canonical provider mesh IDs', () => {
     expect(routeLiveModel({ capability: 'image_generation', selectedProvider: 'Together AI' }).selectedProvider).toBe('together')
     expect(routeLiveModel({ capability: 'music_generation', selectedProvider: 'GenX' }).selectedProvider).toBe('genx')
+  })
+
+  it('blocks MiMo from V1 Studio and app backend execution after canonical normalization', () => {
+    const route = source('app/api/admin/studio/execute/route.ts')
+    const routed = routeLiveModel({ capability: 'chat', selectedProvider: 'xiaomi' })
+
+    expect(route).not.toContain("'mimo-v2.5'")
+    expect(route).not.toContain("'mimo-v2.5-pro'")
+    expect(routed.selectedProvider).toBeNull()
+    expect(routed.blockedReason).toContain('V1 production backend routing is disabled')
   })
 
   it('unknown provider still fails mesh approval while valid canonical providers do not', () => {

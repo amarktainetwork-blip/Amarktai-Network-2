@@ -8,12 +8,14 @@ import {
 import { STATIC_PROVIDER_MODELS, type ProviderModelOption } from '@/lib/ai-model-catalog'
 import {
   getModelsForCapability,
+  isTogetherAdultFallbackEnabled,
   normalizeGovernedCapability,
   validateCapabilitySelection,
   type GovernedCapability,
   type GovernedModel,
 } from '@/lib/provider-capability-governance'
 import { normalizeProviderMeshId } from '@/lib/provider-mesh'
+import { isV1ProductionAIProviderKey } from '@/lib/provider-runtime'
 import { adultPolicyAllows, normalizeAdultPolicy, type AdultPolicyValue } from '@/lib/universal-model-catalog'
 
 export type AiCapability =
@@ -40,6 +42,7 @@ export type AiCapability =
   | 'avatar_video'
   | 'moderation'
   | 'embeddings'
+  | 'rerank'
   | 'rag'
   | 'adult_text'
   | 'adult_image'
@@ -103,6 +106,7 @@ const CAPABILITY_TO_ROLE: Record<AiCapability, string[]> = {
   avatar_video: ['vision'],
   moderation: ['chat'],
   embeddings: ['chat'],
+  rerank: ['reasoning', 'chat'],
   rag: ['chat'],
   adult_text: ['chat'],
   adult_image: ['vision'],
@@ -153,6 +157,7 @@ export const LIVE_ROUTING_CAPABILITIES: readonly AiCapability[] = [
   'avatar_video',
   'moderation',
   'embeddings',
+  'rerank',
   'rag',
   'adult_text',
   'adult_image',
@@ -228,12 +233,18 @@ function normalizeLiveProvider(provider?: string | null): { provider: ApprovedPr
   if (!normalized || !isApprovedAIProvider(normalized)) {
     return { provider: null, error: 'Provider is not approved by the provider mesh.' }
   }
+  if (!isV1ProductionAIProviderKey(normalized)) {
+    return { provider: null, error: 'MiMo Token Plan is reserved for developer/repo/tooling or V2; V1 production backend routing is disabled.' }
+  }
   return { provider: normalized as ApprovedProviderKey, error: null }
 }
 
 function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   if (!input.selectedProvider || input.selectedProvider === 'auto') return null
   const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
+  if (input.selectedProvider === 'together' && input.capability.startsWith('adult_') && !isTogetherAdultFallbackEnabled(input.capability)) {
+    return blocked(input, input.costMode ?? 'balanced', `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${input.capability} model env is configured.`)
+  }
   const validation = validateCapabilitySelection({
     appSlug: input.appSlug,
     capability: input.capability,
@@ -290,11 +301,13 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
     .filter((model) => isApprovedAIProvider(model.provider))
     .filter((model) => model.enabled)
     .filter((model) => {
+      if (!isV1ProductionAIProviderKey(model.provider)) return false
+      if (capability.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(capability)) return false
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
       if (capability === 'adult_text') return ['genx', 'together', 'huggingface'].includes(model.provider) && model.roles.some((role) => ['chat', 'reasoning'].includes(role))
       if (capability === 'adult_image') return ['genx', 'together', 'huggingface'].includes(model.provider) && (model.modalities.includes('image') || model.modalities.includes('multimodal'))
       if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
-      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'mimo' || model.provider === 'genx'
+      if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'genx'
       if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'huggingface'
       if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false
       if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing') return model.modalities.includes('image') || model.modalities.includes('multimodal')
@@ -313,7 +326,8 @@ function governedCandidates(capability: AiCapability): ProviderModelOption[] {
   const normalized = normalizeGovernedCapability(capability) as GovernedCapability | null
   if (!normalized) return []
   return getModelsForCapability(normalized)
-    .filter((model) => !(['tts', 'adult_voice'].includes(normalized) && model.provider === 'groq'))
+    .filter((model) => isV1ProductionAIProviderKey(model.provider))
+    .filter((model) => !(normalized.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(normalized)))
     .map(governedModelToProviderOption)
 }
 

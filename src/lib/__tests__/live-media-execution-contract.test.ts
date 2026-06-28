@@ -307,10 +307,11 @@ describe('live media route contracts', () => {
     expect(route).not.toContain('avatar video provider unavailable')
   })
 
-  it('does not advertise Groq as a canonical TTS provider', () => {
-    expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).not.toContain('groq')
-    expect(routeLiveModel({ capability: 'tts' }).selectedProvider).not.toBe('groq')
-    expect(read('app/api/brain/tts/route.ts')).toContain('Groq TTS is not an approved working audio execution route.')
+  it('advertises Groq as a selectable canonical TTS provider without faking success', () => {
+    expect(MEDIA_CAPABILITY_ROUTES.tts.providers.map((entry) => entry.provider)).toContain('groq')
+    expect(routeLiveModel({ capability: 'tts', selectedProvider: 'groq' }).selectedProvider).toBe('groq')
+    expect(read('app/api/brain/tts/route.ts')).toContain("if (entry.provider === 'groq')")
+    expect(read('app/api/brain/tts/route.ts')).toContain('Groq API key is missing.')
   })
 
   it('uses canonical video capability and exposes local polling in Studio', () => {

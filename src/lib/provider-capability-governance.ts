@@ -1,6 +1,7 @@
 import { STATIC_PROVIDER_MODELS } from '@/lib/ai-model-catalog'
 import { PROVIDER_MESH, normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
+import { isV1ProductionAIProviderKey } from '@/lib/provider-runtime'
 
 export type RootWorkspaceIdentity = {
   appSlug: 'amarktai-network'
@@ -60,6 +61,7 @@ export type GovernedCapability =
   | 'voice_cloning'
   | 'avatar_video'
   | 'embeddings'
+  | 'rerank'
   | 'rag'
   | 'moderation'
   | 'adult_text'
@@ -171,27 +173,35 @@ function roleCapabilities(roles: readonly string[], modalities: readonly string[
   if (modalities.includes('voice_stt')) capabilities.add('stt')
   if (modalities.includes('music')) capabilities.add('music_generation')
   if (modalities.includes('embedding')) capabilities.add('embeddings')
+  if (modalities.includes('embedding')) capabilities.add('rag')
+  if (modalities.includes('rerank')) {
+    capabilities.add('rerank')
+    capabilities.add('rag')
+  }
   return [...capabilities]
 }
 
 const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_MODELS).flatMap(
   ([provider, models]) => models.map((model) => {
     const node = PROVIDER_MESH.find((entry) => entry.id === provider)!
+    const productionEligible = provider !== 'mimo' && isV1ProductionAIProviderKey(provider)
     return {
       provider: provider as GovernedProviderKey,
       providerLabel: node.displayName,
       modelId: model.modelId,
       label: model.displayName,
       capabilities: roleCapabilities(model.roles, model.modalities),
-      status: 'production_ready' as const,
+      status: productionEligible ? 'production_ready' as const : 'blocked' as const,
       route: node.testRoute,
       requiredEnv: [...node.envAliases],
       execution: node.asyncJobs ? 'async_job' as const : 'sync' as const,
       polling: node.asyncJobs,
       artifacts: node.artifactHandling !== 'none',
-      approved: true,
-      routePresent: true,
-      notes: model.notes ?? 'Approved provider-mesh model.',
+      approved: productionEligible,
+      routePresent: productionEligible,
+      notes: provider === 'mimo'
+        ? 'MiMo Token Plan is reserved for developer/repo/tooling or V2; V1 production backend routing is disabled.'
+        : model.notes ?? 'Approved provider-mesh model.',
     }
   }),
 )
@@ -252,7 +262,7 @@ export function normalizeGovernedCapability(capability: string): GovernedCapabil
     'chat', 'reasoning', 'coding', 'repo_audit', 'research', 'crawling', 'browser_qa',
     'image_generation', 'image_editing', 'image_to_video', 'video_generation',
     'music_generation', 'song_generation', 'lyrics_generation', 'instrumental_music',
-    'tts', 'stt', 'voice_selection', 'voice_cloning', 'avatar_video', 'embeddings', 'rag', 'moderation',
+    'tts', 'stt', 'voice_selection', 'voice_cloning', 'avatar_video', 'embeddings', 'rerank', 'rag', 'moderation',
     'adult_text', 'adult_image', 'adult_video', 'adult_voice', 'app_memory', 'artifacts', 'operations',
     'audio',
   ])
@@ -265,6 +275,19 @@ export function isRootWorkspaceAppSlug(appSlug?: string | null): boolean {
 
 export function isExternalManagedAppSlug(appSlug?: string | null): boolean {
   return Boolean(appSlug && !isRootWorkspaceAppSlug(appSlug))
+}
+
+export function isTogetherAdultFallbackEnabled(capability: string): boolean {
+  if (!String(capability).startsWith('adult_')) return false
+  if (process.env.TOGETHER_ADULT_FALLBACK_ENABLED !== 'true') return false
+  const modelEnv = capability === 'adult_image'
+    ? process.env.TOGETHER_ADULT_IMAGE_MODEL
+    : capability === 'adult_video'
+      ? process.env.TOGETHER_ADULT_VIDEO_MODEL
+      : capability === 'adult_voice'
+        ? process.env.TOGETHER_ADULT_VOICE_MODEL
+        : process.env.TOGETHER_ADULT_TEXT_MODEL
+  return Boolean(modelEnv?.trim())
 }
 
 export function getModelsForCapability(
@@ -331,6 +354,22 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
   const provider = providerId ? PROVIDER_MESH.find((node) => node.id === providerId) : null
   if (input.provider && !providerId) {
     return { allowed: false, capability, reason: 'Provider is not approved by the provider mesh.', blockers: ['provider_not_approved'] }
+  }
+  if (providerId === 'mimo') {
+    return {
+      allowed: false,
+      capability,
+      reason: 'MiMo Token Plan is reserved for developer/repo/tooling or V2; V1 production backend routing is disabled.',
+      blockers: ['provider_backend_disabled'],
+    }
+  }
+  if (capability.startsWith('adult_') && providerId === 'together' && !isTogetherAdultFallbackEnabled(capability)) {
+    return {
+      allowed: false,
+      capability,
+      reason: `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${capability} model env is configured.`,
+      blockers: ['adult_fallback_not_configured'],
+    }
   }
   const models = getModelsForCapability(capability, { approvedOnly: true, routePresentOnly: true })
   const model = input.modelId

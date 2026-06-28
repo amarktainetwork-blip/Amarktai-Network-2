@@ -65,6 +65,8 @@ const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
   together: [
     model('together', 'meta-llama/Llama-3-70b-chat-hf', 'Llama 3 70B Chat', 'Together AI', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Open model route for repo tasks.'),
     model('together', 'task:image', 'Together Image Route', 'Together AI', ['image'], ['vision'], 'medium', 'Image route when the app package allows it.'),
+    model('together', 'BAAI/bge-large-en-v1.5', 'Together Embeddings Route', 'Together AI', ['embedding'], ['chat'], 'low', 'Embeddings route for RAG when a Together key is configured.'),
+    model('together', 'Salesforce/Llama-Rank-V1', 'Together Rerank Route', 'Together AI', ['rerank'], ['reasoning'], 'low', 'Rerank route for RAG when a Together rerank model is enabled.'),
   ],
 }
 

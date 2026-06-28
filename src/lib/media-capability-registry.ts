@@ -103,6 +103,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     artifactType: 'audio',
     providers: [
       { provider: 'genx', model: GENX_TTS_MODELS[0] },
+      { provider: 'groq', model: 'playai-tts' },
       { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
     ],
   },

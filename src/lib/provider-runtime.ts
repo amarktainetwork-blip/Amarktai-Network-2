@@ -2,6 +2,8 @@ import type { ProviderMeshId } from '@/lib/provider-mesh'
 
 export const ACTIVE_AI_PROVIDER_KEYS = ['genx', 'huggingface', 'together', 'groq', 'mimo'] as const
 export type ActiveAIProviderKey = (typeof ACTIVE_AI_PROVIDER_KEYS)[number]
+export const V1_PRODUCTION_AI_PROVIDER_KEYS = ['genx', 'huggingface', 'together', 'groq'] as const
+export type V1ProductionAIProviderKey = (typeof V1_PRODUCTION_AI_PROVIDER_KEYS)[number]
 
 export const REMOVED_AI_PROVIDER_KEYS = [
   'qwen',
@@ -123,9 +125,9 @@ export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
       'health', 'models', 'chat', 'streaming_chat', 'text_generation', 'research',
       'summarization', 'translation', 'text_to_image', 'text_to_video', 'image_to_video',
       'video_job_poll', 'music_instrumental', 'music_song', 'text_to_speech',
-      'speech_to_text', 'avatar_image', 'avatar_video',
+      'speech_to_text', 'avatar_image',
     ],
-    unsupportedCapabilityKeys: ['adult_text', 'adult_image', 'adult_voice', 'adult_video'],
+    unsupportedCapabilityKeys: ['avatar_video', 'adult_text', 'adult_image', 'adult_voice', 'adult_video'],
     taskEndpointMap: {
       health: { endpoint: '/v1/models', method: 'GET', routeShape: 'Bearer-auth model list', status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'none', notes: 'Health/model availability check only.' },
       models: { endpoint: '/v1/models', method: 'GET', routeShape: 'Bearer-auth model list', status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'none', notes: 'Used by admin tests.' },
@@ -140,7 +142,6 @@ export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
       text_to_speech: { endpoint: '/v1/media/generations', method: 'POST', routeShape: 'GenX audio generation', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: true, artifactHandling: 'download', notes: 'TTS route downloads URL before artifact creation.' },
       speech_to_text: { endpoint: '/v1/media/generations', method: 'POST', routeShape: 'GenX audio transcription metadata task', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: true, artifactHandling: 'text', notes: 'STT shape must be proven live.' },
       avatar_image: { endpoint: '/v1/media/generations', method: 'POST', routeShape: 'GenX image/avatar media generation', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: true, artifactHandling: 'download', notes: 'Allowed only after route shape proof.' },
-      avatar_video: { endpoint: '/v1/media/generations', method: 'POST', routeShape: 'GenX avatar/video async job', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: true, artifactHandling: 'download', notes: 'Allowed only after route shape proof.' },
     },
     testEndpointMap: { provider: '/api/admin/providers/genx/test', health: '/api/admin/providers/genx/test', chat: '/api/admin/providers/genx/test' },
     asyncJobSupport: true,
@@ -223,14 +224,14 @@ export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
     envAliases: ['GROQ_API_KEY'],
     baseUrl: 'https://api.groq.com/openai/v1',
     authMethod: 'bearer',
-    supportedCapabilityKeys: ['health', 'models', 'chat', 'streaming_chat', 'text_generation', 'research', 'summarization', 'translation', 'speech_to_text'],
+    supportedCapabilityKeys: ['health', 'models', 'chat', 'streaming_chat', 'text_generation', 'research', 'summarization', 'translation', 'speech_to_text', 'text_to_speech'],
     unsupportedCapabilityKeys: ['text_to_image', 'image_edit', 'text_to_video', 'image_to_video', 'music_instrumental', 'music_song', 'avatar_image', 'avatar_video', 'adult_text', 'adult_image', 'adult_voice', 'adult_video'],
     taskEndpointMap: {
       health: { endpoint: '/chat/completions', method: 'POST', routeShape: 'minimal chat completion', status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'none', notes: 'Chat-shaped health check.' },
       chat: { endpoint: '/chat/completions', method: 'POST', routeShape: chatShape, status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'text', notes: 'Fast text/code/reasoning path.' },
       streaming_chat: { endpoint: '/chat/completions', method: 'POST', routeShape: 'OpenAI-compatible stream', status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'text', notes: 'Streaming text only.' },
       speech_to_text: { endpoint: '/audio/transcriptions', method: 'POST', routeShape: 'multipart audio transcription', status: 'working', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'text', notes: 'Used by STT route.' },
-      text_to_speech: { endpoint: '/audio/speech', method: 'POST', routeShape: 'audio speech endpoint if account/model enabled', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'bytes', notes: 'Disabled by execution route until verified.' },
+      text_to_speech: { endpoint: '/audio/speech', method: 'POST', routeShape: 'Groq Orpheus/OpenAI-compatible speech endpoint if account/model enabled', status: 'requires_verification', requiresDedicatedEndpoint: false, supportsAsyncJob: false, artifactHandling: 'bytes', notes: 'TTS route attempts Groq only when selected/configured; no fake success.' },
     },
     testEndpointMap: { provider: '/api/admin/providers/groq/test', chat: '/api/admin/providers/groq/test?task=chat', speech_to_text: '/api/admin/providers/groq/test?task=speech_to_text' },
     asyncJobSupport: false,
@@ -238,7 +239,7 @@ export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
     audience: 'normal_only',
     normalAllowed: true,
     adultAllowed: false,
-    adminNotes: 'Groq is text, vision/OCR where model supports it, and STT. It is not an image/video/music/avatar generator.',
+    adminNotes: 'Groq is text, streaming text, vision/OCR where model supports it, STT, and TTS when the account/model supports Orpheus speech. It is not an image/video/music/avatar generator.',
   },
   mimo: {
     key: 'mimo',
@@ -257,14 +258,22 @@ export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
     asyncJobSupport: false,
     artifactHandling: 'text',
     audience: 'normal_only',
-    normalAllowed: true,
+    normalAllowed: false,
     adultAllowed: false,
-    adminNotes: 'Xiaomi MiMo only. No MiniMax keys, display names, or api.minimax.io endpoints.',
+    adminNotes: 'Xiaomi MiMo Token Plan is reserved for developer/repo/tooling or V2. V1 production app backend execution is disabled unless a backend-eligible MiMo API plan is explicitly added later.',
   },
 } as const
 
 export function getActiveProviderRuntimeKeys(): ActiveAIProviderKey[] {
   return [...ACTIVE_AI_PROVIDER_KEYS]
+}
+
+export function isV1ProductionAIProviderKey(value: string): value is V1ProductionAIProviderKey {
+  return (V1_PRODUCTION_AI_PROVIDER_KEYS as readonly string[]).includes(value)
+}
+
+export function getV1ProductionProviderRuntimes(): ProviderRuntime[] {
+  return V1_PRODUCTION_AI_PROVIDER_KEYS.map((key) => PROVIDER_RUNTIME[key])
 }
 
 export function isActiveAIProviderKey(value: string): value is ActiveAIProviderKey {
