@@ -151,6 +151,9 @@ export interface GenXMediaResult {
   model: string
   latencyMs: number
   error: string | null
+  statusCode?: number
+  errorDetails?: unknown
+  rawErrorBody?: string | null
 }
 
 export interface GenXStatus {
@@ -911,11 +914,30 @@ export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMedi
     const latencyMs = Date.now() - start
 
     if (!res.ok) {
-      const errBody = await res.json().catch(() => ({})) as { error?: string | { message?: string }, message?: string }
+      const rawErrorBody = await res.text().catch(() => '')
+      let errBody: { error?: string | { message?: string }, message?: string } = {}
+      if (rawErrorBody) {
+        try {
+          errBody = JSON.parse(rawErrorBody) as { error?: string | { message?: string }, message?: string }
+        } catch {
+          errBody = { message: rawErrorBody }
+        }
+      }
       const error = typeof errBody.error === 'string'
         ? errBody.error
         : errBody.error?.message ?? errBody.message ?? `GenX HTTP ${res.status}`
-      return { success: false, url: null, jobId: null, status: 'failed' as const, model: resolvedRequest.model, latencyMs, error }
+      return {
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed' as const,
+        model: resolvedRequest.model,
+        latencyMs,
+        error,
+        statusCode: res.status,
+        errorDetails: Object.keys(errBody).length ? errBody : rawErrorBody,
+        rawErrorBody: rawErrorBody || null,
+      }
     }
 
     const data = await res.json() as Record<string, unknown>

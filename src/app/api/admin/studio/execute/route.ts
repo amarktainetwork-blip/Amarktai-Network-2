@@ -12,6 +12,7 @@ import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
 import { callProvider } from '@/lib/brain'
 import { recordEstimatedCost } from '@/lib/cost-tracking'
 import { callGenXChat } from '@/lib/genx-client'
+import { normalizeProviderVideoCount, normalizeProviderVideoDuration } from '@/lib/provider-video-policy'
 import type { LiveRouteResult } from '@/lib/live-ai-routing'
 import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
 import { POST as imagePost } from '@/app/api/brain/image/route'
@@ -595,28 +596,30 @@ export async function POST(request: NextRequest) {
   }
 
   if (tab === 'Avatar / Talking Video') {
+    const requestedAvatarMode = stringControl(controls, 'avatarMode', stringControl(controls, 'mode', 'image')) === 'video' ? 'video' : 'image'
     const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', {
       prompt,
       appSlug,
-      mode: stringControl(controls, 'avatarMode', stringControl(controls, 'mode', 'image')),
+      mode: requestedAvatarMode,
       avatarName: stringControl(controls, 'avatarName', prompt.slice(0, 48) || 'Studio avatar'),
       style: stringControl(controls, 'style', 'creator_avatar'),
       referenceImageUrl: stringControl(controls, 'referenceImageUrl', ''),
       voice: stringControl(controls, 'voice', ''),
       script: stringControl(controls, 'script', prompt),
-      duration: durationSeconds(stringControl(controls, 'duration', '8s'), 8),
+      duration: normalizeProviderVideoDuration(durationSeconds(stringControl(controls, 'duration', '8s'), 8)),
       library: stringControl(controls, 'library', 'default'),
     }))
     const data = await readJson(response)
     const status = String(data.jobStatus ?? data.status ?? 'failed')
     const processing = ['queued', 'processing', 'submitted'].includes(status)
     const completed = ['completed', 'succeeded'].includes(status) && Boolean(data.artifactId && data.storageUrl)
+    const avatarProofCapability = String(data.capability ?? (requestedAvatarMode === 'video' ? 'avatar_video' : 'avatar_image'))
     const selectedProvider = canonicalProviderValue(data.provider) ?? 'genx'
     const selectedModel = data.model ?? null
     const proof = completed
       ? await recordStudioProof({
         mode: 'avatar',
-        capability: 'avatar_video',
+        capability: avatarProofCapability,
         appSlug,
         provider: selectedProvider,
         model: selectedModel,
@@ -626,10 +629,10 @@ export async function POST(request: NextRequest) {
         artifactPath: data.storageUrl ?? null,
         jobId: data.jobId ?? null,
         routePath: '/api/brain/avatar-video',
-        metadata: { source: 'studio_execute', avatar: data.avatar ?? null },
+        metadata: { source: 'studio_execute', avatar: data.avatar ?? null, mode: requestedAvatarMode },
       })
       : studioProofSnapshot({
-        capability: 'avatar_video',
+        capability: avatarProofCapability,
         provider: selectedProvider,
         model: selectedModel,
         route: '/api/brain/avatar-video',
@@ -948,8 +951,9 @@ export async function POST(request: NextRequest) {
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {
         prompt,
         style,
-        duration: Math.min(30, requestedDuration),
+        duration: normalizeProviderVideoDuration(requestedDuration),
         aspectRatio,
+        count: normalizeProviderVideoCount(numberControl(controls, 'count', 1)),
         referenceImageUrl: mode === 'image_to_video' ? referenceImageUrl : undefined,
         appSlug,
         provider,

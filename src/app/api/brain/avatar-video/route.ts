@@ -3,6 +3,7 @@ import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { callGenXMedia, GENX_IMAGE_MODELS, GENX_VIDEO_MODELS } from '@/lib/genx-client'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 import { recordAvatarLibraryEntry } from '@/lib/avatar-library-store'
+import { normalizeProviderVideoDuration } from '@/lib/provider-video-policy'
 
 function stringValue(value: unknown, fallback = '') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
@@ -34,13 +35,13 @@ export async function POST(request: NextRequest) {
   const avatarName = stringValue(body.avatarName, prompt.slice(0, 48) || 'Studio avatar')
   const style = stringValue(body.style, 'creator_avatar')
   const referenceImageUrl = stringValue(body.referenceImageUrl)
-  const duration = Math.min(30, Math.round(numberValue(body.duration, 8)))
+  const duration = normalizeProviderVideoDuration(numberValue(body.duration, 8))
   const library = stringValue(body.library, 'default')
   const voice = stringValue(body.voice)
   const script = stringValue(body.script, prompt)
   const model = mode === 'video' ? GENX_VIDEO_MODELS[0] : GENX_IMAGE_MODELS[0]
   const type = mode === 'video' ? 'video' : 'image'
-  const capability = 'avatar_video'
+  const capability = mode === 'video' ? 'avatar_video' : 'avatar_image'
   const providerPrompt = [
     `Create a reusable ${mode === 'video' ? 'talking avatar video' : 'avatar image'}.`,
     `Avatar name: ${avatarName}.`,
@@ -61,7 +62,9 @@ export async function POST(request: NextRequest) {
   })
 
   if (!generated.success || (!generated.url && !generated.jobId)) {
-    const blocker = generated.error ?? 'Avatar provider returned no completed media or trackable job.'
+    const blocker = generated.error
+      ? `Avatar ${mode} provider failed: ${generated.error}`
+      : `Avatar ${mode} provider returned no completed media or trackable job.`
     return NextResponse.json({
       success: false,
       executed: false,
@@ -73,6 +76,8 @@ export async function POST(request: NextRequest) {
       storageUrl: null,
       error: blocker,
       blocker,
+      providerStatusCode: generated.statusCode ?? null,
+      providerErrorDetails: generated.errorDetails ?? null,
     }, { status: 502 })
   }
 
@@ -162,6 +167,7 @@ export async function POST(request: NextRequest) {
     mediaUrl: persisted.mediaUrl,
     imageUrl: type === 'image' ? persisted.mediaUrl : null,
     videoUrl: type === 'video' ? persisted.mediaUrl : null,
+    avatarVideoProofEligible: type === 'video',
     avatar,
     error: null,
     blocker: null,

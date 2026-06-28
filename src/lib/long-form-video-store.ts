@@ -9,6 +9,7 @@ import {
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { recordProviderResult } from '@/lib/provider-result-log'
 import { getFfmpegStatus, stitchVideoClips } from '@/lib/video-stitcher'
+import { normalizeLongFormSceneDurations } from '@/lib/provider-video-policy'
 
 export type LongFormVideoPhase = 'planning' | 'generating_scenes' | 'stitching' | 'completed' | 'failed'
 export type LongFormVideoStrategy = 'direct_provider' | 'scene_stitched'
@@ -35,6 +36,8 @@ export interface LongFormVideoJob {
   style: string
   aspectRatio: string
   targetDurationSeconds: number
+  plannedDurationSeconds: number
+  finalDurationSeconds: number | null
   sceneCount: number
   productionNotes: string
   voice: string
@@ -75,7 +78,6 @@ export interface StartLongFormVideoInput {
 }
 
 const MAX_PROCESSING_MS = 45 * 60 * 1000
-const MAX_SCENE_DURATION_SECONDS = 30
 
 function saveJob(job: LongFormVideoJob, updates: Partial<Omit<LongFormVideoJob, 'id'>>) {
   return updateRecord<LongFormVideoJob>(LOCAL_STORE_FILES.longFormVideoJobs, job.id, {
@@ -90,19 +92,17 @@ export function getLongFormVideoJob(jobId: string): LongFormVideoJob | null {
 
 function splitPromptIntoScenes(input: StartLongFormVideoInput, sceneCount: number): Array<{ prompt: string; durationSeconds: number }> {
   const targetDuration = Math.max(90, Math.round(input.targetDurationSeconds))
-  const perScene = Math.min(MAX_SCENE_DURATION_SECONDS, Math.ceil(targetDuration / sceneCount))
+  const durations = normalizeLongFormSceneDurations(targetDuration, sceneCount)
   const sentences = input.prompt
     .split(/(?<=[.!?])\s+/)
     .map((part) => part.trim())
     .filter(Boolean)
-  return Array.from({ length: sceneCount }, (_, index) => {
+  return Array.from({ length: durations.length }, (_, index) => {
     const seed = sentences[index % Math.max(1, sentences.length)] ?? input.prompt
     const notes = input.productionNotes ? ` Production notes: ${input.productionNotes}` : ''
     return {
-      durationSeconds: index === sceneCount - 1
-        ? Math.max(1, targetDuration - (perScene * (sceneCount - 1)))
-        : perScene,
-      prompt: `Long-form scene ${index + 1}/${sceneCount}. ${seed}${notes}`,
+      durationSeconds: durations[index],
+      prompt: `Long-form scene ${index + 1}/${durations.length}. ${seed}${notes}`,
     }
   })
 }
@@ -133,6 +133,8 @@ function jobResponse(job: LongFormVideoJob) {
     ffmpegStatus: job.ffmpegStatus,
     scenes: job.scenes,
     targetDurationSeconds: job.targetDurationSeconds,
+    plannedDurationSeconds: job.plannedDurationSeconds,
+    finalDurationSeconds: job.finalDurationSeconds,
     proof: {
       capability: 'long_form_video',
       provider: job.provider,
@@ -166,9 +168,12 @@ async function persistFinalVideo(job: LongFormVideoJob, result: unknown, strateg
       jobId: job.id,
       strategy,
       targetDurationSeconds: job.targetDurationSeconds,
+      plannedDurationSeconds: job.plannedDurationSeconds,
+      finalDurationSeconds: job.finalDurationSeconds,
       sceneCount: job.sceneCount,
       scenes: job.scenes.map((scene) => ({
         index: scene.index,
+        durationSeconds: scene.durationSeconds,
         artifactId: scene.artifactId,
         storageUrl: scene.storageUrl,
         providerJobId: scene.providerJobId,
@@ -195,6 +200,8 @@ async function persistFinalVideo(job: LongFormVideoJob, result: unknown, strateg
       proofStatus: 'passed',
       jobId: job.id,
       targetDurationSeconds: job.targetDurationSeconds,
+      plannedDurationSeconds: job.plannedDurationSeconds,
+      finalDurationSeconds: job.finalDurationSeconds,
     },
   }).catch(() => null)
   return persisted
@@ -211,6 +218,7 @@ async function completeWithFinal(job: LongFormVideoJob, result: unknown, strateg
     mediaUrl: persisted.mediaUrl,
     storagePath: persisted.storagePath,
     error: null,
+    finalDurationSeconds: job.plannedDurationSeconds,
     completedAt: new Date().toISOString(),
   })!
 }
@@ -229,7 +237,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     })!
   }
 
-  const sceneCount = Math.max(job.sceneCount, Math.ceil(job.targetDurationSeconds / MAX_SCENE_DURATION_SECONDS))
+  const sceneCount = normalizeLongFormSceneDurations(job.targetDurationSeconds, job.sceneCount).length
   const plannedScenes = splitPromptIntoScenes({
     appSlug: job.appSlug,
     prompt: job.prompt,
@@ -245,7 +253,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
       model: GENX_VIDEO_MODELS[0],
       prompt: scene.prompt,
       type: 'video',
-      duration: Math.min(MAX_SCENE_DURATION_SECONDS, scene.durationSeconds),
+      duration: scene.durationSeconds,
       style: job.style,
       metadata: {
         capability: 'long_form_video_scene',
@@ -269,7 +277,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     const nextScene: LongFormVideoScene = {
       index: index + 1,
       prompt: scene.prompt,
-      durationSeconds: Math.min(MAX_SCENE_DURATION_SECONDS, scene.durationSeconds),
+      durationSeconds: scene.durationSeconds,
       provider: 'genx',
       model: sceneResult.model,
       providerJobId: sceneResult.jobId,
@@ -322,6 +330,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     ffmpegStatus: ffmpeg.ffmpegPath ?? 'ffmpeg',
     scenes,
     sceneCount,
+    plannedDurationSeconds: plannedScenes.reduce((sum, scene) => sum + scene.durationSeconds, 0),
     error: null,
   })!
   return (await pollLongFormVideoJob(saved.id)) ?? saved
@@ -330,7 +339,9 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
 export async function startLongFormVideoJob(input: StartLongFormVideoInput): Promise<LongFormVideoJob> {
   const now = new Date().toISOString()
   const targetDurationSeconds = Math.max(90, Math.round(input.targetDurationSeconds))
-  const requestedSceneCount = Math.max(1, Math.round(input.sceneCount ?? Math.ceil(targetDurationSeconds / MAX_SCENE_DURATION_SECONDS)))
+  const sceneDurations = normalizeLongFormSceneDurations(targetDurationSeconds, input.sceneCount)
+  const requestedSceneCount = sceneDurations.length
+  const plannedDurationSeconds = sceneDurations.reduce((sum, duration) => sum + duration, 0)
   const job = appendRecord<LongFormVideoJob>(LOCAL_STORE_FILES.longFormVideoJobs, {
     id: generateId(),
     capability: 'long_form_video',
@@ -339,6 +350,8 @@ export async function startLongFormVideoJob(input: StartLongFormVideoInput): Pro
     style: input.style ?? 'cinematic',
     aspectRatio: input.aspectRatio ?? '16:9',
     targetDurationSeconds,
+    plannedDurationSeconds,
+    finalDurationSeconds: null,
     sceneCount: requestedSceneCount,
     productionNotes: input.productionNotes ?? '',
     voice: input.voice ?? 'off',
@@ -375,7 +388,7 @@ export async function startLongFormVideoJob(input: StartLongFormVideoInput): Pro
     type: 'video',
     duration: targetDurationSeconds,
     style: job.style,
-    metadata: { capability: 'long_form_video', longFormJobId: job.id, targetDurationSeconds },
+    metadata: { capability: 'long_form_video', longFormJobId: job.id, targetDurationSeconds, plannedDurationSeconds },
   })
 
   if (direct.success && direct.url) {

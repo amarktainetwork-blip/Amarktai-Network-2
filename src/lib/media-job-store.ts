@@ -144,7 +144,7 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         localJobId: job.id,
       },
     })
-    if (persisted.artifactId && job.capability === 'avatar_video') {
+    if (persisted.artifactId && (job.capability === 'avatar_video' || job.capability === 'avatar_image')) {
       recordAvatarLibraryEntry({
         avatarId: typeof job.metadata.avatarId === 'string' ? job.metadata.avatarId : persisted.artifactId,
         appSlug: job.appSlug,

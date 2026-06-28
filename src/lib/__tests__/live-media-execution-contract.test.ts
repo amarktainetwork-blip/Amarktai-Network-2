@@ -248,6 +248,51 @@ describe('local media job lifecycle', () => {
       provider: 'genx',
     })
   })
+
+  it('records avatar image jobs as avatar_image without promoting avatar_video proof', async () => {
+    createLocalMediaJob({
+      capability: 'avatar_image',
+      appSlug: 'amarktai-network',
+      type: 'image',
+      subType: 'avatar_image',
+      title: 'Avatar: Ada image',
+      prompt: 'Create a reusable avatar image.',
+      provider: 'genx',
+      model: 'gpt-image-2',
+      providerJobId: 'provider-avatar-image-job-1',
+      metadata: {
+        avatarId: 'avatar-ada-image',
+        avatarName: 'Ada Image',
+        avatarLibrary: 'brand-library',
+        persona: 'Helpful operator',
+      },
+    })
+    mocks.getGenXJobStatus.mockResolvedValue({
+      id: 'provider-avatar-image-job-1',
+      status: 'completed',
+      resultUrl: 'https://cdn.example/avatar.png',
+    })
+    mocks.persistCanonicalMediaResult.mockResolvedValue({
+      artifactId: 'artifact-avatar-image-1',
+      storageUrl: '/api/artifacts/file/artifact-avatar-image-1',
+      mediaUrl: '/api/artifacts/file/artifact-avatar-image-1',
+    })
+
+    const completed = await pollLocalMediaJob('local-media-job-1')
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      capability: 'avatar_image',
+      artifactId: 'artifact-avatar-image-1',
+    })
+    expect(mocks.recordProviderResult).toHaveBeenCalledWith(expect.objectContaining({
+      capability: 'avatar_image',
+      contentType: 'image',
+    }))
+    expect(mocks.recordProviderResult).not.toHaveBeenCalledWith(expect.objectContaining({
+      capability: 'avatar_video',
+    }))
+  })
 })
 
 describe('live media route contracts', () => {
@@ -257,6 +302,8 @@ describe('live media route contracts', () => {
     expect(route).toContain('callGenXMedia')
     expect(route).toContain('persistCanonicalMediaResult')
     expect(route).toContain('recordAvatarLibraryEntry')
+    expect(route).toContain("mode === 'video' ? 'avatar_video' : 'avatar_image'")
+    expect(route).toContain('avatarVideoProofEligible')
     expect(route).not.toContain('avatar video provider unavailable')
   })
 

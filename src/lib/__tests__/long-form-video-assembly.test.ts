@@ -149,7 +149,7 @@ describe('long-form video assembly jobs', () => {
         status: 'failed',
         model: 'veo-3.1',
         latencyMs: 10,
-        error: 'duration exceeds provider max 30s',
+        error: 'duration exceeds provider max 8s',
       })
       .mockResolvedValue({
         success: true,
@@ -171,9 +171,10 @@ describe('long-form video assembly jobs', () => {
 
     expect(started.strategy).toBe('scene_stitched')
     expect(started.phase).toBe('generating_scenes')
-    expect(started.scenes).toHaveLength(3)
-    expect(started.scenes.every((scene) => scene.durationSeconds <= 30)).toBe(true)
-    expect(mocks.callGenXMedia).toHaveBeenCalledTimes(4)
+    expect(started.scenes).toHaveLength(12)
+    expect(started.scenes.every((scene) => scene.durationSeconds >= 4 && scene.durationSeconds <= 8)).toBe(true)
+    expect(started.scenes.reduce((sum, scene) => sum + scene.durationSeconds, 0)).toBe(90)
+    expect(mocks.callGenXMedia).toHaveBeenCalledTimes(13)
 
     mocks.getGenXJobStatus.mockResolvedValue({
       status: 'completed',
@@ -235,7 +236,7 @@ describe('long-form video assembly jobs', () => {
       status: 'failed',
       model: 'veo-3.1',
       latencyMs: 10,
-      error: 'duration exceeds provider max 30s',
+      error: 'duration exceeds provider max 8s',
     })
     mocks.getFfmpegStatus.mockResolvedValue({ available: false, ffmpegPath: null, error: 'ffmpeg is not installed or not available on PATH.' })
 
@@ -246,7 +247,7 @@ describe('long-form video assembly jobs', () => {
     })
 
     expect(job.status).toBe('failed')
-    expect(job.error).toContain('duration exceeds provider max 30s')
+    expect(job.error).toContain('duration exceeds provider max 8s')
     expect(job.error).toContain('ffmpeg is not installed or not on PATH')
     expect(longFormVideoJobResponse(job).proof).toMatchObject({ proofStatus: 'failed' })
   })
@@ -260,7 +261,7 @@ describe('long-form video assembly jobs', () => {
         status: 'failed',
         model: 'veo-3.1',
         latencyMs: 10,
-        error: 'duration exceeds provider max 30s',
+        error: 'duration exceeds provider max 8s',
       })
       .mockImplementation(async (_input: unknown) => ({
         success: true,

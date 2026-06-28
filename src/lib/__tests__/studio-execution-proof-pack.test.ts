@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest'
 import { normalizeProviderMeshId, requireProviderMeshId } from '@/lib/provider-mesh'
 import { validateCapabilitySelection } from '@/lib/provider-capability-governance'
 import { routeLiveModel } from '@/lib/live-ai-routing'
+import {
+  normalizeLongFormSceneDurations,
+  normalizeProviderVideoDuration,
+} from '@/lib/provider-video-policy'
 
 const root = process.cwd()
 
@@ -97,6 +101,7 @@ describe('Studio execution proof pack', () => {
   it('Studio video, image-to-video, long-form video, and avatar proof routes are wired honestly', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
     const videoRoute = source('app/api/brain/video-generate/route.ts')
+    const referenceUploadRoute = source('app/api/admin/studio/reference-upload/route.ts')
     const longFormRoute = source('app/api/brain/long-form-video/route.ts')
     const longFormPollRoute = source('app/api/brain/long-form-video/[jobId]/route.ts')
     const longFormStore = source('lib/long-form-video-store.ts')
@@ -132,13 +137,20 @@ describe('Studio execution proof pack', () => {
     expect(stitcher).toContain('getStorageDriver')
     expect(videoRoute).toContain("z.enum(['video_generation', 'image_to_video', 'adult_video'])")
     expect(videoRoute).toContain('referenceImageUrl')
+    expect(videoRoute).toContain('providerErrorDetails')
+    expect(videoRoute).toContain('normalizedRequest')
     expect(videoRoute).toContain('persistCanonicalMediaResult')
+    expect(referenceUploadRoute).toContain("subType: 'studio_reference_image'")
+    expect(referenceUploadRoute).toContain('referenceImageUrl: artifact.storageUrl')
     expect(videoPoll).toContain("if (parsed.capability === 'image_to_video') return 'image_to_video'")
     expect(videoPoll).toContain('persistCanonicalMediaResult')
     expect(avatarRoute).toContain('callGenXMedia')
+    expect(avatarRoute).toContain("const capability = mode === 'video' ? 'avatar_video' : 'avatar_image'")
+    expect(avatarRoute).toContain('avatarVideoProofEligible')
     expect(avatarRoute).toContain('recordAvatarLibraryEntry')
     expect(avatarRoute).toContain('createLocalMediaJob')
     expect(jobs).toContain("job.capability === 'avatar_video'")
+    expect(jobs).toContain("job.capability === 'avatar_image'")
     expect(jobs).toContain('recordAvatarLibraryEntry')
   })
 
@@ -146,7 +158,8 @@ describe('Studio execution proof pack', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
 
     expect(studio).toContain("id: 'image-to-video'")
-    expect(studio).toContain("options={['5s', '10s', '15s', '30s']}")
+    expect(studio).toContain("options={['4s', '5s', '6s', '8s']}")
+    expect(studio).toContain("fetch('/api/admin/studio/reference-upload'")
     expect(studio).toContain('setLongVideoDuration')
     expect(studio).toContain('Production notes')
     expect(studio).toContain('Reference image URL')
@@ -154,6 +167,17 @@ describe('Studio execution proof pack', () => {
     expect(studio).toContain('Avatar library')
     expect(studio).toContain('setAvatarDuration')
     expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
+  })
+
+  it('normalizes Studio video durations and long-form scene durations to the provider contract', () => {
+    expect(normalizeProviderVideoDuration(30)).toBe(8)
+    expect(normalizeProviderVideoDuration(1)).toBe(4)
+    expect(normalizeProviderVideoDuration('5s')).toBe(5)
+
+    const ninetySecondPlan = normalizeLongFormSceneDurations(90, 6)
+    expect(ninetySecondPlan).toHaveLength(12)
+    expect(ninetySecondPlan.every((duration) => duration >= 4 && duration <= 8)).toBe(true)
+    expect(ninetySecondPlan.reduce((sum, duration) => sum + duration, 0)).toBe(90)
   })
 
   it('music execution forwards lyrics, structure, vocals, mood, BPM, count, and backend payload metadata', () => {
