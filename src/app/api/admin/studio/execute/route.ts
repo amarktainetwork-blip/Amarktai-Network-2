@@ -16,7 +16,7 @@ import type { LiveRouteResult } from '@/lib/live-ai-routing'
 import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
 import { POST as imagePost } from '@/app/api/brain/image/route'
 import { POST as videoPost } from '@/app/api/brain/video-generate/route'
-import { POST as videoPlanPost } from '@/app/api/brain/video/route'
+import { POST as longFormVideoPost } from '@/app/api/brain/long-form-video/route'
 import { POST as ttsPost } from '@/app/api/brain/tts/route'
 import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
@@ -856,36 +856,69 @@ export async function POST(request: NextRequest) {
       const style = body.style ?? stringControl(controls, 'style', 'cinematic')
       const referenceImageUrl = stringControl(controls, 'referenceImageUrl', '')
       if (mode === 'long_video') {
-        const response = await videoPlanPost(jsonRequest('/api/brain/video', {
-          script: prompt,
+        const response = await longFormVideoPost(jsonRequest('/api/brain/long-form-video', {
+          prompt,
+          appSlug,
           style,
           duration: Math.max(90, requestedDuration),
           aspectRatio,
-          scenes: [],
           productionNotes: stringControl(controls, 'productionNotes', ''),
           sceneCount: Math.max(1, Math.round(numberControl(controls, 'sceneCount', 6))),
           voice: stringControl(controls, 'voice', 'on'),
           music: stringControl(controls, 'music', 'on'),
           stitching: stringControl(controls, 'stitching', 'on'),
+          metadata: { source: 'studio_execute', workspaceId: body.workspaceId ?? null, brandId: body.brandId ?? null },
         }))
         const data = await readJson(response)
-        const blocker = String(data.generation_blocker ?? 'Long-form video rendering is not wired. The backend can plan scenes but cannot assemble a completed 1m30s+ video artifact yet.')
-        return NextResponse.json(blockerResponse({
-          mode,
-          capability: 'long_form_video',
-          status: 'blocked',
-          blocker,
-          nextAction: 'Wire a renderer/stitcher that produces a final video file, then ingest it through canonical artifact storage.',
-          proof: studioProofSnapshot({
+        const status = String(data.jobStatus ?? data.status ?? 'processing')
+        const completed = ['completed', 'succeeded'].includes(status) && Boolean(data.artifactId && data.storageUrl)
+        const processing = ['queued', 'processing', 'submitted'].includes(status)
+        const proof = completed
+          ? await recordStudioProof({
+            mode: 'video',
+            capability: 'long_form_video',
+            appSlug,
+            provider: data.provider ?? route.selectedProvider,
+            model: data.model ?? route.selectedModel,
+            success: true,
+            executed: true,
+            artifactId: data.artifactId ?? null,
+            artifactPath: data.storageUrl ?? null,
+            jobId: data.jobId ?? null,
+            routePath: '/api/brain/long-form-video',
+            metadata: { source: 'studio_execute', strategy: data.strategy ?? null, phase: data.phase ?? null },
+          })
+          : studioProofSnapshot({
             capability: 'long_form_video',
             provider: data.provider ?? route.selectedProvider,
             model: data.model ?? route.selectedModel,
-            route: '/api/brain/video',
-            proofStatus: 'failed',
-            error: blocker,
-          }),
-          route: { ...route, planning: data },
-        }), { status: 501 })
+            route: '/api/brain/long-form-video',
+            artifactId: null,
+            jobId: data.jobId ?? null,
+            proofStatus: processing ? 'processing' : 'failed',
+            error: data.blocker ?? data.error ?? null,
+          })
+        return NextResponse.json({
+          success: Boolean(data.success),
+          executed: Boolean(data.executed),
+          capability: 'long_form_video',
+          provider: data.provider ?? route.selectedProvider,
+          model: data.model ?? route.selectedModel,
+          strategy: data.strategy ?? null,
+          phase: data.phase ?? null,
+          jobStatus: status,
+          status,
+          artifactId: data.artifactId ?? null,
+          storageUrl: data.storageUrl ?? null,
+          videoUrl: data.videoUrl ?? data.storageUrl ?? null,
+          error: data.error ?? null,
+          blocker: data.blocker ?? data.error ?? null,
+          result: data,
+          artifact: data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null,
+          proof,
+          pollUrl: data.pollUrl ?? null,
+          route,
+        }, { status: response.status })
       }
       if (mode === 'image_to_video' && !referenceImageUrl) {
         const blocker = 'Image-to-video requires a referenceImageUrl or uploaded image artifact before execution.'
