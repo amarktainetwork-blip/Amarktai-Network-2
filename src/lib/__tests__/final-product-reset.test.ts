@@ -150,7 +150,7 @@ describe('final product reset truth and provider controls', () => {
   it('keeps Studio chat-first without provider or model selectors', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
     expect(studio).toContain('data-studio-task-selector')
-    for (const task of ['Chat', 'Image', 'Video', 'Long-form Video', 'Music', 'Voice/TTS', 'STT', 'Avatar', 'RAG/Research', 'Campaign']) {
+    for (const task of ['Chat', 'Image', 'Video', 'Image-to-Video', 'Long-form Video', 'Music', 'Voice/TTS', 'STT', 'Avatar', 'RAG/Research', 'Campaign']) {
       expect(studio).toContain(task)
     }
     expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
@@ -189,7 +189,8 @@ describe('final product reset truth and provider controls', () => {
       'Test phrase',
       'Audio upload',
       'Avatar library',
-      'Create avatar',
+      'Avatar name',
+      'Reference image URL',
       'Consistency toggle',
       'URL input for scrape',
       'Document upload',
@@ -204,6 +205,7 @@ describe('final product reset truth and provider controls', () => {
     for (const upload of [
       'image-reference-upload',
       'video-reference-upload',
+      'image-to-video-reference-upload',
       'stt-audio',
       'avatar-reference-upload',
       'rag-document-upload',

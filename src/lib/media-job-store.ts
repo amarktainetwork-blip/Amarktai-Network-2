@@ -8,6 +8,7 @@ import {
 } from '@/lib/local-json-store'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { recordProviderResult } from '@/lib/provider-result-log'
+import { recordAvatarLibraryEntry } from '@/lib/avatar-library-store'
 
 export type LocalMediaJobStatus = 'queued' | 'processing' | 'completed' | 'failed'
 export type LocalMediaType = 'image' | 'audio' | 'music' | 'video'
@@ -143,6 +144,26 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         localJobId: job.id,
       },
     })
+    if (persisted.artifactId && job.capability === 'avatar_video') {
+      recordAvatarLibraryEntry({
+        avatarId: typeof job.metadata.avatarId === 'string' ? job.metadata.avatarId : persisted.artifactId,
+        appSlug: job.appSlug,
+        library: typeof job.metadata.avatarLibrary === 'string' ? job.metadata.avatarLibrary : 'default',
+        name: typeof job.metadata.avatarName === 'string' ? job.metadata.avatarName : job.title,
+        artifactId: persisted.artifactId,
+        artifactUrl: persisted.storageUrl ?? persisted.mediaUrl ?? '',
+        provider: job.provider,
+        model: job.model,
+        prompt: job.prompt,
+        persona: typeof job.metadata.persona === 'string' ? job.metadata.persona : job.prompt,
+        metadata: {
+          ...job.metadata,
+          capability: job.capability,
+          localJobId: job.id,
+          providerJobId: job.providerJobId,
+        },
+      })
+    }
     await recordProviderResult({
       appSlug: job.appSlug,
       provider: job.provider,

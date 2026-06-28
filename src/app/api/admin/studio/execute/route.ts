@@ -16,6 +16,7 @@ import type { LiveRouteResult } from '@/lib/live-ai-routing'
 import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
 import { POST as imagePost } from '@/app/api/brain/image/route'
 import { POST as videoPost } from '@/app/api/brain/video-generate/route'
+import { POST as videoPlanPost } from '@/app/api/brain/video/route'
 import { POST as ttsPost } from '@/app/api/brain/tts/route'
 import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
 import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
@@ -29,24 +30,26 @@ type ExecuteBody = {
   model?: unknown
   providerOverride?: unknown
   modelOverride?: unknown
+  capability?: string
   costMode?: 'cheap' | 'balanced' | 'premium'
   qualityTier?: 'basic' | 'standard' | 'high' | 'premium'
   appSlug?: string
   workspaceId?: string
   brandId?: string
   adultPolicy?: string
-  mode?: 'chat' | 'text' | 'image' | 'music' | 'video' | 'voice'
+  mode?: 'chat' | 'text' | 'image' | 'music' | 'video' | 'long-video' | 'image-to-video' | 'voice' | 'avatar'
   voiceId?: string
   size?: string
   style?: string
   controls?: Record<string, unknown>
 }
 
-type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'voice'
-type ProofMode = 'chat' | 'image' | 'music'
+type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'long_video' | 'image_to_video' | 'voice' | 'avatar'
+type RouteProofMode = 'chat' | 'image' | 'music'
+type ProofMode = RouteProofMode | 'video' | 'avatar'
 type StudioChatProvider = 'groq' | 'together' | 'mimo' | 'genx' | 'huggingface'
 
-const STUDIO_EXECUTABLE_PROVIDERS: Record<ProofMode, readonly ProviderMeshId[]> = {
+const STUDIO_EXECUTABLE_PROVIDERS: Record<RouteProofMode, readonly ProviderMeshId[]> = {
   chat: ['groq', 'together', 'mimo', 'genx', 'huggingface'],
   image: ['genx', 'together'],
   music: ['genx'],
@@ -107,7 +110,9 @@ async function persistArtifact(input: {
   }
 }
 
-function normalizeCapability(tab: StudioTab, adultMode?: string): AiCapability {
+function normalizeCapability(tab: StudioTab, adultMode?: string, requestedCapability?: string): AiCapability {
+  if (requestedCapability === 'image_to_video') return 'image_to_video'
+  if (requestedCapability === 'long_form_video') return 'video_generation'
   if (tab === 'Research') return 'research'
   if (tab === 'Image') return 'image_generation'
   if (tab === 'Video') return 'video_generation'
@@ -157,6 +162,9 @@ function stringArrayControl(controls: Record<string, unknown>, key: string, fall
 }
 
 function normalizeMode(bodyMode: ExecuteBody['mode'], tab: StudioTab): StudioExecutionMode {
+  if (bodyMode === 'long-video') return 'long_video'
+  if (bodyMode === 'image-to-video') return 'image_to_video'
+  if (bodyMode === 'avatar') return 'avatar'
   if (bodyMode === 'chat' || bodyMode === 'image' || bodyMode === 'music' || bodyMode === 'text' || bodyMode === 'video' || bodyMode === 'voice') {
     return bodyMode
   }
@@ -172,6 +180,9 @@ function proofCapability(mode: StudioExecutionMode, capability: AiCapability) {
   if (mode === 'chat') return 'chat'
   if (mode === 'image') return 'image_generation'
   if (mode === 'music') return 'music_generation'
+  if (mode === 'image_to_video') return 'image_to_video'
+  if (mode === 'long_video') return 'long_form_video'
+  if (mode === 'avatar') return 'avatar_video'
   return capability
 }
 
@@ -250,15 +261,19 @@ function selectStudioProvider(
   truth?: CapabilityRuntimeTruthEntry | null,
   costMode: 'cheap' | 'balanced' | 'premium' = 'balanced',
 ): ProviderMeshId | null {
-  if (!truth || !['chat', 'image', 'music'].includes(mode)) return null
+  if (!truth || !isRouteProofMode(mode)) return null
   const connected = new Set(truth.connectedProviderCandidates.map((provider) => normalizeProviderMeshId(provider)).filter(Boolean))
   const supported = mode === 'chat' && costMode === 'premium'
     ? STUDIO_PREMIUM_CHAT_PROVIDERS
-    : STUDIO_EXECUTABLE_PROVIDERS[mode as ProofMode]
+    : STUDIO_EXECUTABLE_PROVIDERS[mode]
   for (const provider of supported) {
     if (connected.has(provider)) return provider
   }
   return null
+}
+
+function isRouteProofMode(mode: StudioExecutionMode): mode is RouteProofMode {
+  return mode === 'chat' || mode === 'image' || mode === 'music'
 }
 
 function noConnectedStudioProviderResponse(
@@ -563,7 +578,7 @@ export async function POST(request: NextRequest) {
     }, { status: 501 })
   }
 
-  const capability = normalizeCapability(tab, body.mode)
+  const capability = normalizeCapability(tab, body.mode, body.capability)
   const mode = normalizeMode(body.mode, tab)
   const costMode = effectiveStudioCostMode(body)
   const proofCapabilityId = proofCapability(mode, capability)
@@ -580,9 +595,58 @@ export async function POST(request: NextRequest) {
   }
 
   if (tab === 'Avatar / Talking Video') {
-    const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', { prompt, appSlug }))
+    const response = await avatarVideoPost(jsonRequest('/api/brain/avatar-video', {
+      prompt,
+      appSlug,
+      mode: stringControl(controls, 'avatarMode', stringControl(controls, 'mode', 'image')),
+      avatarName: stringControl(controls, 'avatarName', prompt.slice(0, 48) || 'Studio avatar'),
+      style: stringControl(controls, 'style', 'creator_avatar'),
+      referenceImageUrl: stringControl(controls, 'referenceImageUrl', ''),
+      voice: stringControl(controls, 'voice', ''),
+      script: stringControl(controls, 'script', prompt),
+      duration: durationSeconds(stringControl(controls, 'duration', '8s'), 8),
+      library: stringControl(controls, 'library', 'default'),
+    }))
     const data = await readJson(response)
-    return NextResponse.json({ ...data, result: data, artifact: null }, { status: response.status })
+    const status = String(data.jobStatus ?? data.status ?? 'failed')
+    const processing = ['queued', 'processing', 'submitted'].includes(status)
+    const completed = ['completed', 'succeeded'].includes(status) && Boolean(data.artifactId && data.storageUrl)
+    const selectedProvider = canonicalProviderValue(data.provider) ?? 'genx'
+    const selectedModel = data.model ?? null
+    const proof = completed
+      ? await recordStudioProof({
+        mode: 'avatar',
+        capability: 'avatar_video',
+        appSlug,
+        provider: selectedProvider,
+        model: selectedModel,
+        success: true,
+        executed: true,
+        artifactId: data.artifactId ?? null,
+        artifactPath: data.storageUrl ?? null,
+        jobId: data.jobId ?? null,
+        routePath: '/api/brain/avatar-video',
+        metadata: { source: 'studio_execute', avatar: data.avatar ?? null },
+      })
+      : studioProofSnapshot({
+        capability: 'avatar_video',
+        provider: selectedProvider,
+        model: selectedModel,
+        route: '/api/brain/avatar-video',
+        artifactId: null,
+        jobId: data.jobId ?? null,
+        proofStatus: processing ? 'processing' : 'failed',
+        error: data.blocker ?? data.error ?? null,
+      })
+    return NextResponse.json({
+      ...data,
+      result: data,
+      artifact: data.artifact ?? (data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null),
+      proof,
+      selectedProvider,
+      selectedModel,
+      output: data.videoUrl ?? data.imageUrl ?? data.mediaUrl ?? data.storageUrl ?? null,
+    }, { status: response.status })
   }
 
   const route = routeLiveModel({
@@ -787,34 +851,124 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Video' || capability === 'adult_video') {
+      const requestedDuration = durationSeconds(stringControl(controls, 'duration', mode === 'long_video' ? '90s' : '30s'), mode === 'long_video' ? 90 : 30)
+      const aspectRatio = stringControl(controls, 'format', '16:9')
+      const style = body.style ?? stringControl(controls, 'style', 'cinematic')
+      const referenceImageUrl = stringControl(controls, 'referenceImageUrl', '')
+      if (mode === 'long_video') {
+        const response = await videoPlanPost(jsonRequest('/api/brain/video', {
+          script: prompt,
+          style,
+          duration: Math.max(90, requestedDuration),
+          aspectRatio,
+          scenes: [],
+          productionNotes: stringControl(controls, 'productionNotes', ''),
+          sceneCount: Math.max(1, Math.round(numberControl(controls, 'sceneCount', 6))),
+          voice: stringControl(controls, 'voice', 'on'),
+          music: stringControl(controls, 'music', 'on'),
+          stitching: stringControl(controls, 'stitching', 'on'),
+        }))
+        const data = await readJson(response)
+        const blocker = String(data.generation_blocker ?? 'Long-form video rendering is not wired. The backend can plan scenes but cannot assemble a completed 1m30s+ video artifact yet.')
+        return NextResponse.json(blockerResponse({
+          mode,
+          capability: 'long_form_video',
+          status: 'blocked',
+          blocker,
+          nextAction: 'Wire a renderer/stitcher that produces a final video file, then ingest it through canonical artifact storage.',
+          proof: studioProofSnapshot({
+            capability: 'long_form_video',
+            provider: data.provider ?? route.selectedProvider,
+            model: data.model ?? route.selectedModel,
+            route: '/api/brain/video',
+            proofStatus: 'failed',
+            error: blocker,
+          }),
+          route: { ...route, planning: data },
+        }), { status: 501 })
+      }
+      if (mode === 'image_to_video' && !referenceImageUrl) {
+        const blocker = 'Image-to-video requires a referenceImageUrl or uploaded image artifact before execution.'
+        return NextResponse.json(blockerResponse({
+          mode,
+          capability: 'image_to_video',
+          status: 'blocked',
+          blocker,
+          nextAction: 'Provide a platform artifact URL or uploaded image reference, then retry image-to-video.',
+          route,
+        }), { status: 400 })
+      }
+      if (mode === 'video' && requestedDuration > 30) {
+        const blocker = 'Short Studio video generation is limited to 30 seconds by the current backend route. Use Long-form Video for 1m30s+ planning, or wire a long-form renderer.'
+        return NextResponse.json(blockerResponse({
+          mode,
+          capability: 'video_generation',
+          status: 'blocked',
+          blocker,
+          nextAction: 'Choose 30s or less for short video, or implement the long-form renderer/stitcher.',
+          route,
+        }), { status: 400 })
+      }
       const provider = route.selectedProvider === 'genx'
         ? route.selectedProvider
         : 'genx'
       const response = await videoPost(jsonRequest('/api/brain/video-generate', {
         prompt,
-        style: body.style ?? stringControl(controls, 'style', 'cinematic'),
-        duration: durationSeconds(stringControl(controls, 'duration', '90s'), 90),
-        aspectRatio: stringControl(controls, 'format', '16:9'),
+        style,
+        duration: Math.min(30, requestedDuration),
+        aspectRatio,
+        referenceImageUrl: mode === 'image_to_video' ? referenceImageUrl : undefined,
         appSlug,
         provider,
         model: route.selectedModel,
-        capability,
+        capability: mode === 'image_to_video' ? 'image_to_video' : capability,
       }) as Request)
       const data = await readJson(response)
       const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
+      const status = String(data.jobStatus ?? data.status ?? 'processing')
+      const completed = ['completed', 'succeeded'].includes(status) && Boolean(data.artifactId && data.storageUrl)
+      const processing = ['queued', 'processing', 'submitted'].includes(status)
+      const proofCapabilityName = mode === 'image_to_video' ? 'image_to_video' : 'video_generation'
+      const proof = completed
+        ? await recordStudioProof({
+          mode: 'video',
+          capability: proofCapabilityName,
+          appSlug,
+          provider: data.provider ?? route.selectedProvider,
+          model: data.model ?? route.selectedModel,
+          success: true,
+          executed: true,
+          artifactId: data.artifactId ?? null,
+          artifactPath: data.storageUrl ?? null,
+          jobId: data.jobId ?? null,
+          routePath: '/api/brain/video-generate',
+          metadata: { source: 'studio_execute', mode, referenceImageUrl: referenceImageUrl || null },
+        })
+        : studioProofSnapshot({
+          capability: proofCapabilityName,
+          provider: data.provider ?? route.selectedProvider,
+          model: data.model ?? route.selectedModel,
+          route: '/api/brain/video-generate',
+          artifactId: null,
+          jobId: data.jobId ?? null,
+          proofStatus: processing ? 'processing' : 'failed',
+          error: data.blocker ?? data.error ?? null,
+        })
       return NextResponse.json({
         success: Boolean(data.success),
         executed: Boolean(data.executed),
-        capability,
+        capability: proofCapabilityName,
         provider: data.provider ?? route.selectedProvider,
         model: data.model ?? route.selectedModel,
-        jobStatus: data.jobStatus ?? data.status ?? 'processing',
+        jobStatus: status,
         artifactId: data.artifactId ?? null,
         storageUrl: data.storageUrl ?? null,
+        videoUrl: data.videoUrl ?? data.storageUrl ?? null,
         error: data.error ?? null,
         blocker: data.blocker ?? data.error ?? null,
         result: data,
         artifact,
+        proof,
         route,
       }, { status: response.status })
     }

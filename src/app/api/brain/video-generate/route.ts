@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { callProvider } from '@/lib/brain'
 import { callGenXMedia, GENX_VIDEO_MODELS } from '@/lib/genx-client'
-import { createArtifact } from '@/lib/artifact-store'
+import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
 
 const RequestSchema = z.object({
@@ -11,10 +11,11 @@ const RequestSchema = z.object({
   style: z.enum(['cinematic', 'animated', 'realistic', 'documentary', 'commercial']).optional().default('cinematic'),
   duration: z.number().int().min(1).max(30).optional().default(4),
   aspectRatio: z.enum(['16:9', '9:16', '1:1']).optional().default('16:9'),
+  referenceImageUrl: z.string().url().optional(),
   appSlug: z.string().optional(),
   provider: z.enum(['genx', 'auto']).optional().default('auto'),
   model: z.string().optional(),
-  capability: z.enum(['video_generation', 'adult_video']).optional().default('video_generation'),
+  capability: z.enum(['video_generation', 'image_to_video', 'adult_video']).optional().default('video_generation'),
 })
 
 async function planningFallback(prompt: string, style: string, duration: number) {
@@ -38,7 +39,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     blocker: 'Invalid request', details: parsed.error.flatten(),
   }, { status: 400 })
 
-  const { prompt, style, duration, aspectRatio, appSlug, provider, model, capability } = parsed.data
+  const { prompt, style, duration, aspectRatio, referenceImageUrl, appSlug, provider, model, capability } = parsed.data
   if (capability === 'adult_video') {
     const targetApp = appSlug ?? 'amarktai-network'
     await loadAppSafetyConfigFromDB(targetApp)
@@ -60,7 +61,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  const enhancedPrompt = `${style} style video: ${prompt}`
+  const enhancedPrompt = referenceImageUrl
+    ? `${style} style image-to-video from reference ${referenceImageUrl}: ${prompt}`
+    : `${style} style video: ${prompt}`
   let providerJobId = ''
   let usedProvider = ''
   let usedModel = ''
@@ -71,7 +74,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     const genxModel = model && GENX_VIDEO_MODELS.includes(model as (typeof GENX_VIDEO_MODELS)[number])
       ? model
       : GENX_VIDEO_MODELS[0]
-    const result = await callGenXMedia({ model: genxModel, prompt: enhancedPrompt, type: 'video', duration })
+    const result = await callGenXMedia({
+      model: genxModel,
+      prompt: enhancedPrompt,
+      type: 'video',
+      duration,
+      params: referenceImageUrl ? { referenceImageUrl, imageUrl: referenceImageUrl } : undefined,
+      metadata: { capability, aspectRatio, referenceImageUrl },
+    })
     if (result.success && (result.jobId || result.url)) {
       providerJobId = result.jobId ? `genx-job:${result.jobId}` : `genx-sync:${result.url}`
       usedProvider = 'genx'
@@ -112,14 +122,15 @@ export async function POST(request: Request): Promise<NextResponse> {
       status,
       providerJobId,
       resultUrl: resultUrl || null,
-      resultMeta: JSON.stringify({ capability }),
+      resultMeta: JSON.stringify({ capability, aspectRatio, referenceImageUrl }),
     },
   })
   let artifactId: string | null = null
   let storageUrl: string | null = null
   if (status === 'succeeded' && resultUrl) {
     try {
-      const artifact = await createArtifact({
+      const persisted = await persistCanonicalMediaResult({
+        result: { resultUrl, status, providerJobId },
         appSlug: appSlug ?? 'amarktai-network',
         type: 'video',
         subType: capability,
@@ -128,13 +139,11 @@ export async function POST(request: Request): Promise<NextResponse> {
         provider: usedProvider,
         model: usedModel,
         traceId: `video-job-${job.id}`,
-        contentUrl: resultUrl,
-        allowRemoteReference: true,
-        mimeType: 'video/mp4',
-        metadata: { capability, jobId: job.id },
+        metadata: { capability, jobId: job.id, aspectRatio, referenceImageUrl },
       })
-      artifactId = artifact.id
-      storageUrl = artifact.storageUrl
+      if (!persisted.artifactId || !persisted.storageUrl) throw new Error(persisted.blocker ?? 'Video artifact ingestion failed')
+      artifactId = persisted.artifactId
+      storageUrl = persisted.storageUrl
     } catch (error) {
       const message = `Generation completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`
       return NextResponse.json({

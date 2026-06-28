@@ -13,13 +13,17 @@ const mocks = vi.hoisted(() => {
 })
 
 vi.mock('@/lib/local-json-store', () => ({
-  LOCAL_STORE_FILES: { mediaJobs: 'jobs/media-jobs.json' },
+  LOCAL_STORE_FILES: { mediaJobs: 'jobs/media-jobs.json', avatarLibrary: 'avatars/avatar-library.json' },
   generateId: vi.fn(() => 'local-media-job-1'),
   appendRecord: vi.fn((_file: string, record: Record<string, unknown>) => {
     mocks.records.set(String(record.id), record)
     return record
   }),
   findRecord: vi.fn((_file: string, id: string) => mocks.records.get(id) ?? null),
+  listRecords: vi.fn((_file: string, predicate?: (record: Record<string, unknown>) => boolean) => {
+    const values = [...mocks.records.values()]
+    return predicate ? values.filter(predicate) : values
+  }),
   updateRecord: vi.fn((_file: string, id: string, updates: Record<string, unknown>) => {
     const current = mocks.records.get(id)
     if (!current) return null
@@ -196,12 +200,64 @@ describe('local media job lifecycle', () => {
       proof: expect.objectContaining({ proofStatus: 'failed' }),
     })
   })
+
+  it('records completed avatar provider jobs in the reusable avatar library after artifact ingestion', async () => {
+    createLocalMediaJob({
+      capability: 'avatar_video',
+      appSlug: 'amarktai-network',
+      type: 'video',
+      subType: 'avatar_video',
+      title: 'Avatar: Ada',
+      prompt: 'Create a reusable talking avatar.',
+      provider: 'genx',
+      model: 'veo-3.1-fast',
+      providerJobId: 'provider-avatar-job-1',
+      metadata: {
+        avatarId: 'avatar-ada',
+        avatarName: 'Ada',
+        avatarLibrary: 'brand-library',
+        persona: 'Helpful operator',
+      },
+    })
+    mocks.getGenXJobStatus.mockResolvedValue({
+      id: 'provider-avatar-job-1',
+      status: 'completed',
+      resultUrl: 'https://cdn.example/avatar.mp4',
+    })
+    mocks.persistCanonicalMediaResult.mockResolvedValue({
+      artifactId: 'artifact-avatar-1',
+      storageUrl: '/api/artifacts/file/artifact-avatar-1',
+      mediaUrl: '/api/artifacts/file/artifact-avatar-1',
+    })
+
+    const completed = await pollLocalMediaJob('local-media-job-1')
+    const avatar = mocks.records.get('avatar-ada')
+
+    expect(completed).toMatchObject({
+      status: 'completed',
+      artifactId: 'artifact-avatar-1',
+      storageUrl: '/api/artifacts/file/artifact-avatar-1',
+    })
+    expect(avatar).toMatchObject({
+      id: 'avatar-ada',
+      avatarId: 'avatar-ada',
+      library: 'brand-library',
+      name: 'Ada',
+      artifactId: 'artifact-avatar-1',
+      artifactUrl: '/api/artifacts/file/artifact-avatar-1',
+      provider: 'genx',
+    })
+  })
 })
 
 describe('live media route contracts', () => {
   it('recognizes avatar video without advertising a fake provider', () => {
     expect(normalizeGovernedCapability('avatar_video')).toBe('avatar_video')
-    expect(read('app/api/brain/avatar-video/route.ts')).toContain('avatar video provider unavailable')
+    const route = read('app/api/brain/avatar-video/route.ts')
+    expect(route).toContain('callGenXMedia')
+    expect(route).toContain('persistCanonicalMediaResult')
+    expect(route).toContain('recordAvatarLibraryEntry')
+    expect(route).not.toContain('avatar video provider unavailable')
   })
 
   it('does not advertise Groq as a canonical TTS provider', () => {

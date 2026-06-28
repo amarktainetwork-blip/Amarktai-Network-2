@@ -2,16 +2,25 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getGenXJobStatus } from '@/lib/genx-client'
 import { dispatchEvent } from '@/lib/webhook-manager'
-import { createArtifact } from '@/lib/artifact-store'
+import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 
 const MAX_PROCESSING_MS = 15 * 60 * 1000
 
 function capabilityFor(resultMeta: string | null) {
   try {
     const parsed = JSON.parse(resultMeta ?? '{}') as { capability?: string }
+    if (parsed.capability === 'image_to_video') return 'image_to_video'
     return parsed.capability === 'adult_video' ? 'adult_video' : 'video_generation'
   } catch {
     return 'video_generation'
+  }
+}
+
+function metaFor(resultMeta: string | null): Record<string, unknown> {
+  try {
+    return JSON.parse(resultMeta ?? '{}') as Record<string, unknown>
+  } catch {
+    return {}
   }
 }
 
@@ -32,7 +41,8 @@ async function ensureVideoArtifact(job: {
       select: { id: true, storageUrl: true },
     })
     if (existing) return { artifactId: existing.id, storageUrl: existing.storageUrl, artifactError: null }
-    const artifact = await createArtifact({
+    const persisted = await persistCanonicalMediaResult({
+      result: { resultUrl: job.resultUrl, providerJobId: job.id, status: 'succeeded' },
       appSlug: job.appSlug ?? 'amarktai-network',
       type: 'video',
       subType: capabilityFor(job.resultMeta),
@@ -41,12 +51,12 @@ async function ensureVideoArtifact(job: {
       provider: job.provider,
       model: job.modelId,
       traceId,
-      mimeType: 'video/mp4',
-      contentUrl: job.resultUrl,
-      allowRemoteReference: true,
-      metadata: { capability: capabilityFor(job.resultMeta), jobId: job.id },
+      metadata: { ...metaFor(job.resultMeta), capability: capabilityFor(job.resultMeta), jobId: job.id },
     })
-    return { artifactId: artifact.id, storageUrl: artifact.storageUrl, artifactError: null }
+    if (!persisted.artifactId || !persisted.storageUrl) {
+      return { artifactId: null, storageUrl: null, artifactError: persisted.blocker ?? 'Video artifact ingestion failed.' }
+    }
+    return { artifactId: persisted.artifactId, storageUrl: persisted.storageUrl, artifactError: null }
   } catch (error) {
     return {
       artifactId: null,

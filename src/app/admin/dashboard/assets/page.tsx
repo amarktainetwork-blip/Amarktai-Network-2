@@ -3,6 +3,7 @@ import { Archive, Download, ExternalLink, FileAudio, FileImage, FileText, Music,
 import { prisma } from '@/lib/prisma'
 import { listArtifacts, type ArtifactRecord } from '@/lib/artifact-store'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import { listAvatarLibraryEntries } from '@/lib/avatar-library-store'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +89,7 @@ export default async function AssetsAndJobsPage() {
   const snapshot = await getSnapshot()
   const localArtifacts = listRecords<LocalArtifact>(LOCAL_STORE_FILES.artifacts).slice(-40).reverse()
   const commandJobs = listRecords<CommandJob>('jobs/command-jobs.json').slice(-40).reverse()
+  const avatarLibrary = listAvatarLibraryEntries().slice(0, 40)
   const allJobs = [
     ...snapshot.videoJobs.map((job) => ({
       id: job.id,
@@ -134,7 +136,7 @@ export default async function AssetsAndJobsPage() {
         <Metric icon={<FileImage />} label="Generated assets" value={String(snapshot.assets.length + snapshot.artifacts.length)} />
         <Metric icon={<Video />} label="Video jobs" value={String(snapshot.videoJobs.length)} />
         <Metric icon={<Archive />} label="Local artifacts" value={String(localArtifacts.length)} />
-        <Metric icon={<RefreshCw />} label="Command jobs" value={String(commandJobs.length)} />
+        <Metric icon={<FileImage />} label="Avatar library" value={String(avatarLibrary.length)} />
       </section>
 
       <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="Asset filters">
@@ -242,6 +244,48 @@ export default async function AssetsAndJobsPage() {
           )}
         </Panel>
       </section>
+
+      <Panel title="Avatar Library">
+        {avatarLibrary.length ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {avatarLibrary.map((avatar) => (
+              <article key={avatar.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-800 bg-slate-900 text-cyan-300">
+                    <FileImage className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="truncate text-sm font-black text-white">{avatar.name}</p>
+                      <StatusPill status="stored" />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">{avatar.library}</p>
+                    <p className="mt-1 text-xs text-slate-600">{avatar.createdAt}</p>
+                    <p className="mt-2 text-xs font-bold text-slate-500">{avatar.provider || 'runtime'} / {avatar.model || 'model selected at runtime'}</p>
+                    <p className="mt-1 break-words font-mono text-[11px] text-slate-600">{avatar.artifactId}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {avatar.artifactUrl ? (
+                        <>
+                          <a href={avatar.artifactUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1.5 text-xs font-black text-cyan-200">
+                            <ExternalLink className="h-3.5 w-3.5" /> Open
+                          </a>
+                          <a href={avatar.artifactUrl} download className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-black text-slate-300">
+                            <Download className="h-3.5 w-3.5" /> Download
+                          </a>
+                        </>
+                      ) : (
+                        <span className="text-xs font-bold text-slate-600">No reference link</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Empty text="No reusable avatar outputs found." />
+        )}
+      </Panel>
     </div>
   )
 }

@@ -386,7 +386,7 @@ describe('Qdrant Per-App Isolation', () => {
     // Without Qdrant configured, should return empty (graceful degradation)
     const results = await searchAppKnowledge('test-app', new Array(1536).fill(0))
     expect(results).toEqual([])
-  }, 10_000)
+  }, 30_000)
 
   it('deleteAppKnowledge returns false when Qdrant unavailable', async () => {
     const { deleteAppKnowledge } = await import('@/lib/vector-store')

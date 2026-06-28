@@ -6,7 +6,7 @@ import { ArrowRight, ImageIcon, Loader2, Mic, Music, Paperclip, Send, Sparkles, 
 import { STUDIO_ROUTE_MAP, type StudioTab } from '@/lib/studio-route-map'
 import type { CostMode } from '@/lib/approved-ai-catalog'
 
-type TaskId = 'chat' | 'image' | 'video' | 'long-video' | 'music' | 'tts' | 'stt' | 'avatar' | 'research' | 'campaign'
+type TaskId = 'chat' | 'image' | 'video' | 'long-video' | 'image-to-video' | 'music' | 'tts' | 'stt' | 'avatar' | 'research' | 'campaign'
 
 type StudioTask = {
   id: TaskId
@@ -22,6 +22,7 @@ const TASKS: StudioTask[] = [
   { id: 'image', label: 'Image', tab: 'Image', capability: 'image_generation', icon: <ImageIcon />, placeholder: 'Describe the image, style, references, and intended use.' },
   { id: 'video', label: 'Video', tab: 'Video', capability: 'video_generation', icon: <Video />, placeholder: 'Describe a short video, reference image, camera motion, and format.' },
   { id: 'long-video', label: 'Long-form Video', tab: 'Video', capability: 'long_form_video', icon: <Video />, placeholder: 'Describe script, scenes, music, voice, stitching, and final format.' },
+  { id: 'image-to-video', label: 'Image-to-Video', tab: 'Video', capability: 'image_to_video', icon: <Video />, placeholder: 'Describe motion, camera move, and transformation from the reference image.' },
   { id: 'music', label: 'Music', tab: 'Music / Audio', capability: 'music_generation', icon: <Music />, placeholder: 'Describe genre, lyrics, vocals, mood, and duration over two minutes.' },
   { id: 'tts', label: 'Voice/TTS', tab: 'Voice / TTS', capability: 'tts', icon: <Mic />, placeholder: 'Paste the voice script and choose delivery style.' },
   { id: 'stt', label: 'STT', tab: 'STT / Transcription', capability: 'stt', icon: <Upload />, placeholder: 'Upload or record audio, then request a transcript.' },
@@ -70,11 +71,14 @@ export default function StudioPage() {
   const [imageSize, setImageSize] = useState('1024x1024')
   const [imageStyle, setImageStyle] = useState('premium realistic')
   const [imageCount, setImageCount] = useState('1')
-  const [videoDuration, setVideoDuration] = useState('1m30s')
+  const [videoDuration, setVideoDuration] = useState('30s')
+  const [longVideoDuration, setLongVideoDuration] = useState('1m30s')
   const [videoFormat, setVideoFormat] = useState('16:9')
   const [videoStyle, setVideoStyle] = useState('cinematic')
   const [videoCount, setVideoCount] = useState('1')
+  const [referenceImageUrl, setReferenceImageUrl] = useState('')
   const [sceneCount, setSceneCount] = useState('6')
+  const [productionNotes, setProductionNotes] = useState('')
   const [longVideoVoice, setLongVideoVoice] = useState('on')
   const [longVideoMusic, setLongVideoMusic] = useState('on')
   const [longVideoStitching, setLongVideoStitching] = useState('on')
@@ -111,7 +115,11 @@ export default function StudioPage() {
   const [campaignDays, setCampaignDays] = useState('14')
   const [campaignAssetTypes, setCampaignAssetTypes] = useState('copy, image, document')
   const [avatarLibrary, setAvatarLibrary] = useState('default')
-  const [avatarMode, setAvatarMode] = useState('video')
+  const [avatarMode, setAvatarMode] = useState('image')
+  const [avatarName, setAvatarName] = useState('')
+  const [avatarStyle, setAvatarStyle] = useState('creator_avatar')
+  const [avatarScript, setAvatarScript] = useState('')
+  const [avatarDuration, setAvatarDuration] = useState('8s')
   const [avatarConsistency, setAvatarConsistency] = useState('on')
   const [sttFile, setSttFile] = useState<File | null>(null)
 
@@ -286,8 +294,9 @@ export default function StudioPage() {
 
   function buildControls(id: TaskId) {
     if (id === 'image') return { size: imageSize, style: imageStyle, count: imageCount, references: 'reference image upload' }
-    if (id === 'video') return { duration: videoDuration, format: videoFormat, style: videoStyle, count: videoCount, referenceImage: 'reference image upload' }
-    if (id === 'long-video') return { duration: videoDuration, format: videoFormat, style: videoStyle, sceneCount, music: longVideoMusic, voice: longVideoVoice, stitching: longVideoStitching }
+    if (id === 'video') return { duration: videoDuration, format: videoFormat, style: videoStyle, count: videoCount, referenceImageUrl }
+    if (id === 'image-to-video') return { duration: videoDuration, format: videoFormat, style: videoStyle, count: videoCount, referenceImageUrl }
+    if (id === 'long-video') return { duration: longVideoDuration, format: videoFormat, style: videoStyle, sceneCount, music: longVideoMusic, voice: longVideoVoice, stitching: longVideoStitching, productionNotes }
     if (id === 'music') return {
       genre: musicGenre,
       genres: [musicGenre, musicGenre2, musicGenre3, musicGenre4, musicGenre5].filter(Boolean).slice(0, 5),
@@ -313,7 +322,7 @@ export default function StudioPage() {
       musicVideoSceneCount,
     }
     if (id === 'tts') return { voice: voiceStyle, speed: voiceSpeed, style: voiceStyle, voiceCloneName, voiceCloneConsent, voiceClonePhrase }
-    if (id === 'avatar') return { library: avatarLibrary, persona: true, consistencyReference: avatarConsistency, voice: voiceStyle, mode: avatarMode }
+    if (id === 'avatar') return { library: avatarLibrary, persona: true, consistencyReference: avatarConsistency, voice: voiceStyle, mode: avatarMode, avatarMode, avatarName, style: avatarStyle, script: avatarScript, duration: avatarDuration, referenceImageUrl }
     if (id === 'research') return { sourceUrl, query: prompt }
     if (id === 'campaign') return { appSlug, channels: campaignChannels, days: campaignDays, assetTypes: campaignAssetTypes }
     return {}
@@ -391,23 +400,23 @@ export default function StudioPage() {
             <TaskControls
               task={task.id}
               values={{
-                imageSize, imageStyle, imageCount, videoDuration, videoFormat, videoStyle, videoCount, sceneCount,
+                imageSize, imageStyle, imageCount, videoDuration, longVideoDuration, videoFormat, videoStyle, videoCount, referenceImageUrl, sceneCount, productionNotes,
                 longVideoVoice, longVideoMusic, longVideoStitching, musicGenre, musicGenre2, musicGenre3, musicGenre4,
                 musicGenre5, musicMood, musicVocals, musicBpm, musicLanguage, musicDuration, musicCount, lyrics,
                 musicIntro, musicVerse, musicChorus, musicBridge, musicOutro, musicVideoEnabled, musicVideoVisualStyle,
                 musicVideoStoryConcept, musicVideoAspectRatio, musicVideoDuration, musicVideoSceneCount,
                 voiceStyle, voiceSpeed, voiceCloneName, voiceCloneConsent, voiceClonePhrase,
-                sourceUrl, campaignChannels, campaignDays, campaignAssetTypes, appSlug, avatarLibrary, avatarMode, avatarConsistency,
+                sourceUrl, campaignChannels, campaignDays, campaignAssetTypes, appSlug, avatarLibrary, avatarMode, avatarName, avatarStyle, avatarScript, avatarDuration, avatarConsistency,
               }}
               setters={{
-                setImageSize, setImageStyle, setImageCount, setVideoDuration, setVideoFormat, setVideoStyle, setVideoCount,
-                setSceneCount, setLongVideoVoice, setLongVideoMusic, setLongVideoStitching, setMusicGenre, setMusicGenre2,
+                setImageSize, setImageStyle, setImageCount, setVideoDuration, setLongVideoDuration, setVideoFormat, setVideoStyle, setVideoCount,
+                setReferenceImageUrl, setSceneCount, setProductionNotes, setLongVideoVoice, setLongVideoMusic, setLongVideoStitching, setMusicGenre, setMusicGenre2,
                 setMusicGenre3, setMusicGenre4, setMusicGenre5, setMusicMood, setMusicVocals, setMusicBpm, setMusicLanguage,
                 setMusicDuration, setMusicCount, setLyrics, setMusicIntro, setMusicVerse, setMusicChorus, setMusicBridge,
                 setMusicOutro, setMusicVideoEnabled, setMusicVideoVisualStyle, setMusicVideoStoryConcept, setMusicVideoAspectRatio,
                 setMusicVideoDuration, setMusicVideoSceneCount, setVoiceStyle, setVoiceSpeed, setVoiceCloneName,
                 setVoiceCloneConsent, setVoiceClonePhrase, setSourceUrl, setCampaignChannels, setCampaignDays, setCampaignAssetTypes,
-                setAppSlug, setAvatarLibrary, setAvatarMode, setAvatarConsistency,
+                setAppSlug, setAvatarLibrary, setAvatarMode, setAvatarName, setAvatarStyle, setAvatarScript, setAvatarDuration, setAvatarConsistency,
               }}
               setSttFile={setSttFile}
             />
@@ -441,6 +450,8 @@ export default function StudioPage() {
                 <img src={result.outputUrl} alt="Studio image preview" className="mt-4 aspect-square w-full rounded-xl border border-slate-800 object-cover" />
               ) : result.mediaType === 'audio' || result.mediaType === 'music' ? (
                 <audio src={result.outputUrl} controls className="mt-4 w-full" />
+              ) : result.mediaType === 'video' ? (
+                <video src={result.outputUrl} controls className="mt-4 aspect-video w-full rounded-xl border border-slate-800 bg-black" />
               ) : (
                 <a href={result.outputUrl} target="_blank" rel="noreferrer" className="mt-4 block break-words text-sm font-bold text-cyan-200 hover:text-cyan-100">{result.outputUrl}</a>
               )}
@@ -523,10 +534,13 @@ function TaskControls({
     return <ControlGrid><Field label="Reference image upload"><FileInput dataAttr="image-reference-upload" /></Field><Field label="Aspect / size"><Select value={values.imageSize} onChange={setters.setImageSize} options={['1024x1024', '768x1024', '1024x768', '1536x1024']} /></Field><Field label="Style"><Input value={values.imageStyle} onChange={setters.setImageStyle} /></Field><Field label="Number of images"><Select value={values.imageCount} onChange={setters.setImageCount} options={['1', '2', '4']} /></Field><Field label="Edit mode"><Select value="generate" onChange={() => undefined} options={['generate', 'edit reference image']} /></Field></ControlGrid>
   }
   if (task === 'video') {
-    return <ControlGrid><Field label="Reference image upload"><FileInput dataAttr="video-reference-upload" /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['30s', '1m30s', '3m', '5m']} /></Field><Field label="Aspect"><Select value={values.videoFormat} onChange={setters.setVideoFormat} options={['16:9', '9:16', '1:1']} /></Field><Field label="Style"><Input value={values.videoStyle} onChange={setters.setVideoStyle} /></Field><Field label="Number of videos"><Select value={values.videoCount} onChange={setters.setVideoCount} options={['1', '2', '3']} /></Field></ControlGrid>
+    return <ControlGrid><Field label="Reference image URL"><Input value={values.referenceImageUrl} onChange={setters.setReferenceImageUrl} placeholder="/api/artifacts/file/... or https://..." /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['5s', '10s', '15s', '30s']} /></Field><Field label="Aspect"><Select value={values.videoFormat} onChange={setters.setVideoFormat} options={['16:9', '9:16', '1:1']} /></Field><Field label="Style"><Input value={values.videoStyle} onChange={setters.setVideoStyle} /></Field><Field label="Number of videos"><Select value={values.videoCount} onChange={setters.setVideoCount} options={['1', '2', '3']} /></Field><Field label="Reference image upload"><FileInput dataAttr="video-reference-upload" /></Field></ControlGrid>
+  }
+  if (task === 'image-to-video') {
+    return <ControlGrid><Field label="Reference image URL"><Input value={values.referenceImageUrl} onChange={setters.setReferenceImageUrl} placeholder="/api/artifacts/file/... or https://..." /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['5s', '10s', '15s', '30s']} /></Field><Field label="Aspect"><Select value={values.videoFormat} onChange={setters.setVideoFormat} options={['16:9', '9:16', '1:1']} /></Field><Field label="Motion style"><Input value={values.videoStyle} onChange={setters.setVideoStyle} /></Field><Field label="Number of videos"><Select value={values.videoCount} onChange={setters.setVideoCount} options={['1', '2', '3']} /></Field><Field label="Reference image upload"><FileInput dataAttr="image-to-video-reference-upload" /></Field></ControlGrid>
   }
   if (task === 'long-video') {
-    return <ControlGrid><Field label="Scene count"><Select value={values.sceneCount} onChange={setters.setSceneCount} options={['4', '6', '8', '12']} /></Field><Field label="Target duration"><Select value={values.videoDuration} onChange={setters.setVideoDuration} options={['1m30s', '3m', '5m', '10m']} /></Field><Field label="Voice toggle"><Select value={values.longVideoVoice} onChange={setters.setLongVideoVoice} options={['on', 'off']} /></Field><Field label="Music toggle"><Select value={values.longVideoMusic} onChange={setters.setLongVideoMusic} options={['on', 'off']} /></Field><Field label="Stitching option"><Select value={values.longVideoStitching} onChange={setters.setLongVideoStitching} options={['on', 'off']} /></Field></ControlGrid>
+    return <ControlGrid><Field label="Scene count"><Select value={values.sceneCount} onChange={setters.setSceneCount} options={['4', '6', '8', '12']} /></Field><Field label="Target duration"><Select value={values.longVideoDuration} onChange={setters.setLongVideoDuration} options={['1m30s', '3m', '5m', '10m']} /></Field><Field label="Voice toggle"><Select value={values.longVideoVoice} onChange={setters.setLongVideoVoice} options={['on', 'off']} /></Field><Field label="Music toggle"><Select value={values.longVideoMusic} onChange={setters.setLongVideoMusic} options={['on', 'off']} /></Field><Field label="Stitching option"><Select value={values.longVideoStitching} onChange={setters.setLongVideoStitching} options={['on', 'off']} /></Field><Field label="Production notes"><Input value={values.productionNotes} onChange={setters.setProductionNotes} /></Field></ControlGrid>
   }
   if (task === 'music') {
     const genreOptions = ['', 'cinematic pop', 'pop', 'cinematic', 'gospel', 'rnb', 'reggae', 'rock', 'rap', 'ambient', 'afrobeats', 'amapiano', 'edm', 'jazz']
@@ -539,7 +553,7 @@ function TaskControls({
     return <ControlGrid><Field label="Audio upload"><input type="file" accept="audio/*" data-studio-upload="stt-audio" onChange={(event) => setSttFile(event.target.files?.[0] ?? null)} className="block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-black file:text-slate-200" /></Field><Field label="Transcript output"><Input value="/api/admin/studio/stt saves transcript artifacts" readOnly /></Field></ControlGrid>
   }
   if (task === 'avatar') {
-    return <ControlGrid><Field label="Avatar library"><Select value={values.avatarLibrary} onChange={setters.setAvatarLibrary} options={['default', 'brand-library', 'app-library']} /></Field><Field label="Create avatar"><button type="button" className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-sm font-black text-slate-200">Create avatar</button></Field><Field label="Reference image upload"><FileInput dataAttr="avatar-reference-upload" /></Field><Field label="Voice selector"><Select value={values.voiceStyle} onChange={setters.setVoiceStyle} options={['AmarktAI Neutral', 'AmarktAI Warm', 'Calm Operator']} /></Field><Field label="Image / video mode"><Select value={values.avatarMode} onChange={setters.setAvatarMode} options={['image', 'video']} /></Field><Field label="Consistency toggle"><Select value={values.avatarConsistency} onChange={setters.setAvatarConsistency} options={['on', 'off']} /></Field></ControlGrid>
+    return <ControlGrid><Field label="Avatar library"><Select value={values.avatarLibrary} onChange={setters.setAvatarLibrary} options={['default', 'brand-library', 'app-library']} /></Field><Field label="Avatar name"><Input value={values.avatarName} onChange={setters.setAvatarName} /></Field><Field label="Style"><Input value={values.avatarStyle} onChange={setters.setAvatarStyle} /></Field><Field label="Script"><Input value={values.avatarScript} onChange={setters.setAvatarScript} /></Field><Field label="Reference image URL"><Input value={values.referenceImageUrl} onChange={setters.setReferenceImageUrl} placeholder="/api/artifacts/file/... or https://..." /></Field><Field label="Voice selector"><Select value={values.voiceStyle} onChange={setters.setVoiceStyle} options={['AmarktAI Neutral', 'AmarktAI Warm', 'Calm Operator']} /></Field><Field label="Image / video mode"><Select value={values.avatarMode} onChange={setters.setAvatarMode} options={['image', 'video']} /></Field><Field label="Duration"><Select value={values.avatarDuration} onChange={setters.setAvatarDuration} options={['5s', '8s', '10s', '15s', '30s']} /></Field><Field label="Consistency toggle"><Select value={values.avatarConsistency} onChange={setters.setAvatarConsistency} options={['on', 'off']} /></Field><Field label="Reference image upload"><FileInput dataAttr="avatar-reference-upload" /></Field></ControlGrid>
   }
   if (task === 'research') {
     return <ControlGrid><Field label="URL input for scrape"><Input value={values.sourceUrl} onChange={setters.setSourceUrl} placeholder="https://..." /></Field><Field label="Document upload"><FileInput dataAttr="rag-document-upload" /></Field><Field label="Mode"><Select value="query" onChange={() => undefined} options={['scrape', 'ingest', 'query']} /></Field><Field label="Result preview"><Input value="Preview appears in the chat/output panel" readOnly /></Field></ControlGrid>
@@ -596,21 +610,24 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
   const job = toRecord(data.job)
   const rawState = data.jobStatus ?? data.status ?? result?.status
   let status = normalizeExecutionState(rawState)
+  const hasVideoOutput = Boolean(firstString(data.videoUrl, result?.videoUrl))
   const mediaType = taskId === 'image'
     ? 'image'
     : taskId === 'music'
       ? 'music'
-      : taskId === 'video' || taskId === 'long-video'
+      : taskId === 'video' || taskId === 'long-video' || taskId === 'image-to-video'
         ? 'video'
-        : undefined
+        : taskId === 'avatar'
+          ? hasVideoOutput ? 'video' : 'image'
+          : undefined
   const artifactId = firstString(data.artifactId, artifact?.id, result?.artifactId)
   const artifactUrl = firstString(data.storageUrl, data.mediaUrl, artifact?.storageUrl, result?.storageUrl)
-  const rawOutputUrl = firstString(data.output, data.imageUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.musicUrl, result?.audioUrl, result?.mediaUrl)
+  const rawOutputUrl = firstString(data.output, data.imageUrl, data.videoUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.videoUrl, result?.musicUrl, result?.audioUrl, result?.mediaUrl, result?.storageUrl)
   const outputUrl = rawOutputUrl && isPlatformArtifactUrl(rawOutputUrl) ? rawOutputUrl : undefined
   const jobUrl = firstString(data.pollUrl, job?.pollUrl, result?.pollUrl)
   const blocker = firstString(data.blocker, data.error, result?.blocker, result?.error)
 
-  if (['image', 'music'].includes(taskId) && status === 'completed' && (!artifactId || !outputUrl)) {
+  if (['image', 'music', 'video', 'long-video', 'image-to-video', 'avatar'].includes(taskId) && status === 'completed' && (!artifactId || !outputUrl)) {
     status = 'failed'
   }
 
@@ -631,7 +648,7 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
     blocker: status === 'failed'
       ? blocker ?? (rawOutputUrl && !isPlatformArtifactUrl(rawOutputUrl)
         ? 'Job completed but no platform artifact was returned/saved.'
-        : ['image', 'music'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
+        : ['image', 'music', 'video', 'long-video', 'image-to-video', 'avatar'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
       : blocker,
   }
 }
