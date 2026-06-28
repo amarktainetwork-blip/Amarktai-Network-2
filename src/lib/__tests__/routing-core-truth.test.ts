@@ -68,11 +68,12 @@ describe('Image routing: Together preferred over GenX for non-premium', () => {
 
   it('brain/image route tries Together before GenX in non-premium auto path', () => {
     const source = src('src/app/api/brain/image/route.ts')
-    // Auto routing comment confirms Together-first for non-premium
-    expect(source).toContain('Auto routing: Together first')
-    expect(source).toContain('!preferGenXFirst && togetherKey')
-    // GenX is the fallback attempt (labelled)
-    expect(source).toContain('GenX attempt')
+    // Auto routing uses a provider loop
+    expect(source).toContain('for (const provider of eligibleProviders)')
+    // The non-premium base order must be ['together', 'genx'] — together first
+    expect(source).toContain("['together', 'genx']")
+    // Must have fallback warn log when Together fails
+    expect(source).toContain('Together failed, falling back')
   })
 
   it('brain/image route has selectGenXImageModel instead of GENX_IMAGE_MODELS[0]', () => {

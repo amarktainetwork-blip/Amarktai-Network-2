@@ -1,24 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getVaultApiKey } from '@/lib/brain';
 import { callGenXMedia, GENX_IMAGE_MODELS } from '@/lib/genx-client';
+import { parseTogetherImageResponse } from '@/lib/together-image-parser';
 
 /**
  * POST /api/brain/image — Standard image generation
  *
  * Provider chain (first configured key that succeeds wins).
  * Default order (balanced/cheap): Together AI → GenX
- * Premium order or explicit override: GenX → Together AI
+ * Premium order: GenX → Together AI
+ * Explicit override: try preferred provider first, then fallback chain unless capability is adult.
  *
  * Accepts JSON body:
- *   - prompt          (string, required)
- *   - providerOverride (string, optional) — 'together' | 'genx' | 'huggingface'
- *   - modelOverride   (string, optional) — override model id
- *   - model           (string, optional) — alias for modelOverride
- *   - size            (string, optional) — '1024x1024' | '1024x1792' | '1792x1024'
- *   - costMode        (string, optional) — 'cheap' | 'balanced' | 'premium'
+ *   - prompt           (string, required)
+ *   - preferProvider   (string, optional) — 'together' | 'genx' | 'huggingface' — hint, not hard lock
+ *   - providerOverride (string, optional) — kept for compat; treated same as preferProvider
+ *   - modelOverride    (string, optional)
+ *   - model            (string, optional)
+ *   - size             (string, optional)
+ *   - costMode         (string, optional) — 'cheap' | 'balanced' | 'premium'
+ *   - noFallback       (boolean, optional) — set true to disable fallback (explicit override semantics)
+ *   - capability       (string, optional) — 'image_generation' | 'adult_image' (adult never falls back to genx)
  *
  * Returns:
- *   { executed, imageUrl?, imageBase64?, provider, model, error? }
+ *   { executed, imageUrl?, imageBase64?, provider, model, error?, attempts }
  */
 
 const ALLOWED_SIZES = ['256x256', '512x512', '1024x1024', '1024x1792', '1792x1024'] as const;
@@ -29,10 +34,15 @@ const FLUX_MODELS = [
   { id: 'black-forest-labs/FLUX.1-schnell', steps: 4 },
 ];
 
-/**
- * Select a GenX image model by quality tier rather than by array position.
- * Defaults to a mid-tier model; only uses premium (gpt-image-2) when explicitly requested.
- */
+type ImageAttempt = {
+  provider: string;
+  model: string;
+  status: 'ok' | 'no_image' | 'http_error' | 'no_key' | 'exception';
+  error?: string;
+  responseShape?: string[];
+}
+
+/** Select a GenX image model by quality tier rather than by array position. */
 function selectGenXImageModel(modelOverride: string | undefined, costMode: string): string {
   if (modelOverride && GENX_IMAGE_MODELS.includes(modelOverride as (typeof GENX_IMAGE_MODELS)[number])) {
     return modelOverride;
@@ -43,9 +53,25 @@ function selectGenXImageModel(modelOverride: string | undefined, costMode: strin
   return 'genxlm-pro-v1-img';
 }
 
-async function tryTogether(prompt: string, togetherKey: string, model?: string): Promise<{ ok: boolean; url?: string; usedModel?: string }> {
+/**
+ * Parse a Together AI image response body into a usable image URL or base64 string.
+ * Together can return multiple shapes depending on the model and endpoint version:
+ *   - { data: [{ url }] }             — standard SDXL/FLUX URL
+ *   - { data: [{ b64_json }] }        — base64 encoded image
+ *   - { data: [{ image_url }] }       — alternate key (some models)
+ *   - { artifacts: [{ uri }] }        — legacy Together artifact shape
+ *   - { output: { choices: [{ url }]}} — older Together generations shape
+ */
+
+
+async function tryTogether(
+  prompt: string,
+  togetherKey: string,
+  model?: string,
+): Promise<{ ok: boolean; url?: string; base64?: string; usedModel?: string; attempt: ImageAttempt }> {
   const models = model ? [{ id: model, steps: 4 }] : FLUX_MODELS;
   for (const { id: fluxModel, steps } of models) {
+    let responseShapeKeys: string[] = [];
     try {
       const response = await fetch('https://api.together.xyz/v1/images/generations', {
         method: 'POST',
@@ -53,27 +79,70 @@ async function tryTogether(prompt: string, togetherKey: string, model?: string):
         body: JSON.stringify({ model: fluxModel, prompt: prompt.trim(), n: 1, steps, width: 1024, height: 1024 }),
         signal: AbortSignal.timeout(60_000),
       });
-      if (response.ok) {
-        const data = await response.json() as { data?: Array<{ url?: string }> };
-        const url = data.data?.[0]?.url;
-        if (url) return { ok: true, url, usedModel: fluxModel };
+
+      if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        return {
+          ok: false,
+          attempt: {
+            provider: 'together',
+            model: fluxModel,
+            status: 'http_error',
+            error: `HTTP ${response.status}${errText ? ': ' + errText.slice(0, 200) : ''}`,
+          },
+        };
       }
+
+      const rawBody = await response.json().catch(() => null);
+      const parsed = parseTogetherImageResponse(rawBody);
+      responseShapeKeys = parsed.responseShapeKeys;
+
+      if (parsed.url) {
+        return { ok: true, url: parsed.url, usedModel: fluxModel, attempt: { provider: 'together', model: fluxModel, status: 'ok' } };
+      }
+      if (parsed.base64) {
+        return { ok: true, base64: parsed.base64, usedModel: fluxModel, attempt: { provider: 'together', model: fluxModel, status: 'ok' } };
+      }
+
+      // Response was OK but no usable image found — return diagnostics
+      return {
+        ok: false,
+        attempt: {
+          provider: 'together',
+          model: fluxModel,
+          status: 'no_image',
+          error: `Together response did not contain a usable image. Response keys: [${responseShapeKeys.join(', ')}]. Check model availability for: ${fluxModel}`,
+          responseShape: responseShapeKeys,
+        },
+      };
     } catch (err) {
-      console.warn(`[brain/image] Together ${fluxModel} failed:`, err instanceof Error ? err.message : err);
+      return {
+        ok: false,
+        attempt: {
+          provider: 'together',
+          model: fluxModel,
+          status: 'exception',
+          error: err instanceof Error ? err.message : String(err),
+          responseShape: responseShapeKeys,
+        },
+      };
     }
   }
-  return { ok: false };
+  return { ok: false, attempt: { provider: 'together', model: model ?? 'FLUX.1-schnell-Free', status: 'exception', error: 'No models to try' } };
 }
 
-async function tryGenX(prompt: string, model: string): Promise<{ ok: boolean; url?: string; jobId?: string; status?: string; usedModel?: string }> {
+async function tryGenX(
+  prompt: string,
+  model: string,
+): Promise<{ ok: boolean; url?: string; jobId?: string; status?: string; usedModel?: string; attempt: ImageAttempt }> {
   try {
     const result = await callGenXMedia({ model, prompt: prompt.trim(), type: 'image' });
-    if (result.success && result.url) return { ok: true, url: result.url, usedModel: result.model };
-    if (result.success && result.jobId) return { ok: true, jobId: result.jobId, status: result.status, usedModel: result.model };
+    if (result.success && result.url) return { ok: true, url: result.url, usedModel: result.model, attempt: { provider: 'genx', model, status: 'ok' } };
+    if (result.success && result.jobId) return { ok: true, jobId: result.jobId, status: result.status, usedModel: result.model, attempt: { provider: 'genx', model, status: 'ok' } };
+    return { ok: false, attempt: { provider: 'genx', model, status: 'no_image', error: result.error ?? 'GenX returned no image or job.' } };
   } catch (err) {
-    console.warn('[brain/image] GenX image failed:', err instanceof Error ? err.message : err);
+    return { ok: false, attempt: { provider: 'genx', model, status: 'exception', error: err instanceof Error ? err.message : String(err) } };
   }
-  return { ok: false };
 }
 
 export async function POST(request: NextRequest) {
@@ -84,15 +153,21 @@ export async function POST(request: NextRequest) {
       model: requestedModel,
       size = '1024x1024',
       providerOverride,
+      preferProvider,
       modelOverride,
       costMode = 'balanced',
+      noFallback = false,
+      capability = 'image_generation',
     } = body as {
       prompt?: string;
       model?: string;
       size?: string;
       providerOverride?: string;
+      preferProvider?: string;
       modelOverride?: string;
       costMode?: string;
+      noFallback?: boolean;
+      capability?: string;
     };
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
@@ -101,56 +176,93 @@ export async function POST(request: NextRequest) {
 
     const resolvedSize: ImageSize = ALLOWED_SIZES.includes(size as ImageSize) ? (size as ImageSize) : '1024x1024';
     const effectiveModel = modelOverride ?? requestedModel;
-    const override = typeof providerOverride === 'string' ? providerOverride.trim().toLowerCase() : null;
+    // preferProvider / providerOverride both act as preference hints.
+    // noFallback=true makes them hard overrides (used by direct provider test flows).
+    const preferredProvider = (preferProvider ?? providerOverride ?? '').trim().toLowerCase() || null;
     const effectiveCostMode = ['cheap', 'balanced', 'premium'].includes(costMode) ? costMode : 'balanced';
+    const isAdult = capability === 'adult_image';
     const togetherKey = await getVaultApiKey('together');
+    const attempts: ImageAttempt[] = [];
 
-    // ── Explicit provider override ────────────────────────────────────────────
-    if (override && override !== 'auto') {
-      if (override === 'together') {
+    // ── Explicit hard override (noFallback=true) ──────────────────────────────
+    if (preferredProvider && noFallback && preferredProvider !== 'auto') {
+      if (preferredProvider === 'together') {
         if (!togetherKey) {
-          return NextResponse.json({ executed: false, capability: 'image_generation', code: 'no_key', error: 'Together AI key not configured.', provider: 'together' }, { status: 503 });
+          return NextResponse.json({ executed: false, capability, code: 'no_key', error: 'Together AI key not configured.', provider: 'together', attempts }, { status: 503 });
         }
         const r = await tryTogether(prompt, togetherKey, effectiveModel);
-        if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'together', model: r.usedModel, size: '1024x1024' });
-        return NextResponse.json({ executed: false, capability: 'image_generation', code: 'provider_failed', error: 'Together AI returned no image.', provider: 'together' }, { status: 503 });
+        attempts.push(r.attempt);
+        if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'together', model: r.usedModel, size: '1024x1024', attempts });
+        if (r.ok && r.base64) return NextResponse.json({ executed: true, imageBase64: r.base64, provider: 'together', model: r.usedModel, size: '1024x1024', attempts });
+        return NextResponse.json({ executed: false, capability, code: 'provider_failed', error: r.attempt.error, provider: 'together', attempts }, { status: 503 });
       }
-      if (override === 'genx') {
+      if (preferredProvider === 'genx') {
         const gModel = selectGenXImageModel(effectiveModel, effectiveCostMode);
         const r = await tryGenX(prompt, gModel);
-        if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'genx', model: r.usedModel, size: resolvedSize });
-        if (r.ok && r.jobId) return NextResponse.json({ executed: true, jobId: r.jobId, status: r.status, provider: 'genx', model: r.usedModel, size: resolvedSize });
-        return NextResponse.json({ executed: false, capability: 'image_generation', code: 'provider_failed', error: 'GenX returned no image.', provider: 'genx' }, { status: 503 });
+        attempts.push(r.attempt);
+        if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'genx', model: r.usedModel, size: resolvedSize, attempts });
+        if (r.ok && r.jobId) return NextResponse.json({ executed: true, jobId: r.jobId, status: r.status, provider: 'genx', model: r.usedModel, size: resolvedSize, attempts });
+        return NextResponse.json({ executed: false, capability, code: 'provider_failed', error: r.attempt.error, provider: 'genx', attempts }, { status: 503 });
       }
-      // Unknown override — fall through to auto
     }
 
-    // ── Auto routing: Together first (cheaper) unless premium ─────────────────
-    const preferGenXFirst = effectiveCostMode === 'premium';
+    // ── Auto routing with fallback ────────────────────────────────────────────
+    // Build ordered provider list based on cost mode and preference hint.
+    // Adult image never falls back to GenX.
+    type ImageProvider = 'together' | 'genx';
+    const providerOrder: ImageProvider[] = (() => {
+      const preferGenX = effectiveCostMode === 'premium';
+      const base: ImageProvider[] = preferGenX ? ['genx', 'together'] : ['together', 'genx'];
+      // If a preferred provider is specified, move it to front
+      if (preferredProvider === 'together' || preferredProvider === 'genx') {
+        const pref = preferredProvider as ImageProvider;
+        return [pref, ...base.filter((p) => p !== pref)];
+      }
+      return base;
+    })();
 
-    if (!preferGenXFirst && togetherKey) {
-      const r = await tryTogether(prompt, togetherKey, effectiveModel);
-      if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'together', model: r.usedModel, size: '1024x1024' });
+    // Filter out GenX for adult capability
+    const eligibleProviders = isAdult
+      ? providerOrder.filter((p) => p !== 'genx')
+      : providerOrder;
+
+    for (const provider of eligibleProviders) {
+      if (provider === 'together') {
+        if (!togetherKey) {
+          attempts.push({ provider: 'together', model: 'FLUX.1-schnell-Free', status: 'no_key', error: 'Together AI key not configured.' });
+          continue;
+        }
+        const r = await tryTogether(prompt, togetherKey, effectiveModel);
+        attempts.push(r.attempt);
+        if (r.ok && r.url) {
+          return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'together', model: r.usedModel, size: '1024x1024', fallbackUsed: attempts.length > 1, attempts });
+        }
+        if (r.ok && r.base64) {
+          return NextResponse.json({ executed: true, imageBase64: r.base64, provider: 'together', model: r.usedModel, size: '1024x1024', fallbackUsed: attempts.length > 1, attempts });
+        }
+        // Together failed — log and continue to next provider
+        console.warn(`[brain/image] Together failed, falling back. Reason: ${r.attempt.error}`);
+        continue;
+      }
+
+      if (provider === 'genx') {
+        const gModel = selectGenXImageModel(effectiveModel, effectiveCostMode);
+        const r = await tryGenX(prompt, gModel);
+        attempts.push(r.attempt);
+        if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'genx', model: r.usedModel, size: resolvedSize, fallbackUsed: attempts.length > 1, attempts });
+        if (r.ok && r.jobId) return NextResponse.json({ executed: true, jobId: r.jobId, status: r.status, provider: 'genx', model: r.usedModel, size: resolvedSize, fallbackUsed: attempts.length > 1, attempts });
+        continue;
+      }
     }
 
-    // GenX attempt
-    const gModel = selectGenXImageModel(effectiveModel, effectiveCostMode);
-    const rg = await tryGenX(prompt, gModel);
-    if (rg.ok && rg.url) return NextResponse.json({ executed: true, imageUrl: rg.url, provider: 'genx', model: rg.usedModel, size: resolvedSize });
-    if (rg.ok && rg.jobId) return NextResponse.json({ executed: true, jobId: rg.jobId, status: rg.status, provider: 'genx', model: rg.usedModel, size: resolvedSize });
-
-    // Together fallback if not tried yet (premium mode tried GenX first)
-    if (preferGenXFirst && togetherKey) {
-      const r = await tryTogether(prompt, togetherKey, effectiveModel);
-      if (r.ok && r.url) return NextResponse.json({ executed: true, imageUrl: r.url, provider: 'together', model: r.usedModel, size: '1024x1024', fallbackUsed: true });
-    }
-
+    const attemptSummary = attempts.map((a) => `${a.provider}/${a.model}: ${a.error ?? a.status}`).join('; ');
     return NextResponse.json({
       executed: false,
-      capability: 'image_generation',
-      code: 'no_eligible_image_model',
-      error: 'No image generation provider is configured. Configure at least one of: Together AI (FLUX), GenX in Admin → AI Providers.',
-      providers_checked: ['together', 'genx'],
+      capability,
+      code: 'all_providers_failed',
+      error: `All image providers failed. ${attemptSummary || 'No providers were available.'}`,
+      providers_checked: eligibleProviders,
+      attempts,
     }, { status: 503 });
   } catch (err) {
     return NextResponse.json({ error: 'Internal server error', detail: String(err), executed: false }, { status: 500 });

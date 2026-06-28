@@ -750,8 +750,12 @@ export async function POST(request: NextRequest) {
         prompt,
         size: body.size ?? stringControl(controls, 'size', '1024x1024'),
         style: body.style ?? stringControl(controls, 'style', 'premium realistic'),
-        providerOverride: route.selectedProvider,
+        // Use preferProvider (not providerOverride) so the image route can fallback
+        // to the next eligible provider if the preferred one fails.
+        // noFallback is not set — Studio always wants a result if any provider can deliver it.
+        preferProvider: route.selectedProvider,
         modelOverride: route.selectedModel,
+        costMode,
       }))
       const data = await readJson(response)
       const persisted = response.ok && data.executed
