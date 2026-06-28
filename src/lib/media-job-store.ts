@@ -152,6 +152,11 @@ export async function pollLocalMediaJob(jobId: string): Promise<LocalMediaJob | 
         name: typeof job.metadata.avatarName === 'string' ? job.metadata.avatarName : job.title,
         artifactId: persisted.artifactId,
         artifactUrl: persisted.storageUrl ?? persisted.mediaUrl ?? '',
+        referenceArtifactId: typeof job.metadata.referenceArtifactId === 'string' ? job.metadata.referenceArtifactId : persisted.artifactId,
+        referenceImageUrl: typeof job.metadata.referenceImageUrl === 'string'
+          ? job.metadata.referenceImageUrl
+          : persisted.storageUrl ?? persisted.mediaUrl ?? '',
+        identitySource: job.capability === 'avatar_video' ? 'video_output' : 'generated_reference',
         provider: job.provider,
         model: job.model,
         prompt: job.prompt,

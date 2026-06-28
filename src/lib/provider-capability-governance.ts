@@ -371,6 +371,15 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
       blockers: ['adult_fallback_not_configured'],
     }
   }
+  if (capability.startsWith('adult_') && providerId === 'together' && isTogetherAdultFallbackEnabled(capability)) {
+    return {
+      allowed: true,
+      capability,
+      provider: 'together',
+      reason: `Together fallback is explicitly configured for ${capability}.`,
+      blockers: [],
+    }
+  }
   const models = getModelsForCapability(capability, { approvedOnly: true, routePresentOnly: true })
   const model = input.modelId
     ? models.find((entry) => entry.modelId === input.modelId && (!provider || entry.provider === provider.id))

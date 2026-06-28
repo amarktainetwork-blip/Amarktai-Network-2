@@ -181,7 +181,10 @@ export async function POST(request: NextRequest) {
             audio = Buffer.from(await response.arrayBuffer())
             mimeType = response.headers.get('content-type') ?? mimeType
           } else {
-            error = response ? `Groq TTS returned HTTP ${response.status}.` : 'Groq TTS request failed.'
+            const providerBody = response ? await response.text().catch(() => '') : ''
+            error = response
+              ? `Groq TTS returned HTTP ${response.status}: ${providerBody || 'no provider error body'}`
+              : 'Groq TTS request failed.'
           }
         }
       }

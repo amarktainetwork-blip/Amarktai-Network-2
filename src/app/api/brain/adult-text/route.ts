@@ -11,8 +11,9 @@ import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
 import { getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import { isTogetherAdultFallbackEnabled } from '@/lib/provider-capability-governance'
 
-type AdultTextProvider = 'auto' | 'huggingface'
+type AdultTextProvider = 'auto' | 'huggingface' | 'together'
 type Attempt = {
   provider: Exclude<AdultTextProvider, 'auto'>
   model: string
@@ -145,6 +146,67 @@ async function executeHuggingFace(
   }
 }
 
+function togetherAdultConfigBlocker() {
+  return 'Together adult_text fallback is disabled. Set TOGETHER_ADULT_FALLBACK_ENABLED=true and TOGETHER_ADULT_TEXT_MODEL to an approved Together text model.'
+}
+
+async function executeTogether(
+  apiKey: string | null,
+  model: string | null,
+  prompt: string,
+): Promise<{ output: string | null; attempt: Attempt }> {
+  const resolvedModel = model?.trim() ?? ''
+  if (!isTogetherAdultFallbackEnabled(CAPABILITY) || !resolvedModel) {
+    return {
+      output: null,
+      attempt: {
+        provider: 'together',
+        model: resolvedModel || 'TOGETHER_ADULT_TEXT_MODEL',
+        status: 'needs_endpoint',
+        error: togetherAdultConfigBlocker(),
+      },
+    }
+  }
+  if (!apiKey) {
+    return { output: null, attempt: { provider: 'together', model: resolvedModel, status: 'needs_key', error: 'Together API key is missing.' } }
+  }
+  try {
+    const res = await fetch('https://api.together.xyz/v1/chat/completions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: resolvedModel,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: prompt },
+        ],
+        max_tokens: 900,
+        temperature: 0.75,
+      }),
+      signal: AbortSignal.timeout(60_000),
+    })
+    const body = await res.text()
+    const data = body ? await Promise.resolve().then(() => JSON.parse(body) as unknown).catch(() => body) : null
+    const output = res.ok ? extractText(data) : null
+    return output
+      ? { output, attempt: { provider: 'together', model: resolvedModel, status: 'ready' } }
+      : {
+        output: null,
+        attempt: {
+          provider: 'together',
+          model: resolvedModel,
+          status: res.status === 401 || res.status === 403 ? 'needs_key' : 'test_failed',
+          error: body || `Together returned HTTP ${res.status}.`,
+        },
+      }
+  } catch (error) {
+    return {
+      output: null,
+      attempt: { provider: 'together', model: resolvedModel, status: 'test_failed', error: error instanceof Error ? error.message : 'Together adult text failed.' },
+    }
+  }
+}
+
 async function authorizeAdultRequest(body: Record<string, unknown>): Promise<{ ok: true; appSlug: string } | { ok: false; status: number; error: string }> {
   const session = await getSession()
   if (session.isLoggedIn) {
@@ -203,24 +265,46 @@ export async function POST(request: NextRequest) {
     }
 
     const provider = (typeof body.provider === 'string' ? body.provider : 'auto') as AdultTextProvider
-    if (!['auto', 'huggingface'].includes(provider)) {
+    if (!['auto', 'huggingface', 'together'].includes(provider)) {
       return NextResponse.json(response({
         success: false,
         traceId,
         jobStatus: 'blocked',
-        error: `Provider "${provider}" is not in the canonical adult_text route. Configure a Hugging Face private endpoint.`,
+        error: `Provider "${provider}" is not in the canonical adult_text route. Configure Hugging Face primary or explicit Together adult fallback.`,
       }), { status: 400 })
+    }
+    if (provider === 'together' && !isTogetherAdultFallbackEnabled(CAPABILITY)) {
+      return NextResponse.json(response({
+        success: false,
+        traceId,
+        provider: 'together',
+        model: process.env.TOGETHER_ADULT_TEXT_MODEL ?? null,
+        jobStatus: 'needs_setup',
+        status: 'needs_setup',
+        error: togetherAdultConfigBlocker(),
+        attempts: [{ provider: 'together', model: process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL', status: 'needs_endpoint', error: togetherAdultConfigBlocker() }],
+      }), { status: 409 })
     }
 
     const route = getMediaCapabilityRoute(CAPABILITY)!
     const endpoint = process.env.HF_ADULT_TEXT_ENDPOINT ?? null
     const attempts: Attempt[] = []
     const hfKey = await getVaultApiKey('huggingface')
-    const chain = route.providers.filter((entry) => provider === 'auto' || entry.provider === provider)
+    const togetherKey = await getVaultApiKey('together')
+    const chain = [
+      ...route.providers.filter((entry) => provider === 'auto' || entry.provider === provider),
+      ...(provider === 'auto' || provider === 'together'
+        ? [{ provider: 'together' as const, model: process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL' }]
+        : []),
+    ]
 
     for (const entry of chain) {
-      const model = getDefaultAdultTextModel().id
-      const result = await executeHuggingFace(hfKey, endpoint, model, prompt)
+      const model = entry.provider === 'together'
+        ? process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL'
+        : getDefaultAdultTextModel().id
+      const result = entry.provider === 'together'
+        ? await executeTogether(togetherKey, model, prompt)
+        : await executeHuggingFace(hfKey, endpoint, model, prompt)
       attempts.push(result.attempt)
       if (!result.output) continue
 

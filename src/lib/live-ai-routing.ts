@@ -245,6 +245,15 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   if (input.selectedProvider === 'together' && input.capability.startsWith('adult_') && !isTogetherAdultFallbackEnabled(input.capability)) {
     return blocked(input, input.costMode ?? 'balanced', `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${input.capability} model env is configured.`)
   }
+  const configuredTogetherAdultModel = input.selectedProvider === 'together' && input.capability.startsWith('adult_')
+    ? input.capability === 'adult_image'
+      ? process.env.TOGETHER_ADULT_IMAGE_MODEL
+      : input.capability === 'adult_video'
+        ? process.env.TOGETHER_ADULT_VIDEO_MODEL
+        : input.capability === 'adult_voice'
+          ? process.env.TOGETHER_ADULT_VOICE_MODEL
+          : process.env.TOGETHER_ADULT_TEXT_MODEL
+    : null
   const validation = validateCapabilitySelection({
     appSlug: input.appSlug,
     capability: input.capability,
@@ -259,10 +268,10 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   const governedModels = governedCapability
     ? getModelsForCapability(governedCapability, { provider: input.selectedProvider })
     : []
-  const selectedModel = input.selectedModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
+  const selectedModel = input.selectedModel || configuredTogetherAdultModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
   const selected = providerModels.find((model) => model.modelId === selectedModel)
   const governedSelected = governedModels.find((model) => model.modelId === selectedModel)
-  if (!selected && !governedSelected && input.selectedProvider !== 'huggingface') {
+  if (!selected && !governedSelected && !configuredTogetherAdultModel && input.selectedProvider !== 'huggingface') {
     return blocked(input, input.costMode ?? 'balanced', 'Selected model is not in the approved catalog.')
   }
 

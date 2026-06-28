@@ -87,6 +87,19 @@ describe('provider capability truth and routing policy', () => {
     expect(isTogetherAdultFallbackEnabled('adult_image')).toBe(false)
     process.env.TOGETHER_ADULT_IMAGE_MODEL = 'approved-adult-image-model'
     expect(isTogetherAdultFallbackEnabled('adult_image')).toBe(true)
+
+    process.env.TOGETHER_ADULT_TEXT_MODEL = 'approved-adult-text-model'
+    const allowed = validateCapabilitySelection({
+      capability: 'adult_text',
+      provider: 'together',
+      adultPolicyAllows: true,
+    })
+    expect(allowed.allowed).toBe(true)
+    expect(routeLiveModel({
+      capability: 'adult_text',
+      selectedProvider: 'together',
+      adultPolicy: 'adult_text',
+    }).selectedModel).toBe('approved-adult-text-model')
   })
 
   it('does not silently force Studio video routing back to GenX', () => {
@@ -106,6 +119,7 @@ describe('provider capability truth and routing policy', () => {
     expect(genx.taskEndpointMap).not.toHaveProperty('avatar_video')
     expect(validation.allowed).toBe(false)
     expect(validation.reason).toBe('No approved wired model supports this capability.')
+    expect(source('app/api/brain/avatar-video/route.ts')).toContain('generic Veo video is not accepted as avatar lip-sync proof')
   })
 
   it('preserves existing Studio chat, image, music, and short-video routing behavior', () => {

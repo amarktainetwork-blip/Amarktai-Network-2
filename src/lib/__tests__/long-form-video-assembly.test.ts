@@ -296,4 +296,58 @@ describe('long-form video assembly jobs', () => {
     expect(failed?.error).toBe('Scene 2 provider failed: provider quota exhausted')
     expect(mocks.stitchVideoClips).not.toHaveBeenCalled()
   })
+
+  it('captures provider body and scene metadata when a scene fails to start', async () => {
+    mocks.callGenXMedia
+      .mockResolvedValueOnce({
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed',
+        model: 'veo-3.1',
+        latencyMs: 10,
+        error: 'duration exceeds provider max 8s',
+      })
+      .mockResolvedValueOnce({
+        success: false,
+        url: null,
+        jobId: null,
+        status: 'failed',
+        model: 'veo-3.1',
+        latencyMs: 10,
+        error: 'provider rejected scene prompt',
+        statusCode: 400,
+        errorDetails: { error: { message: 'invalid scene prompt' } },
+        rawErrorBody: '{"error":{"message":"invalid scene prompt"}}',
+      })
+    mocks.getFfmpegStatus.mockResolvedValue({ available: true, ffmpegPath: 'ffmpeg', error: null })
+
+    const failed = await startLongFormVideoJob({
+      appSlug: 'demo',
+      prompt: 'A 90 second film',
+      targetDurationSeconds: 90,
+      sceneCount: 3,
+    })
+
+    expect(failed.status).toBe('failed')
+    expect(failed.scenes[0]).toMatchObject({
+      index: 1,
+      status: 'failed',
+      provider: 'genx',
+      providerStatusCode: 400,
+      providerErrorDetails: { error: { message: 'invalid scene prompt' } },
+      providerRawErrorBody: '{"error":{"message":"invalid scene prompt"}}',
+    })
+    expect(failed.scenes[0].requestPayload).toMatchObject({
+      model: 'veo-3.1',
+      params: expect.objectContaining({ type: 'video' }),
+      metadata: expect.objectContaining({ sceneIndex: 1 }),
+    })
+    expect(failed.metadata.failedScene).toMatchObject({
+      sceneIndex: 1,
+      statusCode: 400,
+      rawErrorBody: '{"error":{"message":"invalid scene prompt"}}',
+    })
+    expect(mocks.stitchVideoClips).not.toHaveBeenCalled()
+  })
 })

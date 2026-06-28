@@ -6,10 +6,12 @@ import { getSession } from '@/lib/session'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAdultImageModels } from '@/lib/adult-model-catalog'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
+import { isTogetherAdultFallbackEnabled } from '@/lib/provider-capability-governance'
 
 const CAPABILITY = 'adult_image'
 const ALLOWED_SIZES = ['512x512', '768x768', '1024x1024'] as const
 type AdultImageProvider = 'auto' | 'huggingface'
+type ExecutableAdultImageProvider = 'huggingface' | 'together'
 
 function payload(input: {
   success: boolean
@@ -52,6 +54,10 @@ function validateEndpoint(raw: string): string | null {
   } catch {
     return null
   }
+}
+
+function togetherAdultImageConfigBlocker() {
+  return 'Together adult_image fallback is disabled. Set TOGETHER_ADULT_FALLBACK_ENABLED=true and TOGETHER_ADULT_IMAGE_MODEL to an approved Together image model.'
 }
 
 async function authorizeAdultRequest(body: Record<string, unknown>): Promise<{ ok: true; appSlug: string } | { ok: false; status: number; error: string }> {
@@ -112,14 +118,25 @@ export async function POST(request: NextRequest) {
       }), { status: 422 })
     }
 
-    const requestedProvider = (typeof body.provider === 'string' ? body.provider : 'auto') as AdultImageProvider
-    if (!['auto', 'huggingface'].includes(requestedProvider)) {
+    const requestedProvider = (typeof body.provider === 'string' ? body.provider : 'auto') as AdultImageProvider | 'together'
+    if (!['auto', 'huggingface', 'together'].includes(requestedProvider)) {
       return NextResponse.json(payload({
         success: false,
         traceId,
         jobStatus: 'blocked',
-        error: `Provider "${requestedProvider}" is not in the canonical adult_image route. Configure a Hugging Face private endpoint.`,
+        error: `Provider "${requestedProvider}" is not in the canonical adult_image route. Configure Hugging Face primary or explicit Together adult fallback.`,
       }), { status: 400 })
+    }
+    if (requestedProvider === 'together' && !isTogetherAdultFallbackEnabled(CAPABILITY)) {
+      return NextResponse.json(payload({
+        success: false,
+        traceId,
+        provider: 'together',
+        model: process.env.TOGETHER_ADULT_IMAGE_MODEL ?? null,
+        jobStatus: 'needs_setup',
+        error: togetherAdultImageConfigBlocker(),
+        attempts: [{ provider: 'together', model: process.env.TOGETHER_ADULT_IMAGE_MODEL ?? 'TOGETHER_ADULT_IMAGE_MODEL', status: 'needs_endpoint', error: togetherAdultImageConfigBlocker() }],
+      }), { status: 409 })
     }
 
     const size = ALLOWED_SIZES.includes(body.size as typeof ALLOWED_SIZES[number])
@@ -130,7 +147,16 @@ export async function POST(request: NextRequest) {
     const attempts: Array<Record<string, unknown>> = []
     const endpoint = process.env.HF_ADULT_IMAGE_ENDPOINT ?? null
 
-    for (const entry of route.providers.filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)) {
+    const providerChain: Array<{ provider: ExecutableAdultImageProvider; model: string }> = [
+      ...route.providers
+        .filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)
+        .map((candidate) => ({ provider: candidate.provider as ExecutableAdultImageProvider, model: candidate.model })),
+      ...(requestedProvider === 'auto' || requestedProvider === 'together'
+        ? [{ provider: 'together' as const, model: process.env.TOGETHER_ADULT_IMAGE_MODEL ?? 'TOGETHER_ADULT_IMAGE_MODEL' }]
+        : []),
+    ]
+
+    for (const entry of providerChain) {
       if (entry.provider === 'huggingface') {
         const apiKey = await getVaultApiKey('huggingface')
         if (!apiKey) {
@@ -174,13 +200,59 @@ export async function POST(request: NextRequest) {
           attempts.push({ provider: entry.provider, model: hfModel, status: 'test_failed', error: error instanceof Error ? error.message : 'Hugging Face failed.' })
         }
       }
+
+      if (entry.provider === 'together') {
+        const model = process.env.TOGETHER_ADULT_IMAGE_MODEL ?? ''
+        if (!isTogetherAdultFallbackEnabled(CAPABILITY) || !model) {
+          attempts.push({ provider: entry.provider, model: model || 'TOGETHER_ADULT_IMAGE_MODEL', status: 'needs_endpoint', error: togetherAdultImageConfigBlocker() })
+          continue
+        }
+        const apiKey = await getVaultApiKey('together')
+        if (!apiKey) {
+          attempts.push({ provider: entry.provider, model, status: 'needs_key', error: 'Together API key is missing.' })
+          continue
+        }
+        try {
+          const res = await fetch('https://api.together.xyz/v1/images/generations', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model,
+              prompt,
+              width,
+              height,
+              n: 1,
+              steps: typeof body.steps === 'number' ? body.steps : 4,
+            }),
+            signal: AbortSignal.timeout(120_000),
+          })
+          const data = await res.json().catch(() => null) as { data?: Array<{ url?: string; b64_json?: string }>; error?: unknown } | null
+          const imageUrl = data?.data?.[0]?.url ?? null
+          const b64 = data?.data?.[0]?.b64_json ?? null
+          if (res.ok && (imageUrl || b64)) {
+            return persistImage({
+              appSlug,
+              prompt,
+              provider: entry.provider,
+              model,
+              traceId,
+              imageUrl: imageUrl ?? undefined,
+              imageBase64: b64 ? `data:image/png;base64,${b64}` : undefined,
+              attempts,
+            })
+          }
+          attempts.push({ provider: entry.provider, model, status: res.status === 401 || res.status === 403 ? 'needs_key' : 'test_failed', httpStatus: res.status, error: JSON.stringify(data?.error ?? data ?? {}).slice(0, 500) })
+        } catch (error) {
+          attempts.push({ provider: entry.provider, model, status: 'test_failed', error: error instanceof Error ? error.message : 'Together adult image failed.' })
+        }
+      }
     }
 
     return NextResponse.json(payload({
       success: false,
       traceId,
       jobStatus: 'needs_setup',
-      error: 'No tested adult image provider returned a real image. Configure Hugging Face.',
+      error: requestedProvider === 'together' ? togetherAdultImageConfigBlocker() : 'No tested adult image provider returned a real image. Configure Hugging Face primary or explicit Together adult fallback.',
       attempts,
     }), { status: 503 })
   } catch (error) {

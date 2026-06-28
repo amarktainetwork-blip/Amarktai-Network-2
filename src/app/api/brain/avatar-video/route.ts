@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
-import { callGenXMedia, GENX_IMAGE_MODELS, GENX_VIDEO_MODELS } from '@/lib/genx-client'
+import { callGenXMedia, GENX_IMAGE_MODELS } from '@/lib/genx-client'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 import { recordAvatarLibraryEntry } from '@/lib/avatar-library-store'
 import { normalizeProviderVideoDuration } from '@/lib/provider-video-policy'
@@ -12,6 +12,21 @@ function stringValue(value: unknown, fallback = '') {
 function numberValue(value: unknown, fallback: number) {
   const numeric = typeof value === 'number' ? value : typeof value === 'string' ? Number(value.trim()) : NaN
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback
+}
+
+function slugValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80) || 'avatar'
+}
+
+function configuredAvatarVideoModel() {
+  const model = process.env.GENX_AVATAR_VIDEO_MODEL
+    ?? process.env.GENX_LIPSYNC_MODEL
+    ?? process.env.KLING_AVATAR_MODEL
+    ?? ''
+  const normalized = model.trim()
+  if (!normalized) return null
+  if (/^veo-|generic|default-video/i.test(normalized)) return null
+  return normalized
 }
 
 export async function POST(request: NextRequest) {
@@ -39,7 +54,45 @@ export async function POST(request: NextRequest) {
   const library = stringValue(body.library, 'default')
   const voice = stringValue(body.voice)
   const script = stringValue(body.script, prompt)
-  const model = mode === 'video' ? GENX_VIDEO_MODELS[0] : GENX_IMAGE_MODELS[0]
+  const avatarId = stringValue(body.avatarId, `${appSlug}:${library}:${slugValue(avatarName)}`)
+  const videoModel = mode === 'video' ? configuredAvatarVideoModel() : null
+  if (mode === 'video') {
+    if (!referenceImageUrl) {
+      const blocker = 'Avatar video requires a reusable referenceImageUrl from the avatar library or reference upload before lip-sync/video generation.'
+      return NextResponse.json({
+        success: false,
+        executed: false,
+        capability: 'avatar_video',
+        provider: 'genx',
+        model: null,
+        jobStatus: 'blocked',
+        artifactId: null,
+        storageUrl: null,
+        error: blocker,
+        blocker,
+        requiredConfig: ['referenceImageUrl'],
+        avatarVideoProofEligible: false,
+      }, { status: 409 })
+    }
+    if (!videoModel) {
+      const blocker = 'No real GenX avatar/lip-sync model is configured. Set GENX_AVATAR_VIDEO_MODEL, GENX_LIPSYNC_MODEL, or KLING_AVATAR_MODEL to a reference-capable avatar/lip-sync model; generic Veo video is not accepted as avatar lip-sync proof.'
+      return NextResponse.json({
+        success: false,
+        executed: false,
+        capability: 'avatar_video',
+        provider: 'genx',
+        model: null,
+        jobStatus: 'blocked',
+        artifactId: null,
+        storageUrl: null,
+        error: blocker,
+        blocker,
+        requiredConfig: ['GENX_AVATAR_VIDEO_MODEL', 'GENX_LIPSYNC_MODEL', 'KLING_AVATAR_MODEL'],
+        avatarVideoProofEligible: false,
+      }, { status: 409 })
+    }
+  }
+  const model = mode === 'video' ? videoModel! : GENX_IMAGE_MODELS[0]
   const type = mode === 'video' ? 'video' : 'image'
   const capability = mode === 'video' ? 'avatar_video' : 'avatar_image'
   const providerPrompt = [
@@ -57,8 +110,8 @@ export async function POST(request: NextRequest) {
     prompt: providerPrompt,
     type,
     duration: mode === 'video' ? duration : undefined,
-    params: referenceImageUrl ? { referenceImageUrl, imageUrl: referenceImageUrl } : undefined,
-    metadata: { capability, mode, avatarName, style, referenceImageUrl, voice },
+    params: referenceImageUrl ? { referenceImageUrl, imageUrl: referenceImageUrl, avatarId } : undefined,
+    metadata: { capability, mode, avatarId, avatarName, style, referenceImageUrl, voice, referenceConditioned: mode === 'video' },
   })
 
   if (!generated.success || (!generated.url && !generated.jobId)) {
@@ -91,6 +144,8 @@ export async function POST(request: NextRequest) {
     script,
     voice,
     referenceImageUrl,
+    referenceConditioned: mode === 'video',
+    avatarId,
     duration,
   }
 
@@ -141,12 +196,15 @@ export async function POST(request: NextRequest) {
   }
 
   const avatar = recordAvatarLibraryEntry({
-    avatarId: persisted.artifactId,
+    avatarId,
     appSlug,
     library,
     name: avatarName,
     artifactId: persisted.artifactId,
     artifactUrl: persisted.storageUrl,
+    referenceArtifactId: mode === 'image' ? persisted.artifactId : null,
+    referenceImageUrl: mode === 'image' ? persisted.storageUrl : referenceImageUrl,
+    identitySource: mode === 'image' ? 'generated_reference' : 'video_output',
     provider: 'genx',
     model: generated.model,
     prompt: providerPrompt,
@@ -167,7 +225,7 @@ export async function POST(request: NextRequest) {
     mediaUrl: persisted.mediaUrl,
     imageUrl: type === 'image' ? persisted.mediaUrl : null,
     videoUrl: type === 'video' ? persisted.mediaUrl : null,
-    avatarVideoProofEligible: type === 'video',
+    avatarVideoProofEligible: type === 'video' && Boolean(videoModel && referenceImageUrl),
     avatar,
     error: null,
     blocker: null,

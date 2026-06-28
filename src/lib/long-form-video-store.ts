@@ -20,12 +20,17 @@ export interface LongFormVideoScene {
   durationSeconds: number
   provider: string
   model: string
+  requestPayload?: Record<string, unknown> | null
   providerJobId: string | null
   status: 'queued' | 'processing' | 'completed' | 'failed'
   artifactId: string | null
   storageUrl: string | null
   storagePath: string | null
   error: string | null
+  providerStatusCode?: number | null
+  providerErrorDetails?: unknown
+  providerRawErrorBody?: string | null
+  attempts?: number
 }
 
 export interface LongFormVideoJob {
@@ -100,11 +105,48 @@ function splitPromptIntoScenes(input: StartLongFormVideoInput, sceneCount: numbe
   return Array.from({ length: durations.length }, (_, index) => {
     const seed = sentences[index % Math.max(1, sentences.length)] ?? input.prompt
     const notes = input.productionNotes ? ` Production notes: ${input.productionNotes}` : ''
+    const prompt = [
+      `Create only scene ${index + 1} of ${durations.length} as a standalone ${durations[index]} second ${input.style ?? 'cinematic'} video clip.`,
+      `Aspect ratio: ${input.aspectRatio ?? '16:9'}.`,
+      `Visual brief: ${seed}${notes}`,
+      'No title cards, no credits, no scene-number text, no unsafe or copyrighted characters.',
+    ].join(' ')
     return {
       durationSeconds: durations[index],
-      prompt: `Long-form scene ${index + 1}/${durations.length}. ${seed}${notes}`,
+      prompt: prompt.replace(/\s+/g, ' ').slice(0, 1200),
     }
   })
+}
+
+function publicProviderFailure(input: {
+  sceneIndex?: number
+  prompt?: string
+  durationSeconds?: number
+  provider: string
+  model: string
+  requestPayload?: Record<string, unknown>
+  error?: string | null
+  statusCode?: number
+  errorDetails?: unknown
+  rawErrorBody?: string | null
+}) {
+  return {
+    sceneIndex: input.sceneIndex ?? null,
+    prompt: input.prompt ?? null,
+    durationSeconds: input.durationSeconds ?? null,
+    provider: input.provider,
+    model: input.model,
+    requestPayload: input.requestPayload ?? null,
+    error: input.error ?? null,
+    statusCode: input.statusCode ?? null,
+    errorDetails: input.errorDetails ?? null,
+    rawErrorBody: input.rawErrorBody ?? null,
+  }
+}
+
+function shouldRetrySceneFailure(statusCode?: number, error?: string | null) {
+  if (statusCode && (statusCode === 408 || statusCode === 409 || statusCode === 425 || statusCode === 429 || statusCode >= 500)) return true
+  return Boolean(error && /timeout|temporar|rate|busy|overload|try again/i.test(error))
 }
 
 function jobResponse(job: LongFormVideoJob) {
@@ -249,7 +291,21 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
   }, sceneCount)
   const scenes: LongFormVideoScene[] = []
   for (const [index, scene] of plannedScenes.entries()) {
-    const sceneResult = await callGenXMedia({
+    const sceneRequestPayload = {
+      model: GENX_VIDEO_MODELS[0],
+      params: {
+        prompt: scene.prompt,
+        type: 'video',
+        duration: scene.durationSeconds,
+        style: job.style,
+      },
+      metadata: {
+        capability: 'long_form_video_scene',
+        longFormJobId: job.id,
+        sceneIndex: index + 1,
+      },
+    }
+    let sceneResult = await callGenXMedia({
       model: GENX_VIDEO_MODELS[0],
       prompt: scene.prompt,
       type: 'video',
@@ -261,8 +317,55 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
         sceneIndex: index + 1,
       },
     })
+    let attempts = 1
+    if (!sceneResult.success && shouldRetrySceneFailure(sceneResult.statusCode, sceneResult.error)) {
+      attempts += 1
+      sceneResult = await callGenXMedia({
+        model: GENX_VIDEO_MODELS[0],
+        prompt: `${scene.prompt} Keep the clip simple, single location, continuous camera, provider-safe visual-only scene.`,
+        type: 'video',
+        duration: scene.durationSeconds,
+        style: job.style,
+        metadata: {
+          capability: 'long_form_video_scene',
+          longFormJobId: job.id,
+          sceneIndex: index + 1,
+          retry: 1,
+        },
+      })
+    }
     if (!sceneResult.success || (!sceneResult.url && !sceneResult.jobId)) {
-      const error = `Scene ${index + 1} failed to start: ${sceneResult.error ?? 'provider returned no media URL or job ID'}`
+      const failure = publicProviderFailure({
+        sceneIndex: index + 1,
+        prompt: scene.prompt,
+        durationSeconds: scene.durationSeconds,
+        provider: 'genx',
+        model: sceneResult.model,
+        requestPayload: sceneRequestPayload,
+        error: sceneResult.error ?? 'provider returned no media URL or job ID',
+        statusCode: sceneResult.statusCode,
+        errorDetails: sceneResult.errorDetails,
+        rawErrorBody: sceneResult.rawErrorBody,
+      })
+      const error = `Scene ${index + 1} failed to start with ${failure.provider}/${failure.model}: ${failure.error}`
+      scenes.push({
+        index: index + 1,
+        prompt: scene.prompt,
+        durationSeconds: scene.durationSeconds,
+        provider: failure.provider,
+        model: failure.model,
+        requestPayload: sceneRequestPayload,
+        providerJobId: null,
+        status: 'failed',
+        artifactId: null,
+        storageUrl: null,
+        storagePath: null,
+        error,
+        providerStatusCode: failure.statusCode,
+        providerErrorDetails: failure.errorDetails,
+        providerRawErrorBody: failure.rawErrorBody,
+        attempts,
+      })
       return saveJob(job, {
         status: 'failed',
         phase: 'failed',
@@ -271,6 +374,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
         ffmpegStatus: ffmpeg.ffmpegPath ?? 'ffmpeg',
         scenes,
         error,
+        metadata: { ...job.metadata, failedScene: failure },
         completedAt: new Date().toISOString(),
       })!
     }
@@ -280,12 +384,17 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
       durationSeconds: scene.durationSeconds,
       provider: 'genx',
       model: sceneResult.model,
+      requestPayload: sceneRequestPayload,
       providerJobId: sceneResult.jobId,
       status: sceneResult.url ? 'completed' : 'processing',
       artifactId: null,
       storageUrl: null,
       storagePath: null,
       error: null,
+      providerStatusCode: null,
+      providerErrorDetails: null,
+      providerRawErrorBody: null,
+      attempts,
     }
     if (sceneResult.url) {
       const persisted = await persistCanonicalMediaResult({
@@ -310,6 +419,18 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
           ffmpegStatus: ffmpeg.ffmpegPath ?? 'ffmpeg',
           scenes,
           error,
+          metadata: {
+            ...job.metadata,
+            failedScene: publicProviderFailure({
+              sceneIndex: index + 1,
+              prompt: scene.prompt,
+              durationSeconds: scene.durationSeconds,
+              provider: 'genx',
+              model: sceneResult.model,
+              requestPayload: sceneRequestPayload,
+              error,
+            }),
+          },
           completedAt: new Date().toISOString(),
         })!
       }

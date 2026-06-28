@@ -247,6 +247,17 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresAdultGate: false,
     requiresDedicatedEndpoint: false,
   },
+  {
+    capabilityId: 'avatar_lipsync',
+    label: 'Avatar Lip-sync / Talking Video',
+    category: 'video',
+    providerCandidates: ['genx'],
+    executionRoute: '/api/brain/avatar-video',
+    requiresStorage: true,
+    requiresAdultGate: false,
+    requiresDedicatedEndpoint: true,
+    dedicatedEndpointEnvs: ['GENX_AVATAR_VIDEO_MODEL', 'GENX_LIPSYNC_MODEL', 'KLING_AVATAR_MODEL'],
+  },
   // ── Adult-gated ───────────────────────────────────────────────────────────
   {
     capabilityId: 'adult_avatar',
@@ -263,23 +274,23 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     capabilityId: 'adult_text',
     label: 'Adult Text (Gated)',
     category: 'text',
-    providerCandidates: ['huggingface'],
+    providerCandidates: ['huggingface', 'together'],
     executionRoute: '/api/brain/adult-text',
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_TEXT_ENDPOINT', 'HF_ADULT_TEXT_ENDPOINT_FALLBACK'],
+    dedicatedEndpointEnvs: ['HF_ADULT_TEXT_ENDPOINT', 'HF_ADULT_TEXT_ENDPOINT_FALLBACK', 'TOGETHER_ADULT_TEXT_MODEL'],
   },
   {
     capabilityId: 'adult_image',
     label: 'Adult Image (Gated)',
     category: 'image',
-    providerCandidates: ['huggingface'],
+    providerCandidates: ['huggingface', 'together'],
     executionRoute: '/api/brain/adult-image',
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_IMAGE_ENDPOINT', 'HF_ADULT_IMAGE_ENDPOINT_FALLBACK'],
+    dedicatedEndpointEnvs: ['HF_ADULT_IMAGE_ENDPOINT', 'HF_ADULT_IMAGE_ENDPOINT_FALLBACK', 'TOGETHER_ADULT_IMAGE_MODEL'],
   },
   {
     capabilityId: 'adult_video',
@@ -364,7 +375,11 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
 function evalEndpoint(spec: CapabilitySpec): boolean {
   if (!spec.requiresDedicatedEndpoint) return true
   const envs = spec.dedicatedEndpointEnvs ?? []
-  return envs.some((name) => Boolean(process.env[name]?.trim()))
+  return envs.some((name) => {
+    if (!process.env[name]?.trim()) return false
+    if (name.startsWith('TOGETHER_ADULT_')) return process.env.TOGETHER_ADULT_FALLBACK_ENABLED === 'true'
+    return true
+  })
 }
 
 function evalStorage(): boolean {

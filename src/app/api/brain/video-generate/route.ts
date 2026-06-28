@@ -29,7 +29,6 @@ async function planningFallback(prompt: string, style: string, duration: number)
   for (const [provider, model] of [
     ['groq', 'llama-3.3-70b-versatile'],
     ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
-    ['mimo', 'mimo-v2.5'],
   ] as const) {
     const result = await callProvider(provider, model, request)
     if (result.output) return result.output

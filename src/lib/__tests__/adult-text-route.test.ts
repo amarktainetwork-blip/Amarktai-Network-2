@@ -16,6 +16,7 @@ vi.mock('@/lib/brain', () => ({
   authenticateApp: vi.fn(async () => ({ ok: false, statusCode: 401, error: 'Unauthorized' })),
   getVaultApiKey: vi.fn(async (provider: string) => {
     if (provider === 'huggingface') return 'hf_test'
+    if (provider === 'together') return 'together_test'
     if (provider === 'grok' || provider === 'xai') return null
     return null
   }),
@@ -76,7 +77,7 @@ describe('/api/brain/adult-text', () => {
     expect(data.attempts[0].status).toBe('needs_endpoint')
   })
 
-  it('rejects Together as an adult text route provider', async () => {
+  it('blocks Together adult text fallback until explicit config is enabled', async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const { POST } = await import('@/app/api/brain/adult-text/route')
@@ -91,10 +92,43 @@ describe('/api/brain/adult-text', () => {
     }) as never)
     const data = await response.json()
 
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(409)
     expect(data.success).toBe(false)
-    expect(data.error).toContain('Hugging Face')
+    expect(data.error).toContain('TOGETHER_ADULT_FALLBACK_ENABLED=true')
+    expect(data.error).toContain('TOGETHER_ADULT_TEXT_MODEL')
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('uses Together adult text fallback only with explicit config', async () => {
+    vi.stubEnv('TOGETHER_ADULT_FALLBACK_ENABLED', 'true')
+    vi.stubEnv('TOGETHER_ADULT_TEXT_MODEL', 'approved-adult-text-model')
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      expect(String(input)).toBe('https://api.together.xyz/v1/chat/completions')
+      const body = JSON.parse(String(init?.body ?? '{}'))
+      expect(body.model).toBe('approved-adult-text-model')
+      expect(body.messages[0].content).toContain('consenting adults only')
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'A consenting adult romance paragraph.' } }],
+      }), { status: 200, headers: { 'content-type': 'application/json' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { POST } = await import('@/app/api/brain/adult-text/route')
+
+    const response = await POST(new Request('http://test.local/api/brain/adult-text', {
+      method: 'POST',
+      body: JSON.stringify({
+        appSlug: '__admin_test__',
+        provider: 'together',
+        prompt: 'write a short consenting adult romance paragraph',
+      }),
+    }) as never)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.provider).toBe('together')
+    expect(data.model).toBe('approved-adult-text-model')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('routes adult_text capability through Hugging Face endpoints without GenX fallback', async () => {

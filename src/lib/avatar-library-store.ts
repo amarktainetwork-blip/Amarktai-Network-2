@@ -14,6 +14,9 @@ export interface AvatarLibraryEntry {
   name: string
   artifactId: string
   artifactUrl: string
+  referenceArtifactId?: string | null
+  referenceImageUrl?: string | null
+  identitySource?: 'uploaded_reference' | 'generated_reference' | 'manual_reference' | 'video_output'
   thumbnailArtifactId: string
   thumbnailUrl: string
   provider: string
@@ -32,6 +35,9 @@ export function recordAvatarLibraryEntry(input: {
   name: string
   artifactId: string
   artifactUrl: string
+  referenceArtifactId?: string | null
+  referenceImageUrl?: string | null
+  identitySource?: 'uploaded_reference' | 'generated_reference' | 'manual_reference' | 'video_output'
   thumbnailArtifactId?: string | null
   thumbnailUrl?: string | null
   provider: string
@@ -50,6 +56,9 @@ export function recordAvatarLibraryEntry(input: {
     name: input.name,
     artifactId: input.artifactId,
     artifactUrl: input.artifactUrl,
+    referenceArtifactId: input.referenceArtifactId ?? input.artifactId,
+    referenceImageUrl: input.referenceImageUrl ?? input.artifactUrl,
+    identitySource: input.identitySource ?? 'generated_reference',
     thumbnailArtifactId: input.thumbnailArtifactId || input.artifactId,
     thumbnailUrl: input.thumbnailUrl || input.artifactUrl,
     provider: input.provider,
