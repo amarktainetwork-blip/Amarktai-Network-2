@@ -125,6 +125,14 @@ export interface MusicCreationRequest {
   existingLyrics?: string
   /** Extra creative direction. */
   productionNotes?: string
+  /** Provider-ready prompt compiled by Studio controls. */
+  prompt?: string
+  /** Requested number of tracks. */
+  count?: number
+  /** Fine-grained section instructions from Studio. */
+  songStructure?: Record<string, string>
+  /** Optional downstream video-planning handoff metadata. */
+  musicVideoHandoff?: Record<string, unknown>
   /**
    * Whether to also generate a cover art image.
    * @deprecated Use coverArtChoice. Kept for backward compatibility.

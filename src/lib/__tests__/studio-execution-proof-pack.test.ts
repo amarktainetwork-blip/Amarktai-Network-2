@@ -23,9 +23,10 @@ describe('Studio execution proof pack', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
 
     expect(route).toContain("mode === 'chat'")
-    expect(route).toContain("assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat'")
-    expect(route).toContain('providerOverride: route.selectedProvider')
-    expect(route).toContain('modelOverride: route.selectedModel')
+    expect(route).toContain('executeStudioChat({ prompt, appSlug, route')
+    expect(route).toContain('callGenXChat({ model: candidate.model')
+    expect(route).toContain('callProvider(candidate.provider, candidate.model, input.prompt)')
+    expect(route).not.toContain("assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat'")
     expect(route).toContain("artifact: null")
     expect(route).toContain('noArtifact: true')
     expect(route).not.toContain("selectedProvider: 'auto'")
@@ -91,6 +92,7 @@ describe('Studio execution proof pack', () => {
 
   it('music execution forwards lyrics, structure, vocals, mood, BPM, count, and backend payload metadata', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
+    const musicRoute = source('app/api/admin/music-studio/route.ts')
 
     for (const required of [
       'existingLyrics',
@@ -105,9 +107,15 @@ describe('Studio execution proof pack', () => {
       'requestProof',
       "const completed = ['completed', 'succeeded'].includes(status)",
       "proofStatus: processing ? 'processing' : 'failed'",
+      'buildStudioMusicPrompt',
+      'productionPrompt',
     ]) {
       expect(route).toContain(required)
     }
+    expect(musicRoute).toContain('musicRequest.prompt?.trim()')
+    expect(musicRoute).toContain('productionPrompt: prompt')
+    expect(musicRoute).toContain('songStructure: musicRequest.songStructure')
+    expect(musicRoute).toContain('musicVideoHandoff: musicRequest.musicVideoHandoff')
   })
 
   it('successful image and music executions write runtime proof only for completed output', () => {
@@ -158,6 +166,8 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain('STUDIO_PREMIUM_CHAT_PROVIDERS')
     expect(route).toContain('effectiveStudioCostMode')
     expect(route).toContain('routingPolicy')
+    expect(route).toContain('studioChatCandidates(route')
+    expect(route).toContain("fallbackUsed: candidate.source !== 'primary'")
     expect(routing).toContain('staticModel?.costTier')
     expect(balanced.selectedModel).not.toBe('mimo-v2.5-pro')
     expect(balanced.selectedModel).not.toBe('auto:coding-best')
@@ -176,11 +186,27 @@ describe('Studio execution proof pack', () => {
 
   it('Studio chat automatic routing does not pass auto, display labels, or model IDs into mesh validation', () => {
     const route = routeLiveModel({ capability: 'chat', selectedProvider: 'auto' })
+    const sourceText = source('app/api/admin/studio/execute/route.ts')
 
     expect(route.blockedReason).not.toBe('Provider is not approved by the provider mesh.')
     expect(route.selectedProvider).toMatch(/^(genx|groq|together|mimo|huggingface)$/)
     expect(normalizeProviderMeshId(route.selectedProvider)).toBe(route.selectedProvider)
     expect(normalizeProviderMeshId(route.selectedModel)).toBeNull()
+    expect(sourceText).toContain("if (!value || value === 'auto' || value.startsWith('auto:') || value.startsWith('task:'))")
+    expect(sourceText).toContain("genx: 'gpt-5.4-mini'")
+    expect(sourceText).toContain("huggingface: 'meta-llama/Llama-3-8b-chat-hf'")
+  })
+
+  it('Studio music keeps Hugging Face honest until a Studio music backend route is wired', () => {
+    const route = source('app/api/admin/studio/execute/route.ts')
+    const media = source('lib/media-capability-registry.ts')
+    const music = source('lib/music-studio.ts')
+
+    expect(route).toContain("music: ['genx']")
+    expect(media).toContain('music_generation')
+    expect(media).toContain("capability: 'music_generation'")
+    expect(media).toContain("{ provider: 'genx', model: GENX_AUDIO_MODELS[0] }")
+    expect(music).toContain("export type MusicProvider = 'genx' | 'blueprint_only'")
   })
 
   it('Studio image and music route through canonical provider mesh IDs', () => {

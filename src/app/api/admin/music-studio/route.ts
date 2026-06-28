@@ -164,9 +164,29 @@ export async function POST(request: NextRequest) {
         }, { status: 503 })
       }
       const model = GENX_AUDIO_MODELS[0]
-      const prompt = musicRequest.existingLyrics?.trim()
+      const prompt = musicRequest.prompt?.trim()
+        ? musicRequest.prompt.trim()
+        : musicRequest.existingLyrics?.trim()
         ? `${musicRequest.title ?? musicRequest.theme}\n\n${musicRequest.existingLyrics}`
         : `${musicRequest.title ?? musicRequest.theme}. ${musicRequest.theme}. ${musicRequest.genre} music, ${musicRequest.vocalStyle.replaceAll('_', ' ')}.`
+      const requestMetadata = {
+        capability: 'music_generation',
+        theme: musicRequest.theme,
+        genre: musicRequest.genre,
+        genres: musicRequest.genres ?? [musicRequest.genre],
+        moods: musicRequest.moods ?? [],
+        vocalStyle: musicRequest.vocalStyle,
+        instrumental: musicRequest.instrumental ?? musicRequest.vocalStyle === 'instrumental_only',
+        durationSeconds: musicRequest.durationSeconds,
+        bpm: musicRequest.bpm ?? 0,
+        language: musicRequest.language ?? 'English',
+        count: musicRequest.count ?? 1,
+        existingLyrics: Boolean(musicRequest.existingLyrics?.trim()),
+        songStructure: musicRequest.songStructure ?? null,
+        musicVideoHandoff: musicRequest.musicVideoHandoff ?? null,
+        productionNotes: musicRequest.productionNotes ?? '',
+        productionPrompt: prompt,
+      }
       const generated = await callGenXMedia({
         model,
         prompt,
@@ -195,7 +215,7 @@ export async function POST(request: NextRequest) {
           description: `${musicRequest.genre} / ${musicRequest.vocalStyle} / ${musicRequest.theme}`,
           provider: 'genx',
           model: generated.model,
-          metadata: { capability: 'music_generation', theme: musicRequest.theme, genre: musicRequest.genre },
+          metadata: requestMetadata,
         })
         return NextResponse.json({
           success: true,
@@ -227,7 +247,7 @@ export async function POST(request: NextRequest) {
         provider: 'genx',
         model: generated.model,
         providerJobId: generated.jobId!,
-        metadata: { theme: musicRequest.theme, genre: musicRequest.genre, vocalStyle: musicRequest.vocalStyle },
+        metadata: requestMetadata,
       })
       return NextResponse.json(localMediaJobResponse(job), { status: 202 })
     }

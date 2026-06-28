@@ -9,7 +9,10 @@ import { getCapabilityRuntimeTruthEntry, type CapabilityRuntimeTruthEntry } from
 import { normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { recordProviderResult } from '@/lib/provider-result-log'
 import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
-import { POST as assistantChatPost } from '@/app/api/admin/amarktai-assistant/chat/route'
+import { callProvider } from '@/lib/brain'
+import { recordEstimatedCost } from '@/lib/cost-tracking'
+import { callGenXChat } from '@/lib/genx-client'
+import type { LiveRouteResult } from '@/lib/live-ai-routing'
 import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
 import { POST as imagePost } from '@/app/api/brain/image/route'
 import { POST as videoPost } from '@/app/api/brain/video-generate/route'
@@ -41,6 +44,7 @@ type ExecuteBody = {
 
 type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'voice'
 type ProofMode = 'chat' | 'image' | 'music'
+type StudioChatProvider = 'groq' | 'together' | 'mimo' | 'genx' | 'huggingface'
 
 const STUDIO_EXECUTABLE_PROVIDERS: Record<ProofMode, readonly ProviderMeshId[]> = {
   chat: ['groq', 'together', 'mimo', 'genx', 'huggingface'],
@@ -48,6 +52,13 @@ const STUDIO_EXECUTABLE_PROVIDERS: Record<ProofMode, readonly ProviderMeshId[]> 
   music: ['genx'],
 }
 const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'mimo', 'groq', 'together', 'huggingface']
+const STUDIO_CHAT_EXECUTION_MODELS = {
+  genx: 'gpt-5.4-mini',
+  groq: 'llama-3.3-70b-versatile',
+  together: 'meta-llama/Llama-3-70b-chat-hf',
+  huggingface: 'meta-llama/Llama-3-8b-chat-hf',
+  mimo: 'mimo-v2.5',
+} satisfies Record<StudioChatProvider, string>
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
   return new NextRequest(new URL(path, 'http://studio.local'), {
@@ -277,6 +288,136 @@ function canonicalProviderValue(...values: unknown[]): ProviderMeshId | null {
   return null
 }
 
+function executableStudioChatModel(provider: ProviderMeshId, model?: unknown) {
+  const value = typeof model === 'string' ? model.trim() : ''
+  if (!value || value === 'auto' || value.startsWith('auto:') || value.startsWith('task:')) {
+    return STUDIO_CHAT_EXECUTION_MODELS[provider as keyof typeof STUDIO_CHAT_EXECUTION_MODELS]
+  }
+  return value
+}
+
+function connectedStudioProviders(truth?: CapabilityRuntimeTruthEntry | null) {
+  return new Set(
+    (truth?.connectedProviderCandidates ?? [])
+      .map((provider) => normalizeProviderMeshId(provider))
+      .filter((provider): provider is ProviderMeshId => Boolean(provider)),
+  )
+}
+
+function studioChatCandidates(route: LiveRouteResult, truth?: CapabilityRuntimeTruthEntry | null) {
+  const connected = connectedStudioProviders(truth)
+  const allowed = connected.size > 0 ? connected : new Set<ProviderMeshId>(STUDIO_EXECUTABLE_PROVIDERS.chat)
+  const candidates: Array<{ provider: ProviderMeshId; model: string; source: 'primary' | 'fallback' | 'connected' }> = []
+  const seen = new Set<string>()
+  const add = (providerValue: unknown, modelValue: unknown, source: 'primary' | 'fallback' | 'connected') => {
+    const provider = canonicalProviderValue(providerValue)
+    if (!provider || !allowed.has(provider) || !STUDIO_EXECUTABLE_PROVIDERS.chat.includes(provider)) return
+    const model = executableStudioChatModel(provider, modelValue)
+    const key = `${provider}:${model}`
+    if (seen.has(key)) return
+    seen.add(key)
+    candidates.push({ provider, model, source })
+  }
+
+  add(route.selectedProvider, route.selectedModel, 'primary')
+  for (const fallback of route.fallbackChain) add(fallback.provider, fallback.model, 'fallback')
+  for (const provider of STUDIO_EXECUTABLE_PROVIDERS.chat) add(provider, STUDIO_CHAT_EXECUTION_MODELS[provider as keyof typeof STUDIO_CHAT_EXECUTION_MODELS], 'connected')
+
+  return candidates
+}
+
+async function executeStudioChat(input: {
+  prompt: string
+  appSlug: string
+  route: LiveRouteResult
+  truth?: CapabilityRuntimeTruthEntry | null
+}) {
+  const candidates = studioChatCandidates(input.route, input.truth)
+  const attempts: Array<{ provider: ProviderMeshId; model: string; source: string; ok: boolean; error: string | null }> = []
+
+  for (const candidate of candidates) {
+    const result = candidate.provider === 'genx'
+      ? await callGenXChat({ model: candidate.model, messages: [{ role: 'user', content: input.prompt }] })
+      : await callProvider(candidate.provider, candidate.model, input.prompt)
+    const ok = candidate.provider === 'genx'
+      ? 'success' in result && result.success && Boolean(result.output)
+      : 'ok' in result && result.ok && Boolean(result.output)
+    const output = result.output
+    const error = result.error ?? (ok ? null : 'Provider returned no output.')
+    attempts.push({ ...candidate, ok, error })
+    if (ok && output) {
+      await recordEstimatedCost({
+        provider: candidate.provider,
+        model: candidate.model,
+        appSlug: input.appSlug,
+        agentId: 'studio-chat',
+        capability: 'chat',
+        runType: 'studio-chat',
+        costMode: input.route.costMode,
+        estimatedCostUsd: input.route.estimatedCostUsd,
+      }).catch(() => null)
+      return {
+        success: true,
+        output,
+        provider: candidate.provider,
+        model: candidate.model,
+        fallbackUsed: candidate.source !== 'primary',
+        attempts,
+      }
+    }
+  }
+
+  return {
+    success: false,
+    output: null,
+    provider: null,
+    model: null,
+    fallbackUsed: attempts.length > 1,
+    attempts,
+    error: attempts.map((attempt) => `${attempt.provider}/${attempt.model}: ${attempt.error}`).join('; ') || 'No connected chat provider supports Studio execution.',
+  }
+}
+
+function buildStudioMusicPrompt(input: {
+  theme: string
+  genres: string[]
+  mood: string
+  vocalStyle: string
+  instrumental: boolean
+  duration: number
+  bpm: number
+  language: string
+  count: number
+  lyrics: string
+  songStructure: Record<string, string>
+  productionNotes: string
+  musicVideoHandoff: Record<string, unknown>
+}) {
+  const genreLines = input.genres.map((genre, index) => `${index + 1}. ${genre}${index === 0 ? ' (primary)' : ''}`)
+  const structureLines = Object.entries(input.songStructure)
+    .map(([section, value]) => `${section}: ${value || 'auto'}`)
+  const videoEnabled = input.musicVideoHandoff.enabled === true
+  return [
+    'Studio song generation brief',
+    `Theme: ${input.theme}`,
+    `Requested tracks: ${input.count}`,
+    `Target duration: ${input.duration} seconds`,
+    `Language: ${input.language}`,
+    `Mood: ${input.mood}`,
+    `BPM: ${input.bpm > 0 ? input.bpm : 'auto'}`,
+    `Vocal direction: ${input.instrumental ? 'instrumental only' : input.vocalStyle.replaceAll('_', ' ')}`,
+    'Genre priority:',
+    ...genreLines,
+    'Song structure:',
+    ...structureLines,
+    input.lyrics ? `Lyrics to preserve:\n${input.lyrics}` : 'Lyrics: generate original lyrics matching the theme, structure, language, mood, and vocal direction.',
+    `Production notes:\n${input.productionNotes}`,
+    videoEnabled
+      ? `Music-video handoff: ${String(input.musicVideoHandoff.visualStyle || 'auto visual style')}; ${String(input.musicVideoHandoff.storyConcept || 'auto story')}; ${String(input.musicVideoHandoff.aspectRatio || '16:9')}; ${String(input.musicVideoHandoff.sceneCount || 'auto')} scenes; ${String(input.musicVideoHandoff.durationTargetSeconds || input.duration)}s target.`
+      : 'Music-video handoff: off',
+  ].join('\n')
+}
+
 function capabilityTruthProof(truth: CapabilityRuntimeTruthEntry) {
   return {
     capability: truth.capabilityId,
@@ -467,33 +608,11 @@ export async function POST(request: NextRequest) {
 
   try {
     if (mode === 'chat' || tab === 'Chat') {
-      const response = await assistantChatPost(jsonRequest('/api/admin/amarktai-assistant/chat', {
-        message: prompt,
-        capability: 'chat',
-        providerOverride: route.selectedProvider,
-        modelOverride: route.selectedModel,
-        costMode,
-        metadata: {
-          appSlug,
-          workspaceId: body.workspaceId,
-          brandId: body.brandId,
-          studio: true,
-          routingPolicy: {
-            budget: body.costMode ?? 'balanced',
-            qualityTier: body.qualityTier ?? 'standard',
-            effectiveCostMode: costMode,
-            reason: route.reason,
-          },
-        },
-      }))
-      const data = await readJson(response)
-      const output = typeof data.output === 'string' ? data.output : null
-      const responseRoute = data.route && typeof data.route === 'object'
-        ? data.route as Record<string, unknown>
-        : null
-      const selectedProvider = canonicalProviderValue(data.provider, responseRoute?.selectedProvider, route.selectedProvider)
-      const selectedModel = data.model ?? responseRoute?.selectedModel ?? route.selectedModel
-      const success = response.ok && data.success !== false && Boolean(output)
+      const chat = await executeStudioChat({ prompt, appSlug, route, truth: preflight?.truth })
+      const output = chat.output
+      const selectedProvider = chat.provider
+      const selectedModel = chat.model
+      const success = chat.success
       const proof = await recordStudioProof({
         mode: 'chat',
         capability: 'chat',
@@ -502,8 +621,8 @@ export async function POST(request: NextRequest) {
         model: selectedModel,
         success,
         executed: success,
-        routePath: '/api/admin/amarktai-assistant/chat',
-        metadata: { source: 'studio_execute', noArtifact: true, truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null },
+        routePath: '/api/admin/studio/execute',
+        metadata: { source: 'studio_execute', noArtifact: true, fallbackUsed: chat.fallbackUsed, attempts: chat.attempts, truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null },
       })
       return NextResponse.json(structuredResult({
         ok: success,
@@ -515,11 +634,19 @@ export async function POST(request: NextRequest) {
         selectedProvider,
         selectedModel,
         proof,
-        blocker: success ? null : data.error ?? 'Chat runtime returned no output.',
+        blocker: success ? null : chat.error ?? 'Chat runtime returned no output.',
         nextAction: success ? null : 'Check provider configuration and retry the Studio chat request.',
         extra: {
-          result: data,
-          route: data.route ?? route,
+          result: {
+            output,
+            provider: selectedProvider,
+            model: selectedModel,
+            fallbackUsed: chat.fallbackUsed,
+            attempts: chat.attempts,
+          },
+          route,
+          fallbackUsed: chat.fallbackUsed,
+          attempts: chat.attempts,
           routingPolicy: {
             budget: body.costMode ?? 'balanced',
             qualityTier: body.qualityTier ?? 'standard',
@@ -527,7 +654,7 @@ export async function POST(request: NextRequest) {
             reason: route.reason,
           },
         },
-      }), { status: success ? 200 : response.status })
+      }), { status: success ? 200 : 502 })
     }
 
     if (tab === 'Research') {
@@ -697,6 +824,11 @@ export async function POST(request: NextRequest) {
       const duration = Math.max(180, durationSeconds(stringControl(controls, 'duration', '180s'), 180))
       const bpm = Math.max(0, Math.round(numberControl(controls, 'bpm', 0)))
       const vocalStyle = stringControl(controls, 'vocalStyle', stringControl(controls, 'vocals', 'instrumental_only'))
+      const instrumental = vocalStyle === 'instrumental_only' || stringControl(controls, 'instrumental', 'off') === 'on'
+      const mood = stringControl(controls, 'mood', 'uplifting')
+      const language = stringControl(controls, 'language', 'English')
+      const count = Math.max(1, Math.round(numberControl(controls, 'count', 1)))
+      const lyrics = stringControl(controls, 'lyrics', '')
       const songStructure = {
         intro: stringControl(controls, 'intro', ''),
         verse: stringControl(controls, 'verse', ''),
@@ -715,13 +847,28 @@ export async function POST(request: NextRequest) {
       const productionNotes = [
         `Mood: ${stringControl(controls, 'mood', 'uplifting')}`,
         bpm > 0 ? `BPM: ${bpm}` : 'BPM: auto',
-        `Language: ${stringControl(controls, 'language', 'English')}`,
-        `Song count requested: ${Math.max(1, Math.round(numberControl(controls, 'count', 1)))}`,
+        `Language: ${language}`,
+        `Song count requested: ${count}`,
         `Structure: intro=${songStructure.intro || 'auto'}; verse=${songStructure.verse || 'auto'}; chorus=${songStructure.chorus || 'auto'}; bridge=${songStructure.bridge || 'auto'}; outro=${songStructure.outro || 'auto'}`,
         musicVideoHandoff.enabled
           ? `Music-video handoff: ${musicVideoHandoff.visualStyle || 'auto visual style'}; ${musicVideoHandoff.storyConcept || 'auto story'}; ${musicVideoHandoff.aspectRatio}; ${musicVideoHandoff.sceneCount} scenes; ${musicVideoHandoff.durationTargetSeconds}s target.`
           : 'Music-video handoff: off',
       ].join('\n')
+      const productionPrompt = buildStudioMusicPrompt({
+        theme: prompt,
+        genres,
+        mood,
+        vocalStyle,
+        instrumental,
+        duration,
+        bpm,
+        language,
+        count,
+        lyrics,
+        songStructure,
+        productionNotes,
+        musicVideoHandoff,
+      })
       const response = await musicPost(jsonRequest('/api/admin/music-studio', {
         action: 'create_async',
         request: {
@@ -729,19 +876,19 @@ export async function POST(request: NextRequest) {
           theme: prompt,
           genre: genres[0] ?? 'cinematic',
           genres,
-          moods: [stringControl(controls, 'mood', 'uplifting')],
-          mood: stringControl(controls, 'mood', 'uplifting'),
+          moods: [mood],
+          mood,
           vocalStyle,
-          instrumental: vocalStyle === 'instrumental_only' || stringControl(controls, 'instrumental', 'off') === 'on',
-          existingLyrics: stringControl(controls, 'lyrics', ''),
+          instrumental,
+          existingLyrics: lyrics,
           durationSeconds: duration,
           bpm,
-          language: stringControl(controls, 'language', 'English'),
+          language,
           productionNotes,
-          count: Math.max(1, Math.round(numberControl(controls, 'count', 1))),
+          count,
           songStructure,
           musicVideoHandoff,
-          prompt: `${prompt}\n\n${productionNotes}`,
+          prompt: productionPrompt,
           provider: route.selectedProvider,
           model: route.selectedModel,
         },
@@ -775,6 +922,7 @@ export async function POST(request: NextRequest) {
             bpm,
             songStructure,
             musicVideoHandoff,
+            productionPrompt,
           },
         })
         : studioProofSnapshot({
@@ -815,12 +963,13 @@ export async function POST(request: NextRequest) {
           requestProof: {
             genres,
             durationSeconds: duration,
-            lyrics: Boolean(stringControl(controls, 'lyrics', '')),
+            lyrics: Boolean(lyrics),
             songStructure,
             vocalStyle,
-            mood: stringControl(controls, 'mood', 'uplifting'),
+            mood,
             bpm,
-            count: Math.max(1, Math.round(numberControl(controls, 'count', 1))),
+            count,
+            productionPrompt,
           },
         },
       }), { status: response.status })
