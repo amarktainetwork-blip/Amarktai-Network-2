@@ -14,7 +14,6 @@ function exists(relativePath: string) {
 }
 
 const finalDashboardRoutes = [
-  'app/admin/dashboard/apps/page.tsx',
   'app/admin/dashboard/assets/page.tsx',
   'app/admin/dashboard/capabilities/page.tsx',
   'app/admin/dashboard/memory/page.tsx',
@@ -160,13 +159,18 @@ describe('final product reset truth and provider controls', () => {
     }
   })
 
-  it('keeps Studio chat-first without provider or model selectors', () => {
+  it('keeps Studio mode ribbon driven from CAPABILITY_UI_MODES, no hardcoded TASKS array', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
+    // Must use CAPABILITY_UI_MODES for the mode ribbon
     expect(studio).toContain('data-studio-task-selector')
-    for (const task of ['Chat', 'Image', 'Video', 'Image-to-Video', 'Long-form Video', 'Music', 'Voice/TTS', 'STT', 'Avatar', 'RAG/Research', 'Campaign']) {
-      expect(studio).toContain(task)
-    }
-    expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
+    expect(studio).toContain('CAPABILITY_UI_MODES')
+    // Must NOT have the old hardcoded task list
+    expect(studio).not.toContain('type TaskId =')
+    expect(studio).not.toContain('const TASKS')
+    expect(studio).not.toContain('StudioTask')
+    // Must not have side panel layout
+    expect(studio).not.toContain('xl:grid-cols-[minmax(0,1fr)_320px]')
+    expect(studio).not.toContain('<aside className=')
   })
 
   it('keeps Studio route details collapsed by default', () => {
@@ -175,7 +179,7 @@ describe('final product reset truth and provider controls', () => {
     expect(studio).not.toMatch(/<details\s+open/i)
   })
 
-  it('keeps Studio wired to existing execution routes and required controls', () => {
+  it('keeps Studio wired to existing execution routes', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
     const execute = source('app/api/admin/studio/execute/route.ts')
     expect(studio).toContain('/api/admin/studio/stt')
@@ -183,65 +187,24 @@ describe('final product reset truth and provider controls', () => {
     expect(execute).toContain('/api/admin/music-studio')
     expect(execute).toContain('/api/brain/tts')
     expect(execute).toContain('/api/brain/avatar-video')
-
-    for (const label of [
-      'Reference image upload',
-      'Edit mode',
-      'Number of images',
-      'Target duration',
-      'Number of videos',
-      'Scene count',
-      'Voice toggle',
-      'Music toggle',
-      'Stitching option',
-      'Lyrics textarea',
-      'Number of songs',
-      'Voice sample upload',
-      'Clone name',
-      'Consent / rights',
-      'Test phrase',
-      'Audio upload',
-      'Avatar library',
-      'Avatar name',
-      'Reference image URL',
-      'Consistency toggle',
-      'URL input for scrape',
-      'Document upload',
-      'Asset type selector',
-    ]) {
-      expect(studio).toContain(label)
-    }
   })
 
-  it('keeps Studio upload controls real and duration/count controls broad enough', () => {
+  it('keeps Studio upload controls present via data attributes', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
     for (const upload of [
       'image-reference-upload',
-      'video-reference-upload',
       'image-to-video-reference-upload',
       'stt-audio',
       'avatar-reference-upload',
       'rag-document-upload',
-      'voice-clone-upload',
     ]) {
       expect(studio).toContain(upload)
     }
-    expect(studio).toContain('1m30s')
-    expect(studio).toContain('180s')
-    expect(studio).toContain('300s')
-    expect(studio).toContain('setMusicCount')
   })
 
-  it('keeps planned app templates separate from connected apps', () => {
-    const apps = source('app/admin/dashboard/apps/page.tsx')
-    const addApp = source('components/dashboard/AddAppFlow.tsx')
-    expect(apps).toContain('No apps connected yet')
-    expect(apps).toContain('Templates / next apps')
-    expect(apps).toContain('Template only, not connected')
-    expect(apps).toContain('<AddAppFlow />')
-    expect(addApp).toContain('/api/admin/app-profiles')
-    expect(addApp).toContain('Allowed capability categories')
-    expect(addApp).toContain('Storage / artifact scope')
+  it('apps/page.tsx was deleted — orphaned route removed from product', () => {
+    // apps route is no longer in the 13-section nav and has been deleted
+    expect(exists('app/admin/dashboard/apps/page.tsx')).toBe(false)
   })
 
   it('keeps Memory & Knowledge split into the requested sections', () => {

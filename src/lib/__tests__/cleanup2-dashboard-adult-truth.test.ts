@@ -116,7 +116,7 @@ describe('cleanup 2 dashboard truth and adult routing', () => {
     const adapter = source('src/lib/runtime-capability-truth.ts')
     const overview = source('src/app/admin/dashboard/page.tsx')
     expect(adapter).toContain("if (status === 'wired_unproven') return 'needs_proof'")
-    expect(overview).toContain("capability.status === 'needs_proof'")
+    expect(overview).toContain("c.status === 'wired_unproven'")
     expect(overview).not.toContain("capability.status === 'available'")
     expect(overview).not.toContain("capability.status === 'not_implemented'")
   })

@@ -101,8 +101,8 @@ export default async function CommandCenterPage() {
   const totalProviders = providers.length
 
   const capWorking = capabilityTruth.filter((c) => c.status === 'working').length
-  // needs_proof maps to wired_unproven: capability.status === 'needs_proof' shows as unproven
-  const capWiredUnproven = capabilityTruth.filter((c) => c.status === 'wired_unproven').length
+  // wired_unproven = needs proof: not yet live-tested, needs real proof run
+  const capNeedsProof = capabilityTruth.filter((c) => c.status === 'wired_unproven').length
   const capBlocked = capabilityTruth.filter((c) => c.status === 'blocked').length
   const capMissing = capabilityTruth.filter((c) => c.status === 'missing').length
   const capTotal = capabilityTruth.length
@@ -154,7 +154,7 @@ export default async function CommandCenterPage() {
           icon={<Zap />}
           label="Capabilities"
           value={`${capWorking}/${capTotal}`}
-          detail={`${capWiredUnproven} unproven · ${capBlocked} blocked · ${capMissing} missing`}
+          detail={`${capNeedsProof} needs proof · ${capBlocked} blocked · ${capMissing} missing`}
           tone={capWorking > 0 ? 'good' : 'warn'}
         />
         <MetricCard
@@ -223,7 +223,7 @@ export default async function CommandCenterPage() {
         <Panel title="Capability status summary">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatBox label="Working" value={capWorking} tone="good" />
-            <StatBox label="Unproven" value={capWiredUnproven} tone="neutral" />
+            <StatBox label="Needs proof" value={capNeedsProof} tone="neutral" />
             <StatBox label="Blocked" value={capBlocked} tone="warn" />
             <StatBox label="Missing" value={capMissing} tone="bad" />
           </div>

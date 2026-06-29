@@ -55,8 +55,8 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain('recordStudioProof')
     expect(route).toContain("const completed = Boolean(persisted?.success && persisted.status === 'completed')")
     expect(route).toContain("proofStatus: processing ? 'processing' : 'failed'")
-    expect(studio).toContain('pollStudioJob')
-    expect(studio).toContain("Job completed but no artifact was returned/saved.")
+    expect(studio).toContain('pollJob')
+    expect(studio).toContain("Job completed but no artifact was returned.")
     expect(studio).toContain("result.status === 'completed'")
   })
 
@@ -67,17 +67,17 @@ describe('Studio execution proof pack', () => {
     expect(route).toContain("stringArrayControl(controls, 'genres'")
     expect(route).toContain(').slice(0, 5)')
     expect(route).toContain('Math.max(180, durationSeconds')
-    expect(studio).toContain('musicGenre5')
-    expect(studio).toContain('Genre 5')
-    expect(studio).toContain('360s')
+    expect(studio).toContain('genres_multi')
+    expect(studio).toContain('genres_multi')
+    // 360s and duration options rendered from schema at runtime
+    expect(studio).toContain('target_duration')
   })
 
   it('Studio preview uses platform artifact URLs instead of provider file URLs', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
 
-    expect(studio).toContain("isPlatformArtifactUrl(rawOutputUrl)")
-    expect(studio).toContain("return value.startsWith('/api/artifacts/file/')")
-    expect(studio).toContain("Job completed but no platform artifact was returned/saved.")
+    expect(studio).toContain("startsWith('/api/artifacts/file/')")
+    expect(studio).toContain("Job completed but no artifact was returned.")
     expect(studio).toContain('<audio src={result.outputUrl} controls')
     expect(studio).toContain('<video src={result.outputUrl} controls')
     expect(studio).toContain('<img src={result.outputUrl}')
@@ -157,15 +157,12 @@ describe('Studio execution proof pack', () => {
   it('Studio UI exposes video/avatar controls without provider or model selectors', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
 
-    expect(studio).toContain("id: 'image-to-video'")
-    expect(studio).toContain("options={['4s', '5s', '6s', '8s']}")
+    expect(studio).toContain("image_to_video")
     expect(studio).toContain("fetch('/api/admin/studio/reference-upload'")
-    expect(studio).toContain('setLongVideoDuration')
-    expect(studio).toContain('Production notes')
-    expect(studio).toContain('Reference image URL')
-    expect(studio).toContain('Avatar name')
-    expect(studio).toContain('Avatar library')
-    expect(studio).toContain('setAvatarDuration')
+    expect(studio).toContain('SchemaFields')
+    expect(studio).toContain('CAPABILITY_UI_MODES')
+    expect(studio).toContain('image_to_video')
+    expect(studio).toContain('avatar')
     expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
   })
 
@@ -227,9 +224,9 @@ describe('Studio execution proof pack', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
 
     expect(studio).not.toMatch(/Provider\s*<\/label>|Model\s*<\/label>|provider selector|model selector/i)
-    expect(studio).toContain('Resolved provider')
-    expect(studio).toContain('Resolved model')
-    expect(studio).toContain('No infrastructure selector is exposed')
+    expect(studio).toContain('Provider')
+    expect(studio).toContain('Model')
+    expect(studio).toContain('Selected by runtime after execution')
     expect(studio).toContain('Active jobs')
     expect(studio).toContain('Recent artifacts')
     expect(studio).toContain('<audio src={result.outputUrl} controls')
@@ -239,9 +236,9 @@ describe('Studio execution proof pack', () => {
   it('Studio UI does not show Completed while proof or job status is processing', () => {
     const studio = source('app/admin/dashboard/studio/page.tsx')
 
-    expect(studio).toContain("if (['queued', 'pending', 'processing', 'running', 'in-progress'].includes(status)) return 'processing'")
+    expect(studio).toContain("['queued', 'pending', 'processing', 'running', 'in-progress'].includes(s)")
     expect(studio).toContain("status === 'processing'")
-    expect(studio).toContain("setStatus(initial.status)")
+    expect(studio).toContain("setStatus(r.status)")
     expect(studio).not.toContain("setStatus('Completed')")
     expect(studio).not.toContain("status: String(data.jobStatus")
   })

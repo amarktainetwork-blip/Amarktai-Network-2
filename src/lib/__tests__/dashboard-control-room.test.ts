@@ -171,10 +171,27 @@ describe('capability-ui-schema: music mode completeness', () => {
   })
 })
 
-// ── Studio: no provider/model controls ───────────────────────────────────────
+// ── Studio: schema-driven, no hardcoded mode list ────────────────────────────
 
-describe('studio: no provider/model overrides', () => {
-  it('studio does not expose provider/model labels', () => {
+describe('studio: schema-driven modes, no hardcoded TASKS', () => {
+  it('studio mode ribbon uses CAPABILITY_UI_MODES, not a hardcoded TASKS array', () => {
+    const studio = src('app/admin/dashboard/studio/page.tsx')
+    expect(studio).toContain('CAPABILITY_UI_MODES')
+    expect(studio).toContain('ALL_MODES')
+    // Must NOT have old hardcoded structures
+    expect(studio).not.toContain('type TaskId =')
+    expect(studio).not.toContain('const TASKS')
+    expect(studio).not.toContain('StudioTask')
+  })
+
+  it('studio does not use side panel layout', () => {
+    const studio = src('app/admin/dashboard/studio/page.tsx')
+    expect(studio).not.toContain('xl:grid-cols-[minmax(0,1fr)_320px]')
+    // No <aside className= pattern (side result panel)
+    expect(studio).not.toMatch(/<aside\s+className=/)
+  })
+
+  it('studio does not expose provider/model selectors or overrides', () => {
     const studio = src('app/admin/dashboard/studio/page.tsx')
     expect(studio).not.toMatch(/Provider\s*<\/label>|<label.*Provider/i)
     expect(studio).not.toMatch(/Model\s*<\/label>|<label.*Model/i)
@@ -182,16 +199,32 @@ describe('studio: no provider/model overrides', () => {
     expect(studio).not.toContain('modelOverride')
   })
 
-  it('studio imports CAPABILITY_UI_MODES', () => {
+  it('studio request payload does not include provider/model/providerOverride/modelOverride', () => {
     const studio = src('app/admin/dashboard/studio/page.tsx')
-    expect(studio).toContain('CAPABILITY_UI_MODES')
+    // Execution payload must NOT include these keys
+    expect(studio).not.toMatch(/provider:\s*selectedMode|providerOverride:|modelOverride:|["']provider["']:\s*(?!selectedMode)/i)
   })
 
-  it('studio music section has sub-section labels', () => {
+  it('studio result section shows runtime-selected before execution', () => {
     const studio = src('app/admin/dashboard/studio/page.tsx')
-    for (const sub of ['Song', 'Lyrics', 'Production', 'Structure']) {
+    expect(studio).toContain('Selected by runtime after execution')
+  })
+
+  it('studio music section renders sub-section tabs from schema', () => {
+    const studio = src('app/admin/dashboard/studio/page.tsx')
+    for (const sub of ['Song', 'Lyrics', 'Production', 'Structure', 'Remix', 'Video / Outputs']) {
       expect(studio).toContain(sub)
     }
+  })
+
+  it('studio exposes all 15 modes from CAPABILITY_UI_MODES at runtime', async () => {
+    const { CAPABILITY_UI_MODES } = await import('@/lib/capability-ui-schema')
+    const REQUIRED = ['chat', 'image', 'video', 'long_form_video', 'image_to_video', 'music', 'tts', 'stt', 'avatar', 'research_rag', 'campaign', 'automation', 'publishing', 'trading', 'adult_private']
+    for (const modeId of REQUIRED) {
+      const found = CAPABILITY_UI_MODES.find((m) => m.id === modeId)
+      expect(found, `mode ${modeId} missing from CAPABILITY_UI_MODES`).toBeDefined()
+    }
+    expect(CAPABILITY_UI_MODES.length).toBeGreaterThanOrEqual(15)
   })
 })
 
@@ -295,6 +328,106 @@ describe('deleted runtime files remain gone', () => {
 
   it.each(DELETED)('%s is still deleted', (file) => {
     expect(exists(file)).toBe(false)
+  })
+})
+
+// ── Capabilities page: full contract columns ──────────────────────────────────
+
+describe('capabilities page: required columns', () => {
+  it('includes required config column', () => {
+    const page = src('app/admin/dashboard/capabilities/page.tsx')
+    expect(page).toContain('Required config')
+  })
+
+  it('includes artifact type column', () => {
+    const page = src('app/admin/dashboard/capabilities/page.tsx')
+    expect(page).toContain('Artifact type')
+  })
+
+  it('includes job type column', () => {
+    const page = src('app/admin/dashboard/capabilities/page.tsx')
+    expect(page).toContain('Job type')
+  })
+
+  it('uses canonical capability truth', () => {
+    const page = src('app/admin/dashboard/capabilities/page.tsx')
+    expect(page).toContain('getCapabilityRuntimeTruth')
+  })
+})
+
+// ── Library registry: complete capability mappings ────────────────────────────
+
+describe('platform-library-registry: complete capability mappings', () => {
+  it('Crawlee includes campaigns and brand_memory', async () => {
+    const { PLATFORM_LIBRARIES } = await import('@/lib/platform-library-registry')
+    const lib = PLATFORM_LIBRARIES.find((l) => l.id === 'crawlee')
+    expect(lib?.usedByCapabilities).toContain('campaigns')
+    expect(lib?.usedByCapabilities).toContain('brand_memory')
+  })
+
+  it('Qdrant includes memory and brand_memory', async () => {
+    const { PLATFORM_LIBRARIES } = await import('@/lib/platform-library-registry')
+    const lib = PLATFORM_LIBRARIES.find((l) => l.id === 'qdrant')
+    expect(lib?.usedByCapabilities).toContain('memory')
+    expect(lib?.usedByCapabilities).toContain('brand_memory')
+  })
+
+  it('BullMQ includes long_form_video and social_publishing', async () => {
+    const { PLATFORM_LIBRARIES } = await import('@/lib/platform-library-registry')
+    const lib = PLATFORM_LIBRARIES.find((l) => l.id === 'bullmq_flows')
+    expect(lib?.usedByCapabilities).toContain('long_form_video')
+    expect(lib?.usedByCapabilities).toContain('social_publishing')
+  })
+
+  it('TanStack Table includes capabilities and providers', async () => {
+    const { PLATFORM_LIBRARIES } = await import('@/lib/platform-library-registry')
+    const lib = PLATFORM_LIBRARIES.find((l) => l.id === 'tanstack_table')
+    expect(lib?.usedByCapabilities).toContain('capabilities')
+    expect(lib?.usedByCapabilities).toContain('providers')
+  })
+})
+
+// ── Music schema: all required fields ────────────────────────────────────────
+
+describe('music schema: all required fields present', () => {
+  const REQUIRED_MUSIC_FIELDS = [
+    'subgenre', 'era_decade',
+    'use_my_lyrics', 'singer_gender',
+    'tempo_feel', 'beat_style', 'drum_pattern', 'bass_style', 'instruments',
+    'synth_style', 'guitar_style', 'piano_style', 'orchestral', 'mixing_style',
+    'mastering', 'reference_vibe',
+    'structure_pre_chorus', 'structure_breakdown', 'structure_solo', 'custom_structure',
+    'acoustic_version', 'dance_version', 'cinematic_version', 'radio_edit',
+    'extended_mix', 'instrumental_version', 'regenerate_section', 'variation_count',
+    'waveform_preview', 'music_video_concept', 'music_video_aspect', 'music_video_scenes', 'license_pdf',
+  ] as const
+
+  it.each(REQUIRED_MUSIC_FIELDS)('music schema contains field: %s', (fieldId) => {
+    const schema = src('lib/capability-ui-schema.ts')
+    expect(schema).toContain(fieldId)
+  })
+})
+
+// ── Dashboard: Unproven removed, Needs proof used ─────────────────────────────
+
+describe('command center: correct status labels', () => {
+  it('command center does not use Unproven as user-facing label', () => {
+    const page = src('app/admin/dashboard/page.tsx')
+    expect(page).not.toMatch(/>Unproven<|label.*Unproven|Unproven.*label/i)
+    expect(page).not.toContain('"Unproven"')
+  })
+
+  it('command center uses Needs proof for wired_unproven', () => {
+    const page = src('app/admin/dashboard/page.tsx')
+    expect(page).toContain('Needs proof')
+  })
+})
+
+// ── Apps route deleted ────────────────────────────────────────────────────────
+
+describe('apps route: deleted', () => {
+  it('apps/page.tsx is deleted (orphaned from nav)', () => {
+    expect(exists('app/admin/dashboard/apps/page.tsx')).toBe(false)
   })
 })
 

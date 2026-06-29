@@ -238,6 +238,7 @@ export const CAPABILITY_UI_MODES: readonly CapabilityUiMode[] = [
     fields: [
       // ── Song ──
       { id: 'theme', label: 'Song theme / prompt', type: 'textarea', required: true, placeholder: 'Describe the song concept, emotion, story, or vibe.' },
+      // ── Song ──
       { id: 'genre', label: 'Primary genre', type: 'select', options: [
         { value: 'pop', label: 'Pop' }, { value: 'rock', label: 'Rock' }, { value: 'jazz', label: 'Jazz' },
         { value: 'hip-hop', label: 'Hip-hop' }, { value: 'electronic', label: 'Electronic' },
@@ -247,43 +248,78 @@ export const CAPABILITY_UI_MODES: readonly CapabilityUiMode[] = [
       { id: 'genres_multi', label: 'Multi-genre tags', type: 'multi_select', options: [
         { value: 'pop', label: 'Pop' }, { value: 'rock', label: 'Rock' }, { value: 'jazz', label: 'Jazz' },
         { value: 'hip-hop', label: 'Hip-hop' }, { value: 'electronic', label: 'Electronic' },
+        { value: 'classical', label: 'Classical' }, { value: 'rnb', label: 'R&B' }, { value: 'folk', label: 'Folk' },
+      ]},
+      { id: 'subgenre', label: 'Subgenre', type: 'text', placeholder: 'e.g. lo-fi, indie, trap, bossa nova' },
+      { id: 'era_decade', label: 'Era / decade', type: 'select', options: [
+        { value: 'contemporary', label: 'Contemporary' }, { value: '2010s', label: '2010s' }, { value: '2000s', label: '2000s' },
+        { value: '1990s', label: '1990s' }, { value: '1980s', label: '1980s' }, { value: '1970s', label: '1970s' },
+        { value: 'classic', label: 'Classic / timeless' },
       ]},
       { id: 'mood', label: 'Mood', type: 'select', options: [
         { value: 'uplifting', label: 'Uplifting' }, { value: 'melancholic', label: 'Melancholic' },
         { value: 'energetic', label: 'Energetic' }, { value: 'calm', label: 'Calm' }, { value: 'dark', label: 'Dark' },
+        { value: 'romantic', label: 'Romantic' }, { value: 'nostalgic', label: 'Nostalgic' },
       ]},
+      { id: 'language', label: 'Language', type: 'select', defaultValue: 'en', options: [
+        { value: 'en', label: 'English' }, { value: 'es', label: 'Spanish' }, { value: 'fr', label: 'French' },
+        { value: 'pt', label: 'Portuguese' }, { value: 'de', label: 'German' }, { value: 'auto', label: 'Auto' },
+      ]},
+      { id: 'target_duration', label: 'Target duration', type: 'duration', defaultValue: '180s', helpText: 'e.g. 180s, 240s, 300s' },
+      { id: 'track_count', label: 'Number of songs', type: 'number', defaultValue: 1 },
+      qualityField,
+      // ── Lyrics ──
+      { id: 'lyrics', label: 'Lyrics textarea', type: 'textarea', placeholder: 'Paste your lyrics or leave blank to generate.' },
+      { id: 'generate_lyrics', label: 'Generate lyrics', type: 'toggle', defaultValue: true },
+      { id: 'use_my_lyrics', label: 'Use my lyrics', type: 'toggle', defaultValue: false },
+      { id: 'instrumental_only', label: 'Instrumental only', type: 'toggle', defaultValue: false },
       { id: 'vocal_mode', label: 'Vocal / No vocal', type: 'select', defaultValue: 'vocal', options: [
         { value: 'vocal', label: 'Vocal' }, { value: 'instrumental', label: 'Instrumental' }, { value: 'no_vocal', label: 'No vocal' },
       ]},
       { id: 'vocal_style', label: 'Vocal style', type: 'select', visibleWhen: 'vocal_mode=vocal', options: [
-        { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'choir', label: 'Choir' },
+        { value: 'lead', label: 'Lead' }, { value: 'harmony', label: 'Harmony' }, { value: 'rap', label: 'Rap' },
+        { value: 'spoken_word', label: 'Spoken word' }, { value: 'choir', label: 'Choir' },
       ]},
-      { id: 'language', label: 'Language', type: 'select', defaultValue: 'en', options: [
-        { value: 'en', label: 'English' }, { value: 'es', label: 'Spanish' }, { value: 'fr', label: 'French' },
+      { id: 'singer_gender', label: 'Singer gender / voice type', type: 'select', visibleWhen: 'vocal_mode=vocal', options: [
+        { value: 'female', label: 'Female' }, { value: 'male', label: 'Male' },
+        { value: 'duo', label: 'Male & female duo' }, { value: 'auto', label: 'Auto' },
       ]},
-      { id: 'target_duration', label: 'Target duration', type: 'duration', defaultValue: '180s' },
-      { id: 'track_count', label: 'Number of songs', type: 'number', defaultValue: 1 },
-      { id: 'instrumental_only', label: 'Instrumental only', type: 'toggle', defaultValue: false },
-      { id: 'generate_lyrics', label: 'Generate lyrics', type: 'toggle', defaultValue: true },
-      qualityField,
-      // ── Lyrics ──
-      { id: 'lyrics', label: 'Lyrics textarea', type: 'textarea', placeholder: 'Paste your lyrics or leave blank to generate.' },
       // ── Production ──
       { id: 'bpm', label: 'BPM', type: 'number', defaultValue: 120 },
       { id: 'key', label: 'Key', type: 'select', options: [
         { value: 'c', label: 'C' }, { value: 'g', label: 'G' }, { value: 'd', label: 'D' },
-        { value: 'a', label: 'A' }, { value: 'e', label: 'E' }, { value: 'am', label: 'Am' },
+        { value: 'a', label: 'A' }, { value: 'e', label: 'E' }, { value: 'am', label: 'Am' }, { value: 'auto', label: 'Auto' },
       ]},
-      { id: 'energy', label: 'Energy level', type: 'select', options: [
-        { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' },
+      { id: 'tempo_feel', label: 'Tempo feel', type: 'select', options: [
+        { value: 'slow', label: 'Slow' }, { value: 'mid', label: 'Mid-tempo' }, { value: 'fast', label: 'Fast' }, { value: 'variable', label: 'Variable' },
       ]},
+      { id: 'energy_level', label: 'Energy level', type: 'select', options: [
+        { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' }, { value: 'builds', label: 'Builds' },
+      ]},
+      { id: 'beat_style', label: 'Beat style', type: 'text', placeholder: 'e.g. trap, boom-bap, four-on-the-floor' },
+      { id: 'drum_pattern', label: 'Drum pattern', type: 'text', placeholder: 'e.g. kick on 1 & 3, snare on 2 & 4' },
+      { id: 'bass_style', label: 'Bass style', type: 'text', placeholder: 'e.g. walking bass, synth bass, 808' },
+      { id: 'instruments', label: 'Instruments', type: 'text', placeholder: 'e.g. piano, strings, brass, guitar' },
+      { id: 'synth_style', label: 'Synth style', type: 'text', placeholder: 'e.g. warm pads, lead synth, arp' },
+      { id: 'guitar_style', label: 'Guitar style', type: 'text', placeholder: 'e.g. acoustic strumming, electric riff' },
+      { id: 'piano_style', label: 'Piano / keys style', type: 'text', placeholder: 'e.g. gospel chords, minimalist, jazz voicings' },
+      { id: 'orchestral', label: 'Orchestral elements', type: 'text', placeholder: 'e.g. strings swell, brass stabs' },
+      { id: 'mixing_style', label: 'Mixing style', type: 'text', placeholder: 'e.g. clean, lo-fi, vintage, modern' },
+      { id: 'mastering', label: 'Mastering intensity', type: 'select', options: [
+        { value: 'light', label: 'Light' }, { value: 'standard', label: 'Standard' }, { value: 'loud', label: 'Loud / commercial' },
+      ]},
+      { id: 'reference_vibe', label: 'Reference vibe', type: 'text', placeholder: 'e.g. sounds like early Daft Punk meets Bon Iver' },
       { id: 'production_notes', label: 'Production notes', type: 'textarea' },
       // ── Structure ──
       { id: 'structure_intro', label: 'Intro', type: 'text', placeholder: 'Intro length / style' },
       { id: 'structure_verse', label: 'Verse', type: 'text', placeholder: 'Verse style' },
+      { id: 'structure_pre_chorus', label: 'Pre-chorus', type: 'text', placeholder: 'Pre-chorus style or omit' },
       { id: 'structure_chorus', label: 'Chorus', type: 'text', placeholder: 'Chorus style' },
       { id: 'structure_bridge', label: 'Bridge', type: 'text', placeholder: 'Bridge style' },
+      { id: 'structure_breakdown', label: 'Breakdown', type: 'text', placeholder: 'Breakdown style or omit' },
+      { id: 'structure_solo', label: 'Solo', type: 'text', placeholder: 'Solo style or omit' },
       { id: 'structure_outro', label: 'Outro', type: 'text', placeholder: 'Outro style' },
+      { id: 'custom_structure', label: 'Custom structure notes', type: 'textarea', placeholder: 'Describe a non-standard arrangement' },
       // ── Remix / Variations ──
       { id: 'remix', label: 'Create remix', type: 'toggle', defaultValue: false },
       { id: 'remix_style', label: 'Remix style', type: 'select', visibleWhen: 'remix=true', options: [
@@ -291,15 +327,34 @@ export const CAPABILITY_UI_MODES: readonly CapabilityUiMode[] = [
         { value: 'cinematic', label: 'Cinematic' }, { value: 'radio_edit', label: 'Radio edit' },
         { value: 'extended', label: 'Extended mix' }, { value: 'instrumental', label: 'Instrumental version' },
       ]},
-      { id: 'stems', label: 'Stems / vocals-only', type: 'status', statusCapabilityId: 'music_generation' },
+      { id: 'acoustic_version', label: 'Acoustic version', type: 'toggle', defaultValue: false },
+      { id: 'dance_version', label: 'Dance version', type: 'toggle', defaultValue: false },
+      { id: 'cinematic_version', label: 'Cinematic version', type: 'toggle', defaultValue: false },
+      { id: 'radio_edit', label: 'Radio edit', type: 'toggle', defaultValue: false },
+      { id: 'extended_mix', label: 'Extended mix', type: 'toggle', defaultValue: false },
+      { id: 'instrumental_version', label: 'Instrumental version', type: 'toggle', defaultValue: false },
+      { id: 'stems', label: 'Vocals-only / stems', type: 'status', statusCapabilityId: 'music_generation' },
+      { id: 'regenerate_section', label: 'Regenerate section', type: 'select', options: [
+        { value: '', label: 'None' }, { value: 'intro', label: 'Intro' }, { value: 'verse', label: 'Verse' },
+        { value: 'chorus', label: 'Chorus' }, { value: 'bridge', label: 'Bridge' },
+      ]},
+      { id: 'variation_count', label: 'Variation count', type: 'number', defaultValue: 1 },
       // ── Video / Outputs ──
       { id: 'cover_art', label: 'Cover art', type: 'status', statusCapabilityId: 'image_generation' },
       { id: 'music_video', label: 'Music video handoff', type: 'toggle', defaultValue: false },
       { id: 'music_video_style', label: 'Music video visual style', type: 'select', visibleWhen: 'music_video=true', options: [
         { value: 'abstract', label: 'Abstract' }, { value: 'narrative', label: 'Narrative' }, { value: 'lyric', label: 'Lyric' },
+        { value: 'performance', label: 'Performance' },
       ]},
+      { id: 'music_video_concept', label: 'Music video story concept', type: 'textarea', visibleWhen: 'music_video=true', placeholder: 'Story concept for the music video' },
+      { id: 'music_video_aspect', label: 'Music video aspect ratio', type: 'select', options: [
+        { value: '16:9', label: '16:9 Landscape' }, { value: '9:16', label: '9:16 Portrait' }, { value: '1:1', label: '1:1 Square' },
+      ]},
+      { id: 'music_video_scenes', label: 'Music video scene count', type: 'number', defaultValue: 6 },
       { id: 'lyric_video', label: 'Lyric video', type: 'toggle', defaultValue: false },
+      { id: 'waveform_preview', label: 'Waveform / preview', type: 'status', statusCapabilityId: 'music_generation' },
       { id: 'download_artifact', label: 'Download artifact', type: 'status', statusCapabilityId: 'music_generation' },
+      { id: 'license_pdf', label: 'License / report PDF', type: 'status', statusCapabilityId: 'music_generation' },
     ],
   },
 
