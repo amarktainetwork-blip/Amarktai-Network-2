@@ -30,6 +30,10 @@ export interface CoreProofPackResult {
   success: boolean
   mode: CoreProofMode
   ranAt: string
+  requestedCapabilities: string[]
+  selectedCapabilities: string[]
+  rejectedCapabilities: string[]
+  liveExecutionAttempted: boolean
   capabilities: CoreProofCapabilityResult[]
 }
 
@@ -38,6 +42,15 @@ export interface CoreProofPackOptions {
   capabilities?: readonly string[]
   maxDurationSeconds?: number
   costMode?: CoreProofCostMode
+  pollSeconds?: number
+  pollIntervalMs?: number
+}
+
+export interface CoreProofAudioSource {
+  audioBase64: string | null
+  artifactId: string | null
+  storageUrl: string | null
+  audioUrl: string | null
 }
 
 export const CORE_PROOF_CAPABILITIES: readonly CoreProofCapabilitySpec[] = [
@@ -98,6 +111,32 @@ function isCompletedArtifactUrl(storageUrl: string | null) {
   return storageUrl.startsWith('/api/artifacts/file/') || storageUrl.startsWith('https://') || storageUrl.startsWith('http://')
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function boundedPollSeconds(value: number | undefined) {
+  return Number.isFinite(value) && value !== undefined ? Math.max(1, Math.min(value, 300)) : 60
+}
+
+function boundedPollIntervalMs(value: number | undefined) {
+  return Number.isFinite(value) && value !== undefined ? Math.max(250, Math.min(value, 30_000)) : 3_000
+}
+
+export function extractCoreProofAudioSource(data: Record<string, unknown>): CoreProofAudioSource {
+  const result = toRecord(data.result)
+  const artifact = toRecord(data.artifact)
+  return {
+    audioBase64: firstString(data.audioBase64, result.audioBase64),
+    artifactId: firstString(data.artifactId, artifact.id, result.artifactId),
+    storageUrl: firstString(data.storageUrl, data.mediaUrl, data.audioUrl, artifact.storageUrl, result.storageUrl),
+    audioUrl: firstString(data.audioUrl, data.mediaUrl, result.audioUrl, result.mediaUrl),
+  }
+}
+
+export function hasCoreProofAudioSource(source: CoreProofAudioSource | null): source is CoreProofAudioSource {
+  if (!source) return false
+  return Boolean(source.audioBase64 || source.audioUrl || (source.artifactId && source.storageUrl))
+}
+
 export function normalizeCoreProofRouteResult(
   capability: string,
   route: string,
@@ -109,7 +148,7 @@ export function normalizeCoreProofRouteResult(
   const job = toRecord(data.job)
   const jobStatus = firstString(data.jobStatus, data.status, job.status, result.jobStatus, result.status)
   const artifactId = firstString(data.artifactId, artifact.id, result.artifactId)
-  const storageUrl = firstString(data.storageUrl, data.imageUrl, data.videoUrl, data.audioUrl, artifact.storageUrl, result.storageUrl)
+  const storageUrl = firstString(data.storageUrl, data.imageUrl, data.videoUrl, data.audioUrl, data.musicUrl, data.mediaUrl, artifact.storageUrl, result.storageUrl)
   const jobId = firstString(data.jobId, job.jobId, result.jobId)
   const pollUrl = firstString(data.pollUrl, job.pollUrl, result.pollUrl)
   const blocker = firstString(data.blocker, data.error, result.blocker, result.error)
@@ -118,7 +157,7 @@ export function normalizeCoreProofRouteResult(
   const completed = ['completed', 'succeeded', 'success', 'generated'].includes(String(jobStatus ?? '').toLowerCase())
   const artifactReady = Boolean((artifactId || storageUrl) && isCompletedArtifactUrl(storageUrl))
   const processing = Boolean(jobId || pollUrl) && !Boolean(artifactId && storageUrl)
-  const missingConfig = /missing|not configured|needs_setup|requires_endpoint|no connected provider/i.test(blocker ?? String(jobStatus ?? ''))
+  const missingConfig = /missing|not configured|needs_setup|requires_endpoint|no connected provider/i.test(`${blocker ?? ''} ${jobStatus ?? ''}`)
   const persistenceFailure = /artifact|persist|persistence|storage|ingestion/i.test(blocker ?? '')
   const status: CoreProofStatus =
     executed && completed && artifactReady && !persistenceFailure ? 'proven' :
@@ -244,6 +283,81 @@ async function postJsonRoute(route: string, body: Record<string, unknown>) {
   return request
 }
 
+async function pollMediaJobProof(
+  capability: string,
+  route: string,
+  initialData: Record<string, unknown>,
+  options: CoreProofPackOptions,
+): Promise<{ result: CoreProofCapabilityResult; data: Record<string, unknown> }> {
+  let currentData = initialData
+  let currentResult = normalizeCoreProofRouteResult(capability, route, currentData)
+  const jobId = currentResult.jobId
+  if (!jobId || currentResult.status !== 'processing') return { result: currentResult, data: currentData }
+
+  const { pollLocalMediaJob, localMediaJobResponse } = await import('@/lib/media-job-store')
+  const deadline = Date.now() + boundedPollSeconds(options.pollSeconds) * 1000
+  const intervalMs = boundedPollIntervalMs(options.pollIntervalMs)
+
+  while (Date.now() <= deadline) {
+    const job = await pollLocalMediaJob(jobId)
+    if (!job) {
+      currentData = {
+        ...currentData,
+        success: false,
+        executed: false,
+        status: 'failed',
+        jobStatus: 'failed',
+        blocker: `Media job ${jobId} was not found during proof polling.`,
+      }
+      currentResult = normalizeCoreProofRouteResult(capability, route, currentData)
+      return { result: currentResult, data: currentData }
+    }
+
+    currentData = localMediaJobResponse(job) as Record<string, unknown>
+    currentResult = normalizeCoreProofRouteResult(capability, route, currentData)
+    if (currentResult.status !== 'processing') return { result: currentResult, data: currentData }
+    if (Date.now() + intervalMs > deadline) break
+    await sleep(intervalMs)
+  }
+
+  return {
+    result: {
+      ...currentResult,
+      blocker: currentResult.blocker ?? `Media job ${jobId} did not complete within ${boundedPollSeconds(options.pollSeconds)} seconds.`,
+      nextAction: currentResult.nextAction ?? 'Poll the returned media job again or increase --pollSeconds for live proof.',
+    },
+    data: currentData,
+  }
+}
+
+async function readAudioSourceBytes(source: CoreProofAudioSource): Promise<{ bytes: Buffer; mimeType: string } | null> {
+  if (source.audioBase64) {
+    const decoded = decodeDataUri(source.audioBase64)
+    if (decoded?.bytes.length) return decoded
+  }
+
+  const directUrl = source.audioUrl ?? source.storageUrl
+  if (directUrl?.startsWith('http://') || directUrl?.startsWith('https://')) {
+    const response = await fetch(directUrl, { signal: AbortSignal.timeout(30_000) })
+    if (!response.ok) throw new Error(`TTS artifact fetch failed with HTTP ${response.status}.`)
+    const bytes = Buffer.from(await response.arrayBuffer())
+    if (!bytes.length) return null
+    return { bytes, mimeType: response.headers.get('content-type') ?? 'audio/mpeg' }
+  }
+
+  if (source.artifactId) {
+    const { getArtifact } = await import('@/lib/artifact-store')
+    const { getStorageDriver } = await import('@/lib/storage-driver')
+    const artifact = await getArtifact(source.artifactId)
+    if (artifact?.storagePath) {
+      const bytes = await getStorageDriver().get(artifact.storagePath)
+      if (bytes?.length) return { bytes, mimeType: artifact.mimeType || 'audio/mpeg' }
+    }
+  }
+
+  return null
+}
+
 async function runLiveImageProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
   try {
     const { POST } = await import('@/app/api/brain/image/route')
@@ -282,7 +396,7 @@ async function runLiveImageProof(options: CoreProofPackOptions): Promise<CorePro
   }
 }
 
-async function runLiveTtsProof(): Promise<{ result: CoreProofCapabilityResult; audioBase64: string | null }> {
+async function runLiveTtsProof(options: CoreProofPackOptions): Promise<{ result: CoreProofCapabilityResult; audioSource: CoreProofAudioSource | null }> {
   try {
     const { POST } = await import('@/app/api/brain/tts/route')
     const route = '/api/brain/tts'
@@ -293,8 +407,9 @@ async function runLiveTtsProof(): Promise<{ result: CoreProofCapabilityResult; a
       responseFormat: 'json',
     }))
     const data = await jsonFromResponse(response)
-    const result = normalizeCoreProofRouteResult('tts', route, data)
-    return { result, audioBase64: typeof data.audioBase64 === 'string' ? data.audioBase64 : null }
+    const polled = await pollMediaJobProof('tts', route, data, options)
+    const audioSource = extractCoreProofAudioSource(polled.data)
+    return { result: polled.result, audioSource: hasCoreProofAudioSource(audioSource) ? audioSource : null }
   } catch (error) {
     return {
       result: normalizeCoreProofRouteResult('tts', '/api/brain/tts', {
@@ -303,7 +418,7 @@ async function runLiveTtsProof(): Promise<{ result: CoreProofCapabilityResult; a
         status: 'failed',
         blocker: error instanceof Error ? error.message : 'TTS proof execution failed.',
       }),
-      audioBase64: null,
+      audioSource: null,
     }
   }
 }
@@ -314,8 +429,8 @@ function decodeDataUri(dataUri: string): { bytes: Buffer; mimeType: string } | n
   return { bytes: Buffer.from(match[2], 'base64'), mimeType: match[1] }
 }
 
-async function runLiveSttProof(ttsAudioBase64: string | null): Promise<CoreProofCapabilityResult> {
-  if (!ttsAudioBase64) {
+async function runLiveSttProof(ttsAudioSource: CoreProofAudioSource | null): Promise<CoreProofCapabilityResult> {
+  if (!hasCoreProofAudioSource(ttsAudioSource)) {
     return {
       capability: 'stt',
       status: 'needs_proof',
@@ -333,13 +448,13 @@ async function runLiveSttProof(ttsAudioBase64: string | null): Promise<CoreProof
     }
   }
 
-  const decoded = decodeDataUri(ttsAudioBase64)
+  const decoded = await readAudioSourceBytes(ttsAudioSource)
   if (!decoded?.bytes.length) {
     return normalizeCoreProofRouteResult('stt', '/api/brain/stt', {
       success: false,
       executed: false,
-      status: 'failed',
-      blocker: 'TTS proof audio could not be decoded for STT.',
+      status: 'needs_proof',
+      blocker: 'TTS proof audio could not be read from the same-run artifact for STT.',
     })
   }
 
@@ -396,37 +511,94 @@ async function runLiveSttProof(ttsAudioBase64: string | null): Promise<CoreProof
 }
 
 async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
+  const route = '/api/admin/music-studio'
   try {
-    const { createMusic } = await import('@/lib/music-studio')
-    const result = await createMusic({
-      appSlug: 'amarktai-network',
-      title: 'Core proof music',
-      theme: PACK_A_PROMPTS.music_generation,
+    const { callGenXMedia, getConfiguredGenXMusicModel } = await import('@/lib/genx-client')
+    const { persistCanonicalMediaResult } = await import('@/lib/canonical-media-artifact')
+    const { createLocalMediaJob, localMediaJobResponse } = await import('@/lib/media-job-store')
+    const model = getConfiguredGenXMusicModel()
+    if (!model) {
+      return normalizeCoreProofRouteResult('music_generation', route, {
+        success: false,
+        executed: false,
+        status: 'needs_setup',
+        jobStatus: 'needs_setup',
+        provider: 'genx',
+        model: null,
+        blocker: 'GenX music audio requires GENX_MUSIC_MODEL. Set GENX_MUSIC_MODEL to a GenX audio/music model.',
+      })
+    }
+
+    const durationSeconds = Math.min(Math.max(options.maxDurationSeconds ?? 8, 5), 10)
+    const generated = await callGenXMedia({
+      model,
       prompt: PACK_A_PROMPTS.music_generation,
-      genre: 'ambient',
-      genres: ['ambient'],
-      moods: ['calm'],
-      vocalStyle: 'instrumental_only',
-      instrumental: true,
-      durationSeconds: Math.min(options.maxDurationSeconds ?? 10, 10),
-      coverArtChoice: 'none',
-      productionNotes: 'Core live media proof pack A.',
-      qualityTier: 'standard',
+      type: 'audio',
+      duration: durationSeconds,
+      params: {
+        style: 'ambient',
+        instrumental: true,
+      },
+      metadata: {
+        source: 'core_proof_cli',
+        capability: 'music_generation',
+        durationSeconds,
+      },
     })
-    const completed = result.status === 'generated' && Boolean(result.artifact.audioUrl)
-    return normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
-      success: completed,
-      executed: completed,
-      status: completed ? 'completed' : 'needs_setup',
-      provider: result.artifact.musicProvider,
-      model: result.artifact.lyricsModel,
-      artifactId: completed ? result.artifact.id : null,
-      storageUrl: completed ? result.artifact.audioUrl : null,
-      audioUrl: completed ? result.artifact.audioUrl : null,
-      blocker: completed ? null : result.message,
+
+    if (!generated.success || (!generated.url && !generated.jobId)) {
+      return normalizeCoreProofRouteResult('music_generation', route, {
+        success: false,
+        executed: true,
+        status: 'failed',
+        provider: 'genx',
+        model: generated.model,
+        blocker: generated.error ?? 'GenX music generation returned no playable audio or trackable provider job.',
+      })
+    }
+
+    if (generated.url) {
+      const persisted = await persistCanonicalMediaResult({
+        result: generated,
+        appSlug: 'amarktai-network',
+        type: 'music',
+        subType: 'core_proof_music',
+        title: 'Core proof music',
+        description: PACK_A_PROMPTS.music_generation,
+        provider: 'genx',
+        model: generated.model,
+        metadata: { source: 'core_proof_cli', capability: 'music_generation', durationSeconds },
+      })
+      return normalizeCoreProofRouteResult('music_generation', route, {
+        success: Boolean(persisted.artifactId),
+        executed: true,
+        status: persisted.status,
+        provider: 'genx',
+        model: generated.model,
+        artifactId: persisted.artifactId,
+        storageUrl: persisted.storageUrl,
+        audioUrl: persisted.mediaUrl,
+        blocker: persisted.artifactId ? null : 'Music generation completed but artifact persistence failed.',
+      })
+    }
+
+    const job = createLocalMediaJob({
+      capability: 'music_generation',
+      appSlug: 'amarktai-network',
+      type: 'music',
+      subType: 'core_proof_music',
+      title: 'Core proof music',
+      description: PACK_A_PROMPTS.music_generation,
+      prompt: PACK_A_PROMPTS.music_generation,
+      provider: 'genx',
+      model: generated.model,
+      providerJobId: generated.jobId!,
+      metadata: { source: 'core_proof_cli', capability: 'music_generation', durationSeconds },
     })
+    const polled = await pollMediaJobProof('music_generation', route, localMediaJobResponse(job) as Record<string, unknown>, options)
+    return polled.result
   } catch (error) {
-    return normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
+    return normalizeCoreProofRouteResult('music_generation', route, {
       success: false,
       executed: false,
       status: 'failed',
@@ -438,16 +610,16 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
 async function runLiveCapabilityProof(
   spec: CoreProofCapabilitySpec,
   options: CoreProofPackOptions,
-  context: { ttsAudioBase64: string | null },
+  context: { ttsAudioSource: CoreProofAudioSource | null },
 ): Promise<CoreProofCapabilityResult> {
   if (spec.capability === 'image_generation') return runLiveImageProof(options)
   if (spec.capability === 'music_generation') return runLiveMusicProof(options)
   if (spec.capability === 'tts') {
-    const tts = await runLiveTtsProof()
-    context.ttsAudioBase64 = tts.result.status === 'proven' ? tts.audioBase64 : null
+    const tts = await runLiveTtsProof(options)
+    context.ttsAudioSource = tts.result.status === 'proven' ? tts.audioSource : null
     return tts.result
   }
-  if (spec.capability === 'stt') return runLiveSttProof(context.ttsAudioBase64)
+  if (spec.capability === 'stt') return runLiveSttProof(context.ttsAudioSource)
   return blockedLiveCapability(spec.capability, `Live proof pack A does not run ${spec.capability}.`)
 }
 
@@ -455,6 +627,9 @@ export async function runCoreCapabilityProofPack(options: CoreProofPackOptions =
   const truth = await getCapabilityRuntimeTruth()
   const truthByCapability = new Map(truth.map((entry) => [entry.capabilityId, entry]))
   const mode: CoreProofMode = options.live ? 'live' : 'status'
+  const requestedCapabilities = options.capabilities?.length
+    ? Array.from(new Set(options.capabilities))
+    : (options.live ? [...LIVE_MEDIA_PROOF_CAPABILITIES] : CORE_PROOF_CAPABILITIES.map((spec) => spec.capability))
 
   if (!options.live) {
     const capabilities = CORE_PROOF_CAPABILITIES.map((spec) => statusOnlyCapabilityResult(spec, truthByCapability.get(spec.capability)))
@@ -462,12 +637,16 @@ export async function runCoreCapabilityProofPack(options: CoreProofPackOptions =
       success: capabilities.every((entry) => entry.status === 'proven'),
       mode,
       ranAt: new Date().toISOString(),
+      requestedCapabilities,
+      selectedCapabilities: capabilities.map((entry) => entry.capability),
+      rejectedCapabilities: [],
+      liveExecutionAttempted: false,
       capabilities,
     }
   }
 
   const { selected, rejected } = resolveLiveCoreProofCapabilities(options.capabilities)
-  const context = { ttsAudioBase64: null as string | null }
+  const context = { ttsAudioSource: null as CoreProofAudioSource | null }
   const capabilities: CoreProofCapabilityResult[] = [...rejected]
 
   for (const spec of selected) {
@@ -483,6 +662,10 @@ export async function runCoreCapabilityProofPack(options: CoreProofPackOptions =
     success: capabilities.every((entry) => entry.status === 'proven'),
     mode,
     ranAt: new Date().toISOString(),
+    requestedCapabilities,
+    selectedCapabilities: selected.map((entry) => entry.capability),
+    rejectedCapabilities: rejected.map((entry) => entry.capability),
+    liveExecutionAttempted: selected.length > 0,
     capabilities,
   }
 }

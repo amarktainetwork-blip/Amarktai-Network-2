@@ -1,9 +1,9 @@
 import {
-  GENX_DEFAULT_AUDIO_MODEL,
   GENX_DEFAULT_IMAGE_MODEL,
   GENX_DEFAULT_STT_MODEL,
   GENX_DEFAULT_TTS_MODEL,
   GENX_DEFAULT_VIDEO_MODEL,
+  getConfiguredGenXMusicModel,
 } from '@/lib/genx-client'
 import type { ProviderMeshId } from '@/lib/provider-mesh'
 
@@ -94,7 +94,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'music',
     providers: [
-      { provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL },
+      { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },
   tts: {
@@ -125,7 +125,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'audio',
     providers: [
-      { provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL },
+      { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },
 }

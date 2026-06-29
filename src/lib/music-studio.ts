@@ -22,7 +22,7 @@
 import { randomUUID } from 'crypto'
 import { getVaultApiKey } from '@/lib/brain'
 import { isUsableServiceKey } from '@/lib/service-vault'
-import { callGenXMedia, GENX_DEFAULT_AUDIO_MODEL, getGenXStatusAsync } from '@/lib/genx-client'
+import { callGenXMedia, getConfiguredGenXMusicModel, getGenXStatusAsync } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ Constants Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -549,10 +549,12 @@ async function generateAudio(
   if (IS_TEST_RUNTIME) return null
 
   try {
+    const musicModel = getConfiguredGenXMusicModel()
+    if (!musicModel) return null
     const genxStatus = await getGenXStatusAsync()
     if (genxStatus.available) {
       const genxResult = await callGenXMedia({
-        model: GENX_DEFAULT_AUDIO_MODEL,
+        model: musicModel,
         prompt: `${lyrics.title}\n\n${lyrics.lyrics}`,
         type: 'audio',
         duration: request.durationSeconds,
@@ -793,7 +795,7 @@ export function buildMusicBlueprintResult(request: MusicCreationRequest): MusicS
     artifact,
     lyrics: lyricsResult,
     status: 'blueprint_only',
-    message: 'Lyrics and song blueprint generated. Configure an approved audio provider for audio generation.',
+    message: 'Lyrics and song blueprint generated. Configure GENX_MUSIC_MODEL and GenX credentials for real audio generation.',
   }
 }
 
@@ -999,9 +1001,10 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
     getGenXStatusAsync().catch(() => ({ available: false })),
   ])
 
+  const musicModel = getConfiguredGenXMusicModel()
   const hasGenX = Boolean(genxStatus.available)
   const hasChatKey = hasGenX || hasGroq || hasTogether || hasMimo
-  const audioProvider: MusicProvider | null = hasGenX ? 'genx' : null
+  const audioProvider: MusicProvider | null = hasGenX && musicModel ? 'genx' : null
 
   const configuredProviders: string[] = []
   if (hasGenX) configuredProviders.push('genx')
@@ -1012,7 +1015,9 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
   const note = hasChatKey
     ? audioProvider
       ? `Lyrics, audio (${audioProvider}), and cover art generation available.`
-      : 'Lyrics and blueprint generation are available. Configure GenX for real audio and cover art.'
+      : hasGenX && !musicModel
+        ? 'Lyrics and blueprint generation are available. Set GENX_MUSIC_MODEL to enable real GenX music audio.'
+        : 'Lyrics and blueprint generation are available. Configure GenX for real audio and cover art.'
     : 'Template blueprint generation is available. Configure an approved text provider and GenX for media.'
 
   return {
@@ -1143,7 +1148,7 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
         existingLyrics: request.existingLyrics ?? '',
         productionNotes: request.productionNotes ?? '',
         provider: 'genx',
-        model: GENX_DEFAULT_AUDIO_MODEL,
+        model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL',
       },
     })
     jobId = row.id
@@ -1175,7 +1180,7 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
     result: null,
     errorMessage: null,
     provider: 'genx',
-    model: GENX_DEFAULT_AUDIO_MODEL,
+    model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL',
     createdAt: new Date().toISOString(),
     startedAt: null,
     completedAt: null,

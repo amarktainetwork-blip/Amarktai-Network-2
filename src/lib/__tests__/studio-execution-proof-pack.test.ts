@@ -293,7 +293,7 @@ describe('Studio execution proof pack', () => {
     expect(route).not.toContain("music: ['genx']")
     expect(media).toContain('music_generation')
     expect(media).toContain("capability: 'music_generation'")
-    expect(media).toContain("{ provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL }")
+    expect(media).toContain("getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL'")
     expect(music).toContain("export type MusicProvider = 'genx' | 'blueprint_only'")
   })
 

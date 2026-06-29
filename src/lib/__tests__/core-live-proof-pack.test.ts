@@ -8,6 +8,8 @@ import {
   CORE_PROOF_CAPABILITIES,
   LIVE_MEDIA_PROOF_CAPABILITIES,
   LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES,
+  extractCoreProofAudioSource,
+  hasCoreProofAudioSource,
   normalizeCoreProofRouteResult,
   resolveLiveCoreProofCapabilities,
 } from '@/lib/core-capability-proof-runner'
@@ -104,6 +106,8 @@ describe('core live proof pack and capabilities display', () => {
     expect(script).toContain("--capabilities=")
     expect(script).toContain("--maxDurationSeconds=")
     expect(script).toContain("--costMode=")
+    expect(script).toContain("--pollSeconds=")
+    expect(script).toContain("--pollIntervalMs=")
     expect(script).toContain('JSON.stringify(result, null, compact ? 0 : 2)')
     expect(script).toContain("--compact")
     for (const forbidden of [
@@ -151,7 +155,10 @@ describe('core live proof pack and capabilities display', () => {
     expect(runner).toContain("await import('@/app/api/brain/image/route')")
     expect(runner).toContain("await import('@/app/api/brain/tts/route')")
     expect(runner).toContain("await import('@/app/api/brain/stt/route')")
-    expect(runner).toContain("await import('@/lib/music-studio')")
+    expect(runner).toContain("await import('@/lib/genx-client')")
+    expect(runner).toContain("getConfiguredGenXMusicModel")
+    expect(runner).toContain("GENX_MUSIC_MODEL")
+    expect(runner).toContain("await import('@/lib/media-job-store')")
     expect(runner).not.toContain("await import('@/app/api/brain/video-generate/route')")
     expect(runner).not.toContain("await import('@/app/api/brain/long-form-video/route')")
     expect(runner).not.toContain("await import('@/app/api/brain/avatar-video/route')")
@@ -235,10 +242,107 @@ describe('core live proof pack and capabilities display', () => {
     expect(persistenceFailed.proofStatus).toBe('failed')
   })
 
+  it('core proof output includes live selection and rejection metadata', () => {
+    const runner = src('lib/core-capability-proof-runner.ts')
+    expect(runner).toContain('requestedCapabilities: string[]')
+    expect(runner).toContain('selectedCapabilities: string[]')
+    expect(runner).toContain('rejectedCapabilities: string[]')
+    expect(runner).toContain('liveExecutionAttempted: boolean')
+    expect(runner).toContain('requestedCapabilities,')
+    expect(runner).toContain('selectedCapabilities: selected.map')
+    expect(runner).toContain('rejectedCapabilities: rejected.map')
+  })
+
+  it('TTS live proof treats async job responses as processing until polling returns persisted audio', () => {
+    const initial = normalizeCoreProofRouteResult('tts', '/api/brain/tts', {
+      success: true,
+      executed: true,
+      jobStatus: 'processing',
+      jobId: 'job_tts_1',
+      pollUrl: '/api/brain/media-jobs/job_tts_1',
+      provider: 'genx',
+      model: 'grok-tts',
+    })
+    expect(initial.status).toBe('processing')
+
+    const completed = normalizeCoreProofRouteResult('tts', '/api/brain/media-jobs/job_tts_1', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      jobId: 'job_tts_1',
+      artifactId: 'artifact_tts_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/audio/tts.mp3',
+      audioUrl: '/api/artifacts/file/artifacts/amarktai-network/audio/tts.mp3',
+      provider: 'genx',
+      model: 'grok-tts',
+    })
+    expect(completed.status).toBe('proven')
+    expect(completed.proofStatus).toBe('passed')
+  })
+
+  it('STT accepts same-run TTS artifact references instead of requiring fake inline audio', () => {
+    const sourceRef = extractCoreProofAudioSource({
+      artifactId: 'artifact_tts_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/audio/tts.mp3',
+      audioUrl: '/api/artifacts/file/artifacts/amarktai-network/audio/tts.mp3',
+    })
+    expect(hasCoreProofAudioSource(sourceRef)).toBe(true)
+    expect(sourceRef.artifactId).toBe('artifact_tts_1')
+
+    const transcript = normalizeCoreProofRouteResult('stt', '/api/brain/stt', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      transcript: 'AmarktAI proof test.',
+      artifactId: 'artifact_stt_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/transcript/stt.txt',
+      provider: 'groq',
+      model: 'whisper-large-v3-turbo',
+    })
+    expect(transcript.status).toBe('proven')
+  })
+
+  it('music proof requires real GenX audio and the canonical GENX_MUSIC_MODEL setting', () => {
+    const missingModel = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
+      success: false,
+      executed: false,
+      status: 'needs_setup',
+      blocker: 'GenX music audio requires GENX_MUSIC_MODEL. Set GENX_MUSIC_MODEL to a GenX audio/music model.',
+    })
+    expect(missingModel.status).toBe('not_configured')
+
+    const blueprintOnly = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
+      success: false,
+      executed: false,
+      status: 'needs_setup',
+      provider: 'blueprint_only',
+      blocker: 'Lyrics and song blueprint generated. Configure GENX_MUSIC_MODEL and GenX credentials for real audio generation.',
+    })
+    expect(blueprintOnly.status).not.toBe('proven')
+
+    const generated = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      provider: 'genx',
+      model: 'lyria-real-model',
+      artifactId: 'music_artifact',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/song.mp3',
+      audioUrl: '/api/artifacts/file/artifacts/amarktai-network/music/song.mp3',
+    })
+    expect(generated.status).toBe('proven')
+
+    const media = src('lib/media-capability-registry.ts')
+    expect(media).toContain("getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL'")
+    expect(media).not.toContain("{ provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL }")
+  })
+
   it('STT live proof depends on same-run TTS audio artifact', () => {
     const runner = src('lib/core-capability-proof-runner.ts')
     expect(runner).toContain('Run STT after a valid audio artifact exists.')
-    expect(runner).toContain("tts.result.status === 'proven' ? tts.audioBase64 : null")
+    expect(runner).toContain("tts.result.status === 'proven' ? tts.audioSource : null")
+    expect(runner).toContain('readAudioSourceBytes')
+    expect(runner).toContain('getStorageDriver')
   })
 
   it('proof page documents status-only and live pack A commands', () => {

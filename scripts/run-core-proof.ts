@@ -23,6 +23,10 @@ async function main() {
     .filter(Boolean)
   const maxDurationArg = process.argv.find((arg) => arg.startsWith('--maxDurationSeconds='))
   const maxDurationSeconds = maxDurationArg ? Number(maxDurationArg.replace('--maxDurationSeconds=', '')) : undefined
+  const pollSecondsArg = process.argv.find((arg) => arg.startsWith('--pollSeconds='))
+  const pollSeconds = pollSecondsArg ? Number(pollSecondsArg.replace('--pollSeconds=', '')) : undefined
+  const pollIntervalArg = process.argv.find((arg) => arg.startsWith('--pollIntervalMs='))
+  const pollIntervalMs = pollIntervalArg ? Number(pollIntervalArg.replace('--pollIntervalMs=', '')) : undefined
   const costModeArg = process.argv.find((arg) => arg.startsWith('--costMode='))?.replace('--costMode=', '')
   const costMode = costModeArg === 'cheap' || costModeArg === 'balanced' || costModeArg === 'premium'
     ? costModeArg as CoreProofCostMode
@@ -32,6 +36,8 @@ async function main() {
     capabilities,
     maxDurationSeconds: Number.isFinite(maxDurationSeconds) ? maxDurationSeconds : undefined,
     costMode,
+    pollSeconds: Number.isFinite(pollSeconds) ? pollSeconds : undefined,
+    pollIntervalMs: Number.isFinite(pollIntervalMs) ? pollIntervalMs : undefined,
   })
   if (!isStructuredProof(result)) {
     throw new Error('Core proof runner returned malformed output.')

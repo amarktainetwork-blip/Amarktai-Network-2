@@ -226,6 +226,10 @@ export const GENX_DEFAULT_AUDIO_MODEL = 'lyria-3-clip-preview'
 export const GENX_DEFAULT_TTS_MODEL = 'grok-tts'
 export const GENX_DEFAULT_STT_MODEL = 'genxlm-pro-v1-tr'
 
+export function getConfiguredGenXMusicModel(): string | null {
+  return process.env.GENX_MUSIC_MODEL?.trim() || null
+}
+
 const GENX_DEFAULT_MODELS: Record<GenXOperationType, string> = {
   chat:      GENX_TEXT_MODELS[0],
   generate:  GENX_DEFAULT_IMAGE_MODEL,

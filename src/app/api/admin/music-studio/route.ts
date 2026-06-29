@@ -14,7 +14,7 @@ import {
   AVAILABLE_VOCAL_STYLES,
   type MusicCreationRequest,
 } from '@/lib/music-studio'
-import { callGenXMedia, GENX_DEFAULT_AUDIO_MODEL } from '@/lib/genx-client'
+import { callGenXMedia, getConfiguredGenXMusicModel } from '@/lib/genx-client'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
@@ -163,7 +163,22 @@ export async function POST(request: NextRequest) {
           blocker,
         }, { status: 503 })
       }
-      const model = GENX_DEFAULT_AUDIO_MODEL
+      const model = getConfiguredGenXMusicModel()
+      if (!model) {
+        const blocker = 'GenX music audio requires GENX_MUSIC_MODEL. Set GENX_MUSIC_MODEL to a GenX audio/music model.'
+        return NextResponse.json({
+          success: false,
+          executed: false,
+          capability: 'music_generation',
+          provider: 'genx',
+          model: null,
+          jobStatus: 'needs_setup',
+          artifactId: null,
+          storageUrl: null,
+          error: blocker,
+          blocker,
+        }, { status: 503 })
+      }
       const prompt = musicRequest.prompt?.trim()
         ? musicRequest.prompt.trim()
         : musicRequest.existingLyrics?.trim()
