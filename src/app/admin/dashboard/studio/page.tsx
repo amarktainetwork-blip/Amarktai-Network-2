@@ -44,6 +44,9 @@ type StudioResult = {
   jobUrl?: string
   outputUrl?: string
   blocker?: string
+  nextAction?: string
+  proofStatus?: string
+  attempts?: string[]
 }
 type ActiveStudioJob = {
   id: string
@@ -489,7 +492,10 @@ export default function StudioPage() {
                 {result.artifactUrl && <ProofLink label="Artifact link" value={result.artifactUrl} />}
                 {result.jobUrl && <ProofLink label="Job link" value={result.jobUrl} />}
                 {result.outputUrl && <ProofLink label="Output link" value={result.outputUrl} />}
+                {result.proofStatus && <Proof label="Proof status" value={result.proofStatus} />}
+                {result.attempts?.length ? <Proof label="Fallback attempts" value={result.attempts.join(' | ')} /> : null}
                 {result.blocker && <Proof label="Blocker" value={result.blocker} />}
+                {result.nextAction && <Proof label="Next action" value={result.nextAction} />}
               </div>
             ) : (
               <p className="mt-4 text-sm leading-7 text-slate-500">Proof appears after a real execution result. No infrastructure selector is exposed.</p>
@@ -630,6 +636,7 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
   const result = toRecord(data.result)
   const artifact = toRecord(data.artifact)
   const job = toRecord(data.job)
+  const proof = toRecord(data.proof)
   const rawState = data.jobStatus ?? data.status ?? result?.status
   let status = normalizeExecutionState(rawState)
   const hasVideoOutput = Boolean(firstString(data.videoUrl, result?.videoUrl))
@@ -648,6 +655,7 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
   const outputUrl = rawOutputUrl && isPlatformArtifactUrl(rawOutputUrl) ? rawOutputUrl : undefined
   const jobUrl = firstString(data.pollUrl, job?.pollUrl, result?.pollUrl)
   const blocker = firstString(data.blocker, data.error, result?.blocker, result?.error)
+  const attempts = normalizeAttempts(data.attempts ?? result?.attempts)
 
   if (['image', 'music', 'video', 'long-video', 'image-to-video', 'avatar'].includes(taskId) && status === 'completed' && (!artifactId || !outputUrl)) {
     status = 'failed'
@@ -672,6 +680,9 @@ function normalizeStudioResult(data: Record<string, unknown>, taskId: TaskId): S
         ? 'Job completed but no platform artifact was returned/saved.'
         : ['image', 'music', 'video', 'long-video', 'image-to-video', 'avatar'].includes(taskId) ? 'Job completed but no artifact was returned/saved.' : undefined)
       : blocker,
+    nextAction: firstString(data.nextAction, result?.nextAction),
+    proofStatus: firstString(proof?.proofStatus, data.proofStatus, result?.proofStatus),
+    attempts,
   }
 }
 
@@ -713,4 +724,19 @@ function firstString(...values: unknown[]) {
 
 function isPlatformArtifactUrl(value: string) {
   return value.startsWith('/api/artifacts/file/')
+}
+
+function normalizeAttempts(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined
+  const attempts = value.map((attempt) => {
+    if (typeof attempt === 'string') return attempt
+    if (!attempt || typeof attempt !== 'object') return ''
+    const item = attempt as Record<string, unknown>
+    const provider = firstString(item.provider, item.providerId) ?? 'unknown'
+    const model = firstString(item.model, item.modelId) ?? 'model'
+    const status = firstString(item.status) ?? (item.ok === true ? 'ok' : item.ok === false ? 'failed' : 'unknown')
+    const error = firstString(item.error)
+    return error ? `${provider}/${model}: ${status} (${error})` : `${provider}/${model}: ${status}`
+  }).filter(Boolean)
+  return attempts.length ? attempts : undefined
 }

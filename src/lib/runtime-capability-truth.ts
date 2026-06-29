@@ -35,7 +35,7 @@ export interface ProviderRuntimeEntry {
   capabilities?: string[]
 }
 
-export type CapabilityStatus = 'available' | 'blocked' | 'not_implemented'
+export type CapabilityStatus = 'working' | 'needs_proof' | 'blocked' | 'missing'
 
 export interface CapabilityRuntimeEntry {
   name: string
@@ -213,8 +213,9 @@ const LEGACY_CAPABILITY_NAMES: Record<string, string> = {
 }
 
 function mapCanonicalCapabilityStatus(status: CapabilityRuntimeTruthEntry['status']): CapabilityStatus {
-  if (status === 'working') return 'available'
-  if (status === 'missing') return 'not_implemented'
+  if (status === 'working') return 'working'
+  if (status === 'wired_unproven') return 'needs_proof'
+  if (status === 'missing') return 'missing'
   return 'blocked'
 }
 

@@ -30,6 +30,7 @@ export interface CapabilityRuntimeTruthEntry {
   hasRequiredKey: boolean
   hasRequiredEndpoint: boolean
   hasExecutionRoute: boolean
+  executionRoute: string | null
   hasStorage: boolean
   hasPermission: boolean
   proofStatus: ProofStatus
@@ -269,7 +270,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_IMAGE_ENDPOINT', 'HF_ADULT_IMAGE_ENDPOINT_FALLBACK'],
+    dedicatedEndpointEnvs: ['HF_ADULT_AVATAR_ENDPOINT', 'HF_ADULT_AVATAR_ENDPOINT_FALLBACK', 'HF_ADULT_AVATAR_MODEL', 'HF_ADULT_AVATAR_MODEL_FALLBACK'],
   },
   {
     capabilityId: 'adult_text',
@@ -280,7 +281,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_TEXT_ENDPOINT', 'HF_ADULT_TEXT_ENDPOINT_FALLBACK', 'TOGETHER_ADULT_TEXT_MODEL'],
+    dedicatedEndpointEnvs: ['HF_ADULT_TEXT_ENDPOINT', 'HF_ADULT_TEXT_ENDPOINT_FALLBACK', 'HF_ADULT_TEXT_MODEL', 'HF_ADULT_TEXT_MODEL_FALLBACK', 'TOGETHER_ADULT_TEXT_MODEL'],
   },
   {
     capabilityId: 'adult_image',
@@ -291,7 +292,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_IMAGE_ENDPOINT', 'HF_ADULT_IMAGE_ENDPOINT_FALLBACK', 'TOGETHER_ADULT_IMAGE_MODEL'],
+    dedicatedEndpointEnvs: ['HF_ADULT_IMAGE_ENDPOINT', 'HF_ADULT_IMAGE_ENDPOINT_FALLBACK', 'HF_ADULT_IMAGE_MODEL', 'HF_ADULT_IMAGE_MODEL_FALLBACK', 'TOGETHER_ADULT_IMAGE_MODEL'],
   },
   {
     capabilityId: 'adult_video',
@@ -302,7 +303,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_VIDEO_ENDPOINT', 'HF_ADULT_VIDEO_ENDPOINT_FALLBACK'],
+    dedicatedEndpointEnvs: ['HF_ADULT_VIDEO_ENDPOINT', 'HF_ADULT_VIDEO_ENDPOINT_FALLBACK', 'HF_ADULT_VIDEO_MODEL', 'HF_ADULT_VIDEO_MODEL_FALLBACK'],
   },
   {
     capabilityId: 'adult_voice',
@@ -313,7 +314,7 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     requiresStorage: true,
     requiresAdultGate: true,
     requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_ADULT_VOICE_ENDPOINT', 'HF_ADULT_VOICE_ENDPOINT_FALLBACK'],
+    dedicatedEndpointEnvs: ['HF_ADULT_VOICE_ENDPOINT', 'HF_ADULT_VOICE_ENDPOINT_FALLBACK', 'HF_ADULT_VOICE_MODEL', 'HF_ADULT_VOICE_MODEL_FALLBACK'],
   },
   // ── System ───────────────────────────────────────────────────────────────
   {
@@ -376,11 +377,16 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
 function evalEndpoint(spec: CapabilitySpec): boolean {
   if (!spec.requiresDedicatedEndpoint) return true
   const envs = spec.dedicatedEndpointEnvs ?? []
-  return envs.some((name) => {
-    if (!process.env[name]?.trim()) return false
-    if (name.startsWith('TOGETHER_ADULT_')) return process.env.TOGETHER_ADULT_FALLBACK_ENABLED === 'true'
-    return true
-  })
+  const togetherConfigured = envs.some((name) =>
+    name.startsWith('TOGETHER_ADULT_') &&
+    process.env.TOGETHER_ADULT_FALLBACK_ENABLED === 'true' &&
+    Boolean(process.env[name]?.trim()),
+  )
+  const hfEndpointEnvs = envs.filter((name) => name.startsWith('HF_') && name.includes('_ENDPOINT'))
+  const hfModelEnvs = envs.filter((name) => name.startsWith('HF_') && name.includes('_MODEL'))
+  const hfEndpointConfigured = hfEndpointEnvs.some((name) => Boolean(process.env[name]?.trim()))
+  const hfModelConfigured = hfModelEnvs.length === 0 || hfModelEnvs.some((name) => Boolean(process.env[name]?.trim()))
+  return togetherConfigured || (hfEndpointConfigured && hfModelConfigured)
 }
 
 function evalStorage(): boolean {
@@ -457,6 +463,7 @@ function buildEntry(
       hasRequiredKey: true,
       hasRequiredEndpoint: hasEndpoint,
       hasExecutionRoute: hasRoute,
+      executionRoute: spec.executionRoute,
       hasStorage,
       hasPermission,
       proofStatus,
@@ -554,6 +561,7 @@ function buildEntry(
     hasRequiredKey,
     hasRequiredEndpoint: hasEndpoint,
     hasExecutionRoute: hasRoute,
+    executionRoute: spec.executionRoute,
     hasStorage,
     hasPermission,
     proofStatus,

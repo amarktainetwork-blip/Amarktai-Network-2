@@ -9,6 +9,18 @@ import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 import BrandName from '@/components/BrandName'
 
 type HeaderStatus = { appStatus: string }
+type CapabilityStatus = 'working' | 'wired_unproven' | 'blocked' | 'missing'
+type VoiceTruth = {
+  tts: { status: CapabilityStatus; blocker: string; nextAction: string }
+  stt: { status: CapabilityStatus; blocker: string; nextAction: string }
+  realtime: { status: CapabilityStatus; blocker: string; nextAction: string }
+}
+
+const DEFAULT_VOICE_TRUTH: VoiceTruth = {
+  tts: { status: 'missing', blocker: 'TTS truth has not loaded yet.', nextAction: 'Open Capabilities for current TTS status.' },
+  stt: { status: 'missing', blocker: 'STT truth has not loaded yet.', nextAction: 'Open Capabilities for current STT status.' },
+  realtime: { status: 'missing', blocker: 'Realtime voice has not been checked yet.', nextAction: 'Check /api/realtime/session.' },
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -17,16 +29,34 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantVoice, setAssistantVoice] = useState('AmarktAI Voice')
   const [status, setStatus] = useState<HeaderStatus>({ appStatus: 'Checking readiness' })
+  const [voiceTruth, setVoiceTruth] = useState<VoiceTruth>(DEFAULT_VOICE_TRUTH)
   const [pulse, setPulse] = useState(false)
 
   useEffect(() => {
     let mounted = true
-    fetch('/api/admin/settings/status').then(r => r.json()).catch(() => null).then(response => {
+    Promise.all([
+      fetch('/api/admin/settings/status').then(r => r.json()).catch(() => null),
+      fetch('/api/admin/system/capabilities').then(r => r.json()).catch(() => null),
+      fetch('/api/realtime/session', { method: 'POST' }).then(async (r) => ({ ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) })).catch(() => null),
+    ]).then(([response, capabilityResponse, realtimeResponse]) => {
       if (!mounted) return
       const truth = response?.truth
       const connected = Number(truth?.connectedCount ?? 0)
       const storageConnected = Boolean(truth?.storage?.connected)
-      setStatus({ appStatus: storageConnected ? `${connected} connections ready` : 'Storage needs setup' })
+      setStatus({ appStatus: storageConnected ? `${connected} connections configured` : 'Storage needs setup' })
+      const capabilities = Array.isArray(capabilityResponse?.capabilities) ? capabilityResponse.capabilities as Array<Record<string, unknown>> : []
+      const capability = (id: string) => capabilities.find((entry) => entry.capabilityId === id)
+      setVoiceTruth({
+        tts: voiceCapabilityTruth(capability('tts')),
+        stt: voiceCapabilityTruth(capability('stt')),
+        realtime: realtimeResponse?.ok
+          ? { status: 'working', blocker: '', nextAction: '' }
+          : {
+            status: realtimeResponse?.status === 501 ? 'missing' : 'blocked',
+            blocker: String(realtimeResponse?.body?.error ?? 'Realtime voice session endpoint did not return a working session.'),
+            nextAction: realtimeResponse?.status === 501 ? 'Wire realtime voice sessions to an approved active provider.' : 'Check realtime voice session route.',
+          },
+      })
       setPulse(true)
     })
     return () => { mounted = false }
@@ -162,6 +192,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <VoiceAssistantButton
                 open={assistantOpen}
                 voice={assistantVoice}
+                status={voiceTruth.tts.status}
                 onClick={() => setAssistantOpen((current) => !current)}
               />
               <StatusChip icon={<Activity className="h-3 w-3" />} label={status.appStatus} />
@@ -186,6 +217,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <VoiceAssistantPanel
           open={assistantOpen}
           voice={assistantVoice}
+          truth={voiceTruth}
           setVoice={setAssistantVoice}
           onClose={() => setAssistantOpen(false)}
         />
@@ -194,7 +226,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 }
 
-function VoiceAssistantButton({ open, voice, onClick }: { open: boolean; voice: string; onClick: () => void }) {
+function voiceCapabilityTruth(entry?: Record<string, unknown>): VoiceTruth['tts'] {
+  const status = entry?.status === 'working' || entry?.status === 'wired_unproven' || entry?.status === 'blocked' || entry?.status === 'missing'
+    ? entry.status
+    : 'missing'
+  return {
+    status,
+    blocker: typeof entry?.blocker === 'string' ? entry.blocker : '',
+    nextAction: typeof entry?.nextAction === 'string' ? entry.nextAction : '',
+  }
+}
+
+function voiceStatusLabel(status: CapabilityStatus) {
+  if (status === 'working') return 'ready'
+  if (status === 'wired_unproven') return 'needs proof'
+  return status
+}
+
+function VoiceAssistantButton({ open, voice, status, onClick }: { open: boolean; voice: string; status: CapabilityStatus; onClick: () => void }) {
   return (
     <button
       type="button"
@@ -209,7 +258,7 @@ function VoiceAssistantButton({ open, voice, onClick }: { open: boolean; voice: 
     >
       <Mic className="h-3.5 w-3.5 text-blue-400" />
       <span className="hidden sm:inline">{voice}</span>
-      <span className="hidden rounded-full border border-amber-300/25 bg-amber-300/10 px-1.5 py-0.5 text-[9px] text-amber-200 md:inline">backend missing</span>
+      <span className="hidden rounded-full border border-amber-300/25 bg-amber-300/10 px-1.5 py-0.5 text-[9px] text-amber-200 md:inline">TTS {voiceStatusLabel(status)}</span>
     </button>
   )
 }
@@ -217,11 +266,13 @@ function VoiceAssistantButton({ open, voice, onClick }: { open: boolean; voice: 
 function VoiceAssistantPanel({
   open,
   voice,
+  truth,
   setVoice,
   onClose,
 }: {
   open: boolean
   voice: string
+  truth: VoiceTruth
   setVoice: (voice: string) => void
   onClose: () => void
 }) {
@@ -240,7 +291,7 @@ function VoiceAssistantPanel({
           </span>
           <div>
             <p className="text-sm font-black text-white">Dashboard Assistant</p>
-            <p className="mt-0.5 text-xs font-bold text-amber-200">Voice backend not wired</p>
+            <p className="mt-0.5 text-xs font-bold text-amber-200">TTS {voiceStatusLabel(truth.tts.status)}; STT {voiceStatusLabel(truth.stt.status)}; realtime {voiceStatusLabel(truth.realtime.status)}</p>
           </div>
         </div>
         <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200" aria-label="Close assistant">
@@ -264,19 +315,31 @@ function VoiceAssistantPanel({
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <button type="button" className="rounded-xl border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-xs font-black text-blue-200">
-          Preview via /api/admin/voice/preview
+          TTS preview: {voiceStatusLabel(truth.tts.status)}
         </button>
-        <button type="button" disabled className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-500">
-          Mic stream disabled: /api/realtime/session
+        <button type="button" disabled={truth.realtime.status !== 'working'} className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-slate-500">
+          Realtime session: {voiceStatusLabel(truth.realtime.status)}
         </button>
       </div>
 
       <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-        <p className="text-xs leading-6 text-slate-400">
-          Memory indicator: dashboard memory route present at /api/admin/amarktai-assistant/memory. Voice options route present at /api/admin/voice/options. Realtime speaking/listening returns not available until /api/realtime/session is wired.
-        </p>
+        <div className="space-y-2 text-xs leading-6 text-slate-400">
+          <VoiceTruthLine label="TTS" item={truth.tts} />
+          <VoiceTruthLine label="STT" item={truth.stt} />
+          <VoiceTruthLine label="Realtime voice" item={truth.realtime} />
+        </div>
       </div>
     </aside>
+  )
+}
+
+function VoiceTruthLine({ label, item }: { label: string; item: VoiceTruth['tts'] }) {
+  return (
+    <p>
+      <span className="font-black text-slate-300">{label}: {voiceStatusLabel(item.status)}.</span>
+      {item.blocker ? ` ${item.blocker}` : ''}
+      {item.nextAction ? ` ${item.nextAction}` : ''}
+    </p>
   )
 }
 

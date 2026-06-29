@@ -246,7 +246,7 @@ export async function planAiRoute(request: AiRouteRequest): Promise<AiRoutePlan>
     .map((candidate) => {
       const configured = configuredProviders.has(candidate.provider)
       const providerBlocked = configured ? null : `Provider "${candidate.provider}" is not configured in Settings.`
-      const capabilityBlocked = request.capability === 'video_generation' && candidate.provider === 'genx' && !truth.capabilities.some((capability) => capability.name === 'Video Generation' && capability.status === 'available')
+      const capabilityBlocked = request.capability === 'video_generation' && candidate.provider === 'genx' && !truth.capabilities.some((capability) => capability.name === 'Video Generation' && capability.status === 'working')
         ? 'Video generation remains disabled until GenX video route/quota is verified.'
         : null
       const blocked = !configured || !!capabilityBlocked || !!safety

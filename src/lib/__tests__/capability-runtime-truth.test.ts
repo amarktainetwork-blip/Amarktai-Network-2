@@ -50,9 +50,13 @@ beforeEach(() => {
   // Clear adult env vars
   delete process.env.ADULT_MODE_ENABLED
   delete process.env.HF_ADULT_TEXT_ENDPOINT
+  delete process.env.HF_ADULT_TEXT_MODEL
   delete process.env.HF_ADULT_IMAGE_ENDPOINT
+  delete process.env.HF_ADULT_IMAGE_MODEL
   delete process.env.HF_ADULT_VIDEO_ENDPOINT
+  delete process.env.HF_ADULT_VIDEO_MODEL
   delete process.env.HF_ADULT_VOICE_ENDPOINT
+  delete process.env.HF_ADULT_VOICE_MODEL
 })
 
 // Import after mocks
@@ -189,7 +193,7 @@ describe('missing endpoint blocks working status', () => {
     expect(entry!.blocker).toMatch(/requires_endpoint/)
   })
 
-  it('adult_text with dedicated endpoint passes endpoint gate', async () => {
+  it('adult_text with dedicated endpoint and model passes endpoint gate', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -198,6 +202,7 @@ describe('missing endpoint blocks working status', () => {
     )
     process.env.ADULT_MODE_ENABLED = 'true'
     process.env.HF_ADULT_TEXT_ENDPOINT = 'https://my-endpoint.hf.space'
+    process.env.HF_ADULT_TEXT_MODEL = 'adult-text-model'
 
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
     expect(entry!.hasRequiredEndpoint).toBe(true)
@@ -260,6 +265,7 @@ describe('adult gate blocks adult capabilities when not configured', () => {
       id === 'huggingface' ? passedNotes : noNotes,
     )
     process.env.HF_ADULT_TEXT_ENDPOINT = 'https://my-endpoint.hf.space'
+    process.env.HF_ADULT_TEXT_MODEL = 'adult-text-model'
     // ADULT_MODE_ENABLED not set, HF_ADULT_TEXT_ENDPOINT is set → gate OK via endpoint
     delete process.env.ADULT_MODE_ENABLED
 

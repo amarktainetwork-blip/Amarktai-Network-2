@@ -244,6 +244,40 @@ function mediaResponse(
   }
 }
 
+function blockedAdultVideoResponse(): CapabilityResponse {
+  const blocker = 'Adult video requires a dedicated Hugging Face adult video endpoint/model. Configure HF_ADULT_VIDEO_ENDPOINT or HF_ADULT_VIDEO_ENDPOINT_FALLBACK plus HF_ADULT_VIDEO_MODEL or HF_ADULT_VIDEO_MODEL_FALLBACK; generic video generation is not used for adult_video.'
+  return {
+    success: false,
+    capability: 'adult_video',
+    provider: null,
+    model: null,
+    outputType: 'video',
+    output: null,
+    status: 'failed',
+    fallbackUsed: false,
+    error: blocker,
+    error_category: 'model_not_supported',
+    providerAttempts: [
+      {
+        provider: 'huggingface',
+        model: process.env.HF_ADULT_VIDEO_MODEL?.trim() || process.env.HF_ADULT_VIDEO_MODEL_FALLBACK?.trim() || 'HF_ADULT_VIDEO_MODEL',
+        status: 'needs_endpoint',
+        error: blocker,
+      },
+    ],
+    metadata: {
+      blocker,
+      nextAction: 'Configure and prove a dedicated Hugging Face adult video endpoint before enabling adult_video execution.',
+      requiredEnv: [
+        'HF_ADULT_VIDEO_ENDPOINT',
+        'HF_ADULT_VIDEO_ENDPOINT_FALLBACK',
+        'HF_ADULT_VIDEO_MODEL',
+        'HF_ADULT_VIDEO_MODEL_FALLBACK',
+      ],
+    },
+  }
+}
+
 export async function executeCapability(request: CapabilityRequest): Promise<CapabilityResponse> {
   const capability = request.capability ?? 'chat'
   if (TEXT_CAPABILITIES.has(capability)) return executeText(request)
@@ -260,7 +294,11 @@ export async function executeCapability(request: CapabilityRequest): Promise<Cap
     return mediaResponse(request, response, await readJson(response), 'image')
   }
 
-  if (capability === 'video_generation' || capability === 'image_to_video' || capability === 'adult_video') {
+  if (capability === 'adult_video') {
+    return blockedAdultVideoResponse()
+  }
+
+  if (capability === 'video_generation' || capability === 'image_to_video') {
     const response = await videoPost(jsonRequest('/api/brain/video-generate', {
       prompt: request.input,
       appSlug: request.appId,

@@ -279,6 +279,7 @@ export function isExternalManagedAppSlug(appSlug?: string | null): boolean {
 
 export function isTogetherAdultFallbackEnabled(capability: string): boolean {
   if (!String(capability).startsWith('adult_')) return false
+  if (!['adult_text', 'adult_image'].includes(capability)) return false
   if (process.env.TOGETHER_ADULT_FALLBACK_ENABLED !== 'true') return false
   const modelEnv = capability === 'adult_image'
     ? process.env.TOGETHER_ADULT_IMAGE_MODEL
@@ -376,7 +377,9 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
     return {
       allowed: false,
       capability,
-      reason: `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${capability} model env is configured.`,
+      reason: capability === 'adult_video' || capability === 'adult_voice'
+        ? `${capability} requires a dedicated Hugging Face endpoint/model.`
+        : `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${capability} model env is configured.`,
       blockers: ['adult_fallback_not_configured'],
     }
   }

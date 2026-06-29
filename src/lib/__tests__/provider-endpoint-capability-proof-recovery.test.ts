@@ -94,7 +94,7 @@ describe('provider endpoint and capability proof recovery', () => {
 
     for (const capability of ['adult_text', 'adult_image', 'adult_voice'] as const) {
       const route = getMediaCapabilityRoute(capability)
-      expect(route?.providers.map((entry) => entry.provider)).toEqual(['huggingface'])
+      expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
     }
     expect(getMediaCapabilityRoute('adult_video')?.route).toBe('')
     expect(getMediaCapabilityRoute('adult_video')?.providers).toEqual([])

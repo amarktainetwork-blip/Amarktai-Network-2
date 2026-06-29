@@ -32,9 +32,9 @@ export async function getToolRegistry(): Promise<{
   ])
   const configured = new Set(truth.providers.filter((provider) => provider.configured).map((provider) => provider.key))
   const capability = (name: string) => truth.capabilities.find((item) => item.name === name)
-  const imageReady = capability('Image Generation')?.status === 'available'
-  const videoReady = capability('Video Generation')?.status === 'available'
-  const ttsReady = capability('Voice TTS')?.status === 'available'
+  const imageReady = capability('Image Generation')?.status === 'working'
+  const videoReady = capability('Video Generation')?.status === 'working'
+  const ttsReady = capability('Voice TTS')?.status === 'working'
   const githubReady = Boolean(repo?.githubTokenConfigured && repo.githubAuthenticated)
   const workspaceReady = Boolean(repo?.workspaceWritable && repo.gitInstalled)
 

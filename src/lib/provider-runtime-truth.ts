@@ -10,6 +10,7 @@
  *   - Env keys are fallback only.
  *   - Actual key values are never exposed.
  *   - A provider with a key but missing endpoint → blocker = 'requires_endpoint'.
+ *     GenX is exempt because genx-client has a usable default base URL.
  *   - A provider with no key → blocker = 'missing_key'.
  *   - Failed last test → lastTestStatus = 'failed' (not 'connected').
  *   - Local runtime tools (playwright, scrapy, trafilatura, ffmpeg) have no API key;
@@ -47,15 +48,16 @@ const LOCAL_RUNTIME_IDS: ReadonlySet<ProviderMeshId> = new Set([
   'local-crawler', 'playwright', 'scrapy', 'trafilatura', 'ffmpeg',
 ])
 
+const GENX_DEFAULT_BASE_URL = 'https://query.genx.sh'
+
 /** Providers that require a separate endpoint URL in addition to an API key. */
-const REQUIRES_ENDPOINT_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshId>([
-  'genx',
-])
+const REQUIRES_ENDPOINT_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshId>([])
 
 function resolveEndpointStatus(id: ProviderMeshId, hasKey: boolean): ProviderEndpointStatus {
+  if (id === 'genx') return hasKey ? 'ok' : 'missing'
   if (!REQUIRES_ENDPOINT_IDS.has(id)) return 'not_required'
   if (!hasKey) return 'missing'
-  const url = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? ''
+  const url = process.env.GENX_BASE_URL ?? process.env.GENX_API_URL ?? GENX_DEFAULT_BASE_URL
   return url ? 'ok' : 'missing'
 }
 

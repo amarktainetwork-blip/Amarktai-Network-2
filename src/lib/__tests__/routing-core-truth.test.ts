@@ -49,6 +49,7 @@ beforeEach(() => {
   delete process.env.TOGETHER_ADULT_TEXT_MODEL
   delete process.env.TOGETHER_ADULT_IMAGE_MODEL
   delete process.env.HF_ADULT_TEXT_ENDPOINT
+  delete process.env.HF_ADULT_TEXT_MODEL
 })
 
 // ── Test 1: Image routing prefers Together over GenX for non-premium ──────────
@@ -238,7 +239,7 @@ describe('HF adult: requires endpoint env', () => {
     expect(entry!.hasRequiredEndpoint).toBe(false)
   })
 
-  it('adult_text with HF key + endpoint env passes endpoint gate', async () => {
+  it('adult_text with HF key + endpoint and model env passes endpoint gate', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -246,6 +247,7 @@ describe('HF adult: requires endpoint env', () => {
       id === 'huggingface' ? passedNotes : noNotes,
     )
     process.env.HF_ADULT_TEXT_ENDPOINT = 'https://my-endpoint.hf.space'
+    process.env.HF_ADULT_TEXT_MODEL = 'adult-text-model'
     const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
     expect(entry!.hasRequiredEndpoint).toBe(true)

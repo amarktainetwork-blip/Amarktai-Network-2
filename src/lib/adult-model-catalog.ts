@@ -6,15 +6,13 @@
  * writing and roleplay only. They do not provide image or video generation.
  *
  * Most entries are GGUF repositories. GGUF models generally require a private
- * Hugging Face Inference Endpoint, llama.cpp/Ollama/vLLM-style runtime, or a
- * custom OpenAI-compatible endpoint. The public HF Inference API may not serve
+ * Hugging Face Inference Endpoint or a custom OpenAI-compatible endpoint. The public HF Inference API may not serve
  * them directly.
  */
 
 export type AdultModelRuntime =
   | 'huggingface_inference_api'
   | 'huggingface_private_endpoint'
-  | 'local_gguf_runtime'
 
 export interface AdultTextModelSpec {
   id: string
@@ -45,7 +43,7 @@ export interface AdultVideoModelSpec {
   label: string
   source: 'Hugging Face NSFW search'
   sourceUrl: string
-  runtime: Extract<AdultModelRuntime, 'huggingface_private_endpoint' | 'local_gguf_runtime'>[]
+  runtime: Extract<AdultModelRuntime, 'huggingface_private_endpoint'>[]
   notes: string
   experimental: true
 }
@@ -179,8 +177,8 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 10,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
-    notes: 'Creative writing / prose model. GGUF runtime recommended.',
+    runtime: ['huggingface_private_endpoint'],
+    notes: 'Creative writing / prose model. Private endpoint recommended.',
     preferred: true,
   },
   {
@@ -190,7 +188,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 10,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Updated creative-writing model from the same collection.',
     preferred: true,
   },
@@ -201,8 +199,8 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
-    notes: 'Fast creative roleplay model. GGUF runtime required for reliable execution.',
+    runtime: ['huggingface_private_endpoint'],
+    notes: 'Fast creative roleplay model. Private endpoint required for reliable execution.',
     preferred: true,
   },
   {
@@ -212,7 +210,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Smaller adult creative-writing fallback.',
   },
   {
@@ -222,7 +220,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Creative / roleplay model with uncensored tuning.',
   },
   {
@@ -232,7 +230,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Roleplay-focused model.',
   },
   {
@@ -242,7 +240,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Roleplay and long dialogue model.',
   },
   {
@@ -252,7 +250,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 17,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Larger fiction / roleplay model.',
   },
   {
@@ -262,7 +260,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 24,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'MOE creative model. Heavier runtime requirements.',
     preferred: true,
   },
@@ -273,7 +271,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 17,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Reasoning-style creative fiction model.',
   },
   {
@@ -283,7 +281,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 21,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Popular MOE creative model. Heavier runtime requirements.',
     preferred: true,
   },
@@ -294,7 +292,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 8,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Long-context creative roleplay option.',
   },
   {
@@ -304,7 +302,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 22,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Qwen-family uncensored creative model.',
   },
   {
@@ -314,7 +312,7 @@ export const ADULT_TEXT_MODELS: readonly AdultTextModelSpec[] = [
     parametersB: 17,
     source: 'DavidAU Hugging Face collection',
     sourceUrl: DAVIDAU_ADULT_COLLECTION_URL,
-    runtime: ['huggingface_private_endpoint', 'local_gguf_runtime'],
+    runtime: ['huggingface_private_endpoint'],
     notes: 'Creative / reasoning model from the collection.',
   },
 ] as const

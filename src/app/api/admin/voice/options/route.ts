@@ -34,7 +34,7 @@ export async function GET() {
   const voices = BASE_VOICES.map((voice) => {
     const providerReady = configuredProviders.has(voice.provider)
     const genxModelKnown = voice.provider !== 'genx' || GENX_TTS_MODELS.includes(voice.model as (typeof GENX_TTS_MODELS)[number])
-    const capabilityReady = voiceCapability?.status === 'available'
+    const capabilityReady = voiceCapability?.status === 'working'
     const verified = providerReady && genxModelKnown && capabilityReady
     return {
       ...voice,
@@ -44,7 +44,7 @@ export async function GET() {
         : !providerReady
           ? `${voice.provider} is not configured in Settings.`
           : !capabilityReady
-            ? voiceCapability?.blocker ?? 'Voice TTS capability is not available yet.'
+            ? voiceCapability?.blocker ?? 'Voice TTS capability is not working yet.'
             : `Model ${voice.model} is not in the verified TTS model list.`,
     }
   })

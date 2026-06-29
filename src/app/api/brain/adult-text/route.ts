@@ -150,6 +150,22 @@ function togetherAdultConfigBlocker() {
   return 'Together adult_text fallback is disabled. Set TOGETHER_ADULT_FALLBACK_ENABLED=true and TOGETHER_ADULT_TEXT_MODEL to an approved Together text model.'
 }
 
+function huggingFaceAdultTextCandidates() {
+  const fallbackModel = getDefaultAdultTextModel().id
+  return [
+    {
+      provider: 'huggingface' as const,
+      endpoint: process.env.HF_ADULT_TEXT_ENDPOINT ?? null,
+      model: process.env.HF_ADULT_TEXT_MODEL?.trim() || fallbackModel,
+    },
+    {
+      provider: 'huggingface' as const,
+      endpoint: process.env.HF_ADULT_TEXT_ENDPOINT_FALLBACK ?? null,
+      model: process.env.HF_ADULT_TEXT_MODEL_FALLBACK?.trim() || fallbackModel,
+    },
+  ]
+}
+
 async function executeTogether(
   apiKey: string | null,
   model: string | null,
@@ -287,24 +303,26 @@ export async function POST(request: NextRequest) {
     }
 
     const route = getMediaCapabilityRoute(CAPABILITY)!
-    const endpoint = process.env.HF_ADULT_TEXT_ENDPOINT ?? null
     const attempts: Attempt[] = []
     const hfKey = await getVaultApiKey('huggingface')
     const togetherKey = await getVaultApiKey('together')
     const chain = [
-      ...route.providers.filter((entry) => provider === 'auto' || entry.provider === provider),
+      ...huggingFaceAdultTextCandidates().filter((entry) =>
+        route.providers.some((providerRoute) => providerRoute.provider === entry.provider) &&
+        (provider === 'auto' || entry.provider === provider),
+      ),
       ...(provider === 'auto' || provider === 'together'
-        ? [{ provider: 'together' as const, model: process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL' }]
+        ? [{ provider: 'together' as const, endpoint: null, model: process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL' }]
         : []),
     ]
 
     for (const entry of chain) {
       const model = entry.provider === 'together'
         ? process.env.TOGETHER_ADULT_TEXT_MODEL ?? 'TOGETHER_ADULT_TEXT_MODEL'
-        : getDefaultAdultTextModel().id
+        : entry.model
       const result = entry.provider === 'together'
         ? await executeTogether(togetherKey, model, prompt)
-        : await executeHuggingFace(hfKey, endpoint, model, prompt)
+        : await executeHuggingFace(hfKey, entry.endpoint, model, prompt)
       attempts.push(result.attempt)
       if (!result.output) continue
 

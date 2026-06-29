@@ -37,7 +37,8 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'document',
     providers: [
-      { provider: 'huggingface', model: 'private-adult-text-endpoint' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_TEXT_MODEL?.trim() || 'HF_ADULT_TEXT_MODEL' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_TEXT_MODEL_FALLBACK?.trim() || 'HF_ADULT_TEXT_MODEL_FALLBACK' },
     ],
   },
   adult_image: {
@@ -46,7 +47,8 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'image',
     providers: [
-      { provider: 'huggingface', model: 'private-adult-image-endpoint' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_IMAGE_MODEL?.trim() || 'HF_ADULT_IMAGE_MODEL' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_IMAGE_MODEL_FALLBACK?.trim() || 'HF_ADULT_IMAGE_MODEL_FALLBACK' },
     ],
   },
   adult_video: {
@@ -62,7 +64,8 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'audio',
     providers: [
-      { provider: 'huggingface', model: 'private-adult-voice-endpoint' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_VOICE_MODEL?.trim() || 'HF_ADULT_VOICE_MODEL' },
+      { provider: 'huggingface', model: process.env.HF_ADULT_VOICE_MODEL_FALLBACK?.trim() || 'HF_ADULT_VOICE_MODEL_FALLBACK' },
     ],
   },
   image_generation: {

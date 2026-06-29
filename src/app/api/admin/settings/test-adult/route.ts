@@ -5,7 +5,7 @@
  * not just a connection probe.
  *
  * The AI Engine (GenX) is NEVER used for adult content generation.
- * Only specialist providers are supported: Together AI, HuggingFace, GenX, Custom.
+ * Only specialist adult providers are supported: Hugging Face primary, explicit Together fallback, or Custom endpoint.
  *
  * Returns:
  *   { provider, model, success, outputType, status, error_category?, message, latencyMs }
@@ -25,7 +25,7 @@ import { getVaultApiKey } from '@/lib/brain'
 import { getProviderKey, type CoreProvider } from '@/lib/provider-config'
 import { getAdultTextModel, getDefaultAdultTextModel } from '@/lib/adult-model-catalog'
 
-type ProviderType = 'together' | 'huggingface' | 'genx' | 'custom'
+type ProviderType = 'together' | 'huggingface' | 'custom'
 
 type ErrorCategory =
   | 'missing_key'
@@ -511,122 +511,6 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     }
   }
 
-  // ── GenX — real generation test ──
-  if (providerType === 'genx') {
-    if (!apiKey) {
-      return NextResponse.json({
-        provider: 'genx',
-        model: providerModel || 'genx',
-        success: false,
-        supported: false,
-        status: 'not_configured',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'genx',
-        error_category: 'missing_key' as ErrorCategory,
-        message: 'GenX API key is required. Enter it here or save it via Admin → AI Providers → GenX.',
-      })
-    }
-
-    if (!endpoint) {
-      return NextResponse.json({
-        provider: 'genx',
-        model: providerModel || 'genx',
-        success: false,
-        supported: false,
-        status: 'not_configured',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'genx',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: 'GenX endpoint URL is required for adult generation.',
-      })
-    }
-
-    const { url: genxUrl, error: genxErr } = validateUrl(endpoint)
-    if (genxErr) {
-      return NextResponse.json({
-        provider: 'genx',
-        model: providerModel || 'genx',
-        success: false,
-        supported: false,
-        status: 'invalid',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'genx',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: genxErr,
-      })
-    }
-
-    const testModel = providerModel || 'genx'
-    const start = Date.now()
-    try {
-      const genxHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (apiKey) genxHeaders['Authorization'] = `Bearer ${apiKey}`
-      const res = await fetch(genxUrl.href, {
-        method: 'POST',
-        headers: genxHeaders,
-        body: JSON.stringify({ model: testModel, prompt: ADULT_TEST_PROMPT, n: 1 }),
-        signal: AbortSignal.timeout(30_000),
-      })
-      const latencyMs = Date.now() - start
-      const bodyText = await res.text().catch(() => '')
-
-      if (res.ok) {
-        let imageGenerated = false
-        try {
-          const parsed = JSON.parse(bodyText) as { data?: Array<{ url?: string; b64_json?: string }> }
-          imageGenerated = !!(parsed.data?.[0]?.url || parsed.data?.[0]?.b64_json)
-        } catch { /* non-JSON ok response */ }
-
-        return NextResponse.json({
-          provider: 'genx',
-          model: testModel,
-          success: imageGenerated,
-          supported: true,
-          status: imageGenerated ? 'ready' : 'connected_no_output',
-          outputType: 'image',
-          mode: 'specialist', providerType: 'genx',
-          error_category: imageGenerated ? undefined : ('model_not_supported' as ErrorCategory),
-          message: imageGenerated
-            ? `GenX generation test passed — image returned (${latencyMs}ms)`
-            : `GenX connected but no image data returned (${latencyMs}ms)`,
-          latencyMs,
-        })
-      }
-
-      const errCat = classifyHttpError(res.status, bodyText)
-      let errMsg = `GenX generation test failed (HTTP ${res.status}, ${latencyMs}ms)`
-      if (errCat === 'missing_key') errMsg += ' — authentication failed, check API key'
-      else if (errCat === 'provider_policy_block') errMsg += ' — provider safety policy blocked the test prompt'
-      else if (errCat === 'model_not_supported') errMsg += ` — model "${testModel}" may not be available`
-
-      return NextResponse.json({
-        provider: 'genx',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: errCat,
-        outputType: 'image',
-        mode: 'specialist', providerType: 'genx',
-        error_category: errCat,
-        message: errMsg,
-        latencyMs,
-      })
-    } catch (err) {
-      return NextResponse.json({
-        provider: 'genx',
-        model: testModel,
-        success: false,
-        supported: false,
-        status: 'unreachable',
-        outputType: 'image',
-        mode: 'specialist', providerType: 'genx',
-        error_category: 'endpoint_error' as ErrorCategory,
-        message: `Cannot reach GenX API: ${err instanceof Error ? err.message : 'network error'}`,
-        latencyMs: Date.now() - start,
-      })
-    }
-  }
-
   // ── Custom (OpenAI-compatible) — real generation test ──
   if (providerType === 'custom') {
     if (!endpoint) {
@@ -727,7 +611,7 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
     outputType: 'image',
     mode: 'specialist',
     error_category: 'unknown' as ErrorCategory,
-    message: `Unknown provider type: ${providerType}. Supported: genx, together, huggingface, custom`,
+    message: `Unknown provider type: ${providerType}. Supported: together, huggingface, custom`,
   })
 }
 

@@ -60,6 +60,22 @@ function togetherAdultImageConfigBlocker() {
   return 'Together adult_image fallback is disabled. Set TOGETHER_ADULT_FALLBACK_ENABLED=true and TOGETHER_ADULT_IMAGE_MODEL to an approved Together image model.'
 }
 
+function huggingFaceAdultImageCandidates() {
+  const fallbackModel = getAdultImageModels()[0]?.id ?? 'HF_ADULT_IMAGE_MODEL'
+  return [
+    {
+      provider: 'huggingface' as const,
+      endpoint: process.env.HF_ADULT_IMAGE_ENDPOINT ?? null,
+      model: process.env.HF_ADULT_IMAGE_MODEL?.trim() || fallbackModel,
+    },
+    {
+      provider: 'huggingface' as const,
+      endpoint: process.env.HF_ADULT_IMAGE_ENDPOINT_FALLBACK ?? null,
+      model: process.env.HF_ADULT_IMAGE_MODEL_FALLBACK?.trim() || fallbackModel,
+    },
+  ]
+}
+
 async function authorizeAdultRequest(body: Record<string, unknown>): Promise<{ ok: true; appSlug: string } | { ok: false; status: number; error: string }> {
   const session = await getSession()
   if (session.isLoggedIn) {
@@ -145,14 +161,16 @@ export async function POST(request: NextRequest) {
     const [width, height] = size.split('x').map(Number)
     const route = getMediaCapabilityRoute(CAPABILITY)!
     const attempts: Array<Record<string, unknown>> = []
-    const endpoint = process.env.HF_ADULT_IMAGE_ENDPOINT ?? null
 
-    const providerChain: Array<{ provider: ExecutableAdultImageProvider; model: string }> = [
-      ...route.providers
-        .filter((candidate) => requestedProvider === 'auto' || candidate.provider === requestedProvider)
-        .map((candidate) => ({ provider: candidate.provider as ExecutableAdultImageProvider, model: candidate.model })),
+    const providerChain: Array<{ provider: ExecutableAdultImageProvider; model: string; endpoint: string | null }> = [
+      ...huggingFaceAdultImageCandidates()
+        .filter((candidate) =>
+          route.providers.some((providerRoute) => providerRoute.provider === candidate.provider) &&
+          (requestedProvider === 'auto' || candidate.provider === requestedProvider),
+        )
+        .map((candidate) => ({ provider: candidate.provider as ExecutableAdultImageProvider, model: candidate.model, endpoint: candidate.endpoint })),
       ...(requestedProvider === 'auto' || requestedProvider === 'together'
-        ? [{ provider: 'together' as const, model: process.env.TOGETHER_ADULT_IMAGE_MODEL ?? 'TOGETHER_ADULT_IMAGE_MODEL' }]
+        ? [{ provider: 'together' as const, model: process.env.TOGETHER_ADULT_IMAGE_MODEL ?? 'TOGETHER_ADULT_IMAGE_MODEL', endpoint: null }]
         : []),
     ]
 
@@ -163,16 +181,16 @@ export async function POST(request: NextRequest) {
           attempts.push({ provider: entry.provider, model: entry.model, status: 'needs_key' })
           continue
         }
-        if (!endpoint) {
-          attempts.push({ provider: entry.provider, model: entry.model, status: 'needs_endpoint', error: 'Configure HF_ADULT_IMAGE_ENDPOINT.' })
+        if (!entry.endpoint) {
+          attempts.push({ provider: entry.provider, model: entry.model, status: 'needs_endpoint', error: 'Configure HF_ADULT_IMAGE_ENDPOINT or HF_ADULT_IMAGE_ENDPOINT_FALLBACK.' })
           continue
         }
-        const validated = validateEndpoint(endpoint)
+        const validated = validateEndpoint(entry.endpoint)
         if (!validated) {
           attempts.push({ provider: entry.provider, model: entry.model, status: 'test_failed', error: 'Invalid Hugging Face adult image endpoint.' })
           continue
         }
-        const hfModel = getAdultImageModels()[0]?.id ?? entry.model
+        const hfModel = entry.model
         try {
           const res = await fetch(validated, {
             method: 'POST',

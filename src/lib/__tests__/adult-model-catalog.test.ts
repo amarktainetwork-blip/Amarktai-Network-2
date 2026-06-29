@@ -16,7 +16,7 @@ describe('adult-model-catalog', () => {
 
     expect(models.length).toBeGreaterThanOrEqual(10)
     expect(models.every((model) => model.sourceUrl === DAVIDAU_ADULT_COLLECTION_URL)).toBe(true)
-    expect(models.every((model) => model.runtime.includes('local_gguf_runtime'))).toBe(true)
+    expect(models.every((model) => model.runtime.includes('huggingface_private_endpoint'))).toBe(true)
     expect(models.every((model) => model.notes.toLowerCase().includes('image'))).toBe(false)
   })
 

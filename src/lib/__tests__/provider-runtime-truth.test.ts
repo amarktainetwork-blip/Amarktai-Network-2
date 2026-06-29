@@ -5,7 +5,7 @@
  *  1. DB key → hasKey true
  *  2. Env fallback key → hasKey true
  *  3. No DB/env key → missing_key blocker
- *  4. Key present but endpoint missing → requires_endpoint blocker
+ *  4. GenX key uses genx-client default URL when GENX_BASE_URL/GENX_API_URL is absent
  *  5. Failed last test → lastTestStatus 'failed', not 'connected'
  *  6. System Monitoring and Settings consume the same truth
  *  7. MiMo, Groq, Together, GitHub DB key + passed test = connected
@@ -220,15 +220,16 @@ describe('Test 3: No DB/env key returns missing_key blocker', () => {
 
 // ── Test 4: Key present but endpoint missing → requires_endpoint ──────────────
 
-describe('Test 4: Key present but endpoint missing returns requires_endpoint', () => {
-  it('GenX with key but no URL has endpointStatus=missing', async () => {
+describe('Test 4: GenX endpoint truth matches genx-client default URL behavior', () => {
+  it('GenX with key but no URL uses the default endpoint instead of requires_endpoint', async () => {
     mockGetMeshCredential.mockResolvedValue('genx-key-xyz')
     mockGetMeshTestNotes.mockResolvedValue(noNotes)
 
     const entry = await getProviderRuntimeTruthEntry('genx')
     expect(entry!.hasKey).toBe(true)
-    expect(entry!.endpointStatus).toBe('missing')
-    expect(entry!.blocker).toMatch(/requires_endpoint/)
+    expect(entry!.endpointStatus).toBe('ok')
+    expect(entry!.blocker).not.toMatch(/requires_endpoint/)
+    expect(entry!.blocker).toContain('live test')
   })
 
   it('GenX with key AND URL has endpointStatus=ok', async () => {

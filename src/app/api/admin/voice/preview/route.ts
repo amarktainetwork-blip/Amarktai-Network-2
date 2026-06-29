@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   const voiceCapability = truth.capabilities.find((capability) => capability.name === 'Voice TTS')
   const providerReady = providerConfigured(truth, choice.provider)
   const modelKnown = choice.provider !== 'genx' || GENX_TTS_MODELS.includes(choice.model as (typeof GENX_TTS_MODELS)[number])
-  const capabilityReady = voiceCapability?.status === 'available'
+  const capabilityReady = voiceCapability?.status === 'working'
 
   if (!providerReady || !modelKnown || !capabilityReady) {
     return NextResponse.json({
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       error: !providerReady
         ? `${choice.provider} is not configured or not reachable.`
         : !capabilityReady
-          ? voiceCapability?.blocker ?? 'Voice TTS capability is not available yet.'
+          ? voiceCapability?.blocker ?? 'Voice TTS capability is not working yet.'
           : `Model ${choice.model} is not in the verified TTS model list.`,
       voice: choice,
       voiceCapability,

@@ -7,7 +7,7 @@ describe('adult and media capability routing', () => {
     const route = getMediaCapabilityRoute('adult_text')
     expect(route?.route).toBe('/api/brain/adult-text')
     expect(route?.artifactType).toBe('document')
-    expect(route?.providers.map((entry) => entry.provider)).toEqual(['huggingface'])
+    expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
   })
 
   it('routes adult_image to image generation', () => {
@@ -27,7 +27,7 @@ describe('adult and media capability routing', () => {
     const route = getMediaCapabilityRoute('adult_voice')
     expect(route?.route).toBe('/api/brain/tts')
     expect(route?.artifactType).toBe('audio')
-    expect(route?.providers.map((entry) => entry.provider)).toEqual(['huggingface'])
+    expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
   })
 
   it('blocks adult capabilities when policy is disabled', () => {

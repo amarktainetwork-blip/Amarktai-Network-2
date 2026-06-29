@@ -55,8 +55,8 @@ export default async function CapabilitiesPage() {
       </section>
 
       <section className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/60">
-        <div className="grid grid-cols-[1.1fr_0.85fr_0.9fr_0.8fr_1.25fr] gap-px bg-slate-800/70 text-xs">
-          {['Capability', 'Status', 'Providers', 'Route', 'Required fix'].map((heading) => (
+        <div className="grid grid-cols-[1.1fr_0.75fr_0.75fr_0.9fr_0.9fr_1.25fr_1.25fr] gap-px bg-slate-800/70 text-xs">
+          {['Capability', 'Status', 'Proof', 'Connected providers', 'Route', 'Blocker', 'Next action'].map((heading) => (
             <div key={heading} className="bg-slate-950/80 px-3 py-2 font-black uppercase tracking-[0.12em] text-slate-500">{heading}</div>
           ))}
           {capabilities.map((entry) => (
@@ -84,12 +84,15 @@ function CapabilityLine({
         <span className="mt-1 block text-[10px] font-bold uppercase tracking-wide text-slate-600">{entry.category}</span>
       </Cell>
       <Cell><StatusPill status={status} /></Cell>
-      <Cell>{entry.providerCandidates.length ? connected.length ? connected.join(', ') : entry.providerCandidates.join(', ') : 'Platform storage'}</Cell>
-      <Cell>{entry.hasExecutionRoute ? 'Wired' : 'Missing'}</Cell>
-      <Cell>{entry.blocker || entry.nextAction || 'No action required'}</Cell>
+      <Cell>{entry.proofStatus}</Cell>
+      <Cell>{entry.providerCandidates.length ? connected.length ? connected.join(', ') : 'None connected' : 'Platform storage'}</Cell>
+      <Cell>{entry.executionRoute ?? 'Missing'}</Cell>
+      <Cell>{entry.blocker || 'None'}</Cell>
+      <Cell>{entry.nextAction || 'No action required'}</Cell>
     </>
   )
 }
+
 
 function StatusPill({ status }: { status: UiStatus }) {
   const Icon =

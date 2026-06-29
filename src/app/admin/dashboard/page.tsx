@@ -56,9 +56,10 @@ export default async function OverviewPage() {
   }
   const capabilities = runtime?.capabilities ?? []
   const capabilitySummary = {
-    working: capabilities.filter((capability) => capability.status === 'available').length,
+    working: capabilities.filter((capability) => capability.status === 'working').length,
+    needsProof: capabilities.filter((capability) => capability.status === 'needs_proof').length,
     blocked: capabilities.filter((capability) => capability.status === 'blocked').length,
-    missing: capabilities.filter((capability) => capability.status === 'not_implemented').length,
+    missing: capabilities.filter((capability) => capability.status === 'missing').length,
     total: capabilities.length,
   }
   const artifactCount = db.generatedAssets + db.artifacts + localArtifacts.length
@@ -88,7 +89,7 @@ export default async function OverviewPage() {
         <Metric icon={<Server />} label="VPS / Webdock" value={vps?.host.hostname || 'Unverified'} detail={vps ? `${vps.host.memory.usedPercent}% memory used` : 'No VPS snapshot available'} tone={vps ? 'good' : 'warn'} />
         <Metric icon={<AppWindow />} label="Connected apps" value={String(db.connectedApps)} detail={`${db.memoryEntries} memory records`} tone={db.connectedApps > 0 ? 'good' : 'warn'} />
         <Metric icon={<Boxes />} label="Provider health" value={`${providerSummary.working}/${providerSummary.total}`} detail={`${providerSummary.configured} configured`} tone={providerSummary.working > 0 ? 'good' : 'warn'} />
-        <Metric icon={<Zap />} label="Capabilities" value={`${capabilitySummary.working}/${capabilitySummary.total}`} detail={`${capabilitySummary.blocked} blocked, ${capabilitySummary.missing} missing`} tone={capabilitySummary.blocked === 0 ? 'good' : 'warn'} />
+        <Metric icon={<Zap />} label="Capabilities" value={`${capabilitySummary.working}/${capabilitySummary.total}`} detail={`${capabilitySummary.needsProof} needs proof, ${capabilitySummary.blocked} blocked, ${capabilitySummary.missing} missing`} tone={capabilitySummary.blocked === 0 ? 'good' : 'warn'} />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[1fr_1fr]">

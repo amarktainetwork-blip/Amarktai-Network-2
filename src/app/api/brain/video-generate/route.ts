@@ -92,6 +92,26 @@ export async function POST(request: Request): Promise<NextResponse> {
         jobStatus: 'blocked', artifactId: null, storageUrl: null, error, blocker: error,
       }, { status: 422 })
     }
+    const blocker = 'Adult video requires a dedicated Hugging Face adult video endpoint/model. Configure HF_ADULT_VIDEO_ENDPOINT or HF_ADULT_VIDEO_ENDPOINT_FALLBACK plus HF_ADULT_VIDEO_MODEL or HF_ADULT_VIDEO_MODEL_FALLBACK; /api/brain/video-generate does not execute adult_video.'
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      capability,
+      provider: null,
+      model: null,
+      jobStatus: 'needs_setup',
+      artifactId: null,
+      storageUrl: null,
+      error: blocker,
+      blocker,
+      nextAction: 'Wire and prove a dedicated Hugging Face adult video route before enabling adult_video execution.',
+      requiredEnv: [
+        'HF_ADULT_VIDEO_ENDPOINT',
+        'HF_ADULT_VIDEO_ENDPOINT_FALLBACK',
+        'HF_ADULT_VIDEO_MODEL',
+        'HF_ADULT_VIDEO_MODEL_FALLBACK',
+      ],
+    }, { status: 501 })
   }
 
   const enhancedPrompt = effectiveReferenceImageUrl
@@ -111,7 +131,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   } | null = null
 
   // ── Together AI short video (cheap/balanced first if available) ──────────────
-  if ((provider === 'auto' || provider === 'together') && capability !== 'adult_video') {
+  if (provider === 'auto' || provider === 'together') {
     const togetherKey = await getVaultApiKey('together').catch(() => null)
     const togetherModel = process.env.TOGETHER_VIDEO_MODEL?.trim() || ''
     if (togetherKey && (provider === 'together' || costMode !== 'premium')) {
@@ -255,7 +275,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         appSlug: appSlug ?? 'amarktai-network',
         type: 'video',
         subType: capability,
-        title: `${capability === 'adult_video' ? 'Adult video' : 'Video'}: ${prompt.slice(0, 80)}`,
+        title: `Video: ${prompt.slice(0, 80)}`,
         description: enhancedPrompt,
         provider: usedProvider,
         model: usedModel,
