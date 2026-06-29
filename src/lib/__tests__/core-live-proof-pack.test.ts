@@ -4,7 +4,13 @@ import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { getArtifactType, getCapabilityRoute } from '@/lib/capability-display'
 import { CAPABILITY_UI_MODES } from '@/lib/capability-ui-schema'
-import { CORE_PROOF_CAPABILITIES, normalizeCoreProofRouteResult } from '@/lib/core-capability-proof-runner'
+import {
+  CORE_PROOF_CAPABILITIES,
+  LIVE_MEDIA_PROOF_CAPABILITIES,
+  LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES,
+  normalizeCoreProofRouteResult,
+  resolveLiveCoreProofCapabilities,
+} from '@/lib/core-capability-proof-runner'
 import { PROVIDER_MESH } from '@/lib/provider-mesh'
 
 const root = process.cwd()
@@ -71,6 +77,7 @@ describe('core live proof pack and capabilities display', () => {
     const runner = src('lib/core-capability-proof-runner.ts')
     expect(route).toContain('runCoreCapabilityProofPack')
     expect(runner).toContain('success: boolean')
+    expect(runner).toContain("mode: CoreProofMode")
     expect(runner).toContain('ranAt: string')
     expect(runner).toContain('capabilities: CoreProofCapabilityResult[]')
   })
@@ -89,10 +96,14 @@ describe('core live proof pack and capabilities display', () => {
     expect(fs.existsSync(path.join(root, 'scripts/run-core-proof.ts'))).toBe(true)
   })
 
-  it('proof CLI reuses the existing runner and does not copy execution logic', () => {
+  it('proof CLI reuses the existing runner and defaults to status-only mode', () => {
     const script = rootFile('scripts/run-core-proof.ts')
     expect(script).toContain("from '../src/lib/core-capability-proof-runner'")
-    expect(script).toContain('runCoreCapabilityProofPack()')
+    expect(script).toContain('runCoreCapabilityProofPack({')
+    expect(script).toContain("process.argv.includes('--live')")
+    expect(script).toContain("--capabilities=")
+    expect(script).toContain("--maxDurationSeconds=")
+    expect(script).toContain("--costMode=")
     expect(script).toContain('JSON.stringify(result, null, compact ? 0 : 2)')
     expect(script).toContain("--compact")
     for (const forbidden of [
@@ -108,6 +119,44 @@ describe('core live proof pack and capabilities display', () => {
     ]) {
       expect(script).not.toContain(forbidden)
     }
+  })
+
+  it('live proof pack A only allows low-cost core media capabilities', () => {
+    expect([...LIVE_MEDIA_PROOF_CAPABILITIES]).toEqual(['image_generation', 'tts', 'music_generation', 'stt'])
+    expect([...LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES]).toEqual(expect.arrayContaining([
+      'video_generation',
+      'long_form_video',
+      'avatar_generation',
+      'adult_text',
+      'adult_image',
+      'adult_voice',
+      'adult_avatar',
+      'adult_video',
+    ]))
+
+    const resolved = resolveLiveCoreProofCapabilities([
+      'image_generation',
+      'video_generation',
+      'adult_image',
+      'tts',
+    ])
+    expect(resolved.selected.map((entry) => entry.capability)).toEqual(['image_generation', 'tts'])
+    expect(resolved.rejected.map((entry) => entry.capability)).toEqual(['video_generation', 'adult_image'])
+    expect(resolved.rejected.every((entry) => entry.status === 'blocked')).toBe(true)
+  })
+
+  it('live proof runner calls existing execution routes/helpers only behind live mode', () => {
+    const runner = src('lib/core-capability-proof-runner.ts')
+    expect(runner).toContain("if (!options.live)")
+    expect(runner).toContain("await import('@/app/api/brain/image/route')")
+    expect(runner).toContain("await import('@/app/api/brain/tts/route')")
+    expect(runner).toContain("await import('@/app/api/brain/stt/route')")
+    expect(runner).toContain("await import('@/lib/music-studio')")
+    expect(runner).not.toContain("await import('@/app/api/brain/video-generate/route')")
+    expect(runner).not.toContain("await import('@/app/api/brain/long-form-video/route')")
+    expect(runner).not.toContain("await import('@/app/api/brain/avatar-video/route')")
+    expect(runner).not.toContain("providerOverride:")
+    expect(runner).not.toContain("modelOverride:")
   })
 
   it('does not create a duplicate proof runner layer', () => {
@@ -139,9 +188,10 @@ describe('core live proof pack and capabilities display', () => {
       provider: 'genx',
       model: 'kling-v2.5-turbo',
     })
-    expect(result.status).toBe('needs_proof')
+    expect(result.status).toBe('processing')
     expect(result.jobId).toBe('job_123')
     expect(result.pollUrl).toBe('/api/brain/video-generate/job_123')
+    expect(result.proofStatus).toBe('processing')
   })
 
   it('core proof normalization preserves artifact and storage fields for completed media', () => {
@@ -159,6 +209,43 @@ describe('core live proof pack and capabilities display', () => {
       expect(result.artifactId).toBe(`${capability}-artifact`)
       expect(result.storageUrl).toBe(`/api/artifacts/file/${capability}`)
     }
+  })
+
+  it('core proof normalization requires artifact persistence for media proof', () => {
+    const noArtifact = normalizeCoreProofRouteResult('image_generation', '/route', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      provider: 'together',
+      model: 'flux',
+    })
+    expect(noArtifact.status).toBe('needs_proof')
+
+    const persistenceFailed = normalizeCoreProofRouteResult('tts', '/route', {
+      success: false,
+      executed: false,
+      status: 'failed',
+      provider: 'groq',
+      model: 'playai-tts',
+      artifactId: null,
+      storageUrl: null,
+      blocker: 'Generation completed but artifact persistence failed: storage offline',
+    })
+    expect(persistenceFailed.status).toBe('failed')
+    expect(persistenceFailed.proofStatus).toBe('failed')
+  })
+
+  it('STT live proof depends on same-run TTS audio artifact', () => {
+    const runner = src('lib/core-capability-proof-runner.ts')
+    expect(runner).toContain('Run STT after a valid audio artifact exists.')
+    expect(runner).toContain("tts.result.status === 'proven' ? tts.audioBase64 : null")
+  })
+
+  it('proof page documents status-only and live pack A commands', () => {
+    const page = src('app/admin/dashboard/proof/page.tsx')
+    expect(page).toContain('npm run proof</span> is status-only')
+    expect(page).toContain('npm run proof -- --live --capabilities=image_generation,tts,music_generation,stt')
+    expect(page).toContain('Video, long-form video, and avatar proof remain later proof packs.')
   })
 
   it('adult private is blocked and not included in core proof execution', () => {

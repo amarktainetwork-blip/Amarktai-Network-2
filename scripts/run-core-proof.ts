@@ -1,4 +1,4 @@
-import { runCoreCapabilityProofPack } from '../src/lib/core-capability-proof-runner'
+import { runCoreCapabilityProofPack, type CoreProofCostMode } from '../src/lib/core-capability-proof-runner'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value))
@@ -15,7 +15,24 @@ function isStructuredProof(value: unknown) {
 
 async function main() {
   const compact = process.argv.includes('--compact')
-  const result = await runCoreCapabilityProofPack()
+  const live = process.argv.includes('--live')
+  const capabilities = process.argv.find((arg) => arg.startsWith('--capabilities='))
+    ?.replace('--capabilities=', '')
+    .split(',')
+    .map((capability) => capability.trim())
+    .filter(Boolean)
+  const maxDurationArg = process.argv.find((arg) => arg.startsWith('--maxDurationSeconds='))
+  const maxDurationSeconds = maxDurationArg ? Number(maxDurationArg.replace('--maxDurationSeconds=', '')) : undefined
+  const costModeArg = process.argv.find((arg) => arg.startsWith('--costMode='))?.replace('--costMode=', '')
+  const costMode = costModeArg === 'cheap' || costModeArg === 'balanced' || costModeArg === 'premium'
+    ? costModeArg as CoreProofCostMode
+    : undefined
+  const result = await runCoreCapabilityProofPack({
+    live,
+    capabilities,
+    maxDurationSeconds: Number.isFinite(maxDurationSeconds) ? maxDurationSeconds : undefined,
+    costMode,
+  })
   if (!isStructuredProof(result)) {
     throw new Error('Core proof runner returned malformed output.')
   }
