@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getVaultApiKey } from '@/lib/brain'
-import { callGenXMedia, GENX_TTS_MODELS } from '@/lib/genx-client'
+import { callGenXMedia, GENX_DEFAULT_TTS_MODEL, GENX_TTS_MODELS } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       let error = ''
 
       if (entry.provider === 'genx') {
-        const genxModel = GENX_TTS_MODELS.includes(model as (typeof GENX_TTS_MODELS)[number]) ? model : GENX_TTS_MODELS[0]
+        const genxModel = GENX_TTS_MODELS.includes(model as (typeof GENX_TTS_MODELS)[number]) ? model : GENX_DEFAULT_TTS_MODEL
         const generated = await callGenXMedia({ model: genxModel, prompt: text, type: 'audio' }).catch((cause) => ({
           success: false,
           url: null,

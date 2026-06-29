@@ -136,12 +136,12 @@ describe('/api/brain/adult-text', () => {
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       expect(String(input)).toBe('https://hf.test/adult-text')
       const body = JSON.parse(String(init?.body ?? '{}'))
-      expect(body.messages[1].content).toContain('adult roleplay conversation for consenting adults')
+      expect(body.inputs).toContain('adult roleplay conversation for consenting adults')
       return new Response(JSON.stringify({
         generated_text: 'A respectful consenting adult conversation response.',
       }), { status: 200, headers: { 'content-type': 'application/json' } })
     }))
-    const { executeCapability } = await import('@/lib/capability-router')
+    const { executeCapability } = await import('@/lib/runtime-execution')
 
     const result = await executeCapability({
       input: 'adult roleplay conversation for consenting adults',

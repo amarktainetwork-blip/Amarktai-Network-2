@@ -54,16 +54,12 @@ beforeEach(() => {
 // ── Test 1: Image routing prefers Together over GenX for non-premium ──────────
 
 describe('Image routing: Together preferred over GenX for non-premium', () => {
-  it('STUDIO_EXECUTABLE_PROVIDERS image list has together before genx', () => {
+  it('Studio image provider order comes from capability truth', () => {
     const source = src('src/app/api/admin/studio/execute/route.ts')
-    const imageMatch = source.match(/image:\s*\[([^\]]+)\]/)
-    expect(imageMatch).not.toBeNull()
-    const imageProviders = imageMatch![1]
-    const togetherIdx = imageProviders.indexOf("'together'")
-    const genxIdx = imageProviders.indexOf("'genx'")
-    expect(togetherIdx).toBeGreaterThan(-1)
-    expect(genxIdx).toBeGreaterThan(-1)
-    expect(togetherIdx).toBeLessThan(genxIdx)
+    const truth = src('src/lib/capability-runtime-truth.ts')
+    expect(source).not.toContain('STUDIO_EXECUTABLE_PROVIDERS')
+    expect(source).toContain('truth.connectedProviderCandidates')
+    expect(truth).toContain("providerCandidates: ['together', 'genx']")
   })
 
   it('brain/image route tries Together before GenX in non-premium auto path', () => {

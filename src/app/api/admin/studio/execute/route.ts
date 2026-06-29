@@ -50,13 +50,6 @@ type RouteProofMode = 'chat' | 'image' | 'music'
 type ProofMode = RouteProofMode | 'video' | 'avatar'
 type StudioChatProvider = 'groq' | 'together' | 'genx' | 'huggingface'
 
-const STUDIO_EXECUTABLE_PROVIDERS: Record<RouteProofMode, readonly ProviderMeshId[]> = {
-  chat: ['groq', 'together', 'genx', 'huggingface'],
-  // Together is preferred for standard image (cheaper, FLUX); GenX is fallback
-  image: ['together', 'genx'],
-  music: ['genx'],
-}
-const STUDIO_PREMIUM_CHAT_PROVIDERS: readonly ProviderMeshId[] = ['genx', 'groq', 'together', 'huggingface']
 const STUDIO_CHAT_EXECUTION_MODELS = {
   genx: 'gpt-5.4-mini',
   groq: 'llama-3.3-70b-versatile',
@@ -260,15 +253,13 @@ function effectiveStudioCostMode(body: ExecuteBody) {
 function selectStudioProvider(
   mode: StudioExecutionMode,
   truth?: CapabilityRuntimeTruthEntry | null,
-  costMode: 'cheap' | 'balanced' | 'premium' = 'balanced',
 ): ProviderMeshId | null {
   if (!truth || !isRouteProofMode(mode)) return null
-  const connected = new Set(truth.connectedProviderCandidates.map((provider) => normalizeProviderMeshId(provider)).filter(Boolean))
-  const supported = mode === 'chat' && costMode === 'premium'
-    ? STUDIO_PREMIUM_CHAT_PROVIDERS
-    : STUDIO_EXECUTABLE_PROVIDERS[mode]
-  for (const provider of supported) {
-    if (connected.has(provider)) return provider
+  for (const candidate of truth.connectedProviderCandidates) {
+    const provider = normalizeProviderMeshId(candidate)
+    if (!provider) continue
+    if (mode === 'chat' && !(provider in STUDIO_CHAT_EXECUTION_MODELS)) continue
+    return provider
   }
   return null
 }
@@ -282,9 +273,7 @@ function noConnectedStudioProviderResponse(
   capability: string,
   truth?: CapabilityRuntimeTruthEntry | null,
 ) {
-  const supported = mode === 'chat' || mode === 'image' || mode === 'music'
-    ? STUDIO_EXECUTABLE_PROVIDERS[mode].join(', ')
-    : ''
+  const supported = truth?.providerCandidates.join(', ') ?? ''
   return blockerResponse({
     mode,
     capability,
@@ -322,12 +311,14 @@ function connectedStudioProviders(truth?: CapabilityRuntimeTruthEntry | null) {
 
 function studioChatCandidates(route: LiveRouteResult, truth?: CapabilityRuntimeTruthEntry | null) {
   const connected = connectedStudioProviders(truth)
-  const allowed = connected.size > 0 ? connected : new Set<ProviderMeshId>(STUDIO_EXECUTABLE_PROVIDERS.chat)
+  const allowed = connected.size > 0
+    ? connected
+    : new Set<ProviderMeshId>(Object.keys(STUDIO_CHAT_EXECUTION_MODELS) as ProviderMeshId[])
   const candidates: Array<{ provider: ProviderMeshId; model: string; source: 'primary' | 'fallback' | 'connected' }> = []
   const seen = new Set<string>()
   const add = (providerValue: unknown, modelValue: unknown, source: 'primary' | 'fallback' | 'connected') => {
     const provider = canonicalProviderValue(providerValue)
-    if (!provider || !allowed.has(provider) || !STUDIO_EXECUTABLE_PROVIDERS.chat.includes(provider)) return
+    if (!provider || !allowed.has(provider) || !(provider in STUDIO_CHAT_EXECUTION_MODELS)) return
     const model = executableStudioChatModel(provider, modelValue)
     const key = `${provider}:${model}`
     if (seen.has(key)) return
@@ -337,7 +328,9 @@ function studioChatCandidates(route: LiveRouteResult, truth?: CapabilityRuntimeT
 
   add(route.selectedProvider, route.selectedModel, 'primary')
   for (const fallback of route.fallbackChain) add(fallback.provider, fallback.model, 'fallback')
-  for (const provider of STUDIO_EXECUTABLE_PROVIDERS.chat) add(provider, STUDIO_CHAT_EXECUTION_MODELS[provider as keyof typeof STUDIO_CHAT_EXECUTION_MODELS], 'connected')
+  for (const provider of connected.size > 0 ? connected : allowed) {
+    add(provider, STUDIO_CHAT_EXECUTION_MODELS[provider as keyof typeof STUDIO_CHAT_EXECUTION_MODELS], 'connected')
+  }
 
   return candidates
 }
@@ -587,7 +580,7 @@ export async function POST(request: NextRequest) {
   if (preflight?.response) {
     return NextResponse.json(preflight.response, { status: preflight.statusCode })
   }
-  const studioProvider = selectStudioProvider(mode, preflight?.truth, costMode)
+  const studioProvider = selectStudioProvider(mode, preflight?.truth)
   if ((mode === 'chat' || mode === 'image' || mode === 'music') && !studioProvider) {
     return NextResponse.json(
       noConnectedStudioProviderResponse(mode, proofCapabilityId, preflight?.truth),

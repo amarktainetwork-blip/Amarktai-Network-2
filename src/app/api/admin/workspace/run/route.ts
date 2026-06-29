@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server'
 import { getSession } from '@/lib/session'
 import { routeWorkspaceTask } from '@/lib/workspace-executor'
-import { executeCapability } from '@/lib/capability-router'
+import { executeCapability } from '@/lib/runtime-execution'
 import type { GenXModelPolicy, GenXCapability, GenXOperationType } from '@/lib/genx-client'
 
 const VALID_POLICIES = new Set<GenXModelPolicy>(['best', 'cheap', 'balanced', 'fixed'])

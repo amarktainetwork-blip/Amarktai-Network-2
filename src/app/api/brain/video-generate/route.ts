@@ -113,8 +113,14 @@ export async function POST(request: Request): Promise<NextResponse> {
   // ── Together AI short video (cheap/balanced first if available) ──────────────
   if ((provider === 'auto' || provider === 'together') && capability !== 'adult_video') {
     const togetherKey = await getVaultApiKey('together').catch(() => null)
-    const togetherModel = process.env.TOGETHER_VIDEO_MODEL || 'black-forest-labs/FLUX.1-schnell-Free'
+    const togetherModel = process.env.TOGETHER_VIDEO_MODEL?.trim() || ''
     if (togetherKey && (provider === 'together' || costMode !== 'premium')) {
+      if (!togetherModel) {
+        if (provider === 'together') {
+          const blocker = 'Together AI video requires TOGETHER_VIDEO_MODEL. No default video model is assumed.'
+          return NextResponse.json({ success: false, capability, executed: false, provider: null, model: null, jobStatus: 'needs_setup', artifactId: null, storageUrl: null, error: blocker, blocker }, { status: 503 })
+        }
+      } else {
       try {
         const togetherResp = await fetch('https://api.together.xyz/v1/video/generations', {
           method: 'POST',
@@ -134,6 +140,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
       } catch (err) {
         console.warn('[brain/video-generate] Together video failed:', err instanceof Error ? err.message : err)
+      }
       }
     }
     if (provider === 'together' && !providerJobId) {

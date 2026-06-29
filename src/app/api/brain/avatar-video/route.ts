@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
-import { callGenXMedia, GENX_IMAGE_MODELS } from '@/lib/genx-client'
+import { callGenXMedia, GENX_DEFAULT_IMAGE_MODEL } from '@/lib/genx-client'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 import { recordAvatarLibraryEntry } from '@/lib/avatar-library-store'
 import { normalizeProviderVideoDuration } from '@/lib/provider-video-policy'
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       }, { status: 409 })
     }
   }
-  const model = mode === 'video' ? videoModel! : GENX_IMAGE_MODELS[0]
+  const model = mode === 'video' ? videoModel! : GENX_DEFAULT_IMAGE_MODEL
   const type = mode === 'video' ? 'video' : 'image'
   const capability = mode === 'video' ? 'avatar_video' : 'avatar_image'
   const providerPrompt = [

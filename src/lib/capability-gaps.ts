@@ -58,7 +58,7 @@ interface CapabilityRequirement {
 export const CAPABILITY_REQUIREMENTS: Record<string, CapabilityRequirement> = {
   chat:              { providers: ['genx', 'groq', 'together'],      models: ['genx/default-chat', 'llama-3.1-70b'] },
   code:              { providers: ['genx', 'groq', 'together'],      models: ['genx/default-code', 'llama-3.1-70b'] },
-  image_generation:  { providers: ['genx', 'huggingface', 'together'], models: ['black-forest-labs/FLUX.1-schnell-Free'] },
+  image_generation:  { providers: ['genx', 'huggingface', 'together'], models: ['black-forest-labs/FLUX.2-dev'] },
   video:             { providers: ['genx', 'together'],              models: [] },
   voice:             { providers: ['genx', 'groq', 'huggingface', 'mimo'], models: ['openai/whisper-large-v3'] },
   retrieval:         { providers: ['huggingface'],                   models: ['sentence-transformers/all-MiniLM-L6-v2'] },

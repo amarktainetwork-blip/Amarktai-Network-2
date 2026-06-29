@@ -92,10 +92,12 @@ describe('provider endpoint and capability proof recovery', () => {
     expect(getEligibleProvidersForCapability('adult_text').map((provider) => provider.key)).toEqual([])
     expect(getEligibleProvidersForCapability('adult_text', { adult: true }).map((provider) => provider.key)).toEqual(['huggingface'])
 
-    for (const capability of ['adult_text', 'adult_image', 'adult_voice', 'adult_video'] as const) {
+    for (const capability of ['adult_text', 'adult_image', 'adult_voice'] as const) {
       const route = getMediaCapabilityRoute(capability)
       expect(route?.providers.map((entry) => entry.provider)).toEqual(['huggingface'])
     }
+    expect(getMediaCapabilityRoute('adult_video')?.route).toBe('')
+    expect(getMediaCapabilityRoute('adult_video')?.providers).toEqual([])
   })
 
   it('does not route Together FLUX image models as video', () => {

@@ -201,7 +201,7 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
       })
     }
 
-    const testModel = providerModel || 'black-forest-labs/FLUX.1-schnell-Free'
+    const testModel = providerModel || 'black-forest-labs/FLUX.2-dev'
     const start = Date.now()
     try {
       // Real generation test: attempt a minimal 512×512 image with a safe suggestive-adjacent prompt.
@@ -267,7 +267,7 @@ async function runAdultTest(req: NextRequest): Promise<NextResponse> {
         message: errMsg,
         providerError: bodyText.slice(0, 2000),
         suggestedModels: [
-          'black-forest-labs/FLUX.1-schnell-Free',
+          'black-forest-labs/FLUX.2-dev',
           'black-forest-labs/FLUX.1-schnell',
           'black-forest-labs/FLUX.1-dev',
           'stabilityai/stable-diffusion-xl-base-1.0',

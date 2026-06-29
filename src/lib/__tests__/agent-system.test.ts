@@ -109,8 +109,8 @@ describe('runMarketingAgent', () => {
     vi.restoreAllMocks()
   })
 
-  it('calls chat capability through capability-router (no direct provider call)', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+  it('calls chat capability through runtime-execution (no direct provider call)', async () => {
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string; input: string }) => ({
         success: true,
         capability: req.capability,
@@ -149,7 +149,7 @@ describe('runMarketingAgent', () => {
 
   it('uses brand context when brandId provided', async () => {
     let capturedInput = ''
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { input: string; capability: string }) => {
         capturedInput = req.input
         return { success: true, capability: req.capability, provider: 'groq', model: 'auto', outputType: 'text', output: 'Brand-aware copy here', fallbackUsed: false }
@@ -182,7 +182,7 @@ describe('runMarketingAgent', () => {
   })
 
   it('fails clearly when capability not in allowedCapabilities', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async () => ({ success: true, provider: 'genx', model: 'auto', outputType: 'text', output: 'should not reach', capability: 'chat', fallbackUsed: false })),
     }))
     vi.doMock('@/lib/brand-memory', () => ({ brandMemoryEngine: { get: vi.fn(async () => null) } }))
@@ -222,7 +222,7 @@ describe('runAdultCreatorAgent', () => {
   })
 
   it('calls adult_text capability through router with adultMode=true', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true,
         capability: req.capability,
@@ -250,7 +250,7 @@ describe('runAdultCreatorAgent', () => {
   })
 
   it('adult creator enforces HF-only: non-HF provider triggers failure', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async () => ({
         success: true,
         capability: 'adult_text',
@@ -287,7 +287,7 @@ describe('runCustomerServiceAgent', () => {
 
   it('uses RAG context in response', async () => {
     let capturedInput = ''
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { input: string; capability: string }) => {
         capturedInput = req.input
         return { success: true, capability: req.capability, provider: 'groq', model: 'auto', outputType: 'text', output: 'Based on the knowledge base, our refund policy is 30 days.', fallbackUsed: false }
@@ -324,7 +324,7 @@ describe('runCustomerServiceAgent', () => {
   })
 
   it('detects escalation when context is missing', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async () => ({
         success: true, capability: 'chat', provider: 'groq', model: 'auto',
         outputType: 'text', output: 'I cannot help with this — insufficient context. Please escalate to a human agent.', fallbackUsed: false,
@@ -361,7 +361,7 @@ describe('runResearchAgent', () => {
 
   it('stores findings in memory after successful research', async () => {
     const storeCall = vi.fn(async () => ({}))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'auto',
         outputType: 'text', output: 'Research findings: AI in healthcare is growing 30% YoY.', fallbackUsed: false,
@@ -388,7 +388,7 @@ describe('runResearchAgent', () => {
   })
 
   it('fails honestly when research capability is not allowed', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: false, capability: req.capability, provider: null, model: null,
         outputType: 'text', output: null, fallbackUsed: false,
@@ -425,7 +425,7 @@ describe('runAutomationAgent', () => {
 
   it('chains multiple capability calls in sequence', async () => {
     let callCount = 0
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string; input: string }) => {
         callCount++
         return {
@@ -458,7 +458,7 @@ describe('runAutomationAgent', () => {
 
   it('fails honestly when a step fails — does not continue chain', async () => {
     let callCount = 0
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => {
         callCount++
         if (callCount === 2) {
@@ -491,7 +491,7 @@ describe('runAutomationAgent', () => {
   })
 
   it('runAgent dispatches to correct agent type', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'groq', model: 'auto',
         outputType: 'text', output: 'Research complete', fallbackUsed: false,
@@ -513,7 +513,7 @@ describe('runAutomationAgent', () => {
 
   it('runAgent returns failure for invalid config without calling capability', async () => {
     const execCap = vi.fn()
-    vi.doMock('@/lib/capability-router', () => ({ executeCapability: execCap }))
+    vi.doMock('@/lib/runtime-execution', () => ({ executeCapability: execCap }))
     vi.doMock('@/lib/brand-memory', () => ({ brandMemoryEngine: { get: vi.fn(async () => null) } }))
     vi.doMock('@/lib/rag-capability', () => ({ queryRAG: vi.fn(async () => ({ success: false, chunks: [], context: '', sources: [], totalScore: 0 })), ingestDocument: vi.fn() }))
     vi.doMock('@/lib/memory-capability', () => ({ memoryEngine: { store: vi.fn(async () => ({})), search: vi.fn(async () => []) } }))
@@ -537,8 +537,8 @@ describe('runMarketingAgent — media capability calls', () => {
     vi.restoreAllMocks()
   })
 
-  it('marketing agent routes chat/research tasks through runtime capability-router only', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+  it('marketing agent routes chat/research tasks through runtime runtime-execution only', async () => {
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'together', model: 'auto',
         outputType: 'text', output: 'Campaign concept for image ad: bold summer visuals', fallbackUsed: false,
@@ -560,7 +560,7 @@ describe('runMarketingAgent — media capability calls', () => {
       allowedCapabilities: ['chat', 'research'], budget: 'balanced', quality: 'high',
     }
     const task = await runMarketingAgent(config, { task: 'content_idea', prompt: 'Create concepts for a summer campaign image' })
-    // Agent goes through capability-router — never calls provider API directly
+    // Agent goes through runtime-execution — never calls provider API directly
     expect(task.steps.length).toBeGreaterThan(0)
     expect(task.steps[0].capability).toMatch(/^(chat|research)$/) // routed via runtime
     // Provider is decided by runtime — never a removed provider
@@ -573,7 +573,7 @@ describe('runMarketingAgent — media capability calls', () => {
   })
 
   it('marketing agent fails clearly when required capability not in allowedList (image/video/music gate)', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'lyria-3-pro-preview',
         outputType: 'audio', output: null, jobId: 'job-123', status: 'processing', fallbackUsed: false,
@@ -605,7 +605,7 @@ describe('runMarketingAgent — media capability calls', () => {
   })
 
   it('marketing agent blocked from capability not in allowedCapabilities', async () => {
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async () => ({ success: true, capability: 'video_generation', provider: 'genx', model: 'auto', outputType: 'video', output: null, jobId: 'vid-1', fallbackUsed: false })),
     }))
     vi.doMock('@/lib/brand-memory', () => ({ brandMemoryEngine: { get: vi.fn(async () => null) } }))
@@ -655,7 +655,7 @@ describe('platform rule: apps cannot override provider or model', () => {
 
   it('capability request built by agent does not include providerOverride', async () => {
     let capturedRequest: Record<string, unknown> = {}
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: Record<string, unknown>) => {
         capturedRequest = req
         return { success: true, capability: req.capability, provider: 'groq', model: 'auto', outputType: 'text', output: 'result', fallbackUsed: false }
@@ -676,7 +676,7 @@ describe('platform rule: apps cannot override provider or model', () => {
       allowedCapabilities: ['research'], budget: 'balanced', quality: 'standard',
     }
     await runResearchAgent(config, { query: 'test query' })
-    // The request sent to capability-router must NOT contain providerOverride
+    // The request sent to runtime-execution must NOT contain providerOverride
     expect(capturedRequest.providerOverride).toBeUndefined()
     // It must contain the appId and budget metadata
     expect(capturedRequest.appId).toBe('app')

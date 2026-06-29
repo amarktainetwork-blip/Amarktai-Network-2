@@ -44,7 +44,7 @@ const SDXL_DEFAULT_STEPS = 30;
 
 /** Together AI image models in preference order (FLUX first, then SDXL). */
 const TOGETHER_IMAGE_MODELS: ReadonlyArray<{ id: string; steps: number }> = [
-  { id: 'black-forest-labs/FLUX.1-schnell-Free', steps: FLUX_DEFAULT_STEPS },
+  { id: 'black-forest-labs/FLUX.2-dev', steps: FLUX_DEFAULT_STEPS },
   { id: 'black-forest-labs/FLUX.1-schnell', steps: FLUX_DEFAULT_STEPS },
   { id: 'stabilityai/stable-diffusion-xl-base-1.0', steps: SDXL_DEFAULT_STEPS },
 ];

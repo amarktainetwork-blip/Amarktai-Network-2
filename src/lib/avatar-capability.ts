@@ -309,7 +309,7 @@ export const AVATAR_PROVIDER_CATALOG: AvatarProviderEntry[] = [
     costTier: 'low',
     qualityTier: 'standard',
     priority: { cheap: 2, balanced: 1, premium: 3 },
-    defaultModel: 'black-forest-labs/FLUX.1-schnell-Free',
+    defaultModel: 'black-forest-labs/FLUX.2-dev',
     notes: 'Together FLUX image generation for avatar images. Good for cheap/balanced workflows.',
   },
 ]
@@ -426,7 +426,7 @@ export async function executeTogetherAvatarImage(
   prompt: AvatarProviderPrompt,
   togetherApiKey: string,
 ): Promise<AvatarImageResult> {
-  const model = AVATAR_PROVIDER_CATALOG.find(p => p.key === 'together')?.defaultModel ?? 'black-forest-labs/FLUX.1-schnell-Free'
+  const model = AVATAR_PROVIDER_CATALOG.find(p => p.key === 'together')?.defaultModel ?? 'black-forest-labs/FLUX.2-dev'
   const fail = (error: string): AvatarImageResult => ({ success: false, imageDataUrl: null, imageUrl: null, jobId: null, model, provider: 'together', error })
 
   try {

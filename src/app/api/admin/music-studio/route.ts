@@ -14,7 +14,7 @@ import {
   AVAILABLE_VOCAL_STYLES,
   type MusicCreationRequest,
 } from '@/lib/music-studio'
-import { callGenXMedia, GENX_AUDIO_MODELS } from '@/lib/genx-client'
+import { callGenXMedia, GENX_DEFAULT_AUDIO_MODEL } from '@/lib/genx-client'
 import { persistCanonicalMediaResult } from '@/lib/canonical-media-artifact'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
           blocker,
         }, { status: 503 })
       }
-      const model = GENX_AUDIO_MODELS[0]
+      const model = GENX_DEFAULT_AUDIO_MODEL
       const prompt = musicRequest.prompt?.trim()
         ? musicRequest.prompt.trim()
         : musicRequest.existingLyrics?.trim()

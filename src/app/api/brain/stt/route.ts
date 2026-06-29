@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     // GenX STT accepts audio as base64 via the media generate endpoint.
     if (requestedProvider === 'auto' || requestedProvider === 'genx') {
       try {
-        const { callGenXMedia, GENX_STT_MODELS } = await import('@/lib/genx-client');
-        const genxModel = requestedModel ?? GENX_STT_MODELS[0];
+        const { callGenXMedia, GENX_DEFAULT_STT_MODEL } = await import('@/lib/genx-client');
+        const genxModel = requestedModel ?? GENX_DEFAULT_STT_MODEL;
         const audioBytes = await file.arrayBuffer();
         const audioBase64 = Buffer.from(audioBytes).toString('base64');
         const mimeType = (file as File).type || 'audio/mpeg';

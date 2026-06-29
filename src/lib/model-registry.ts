@@ -1698,7 +1698,7 @@ const LEGACY_MODEL_REGISTRY: readonly ModelEntry[] = [
   {
     provider: 'together',
     provider_tier: 'multimodal',
-    model_id: 'black-forest-labs/FLUX.1-schnell-Free',
+    model_id: 'black-forest-labs/FLUX.2-dev',
     model_name: 'FLUX.1 Schnell Free (Together)',
     family: 'FLUX',
     primary_role: 'image_generation',

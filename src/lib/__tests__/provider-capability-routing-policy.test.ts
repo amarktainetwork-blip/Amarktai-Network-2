@@ -67,13 +67,15 @@ describe('provider capability truth and routing policy', () => {
   })
 
   it('keeps adult routing private, Hugging Face primary, and Together fallback gated', () => {
-    for (const capability of ['adult_text', 'adult_image', 'adult_video', 'adult_voice'] as const) {
+    for (const capability of ['adult_text', 'adult_image', 'adult_voice'] as const) {
       const route = getMediaCapabilityRoute(capability)!
       expect(route.providers[0].provider).toBe('huggingface')
       expect(route.providers.map((entry) => entry.provider)).not.toContain('genx')
       expect(route.providers.map((entry) => entry.provider)).not.toContain('groq')
       expect(route.providers.map((entry) => entry.provider)).not.toContain('mimo')
     }
+    expect(getMediaCapabilityRoute('adult_video')?.route).toBe('')
+    expect(getMediaCapabilityRoute('adult_video')?.providers).toEqual([])
 
     const blocked = validateCapabilitySelection({
       capability: 'adult_text',

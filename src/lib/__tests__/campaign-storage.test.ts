@@ -51,7 +51,7 @@ function makeAssetRow(id = 'asset-1', campaignId = 'camp-1') {
     campaignId, campaignItemId: 'item-1',
     assetType: 'image', capability: 'image_generation',
     status: 'completed', approvalStatus: 'draft', approvalNotes: '',
-    runtimeSelectedProvider: 'together', runtimeSelectedModel: 'FLUX.1-schnell-Free',
+    runtimeSelectedProvider: 'together', runtimeSelectedModel: 'FLUX.2-dev',
     fallbackUsed: false, generationMode: '', promptSummary: 'Summer image prompt',
     sourceInputs: '{}', resultUrl: 'https://cdn.example.com/image.png',
     resultFilePath: null, thumbnailUrl: null, mimeType: 'image/png',
@@ -66,7 +66,7 @@ function makeVersionRow(id = 'ver-1', assetId = 'asset-1') {
     id, assetId, versionNumber: 1, status: 'draft',
     resultUrl: 'https://cdn.example.com/image.png', resultFilePath: null, thumbnailUrl: null,
     promptSummary: 'Summer image prompt', sourceInputs: '{}',
-    provider: 'together', model: 'FLUX.1-schnell-Free',
+    provider: 'together', model: 'FLUX.2-dev',
     costCredits: 0.002, latencyMs: 3200, metadata: '{}', createdAt: now,
   }
 }
@@ -207,7 +207,7 @@ describe('createGeneratedAsset', () => {
       assetType: 'image', capability: 'image_generation',
       // RUNTIME provides provider/model — NOT the app
       runtimeSelectedProvider: 'together',
-      runtimeSelectedModel: 'FLUX.1-schnell-Free',
+      runtimeSelectedModel: 'FLUX.2-dev',
       fallbackUsed: false,
       promptSummary: 'Summer image prompt',
       resultUrl: 'https://cdn.example.com/image.png',
@@ -217,7 +217,7 @@ describe('createGeneratedAsset', () => {
 
     expect(asset.id).toBe('asset-1')
     expect(asset.runtimeSelectedProvider).toBe('together')
-    expect(asset.runtimeSelectedModel).toBe('FLUX.1-schnell-Free')
+    expect(asset.runtimeSelectedModel).toBe('FLUX.2-dev')
     expect(asset.status).toBe('completed')
     expect(asset.approvalStatus).toBe('draft')
   })

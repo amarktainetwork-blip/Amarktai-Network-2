@@ -30,9 +30,9 @@ const ALLOWED_SIZES = ['256x256', '512x512', '1024x1024', '1024x1792', '1792x102
 type ImageSize = (typeof ALLOWED_SIZES)[number];
 
 const FLUX_MODELS = [
-  { id: 'black-forest-labs/FLUX.1-schnell-Free', steps: 4 },
+  { id: process.env.TOGETHER_IMAGE_MODEL?.trim() || 'black-forest-labs/FLUX.2-dev', steps: 8 },
   { id: 'black-forest-labs/FLUX.1-schnell', steps: 4 },
-];
+].filter((entry, index, list) => entry.id && list.findIndex((item) => item.id === entry.id) === index);
 
 type ImageAttempt = {
   provider: string;
@@ -128,7 +128,7 @@ async function tryTogether(
       };
     }
   }
-  return { ok: false, attempt: { provider: 'together', model: model ?? 'FLUX.1-schnell-Free', status: 'exception', error: 'No models to try' } };
+  return { ok: false, attempt: { provider: 'together', model: model ?? 'black-forest-labs/FLUX.2-dev', status: 'exception', error: 'No models to try' } };
 }
 
 async function tryGenX(
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     for (const provider of eligibleProviders) {
       if (provider === 'together') {
         if (!togetherKey) {
-          attempts.push({ provider: 'together', model: 'FLUX.1-schnell-Free', status: 'no_key', error: 'Together AI key not configured.' });
+          attempts.push({ provider: 'together', model: process.env.TOGETHER_IMAGE_MODEL?.trim() || 'black-forest-labs/FLUX.2-dev', status: 'no_key', error: 'Together AI key not configured.' });
           continue;
         }
         const r = await tryTogether(prompt, togetherKey, effectiveModel);

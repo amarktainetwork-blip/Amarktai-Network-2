@@ -1,9 +1,9 @@
 import {
-  GENX_AUDIO_MODELS,
-  GENX_IMAGE_MODELS,
-  GENX_STT_MODELS,
-  GENX_TTS_MODELS,
-  GENX_VIDEO_MODELS,
+  GENX_DEFAULT_AUDIO_MODEL,
+  GENX_DEFAULT_IMAGE_MODEL,
+  GENX_DEFAULT_STT_MODEL,
+  GENX_DEFAULT_TTS_MODEL,
+  GENX_DEFAULT_VIDEO_MODEL,
 } from '@/lib/genx-client'
 import type { ProviderMeshId } from '@/lib/provider-mesh'
 
@@ -51,12 +51,10 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
   },
   adult_video: {
     capability: 'adult_video',
-    route: '/api/brain/video-generate',
+    route: '',
     execution: 'async_job',
     artifactType: 'video',
-    providers: [
-      { provider: 'huggingface', model: 'private-adult-video-endpoint' },
-    ],
+    providers: [],
   },
   adult_voice: {
     capability: 'adult_voice',
@@ -73,9 +71,8 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'image',
     providers: [
-      { provider: 'genx', model: GENX_IMAGE_MODELS[0] },
-      { provider: 'together', model: 'black-forest-labs/FLUX.1-schnell-Free' },
-      { provider: 'huggingface', model: 'task:text-to-image' },
+      { provider: 'together', model: process.env.TOGETHER_IMAGE_MODEL?.trim() || 'black-forest-labs/FLUX.2-dev' },
+      { provider: 'genx', model: GENX_DEFAULT_IMAGE_MODEL },
     ],
   },
   video_generation: {
@@ -84,7 +81,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'video',
     providers: [
-      { provider: 'genx', model: GENX_VIDEO_MODELS[0] },
+      { provider: 'genx', model: GENX_DEFAULT_VIDEO_MODEL },
     ],
   },
   music_generation: {
@@ -93,7 +90,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'music',
     providers: [
-      { provider: 'genx', model: GENX_AUDIO_MODELS[0] },
+      { provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL },
     ],
   },
   tts: {
@@ -102,7 +99,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'sync',
     artifactType: 'audio',
     providers: [
-      { provider: 'genx', model: GENX_TTS_MODELS[0] },
+      { provider: 'genx', model: GENX_DEFAULT_TTS_MODEL },
       { provider: 'groq', model: 'playai-tts' },
       { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
     ],
@@ -113,7 +110,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'upload',
     artifactType: 'transcript',
     providers: [
-      { provider: 'genx', model: GENX_STT_MODELS[0] },
+      { provider: 'genx', model: GENX_DEFAULT_STT_MODEL },
       { provider: 'groq', model: 'whisper-large-v3-turbo' },
       { provider: 'huggingface', model: 'openai/whisper-large-v3' },
     ],
@@ -124,7 +121,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'audio',
     providers: [
-      { provider: 'genx', model: GENX_AUDIO_MODELS[0] },
+      { provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL },
     ],
   },
 }

@@ -2,7 +2,7 @@
  * @module agent-system
  * @description Agent System for the AmarktAI Network.
  *
- * Real agent execution using the capability-router as the sole execution path.
+ * Real agent execution using canonical runtime execution.
  * Agents never call provider APIs directly.
  * Agents never hardcode models.
  * Agents never bypass permissions or budget routing.
@@ -14,13 +14,13 @@
  *   research        — web/RAG ingestion, memory storage, structured output
  *   automation      — chained capability calls, scheduled workflows
  *
- * All agents call executeCapability() via the capability-router.
+ * All agents call executeCapability() via canonical runtime execution.
  * Provider/model selection is deferred to the runtime.
  *
  * Server-side only.
  */
 
-import { executeCapability, type CapabilityRequest, type CapabilityResponse } from '@/lib/capability-router'
+import type { CapabilityRequest, CapabilityResponse } from '@/lib/runtime-execution'
 import { memoryEngine } from '@/lib/memory-capability'
 import { brandMemoryEngine } from '@/lib/brand-memory'
 import { queryRAG, ingestDocument } from '@/lib/rag-capability'
@@ -181,6 +181,7 @@ async function agentCallCapability(
     },
   }
 
+  const { executeCapability } = await import('@/lib/runtime-execution')
   return executeCapability(req)
 }
 
@@ -249,7 +250,7 @@ export async function runMarketingAgent(
       `Task: ${input.prompt}`,
     ].filter(Boolean).join('\n\n')
 
-    // Step 4: Execute via capability-router (chat or research based on task)
+    // Step 4: Execute via canonical runtime routes (chat or research based on task)
     const capability = input.task === 'research' ? 'research' : 'chat'
     const stepId = makeStepId(0)
     const capResult = await agentCallCapability(config, capability, enrichedPrompt)
@@ -333,7 +334,7 @@ export async function runAdultCreatorAgent(
   }
 
   // Only HuggingFace is allowed for adult generation
-  // The capability-router enforces this — agent just calls the capability
+  // The runtime enforces this — agent just calls the capability
   const capabilityMap: Record<string, string> = {
     adult_text: 'adult_text',
     adult_image: 'adult_image',
@@ -718,7 +719,7 @@ export type AgentRunInput =
 
 /**
  * Run any agent type through the unified orchestrator.
- * All agents use the capability-router. No direct provider calls.
+ * All agents use canonical runtime execution. No direct provider calls.
  */
 export async function runAgent(config: AgentConfig, run: AgentRunInput): Promise<AgentTask> {
   const validation = validateAgentConfig(config)

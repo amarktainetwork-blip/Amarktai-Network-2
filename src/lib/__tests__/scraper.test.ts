@@ -305,7 +305,7 @@ describe('crawlWebsite', () => {
     // Verify import of scraper, not firecrawl, in the module
     const scraperModule = await import('../scraper')
     expect(scraperModule.crawlWebsite).toBeDefined()
-    // Verify firecrawl is not imported in capability-router by checking the function doesn't exist on firecrawl namespace
+    // Verify firecrawl is not imported in runtime-execution by checking the function doesn't exist on firecrawl namespace
     // (If firecrawl were still used, the test would fail when we mock it)
     const { crawlWebsite: scraperCrawl } = scraperModule
     expect(typeof scraperCrawl).toBe('function')

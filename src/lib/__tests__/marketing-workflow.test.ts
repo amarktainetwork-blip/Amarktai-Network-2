@@ -6,7 +6,7 @@
  *  - Brand identity extracted and saved to Brand Memory
  *  - Website content ingested into RAG
  *  - Marketing agent used for campaign planning
- *  - Asset generation goes through capability-router only (no direct provider)
+ *  - Asset generation goes through runtime-execution only (no direct provider)
  *  - App cannot choose provider or model
  *  - Partial failure when asset generation fails
  *  - Scraper failure returns clear failure (no campaign)
@@ -110,7 +110,7 @@ describe('runMarketingWorkflow — full success', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 800, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string; appId: string }) => ({
         success: true,
         capability: req.capability,
@@ -149,7 +149,7 @@ describe('runMarketingWorkflow — full success', () => {
     // Persisted item and asset IDs returned
     expect(Array.isArray(result.persistedItemIds)).toBe(true)
     expect(Array.isArray(result.persistedAssetIds)).toBe(true)
-    // brandExtracted may be true or false depending on capability-router mock resolution
+    // brandExtracted may be true or false depending on runtime-execution mock resolution
     if (result.brandExtracted) {
       expect(result.brandId).toBe('brand-id-1')
     }
@@ -179,7 +179,7 @@ describe('runMarketingWorkflow — full success', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 400, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'auto',
         outputType: 'text',
@@ -232,7 +232,7 @@ describe('runMarketingWorkflow — full success', () => {
         }
       }),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'auto',
         outputType: 'text',
@@ -259,7 +259,7 @@ describe('runMarketingWorkflow — asset generation', () => {
     vi.restoreAllMocks()
   })
 
-  it('asset requests go through capability-router — app cannot choose provider', async () => {
+  it('asset requests go through runtime-execution — app cannot choose provider', async () => {
     const capturedRequests: Array<{ capability: string; appId: string; metadata?: Record<string, unknown> }> = []
 
     vi.doMock('@/lib/scraper', () => ({ crawlWebsite: vi.fn(async () => makeCrawlSuccess()) }))
@@ -278,10 +278,10 @@ describe('runMarketingWorkflow — asset generation', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 300, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string; appId: string; metadata?: Record<string, unknown> }) => {
         capturedRequests.push({ capability: req.capability, appId: req.appId, metadata: req.metadata })
-        return { success: true, capability: req.capability, provider: 'together', model: 'FLUX.1-schnell-Free', outputType: 'image', output: 'https://cdn.example.com/image.png', fallbackUsed: false }
+        return { success: true, capability: req.capability, provider: 'together', model: 'FLUX.2-dev', outputType: 'image', output: 'https://cdn.example.com/image.png', fallbackUsed: false }
       }),
     }))
     vi.doMock('@/lib/learning-engine', () => ({ recordExecutionSignal: vi.fn(async () => true) }))
@@ -328,7 +328,7 @@ describe('runMarketingWorkflow — asset generation', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 400, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => {
         assetCallCount++
         if (assetCallCount === 2) {
@@ -375,7 +375,7 @@ describe('runMarketingWorkflow — failure modes', () => {
     vi.doMock('@/lib/brand-memory', () => ({ brandMemoryEngine: { create: vi.fn() } }))
     vi.doMock('@/lib/rag-capability', () => ({ ingestWebsite: vi.fn(), queryRAG: vi.fn() }))
     vi.doMock('@/lib/agent-system', () => ({ runAgent: vi.fn() }))
-    vi.doMock('@/lib/capability-router', () => ({ executeCapability: vi.fn() }))
+    vi.doMock('@/lib/runtime-execution', () => ({ executeCapability: vi.fn() }))
     vi.doMock('@/lib/learning-engine', () => ({ recordExecutionSignal: vi.fn(async () => true) }))
 
     const { runMarketingWorkflow } = await import('../marketing-workflow')
@@ -409,7 +409,7 @@ describe('runMarketingWorkflow — failure modes', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 300, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'groq', model: 'auto',
         outputType: 'text', output: '{"brandName":"Test","businessCategory":"ecommerce","productsServices":[],"targetAudience":"","toneOfVoice":"friendly","visualStyle":"modern","colors":[],"valueProposition":"","offers":[],"faqs":[],"contentThemes":[],"complianceNotes":[]}',
@@ -459,7 +459,7 @@ describe('runMarketingWorkflow — learning signals', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 200, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'auto',
         outputType: 'text', output: '{"brandName":"Test","businessCategory":"ecommerce","productsServices":[],"targetAudience":"","toneOfVoice":"bold","visualStyle":"clean","colors":[],"valueProposition":"","offers":[],"faqs":[],"contentThemes":[],"complianceNotes":[]}',
@@ -500,7 +500,7 @@ describe('runMarketingWorkflow — learning signals', () => {
     vi.doMock('@/lib/brand-memory', () => ({ brandMemoryEngine: { create: vi.fn() } }))
     vi.doMock('@/lib/rag-capability', () => ({ ingestWebsite: vi.fn(), queryRAG: vi.fn() }))
     vi.doMock('@/lib/agent-system', () => ({ runAgent: vi.fn() }))
-    vi.doMock('@/lib/capability-router', () => ({ executeCapability: vi.fn() }))
+    vi.doMock('@/lib/runtime-execution', () => ({ executeCapability: vi.fn() }))
     vi.doMock('@/lib/learning-engine', () => ({
       recordExecutionSignal: vi.fn(async (signal: { capability: string; success: boolean }) => {
         signalCalls.push({ capability: signal.capability, success: signal.success })
@@ -539,7 +539,7 @@ describe('runMarketingWorkflow — platform safety', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 100, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => ({
         success: true, capability: req.capability, provider: 'genx', model: 'auto',
         outputType: 'text', output: 'content', fallbackUsed: false,
@@ -571,7 +571,7 @@ describe('runMarketingWorkflow — platform safety', () => {
         artifacts: [], error: null, startedAt: new Date(), completedAt: new Date(), latencyMs: 200, metadata: {},
       })),
     }))
-    vi.doMock('@/lib/capability-router', () => ({
+    vi.doMock('@/lib/runtime-execution', () => ({
       executeCapability: vi.fn(async (req: { capability: string }) => {
         const provider = 'genx' // runtime returns genx — never removed provider
         capabilityProviders.push(provider)

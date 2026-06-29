@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/prisma'
-import { executeCapability } from '@/lib/capability-router'
+import { executeCapability } from '@/lib/runtime-execution'
 import { getFirecrawlStatus } from '@/lib/firecrawl'
 
 /**

@@ -14,7 +14,7 @@
  *
  * Platform rule:
  *   - App cannot choose provider or model — runtime decides all routing
- *   - All asset generation goes through capability-router only
+ *   - All asset generation goes through canonical runtime execution only
  *   - No direct provider API calls
  *   - No Firecrawl — in-house scraper only
  *
@@ -26,7 +26,7 @@ import { brandMemoryEngine } from '@/lib/brand-memory'
 import { ingestWebsite, queryRAG } from '@/lib/rag-capability'
 import { runAgent, type AgentConfig } from '@/lib/agent-system'
 import { recordExecutionSignal, type ExecutionSignal } from '@/lib/learning-engine'
-import { executeCapability, type CapabilityRequest } from '@/lib/capability-router'
+import { executeCapability, type CapabilityRequest } from '@/lib/runtime-execution'
 import {
   createCampaign,
   updateCampaignStatus,
@@ -283,7 +283,7 @@ function parseCampaignPlan(agentOutput: string, platforms: SocialPlatform[], con
   return { campaignName, items }
 }
 
-// ── Asset generation via capability-router ────────────────────────────────────
+// ── Asset generation via canonical runtime execution ──────────────────────────
 
 const CONTENT_TYPE_CAPABILITY: Partial<Record<ContentType, string>> = {
   image: 'image_generation',
@@ -298,7 +298,7 @@ const CONTENT_TYPE_CAPABILITY: Partial<Record<ContentType, string>> = {
 }
 
 /**
- * Generate a single campaign asset through the central capability-router.
+ * Generate a single campaign asset through canonical runtime execution.
  * App cannot choose provider — routing is fully managed by the runtime.
  */
 async function generateCampaignAsset(
@@ -616,7 +616,7 @@ Create ${Math.min(input.platforms.length * input.contentTypes.length, 6)} items 
     warnings.push(`Campaign persistence failed: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  // ── Phase 7: Asset generation through capability-router ──────────────────
+  // ── Phase 7: Asset generation through canonical runtime execution ────────
   const brandContextShort = brandSummary.slice(0, 300)
   const campaignItems: CampaignItem[] = []
 

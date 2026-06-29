@@ -16,12 +16,11 @@ describe('adult and media capability routing', () => {
     expect(route?.artifactType).toBe('image')
   })
 
-  it('routes adult_video only to real video executors', () => {
+  it('keeps adult_video unavailable until a dedicated executor exists', () => {
     const route = getMediaCapabilityRoute('adult_video')
-    expect(route?.route).toBe('/api/brain/video-generate')
+    expect(route?.route).toBe('')
     expect(route?.execution).toBe('async_job')
-    expect(route?.providers.map((entry) => entry.provider)).toEqual(['huggingface'])
-    expect(route?.providers.map((entry) => entry.provider)).not.toContain('together')
+    expect(route?.providers).toEqual([])
   })
 
   it('routes adult_voice through audio/TTS executors', () => {

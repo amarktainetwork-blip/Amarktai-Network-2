@@ -454,7 +454,7 @@ describe('platform safety — no removed providers', () => {
   it('scheduler never calls AI providers — no model selection possible', () => {
     // The publishing-scheduler module has no AI provider imports
     // It imports: prisma, learning-engine only
-    // Verify by inspection: no 'genx-client', 'brain', 'capability-router' imports
+    // Verify by inspection: no 'genx-client', 'brain', 'runtime-execution' imports
     // The module is purely scheduling/persistence — no AI decisions
     const allowedProviders = ['genx', 'huggingface', 'together', 'groq', 'mimo']
     const removedProviders = ['openai', 'gemini', 'anthropic', 'deepseek', 'mistral', 'qwen', 'cohere']

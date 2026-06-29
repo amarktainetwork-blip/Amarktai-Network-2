@@ -1,10 +1,9 @@
 /**
  * GenX Client — AmarktAI Network
  *
- * GenX is the primary AI execution layer for the AmarktAI Network.
- * All AI requests are routed through GenX by default. Direct provider
- * routing (openai/groq/gemini/etc.) is only used as a fallback when
- * GenX is unavailable or returns an error.
+ * GenX is one approved provider in the AmarktAI Network runtime.
+ * Provider/model selection is owned by live routing and capability truth;
+ * this client only executes calls after GenX has been selected.
  *
  * Endpoints:
  *   chat:   POST /v1/chat/completions
@@ -217,17 +216,27 @@ export const GENX_STT_MODELS = [
   'genxlm-pro-v1-tr',
 ] as const
 
+export const GENX_DEFAULT_IMAGE_MODEL = 'genxlm-pro-v1-img'
+export const GENX_DEFAULT_IMAGE_EDIT_MODEL = 'gpt-image-2'
+export const GENX_DEFAULT_VIDEO_MODEL = 'kling-v2.5-turbo'
+export const GENX_DEFAULT_I2V_MODEL = 'kling-v2.5-turbo-i2v'
+export const GENX_PREMIUM_VIDEO_MODEL = 'kling-v2.6-pro'
+export const GENX_PREMIUM_I2V_MODEL = 'kling-v2.6-pro-i2v'
+export const GENX_DEFAULT_AUDIO_MODEL = 'lyria-3-clip-preview'
+export const GENX_DEFAULT_TTS_MODEL = 'grok-tts'
+export const GENX_DEFAULT_STT_MODEL = 'genxlm-pro-v1-tr'
+
 const GENX_DEFAULT_MODELS: Record<GenXOperationType, string> = {
   chat:      GENX_TEXT_MODELS[0],
-  generate:  GENX_IMAGE_MODELS[0],
-  edit:      GENX_IMAGE_MODELS[0],
+  generate:  GENX_DEFAULT_IMAGE_MODEL,
+  edit:      GENX_DEFAULT_IMAGE_EDIT_MODEL,
   plan:      GENX_TEXT_MODELS[0],
   code:      'gpt-5.3-codex',
   summarise: GENX_TEXT_MODELS[0],
   classify:  GENX_TEXT_MODELS[0],
   embed:     GENX_TEXT_MODELS[0],
-  tts:       GENX_TTS_MODELS[0],
-  stt:       GENX_STT_MODELS[0],
+  tts:       GENX_DEFAULT_TTS_MODEL,
+  stt:       GENX_DEFAULT_STT_MODEL,
 }
 
 // ── Configuration ─────────────────────────────────────────────────────────────
@@ -697,9 +706,9 @@ function resolveGenXExecutionModel(model: string | undefined, fallback: string):
   const alias = model.toLowerCase()
   if (alias === 'auto:coding-best') return 'gpt-5.3-codex'
   if (alias === 'auto:coding-balanced' || alias === 'auto:assistant' || alias === 'auto:chat-balanced') return 'gpt-5.4-mini'
-  if (alias === 'auto:image') return GENX_IMAGE_MODELS[0]
-  if (alias === 'auto:video') return GENX_VIDEO_MODELS[0]
-  if (alias === 'auto:voice-tts') return GENX_TTS_MODELS[0]
+  if (alias === 'auto:image') return GENX_DEFAULT_IMAGE_MODEL
+  if (alias === 'auto:video') return GENX_DEFAULT_VIDEO_MODEL
+  if (alias === 'auto:voice-tts') return GENX_DEFAULT_TTS_MODEL
   return fallback
 }
 
@@ -858,10 +867,10 @@ export async function streamGenXChat(
 export async function callGenXMedia(request: GenXMediaRequest): Promise<GenXMediaResult> {
   const start = Date.now()
   const fallbackModel = request.type === 'image'
-    ? GENX_IMAGE_MODELS[0]
+    ? GENX_DEFAULT_IMAGE_MODEL
     : request.type === 'video'
-      ? GENX_VIDEO_MODELS[0]
-      : GENX_AUDIO_MODELS[0]
+      ? GENX_DEFAULT_VIDEO_MODEL
+      : GENX_DEFAULT_AUDIO_MODEL
   const resolvedRequest = {
     ...request,
     model: resolveGenXExecutionModel(request.model, fallbackModel),

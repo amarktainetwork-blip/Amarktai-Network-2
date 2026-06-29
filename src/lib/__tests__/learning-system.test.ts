@@ -178,7 +178,7 @@ describe('recordExecutionSignal', () => {
     const { recordExecutionSignal } = await import('../learning-engine')
     const signal: ExecutionSignal = {
       appSlug: 'app1', capability: 'image_generation', providerKey: 'together',
-      model: 'FLUX.1-schnell-Free', success: true, latencyMs: 3200,
+      model: 'FLUX.2-dev', success: true, latencyMs: 3200,
       costEstimateUsd: 0.002, qualityScore: 0.87, fallbackUsed: false,
     }
     const result = await recordExecutionSignal(signal)

@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/agents/run
  * Run an agent task via agent-system.ts.
- * No direct provider calls — all routing goes through capability-router.
+ * No direct provider calls — all routing goes through runtime-execution.
  *
  * adult_creator agent type is gated: requires adultPermission: true in body.
  * Forbidden: provider, model, providerOverride, modelOverride, endpoint fields.

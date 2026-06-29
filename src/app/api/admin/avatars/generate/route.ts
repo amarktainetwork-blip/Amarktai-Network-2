@@ -1,7 +1,7 @@
 /**
  * POST /api/admin/avatars/generate
- * Validate and trigger avatar generation through capability router.
- * No direct provider calls — validation via avatar-capability.ts, generation via capability-router.
+ * Validate and trigger avatar generation through canonical runtime execution.
+ * No direct provider calls — validation via avatar-capability.ts, generation via runtime routes.
  * Voice cloning requires consentConfirmed=true.
  * No provider/model selection exposed.
  */
@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { validateAvatarPayload, buildAvatarPrompt, type AvatarPayload } from '@/lib/avatar-capability'
-import { executeCapability } from '@/lib/capability-router'
+import { executeCapability } from '@/lib/runtime-execution'
 import { createGeneratedAsset } from '@/lib/campaign-storage'
 
 const FORBIDDEN = ['provider', 'model', 'providerOverride', 'modelOverride', 'endpoint'] as const
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   try {
     const prompt = buildAvatarPrompt(payload)
 
-    // Route through capability-router — runtime selects provider/model
+    // Route through canonical runtime execution — runtime selects provider/model
     const result = await executeCapability({
       input: prompt.prompt,
       capability: 'image_generation',

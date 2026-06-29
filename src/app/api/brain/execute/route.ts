@@ -31,7 +31,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { POST as handleRequest } from '@/app/api/brain/request/route'
 import { POST as handleAdminTest } from '@/app/api/admin/brain/test/route'
 import { resolveCapability } from '@/lib/capability-engine'
-import { executeCapability, type CapabilityResponse } from '@/lib/capability-router'
 
 const APP_FORBIDDEN_OVERRIDE_FIELDS = new Set([
   'provider',
@@ -61,30 +60,6 @@ function findForbiddenProviderOverride(raw: Record<string, unknown>): string | n
 
 function hasAppCredentials(raw: Record<string, unknown>): boolean {
   return Boolean((raw.appId ?? raw.app_id) && (raw.appSecret ?? raw.app_secret))
-}
-
-/**
- * Map a CapabilityResponse failure to the appropriate HTTP status code.
- *
- *   200 — success
- *   400 — bad input / missing required file
- *   403 — guardrail block / adult block
- *   422 — request validation / schema error (handled before this function)
- *   502 — provider runtime failure / bad gateway
- *   503 — missing provider / key / model (service unavailable)
- */
-function httpStatusForCapabilityResult(result: CapabilityResponse): number {
-  if (result.success) return 200
-  const cat = result.error_category
-  if (cat === 'guardrail_block') return 403
-  if (cat === 'missing_key') return 503
-  if (cat === 'model_not_supported') return 503
-  if (cat === 'endpoint_error') return 502
-  if (cat === 'provider_policy_block') return 403
-  // Missing provider / no provider at all → 503
-  if (!result.provider) return 503
-  // Provider returned an error response → 502
-  return 502
 }
 
 /** Convert execute-route body to the admin/brain/test schema. */
@@ -186,39 +161,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       { success: false, error: `App requests cannot override provider routing (${forbiddenOverride}).` },
       { status: 422 },
     )
-  }
-
-  // ── Direct capability request (no appId) — route through capability router ─
-  // When the body carries `input` AND either an explicit `capability` key or
-  // no appId/app_id at all, bypass the app-auth pipeline and route directly
-  // through the central capability router.  This is the admin/internal path.
-  const hasInput = raw.input !== undefined && raw.input !== null
-  const hasNoAppId = !raw.appId && !raw.app_id
-  if (hasInput && (raw.capability !== undefined || hasNoAppId)) {
-    try {
-      const result = await executeCapability({
-        input: String(raw.input ?? ''),
-        capability: typeof raw.capability === 'string' ? raw.capability : undefined,
-        files: Array.isArray(raw.files) ? (raw.files as string[]) : undefined,
-        appId: typeof raw.appId === 'string' ? raw.appId : undefined,
-        workspaceId: typeof raw.workspaceId === 'string' ? raw.workspaceId : undefined,
-        providerOverride: typeof raw.providerOverride === 'string' ? raw.providerOverride : undefined,
-        modelOverride: typeof raw.modelOverride === 'string' ? raw.modelOverride : undefined,
-        adultMode: typeof raw.adultMode === 'boolean' ? raw.adultMode : false,
-        safeMode: typeof raw.safeMode === 'boolean' ? raw.safeMode : false,
-        saveArtifact: typeof raw.saveArtifact === 'boolean' ? raw.saveArtifact : false,
-        traceId: typeof raw.traceId === 'string' ? raw.traceId : undefined,
-        metadata: typeof raw.metadata === 'object' && raw.metadata !== null
-          ? raw.metadata as Record<string, unknown>
-          : undefined,
-      })
-      return NextResponse.json(result, { status: httpStatusForCapabilityResult(result) })
-    } catch (err) {
-      return NextResponse.json(
-        { success: false, error: err instanceof Error ? err.message : 'Internal server error' },
-        { status: 500 },
-      )
-    }
   }
 
   // ── Standard shape — pass through unchanged ──────────────────────────────

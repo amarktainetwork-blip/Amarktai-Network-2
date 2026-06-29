@@ -103,7 +103,7 @@ export async function GET() {
     image.push(directModel('hf/custom-image-model', 'Configured image endpoint/model', 'Hugging Face', 'image', 'medium'))
     voice.push(directModel('hf/tts-model', 'Configured TTS endpoint/model', 'Hugging Face', 'voice', 'medium'))
   }
-  if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.1-schnell-Free', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
+  if (configuredProviders.has('together')) image.push(directModel('black-forest-labs/FLUX.2-dev', 'FLUX.1 Schnell', 'Together AI', 'image', 'low'))
 
   return NextResponse.json({
     genx: {

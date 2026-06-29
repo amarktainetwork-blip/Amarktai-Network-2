@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { APPROVED_ASSISTANT_MODELS, isApprovedAIProvider } from '@/lib/approved-ai-catalog'
-import { executeCapability } from '@/lib/capability-router'
+import { executeCapability } from '@/lib/runtime-execution'
 import { getSession } from '@/lib/session'
 import { recordEstimatedCost } from '@/lib/cost-tracking'
 import { routeLiveModel, type AiCapability } from '@/lib/live-ai-routing'

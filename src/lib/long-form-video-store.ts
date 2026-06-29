@@ -1,4 +1,4 @@
-import { callGenXMedia, GENX_VIDEO_MODELS, getGenXJobStatus } from '@/lib/genx-client'
+import { callGenXMedia, GENX_DEFAULT_VIDEO_MODEL, getGenXJobStatus } from '@/lib/genx-client'
 import {
   appendRecord,
   findRecord,
@@ -12,7 +12,7 @@ import { getFfmpegStatus, stitchVideoClips } from '@/lib/video-stitcher'
 import { normalizeLongFormSceneDurations } from '@/lib/provider-video-policy'
 
 export type LongFormVideoPhase = 'planning' | 'generating_scenes' | 'stitching' | 'completed' | 'failed'
-export type LongFormVideoStrategy = 'direct_provider' | 'scene_stitched'
+export type LongFormVideoStrategy = 'scene_stitched'
 
 export interface LongFormVideoScene {
   index: number
@@ -265,10 +265,14 @@ async function completeWithFinal(job: LongFormVideoJob, result: unknown, strateg
   })!
 }
 
-async function startSceneFallback(job: LongFormVideoJob, reason: string): Promise<LongFormVideoJob> {
+function selectLongFormSceneModel(): string {
+  return GENX_DEFAULT_VIDEO_MODEL
+}
+
+async function startSceneGeneration(job: LongFormVideoJob, reason: string): Promise<LongFormVideoJob> {
   const ffmpeg = await getFfmpegStatus()
   if (!ffmpeg.available) {
-    const error = `GenX direct ${job.targetDurationSeconds}s video did not start (${reason}); scene stitching fallback is unavailable because ffmpeg is not installed or not on PATH.`
+    const error = `Long-form scene stitching is unavailable because ffmpeg is not installed or not on PATH. ${reason}`
     return saveJob(job, {
       status: 'failed',
       phase: 'failed',
@@ -290,9 +294,10 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     productionNotes: job.productionNotes,
   }, sceneCount)
   const scenes: LongFormVideoScene[] = []
+  const sceneModel = selectLongFormSceneModel()
   for (const [index, scene] of plannedScenes.entries()) {
     const sceneRequestPayload = {
-      model: GENX_VIDEO_MODELS[0],
+      model: sceneModel,
       params: {
         prompt: scene.prompt,
         type: 'video',
@@ -306,7 +311,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
       },
     }
     let sceneResult = await callGenXMedia({
-      model: GENX_VIDEO_MODELS[0],
+      model: sceneModel,
       prompt: scene.prompt,
       type: 'video',
       duration: scene.durationSeconds,
@@ -321,7 +326,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     if (!sceneResult.success && shouldRetrySceneFailure(sceneResult.statusCode, sceneResult.error)) {
       attempts += 1
       sceneResult = await callGenXMedia({
-        model: GENX_VIDEO_MODELS[0],
+        model: sceneModel,
         prompt: `${scene.prompt} Keep the clip simple, single location, continuous camera, provider-safe visual-only scene.`,
         type: 'video',
         duration: scene.durationSeconds,
@@ -446,7 +451,7 @@ async function startSceneFallback(job: LongFormVideoJob, reason: string): Promis
     phase: 'generating_scenes',
     status: 'processing',
     provider: 'genx',
-    model: GENX_VIDEO_MODELS[0],
+    model: sceneModel,
     directProviderError: reason,
     ffmpegStatus: ffmpeg.ffmpegPath ?? 'ffmpeg',
     scenes,
@@ -479,8 +484,8 @@ export async function startLongFormVideoJob(input: StartLongFormVideoInput): Pro
     music: input.music ?? 'off',
     stitching: input.stitching ?? 'on',
     provider: 'genx',
-    model: GENX_VIDEO_MODELS[0],
-    strategy: 'direct_provider',
+    model: selectLongFormSceneModel(),
+    strategy: 'scene_stitched',
     phase: 'planning',
     status: 'processing',
     providerJobId: null,
@@ -498,32 +503,7 @@ export async function startLongFormVideoJob(input: StartLongFormVideoInput): Pro
     completedAt: null,
   })
 
-  const direct = await callGenXMedia({
-    model: GENX_VIDEO_MODELS[0],
-    prompt: [
-      `Create a completed ${targetDurationSeconds}-second long-form video.`,
-      `Style: ${job.style}. Aspect ratio: ${job.aspectRatio}.`,
-      `Script/topic: ${job.prompt}`,
-      job.productionNotes ? `Production notes: ${job.productionNotes}` : '',
-    ].filter(Boolean).join('\n'),
-    type: 'video',
-    duration: targetDurationSeconds,
-    style: job.style,
-    metadata: { capability: 'long_form_video', longFormJobId: job.id, targetDurationSeconds, plannedDurationSeconds },
-  })
-
-  if (direct.success && direct.url) {
-    return completeWithFinal({ ...job, model: direct.model }, { resultUrl: direct.url, status: direct.status }, 'direct_provider')
-  }
-  if (direct.success && direct.jobId) {
-    return saveJob(job, {
-      phase: 'generating_scenes',
-      providerJobId: direct.jobId,
-      model: direct.model,
-      error: null,
-    })!
-  }
-  return startSceneFallback(job, direct.error ?? 'provider returned no long-form job or media URL')
+  return startSceneGeneration(job, 'Long-form video is scene-based; no single long-duration provider call is attempted.')
 }
 
 async function persistCompletedScene(job: LongFormVideoJob, scene: LongFormVideoScene, resultUrl: string) {
@@ -563,34 +543,6 @@ export async function pollLongFormVideoJob(jobId: string): Promise<LongFormVideo
       error: `Long-form video job did not complete within ${Math.round(MAX_PROCESSING_MS / 60_000)} minutes.`,
       completedAt: new Date().toISOString(),
     })
-  }
-
-  if (job.strategy === 'direct_provider' && job.providerJobId) {
-    const providerResult = await getGenXJobStatus(job.providerJobId)
-    if (!providerResult) return job
-    if (providerResult.status === 'failed') {
-      return startSceneFallback(job, providerResult.error ?? 'direct provider job failed')
-    }
-    if (!['completed', 'succeeded'].includes(providerResult.status)) {
-      return saveJob(job, { phase: 'generating_scenes', status: 'processing', error: null })
-    }
-    if (!providerResult.resultUrl) {
-      return startSceneFallback(job, 'direct provider completed without a usable media URL')
-    }
-    try {
-      return await completeWithFinal(job, {
-        resultUrl: providerResult.resultUrl,
-        status: providerResult.status,
-        providerJobId: job.providerJobId,
-      }, 'direct_provider')
-    } catch (error) {
-      return saveJob(job, {
-        status: 'failed',
-        phase: 'failed',
-        error: `Direct long-form video completed but artifact ingestion failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-        completedAt: new Date().toISOString(),
-      })
-    }
   }
 
   if (job.strategy === 'scene_stitched') {

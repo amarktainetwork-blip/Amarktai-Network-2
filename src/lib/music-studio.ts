@@ -22,7 +22,7 @@
 import { randomUUID } from 'crypto'
 import { getVaultApiKey } from '@/lib/brain'
 import { isUsableServiceKey } from '@/lib/service-vault'
-import { callGenXMedia, GENX_AUDIO_MODELS, getGenXStatusAsync } from '@/lib/genx-client'
+import { callGenXMedia, GENX_DEFAULT_AUDIO_MODEL, getGenXStatusAsync } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ Constants Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
@@ -552,7 +552,7 @@ async function generateAudio(
     const genxStatus = await getGenXStatusAsync()
     if (genxStatus.available) {
       const genxResult = await callGenXMedia({
-        model: GENX_AUDIO_MODELS[0],
+        model: GENX_DEFAULT_AUDIO_MODEL,
         prompt: `${lyrics.title}\n\n${lyrics.lyrics}`,
         type: 'audio',
         duration: request.durationSeconds,
@@ -1143,7 +1143,7 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
         existingLyrics: request.existingLyrics ?? '',
         productionNotes: request.productionNotes ?? '',
         provider: 'genx',
-        model: GENX_AUDIO_MODELS[0],
+        model: GENX_DEFAULT_AUDIO_MODEL,
       },
     })
     jobId = row.id
@@ -1175,7 +1175,7 @@ export async function createMusicJob(request: MusicCreationRequest): Promise<Mus
     result: null,
     errorMessage: null,
     provider: 'genx',
-    model: GENX_AUDIO_MODELS[0],
+    model: GENX_DEFAULT_AUDIO_MODEL,
     createdAt: new Date().toISOString(),
     startedAt: null,
     completedAt: null,

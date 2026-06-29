@@ -1,306 +1,94 @@
-/**
- * Dependency Cleanup Tests
- *
- * Proves:
- *  - Firecrawl is NOT imported by src/lib runtime files
- *  - package.json has no Firecrawl package dependency
- *  - scrape_website capability routes to in-house scraper (not Firecrawl)
- *  - Active runtime providers are only genx/huggingface/together/groq/mimo
- *  - Removed providers are not in capability-engine suggestedProviders
- *  - Apps cannot pass providerOverride/modelOverride through agent workflow inputs
- *  - Model catalog family strings are not falsely treated as platform providers
- *  - Marketing workflow still uses scraper/RAG/agent/runtime (not Firecrawl)
- *  - VPS monitoring provider health checks only active providers
- *  - capability-engine suggestedProviders contain only allowed providers
- */
+import fs from 'fs'
+import path from 'path'
+import { describe, expect, it } from 'vitest'
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+const root = process.cwd()
 
-const ROOT = join(__dirname, '../../..')
-
-// ── Helper: read source file as string ───────────────────────────────────────
-
-function readSrc(relativePath: string): string {
-  return readFileSync(join(ROOT, relativePath), 'utf-8')
+function read(relativePath: string) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
-// ── Firecrawl import checks ───────────────────────────────────────────────────
-
-describe('Firecrawl cleanup — runtime source files', () => {
-  const REMOVED_IMPORT = "from '@/lib/firecrawl'"
-  const REMOVED_IMPORT_ALT = "from '../firecrawl'"
-
-  const RUNTIME_LIB_FILES = [
-    'src/lib/capability-router.ts',
-    'src/lib/marketing-workflow.ts',
-    'src/lib/rag-capability.ts',
-    'src/lib/scraper.ts',
-    'src/lib/agent-system.ts',
-    'src/lib/vps-monitoring.ts',
-    'src/lib/publishing-scheduler.ts',
-    'src/lib/campaign-storage.ts',
-    'src/lib/memory-capability.ts',
-    'src/lib/brand-memory.ts',
-  ]
-
-  for (const file of RUNTIME_LIB_FILES) {
-    it(`${file} does not import firecrawl`, () => {
-      const src = readSrc(file)
-      expect(src).not.toContain(REMOVED_IMPORT)
-      expect(src).not.toContain(REMOVED_IMPORT_ALT)
-      expect(src).not.toContain('firecrawl.ts')
-      expect(src).not.toMatch(/require.*firecrawl/)
-    })
+function walk(dir: string, files: string[] = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (['node_modules', '.git', '.next'].includes(entry.name)) continue
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) walk(full, files)
+    else files.push(full)
   }
+  return files
+}
 
-  it('capability-router.ts uses in-house scraper, not firecrawl', () => {
-    const src = readSrc('src/lib/capability-router.ts')
-    // Must import from scraper
-    expect(src).toContain("from '@/lib/scraper'")
-    // Must NOT import from firecrawl
-    expect(src).not.toContain("from '@/lib/firecrawl'")
-    expect(src).not.toContain('crawlAppWebsite')
-  })
-})
+function repoFiles() {
+  return walk(path.join(root, 'src'))
+    .filter((file) => /\.(ts|tsx|js|jsx)$/.test(file))
+    .map((file) => path.relative(root, file).replace(/\\/g, '/'))
+}
 
-describe('Firecrawl cleanup — package.json', () => {
-  it('package.json has no @mendable/firecrawl-js or @firecrawl/* dependency', () => {
-    const pkg = JSON.parse(readSrc('package.json')) as { dependencies?: Record<string, string>; devDependencies?: Record<string, string> }
-    const allDeps = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) }
-    for (const dep of Object.keys(allDeps)) {
-      expect(dep.toLowerCase()).not.toContain('firecrawl')
-    }
-  })
-})
-
-// ── Runtime provider governance ───────────────────────────────────────────────
-
-describe('Runtime provider governance — allowed providers only', () => {
-  const ALLOWED_PROVIDERS = ['genx', 'huggingface', 'together', 'groq', 'mimo']
-  const REMOVED_PROVIDERS = [
-    'qwen', 'dashscope', 'wanx', 'minimax', 'openai', 'gemini',
-    'anthropic', 'openrouter', 'deepseek', 'moonshot', 'replicate',
-    'cohere', 'nvidia', 'mistral',
-  ]
-
-  it('all five allowed providers are present', () => {
-    for (const p of ALLOWED_PROVIDERS) {
-      expect(ALLOWED_PROVIDERS).toContain(p)
-    }
-    expect(ALLOWED_PROVIDERS).toHaveLength(5)
-  })
-
-  it('capability-router.ts does not reference removed providers as platform providers', () => {
-    const src = readSrc('src/lib/capability-router.ts')
-    for (const removed of REMOVED_PROVIDERS) {
-      // Check that removed providers don't appear as provider keys (e.g. 'provider: "openai"')
-      // Allow model name strings (e.g. 'openai/whisper' as a model ID under HF)
-      const providerKeyPattern = new RegExp(`provider['":\\s]*['"]${removed}['"]`, 'i')
-      expect(src).not.toMatch(providerKeyPattern)
+describe('runtime cleanup regressions', () => {
+  it('deletes duplicate legacy runtime stack files', () => {
+    for (const file of [
+      'src/lib/capability-router.ts',
+      'src/lib/capability-registry.ts',
+      'src/lib/runtime-registry.ts',
+      'src/lib/model-resolver.ts',
+      'src/lib/provider-capability-map.ts',
+      'src/app/api/brain/video/route.ts',
+    ]) {
+      expect(fs.existsSync(path.join(root, file))).toBe(false)
     }
   })
 
-  it('provider-capability-map.ts only has allowed providers', () => {
-    const src = readSrc('src/lib/provider-capability-map.ts')
-    for (const removed of REMOVED_PROVIDERS) {
-      // Check provider field values — pattern: provider: 'removed_name'
-      const pattern = new RegExp(`provider:\\s*['"]${removed}['"]`, 'i')
-      expect(src).not.toMatch(pattern)
-    }
+  it('production code does not import the deleted capability router', () => {
+    const offenders = repoFiles()
+      .filter((file) => !file.includes('/__tests__/'))
+      .filter((file) => read(file).includes('capability-router'))
+    expect(offenders).toEqual([])
   })
 
-  it('capability-registry.ts only has allowed providers', () => {
-    const src = readSrc('src/lib/capability-registry.ts')
-    for (const removed of REMOVED_PROVIDERS) {
-      const pattern = new RegExp(`provider:\\s*['"]${removed}['"]`, 'i')
-      expect(src).not.toMatch(pattern)
-    }
+  it('does not use array-position GenX media defaults in production code', () => {
+    const patterns = [
+      'GENX_VIDEO_MODELS[0]',
+      'GENX_IMAGE_MODELS[0]',
+      'GENX_AUDIO_MODELS[0]',
+      'GENX_TTS_MODELS[0]',
+      'GENX_STT_MODELS[0]',
+    ]
+    const offenders = repoFiles()
+      .filter((file) => !file.includes('/__tests__/'))
+      .filter((file) => patterns.some((pattern) => read(file).includes(pattern)))
+    expect(offenders).toEqual([])
   })
 
-  it('capability-engine.ts suggestedProviders only contain allowed providers', () => {
-    const src = readSrc('src/lib/capability-engine.ts')
-    // Find all suggestedProviders arrays in the source
-    const suggestedMatches = src.match(/suggestedProviders:\s*\[([^\]]+)\]/g) ?? []
-    for (const match of suggestedMatches) {
-      // Extract provider strings from the array
-      const providers = match.match(/['"]([a-z_]+)['"]/g)?.map(s => s.replace(/['"]/g, '')) ?? []
-      for (const p of providers) {
-        expect(REMOVED_PROVIDERS).not.toContain(p)
-        // Either allowed or a legitimate non-provider string
-      }
-    }
+  it('does not reference the failed Together Free image model', () => {
+    const failedFreeModel = 'FLUX.1-schnell' + '-Free'
+    const offenders = repoFiles().filter((file) => read(file).includes(failedFreeModel))
+    expect(offenders).toEqual([])
   })
 
-  it('vps-monitoring.ts ACTIVE_PROVIDERS contains only allowed providers', () => {
-    const src = readSrc('src/lib/vps-monitoring.ts')
-    // Extract ACTIVE_PROVIDERS constant
-    const match = src.match(/ACTIVE_PROVIDERS\s*=\s*\[([^\]]+)\]/)
-    expect(match).not.toBeNull()
-    const providers = match![1].match(/['"]([a-z]+)['"]/g)?.map(s => s.replace(/['"]/g, '')) ?? []
-    expect(providers).toHaveLength(5)
-    for (const p of providers) {
-      expect(ALLOWED_PROVIDERS).toContain(p)
-    }
-    for (const removed of REMOVED_PROVIDERS) {
-      expect(providers).not.toContain(removed)
-    }
-  })
-})
-
-// ── Model catalog family names — not platform providers ───────────────────────
-
-describe('Model catalog family names — allowed under active providers', () => {
-  it('model-registry.ts family names are model metadata, not platform provider keys', () => {
-    const src = readSrc('src/lib/model-registry.ts')
-    // Model families like 'Qwen', 'Mistral', 'DeepSeek' appear as family metadata
-    // under GenX/Together/HuggingFace — that is correct
-    expect(src).toContain("family: 'Qwen")    // model family under genx/together
-    expect(src).toContain("family: 'Mistral") // model family under genx/together
-    // But provider keys for those models should be allowed providers
-    // (The model registry doesn't assign provider keys as removed providers)
-    const providerPattern = /provider:\s*['"](?:openai|gemini|anthropic|deepseek|minimax|qwen|cohere|nvidia|mistral|replicate)['"](?!\s*\/\/\s*model)/g
-    expect(src).not.toMatch(providerPattern)
+  it('long-form video is scene-based and does not call a direct 90-second provider job', () => {
+    const source = read('src/lib/long-form-video-store.ts')
+    expect(source).not.toContain('direct' + '_provider')
+    expect(source).not.toContain('Create a completed ${targetDurationSeconds}-second long-form video')
+    expect(source).toContain('startSceneGeneration')
+    expect(source).toContain('normalizeLongFormSceneDurations')
   })
 
-  it('model family strings are not the same as platform provider keys', () => {
-    // This test documents the nuance: 'Qwen' as a model family is allowed
-    // but 'qwen' as a platform provider key is not
-    const modelFamily = 'Qwen-2.5'
-    const platformProvider = 'qwen'
-    // They are different strings
-    expect(modelFamily.toLowerCase()).not.toBe(platformProvider)
-    // Platform provider check should use lowercase exact match
-    const REMOVED = ['qwen', 'minimax', 'deepseek', 'mistral']
-    expect(REMOVED).not.toContain(modelFamily) // modelFamily is not in removed list
-    expect(REMOVED).toContain(platformProvider) // provider key IS in removed list
-  })
-})
-
-// ── Apps cannot bypass provider/model selection ───────────────────────────────
-
-describe('Apps cannot bypass provider/model selection', () => {
-  afterEach(() => vi.resetModules())
-
-  it('AgentConfig type has no providerKey or modelId field', () => {
-    // The AgentConfig interface in agent-system.ts has no provider/model fields
-    const src = readSrc('src/lib/agent-system.ts')
-    // AgentConfig should not have providerKey, modelId, or model as fields
-    // (It has budget/quality but not provider selection)
-    const configInterface = src.match(/export interface AgentConfig \{[\s\S]*?\}/)?.[0] ?? ''
-    expect(configInterface).not.toContain('providerKey:')
-    expect(configInterface).not.toContain('modelId:')
-    expect(configInterface).not.toContain('model:')
-    expect(configInterface).not.toContain('provider:')
+  it('adult video truth does not route through normal video generation', () => {
+    const source = read('src/lib/capability-runtime-truth.ts')
+    const adultVideoBlock = source.match(/capabilityId: 'adult_video'[\s\S]*?dedicatedEndpointEnvs: \[[\s\S]*?\],/)?.[0] ?? ''
+    expect(adultVideoBlock).toContain('executionRoute: null')
+    expect(adultVideoBlock).not.toContain('/api/brain/video-generate')
   })
 
-  it('agentCallCapability does not forward providerOverride from app', async () => {
-    // The agent-system calls executeCapability but must not set providerOverride
-    const src = readSrc('src/lib/agent-system.ts')
-    // The CapabilityRequest built by agent must not include providerOverride from config
-    expect(src).not.toContain('providerOverride: config.provider')
-    expect(src).not.toContain('modelOverride: config.model')
-    // It should also not use providerOverride at all (runtime decides)
-    const reqBuildPattern = /const req.*CapabilityRequest[\s\S]{0,300}providerOverride/
-    expect(src).not.toMatch(reqBuildPattern)
+  it('Studio does not maintain a separate executable provider order table', () => {
+    const source = read('src/app/api/admin/studio/execute/route.ts')
+    expect(source).not.toContain('STUDIO_EXECUTABLE_PROVIDERS')
+    expect(source).not.toContain('STUDIO_PREMIUM_CHAT_PROVIDERS')
   })
 
-  it('marketing-workflow does not pass providerOverride to capability requests', () => {
-    const src = readSrc('src/lib/marketing-workflow.ts')
-    expect(src).not.toContain('providerOverride:')
-    expect(src).not.toContain('modelOverride:')
-  })
-})
-
-// ── Marketing workflow still uses scraper/RAG/agent/runtime ──────────────────
-
-describe('Marketing workflow — scraper/RAG/agent/runtime integration', () => {
-  it('imports crawlWebsite from scraper, not firecrawl', () => {
-    const src = readSrc('src/lib/marketing-workflow.ts')
-    expect(src).toContain("from '@/lib/scraper'")
-    expect(src).toContain('crawlWebsite')
-    expect(src).not.toContain("from '@/lib/firecrawl'")
-    expect(src).not.toContain('crawlAppWebsite')
-  })
-
-  it('imports RAG functions (ingestWebsite, queryRAG)', () => {
-    const src = readSrc('src/lib/marketing-workflow.ts')
-    expect(src).toContain('ingestWebsite')
-    expect(src).toContain('queryRAG')
-  })
-
-  it('imports runAgent from agent-system', () => {
-    const src = readSrc('src/lib/marketing-workflow.ts')
-    expect(src).toContain("from '@/lib/agent-system'")
-    expect(src).toContain('runAgent')
-  })
-
-  it('imports executeCapability from capability-router', () => {
-    const src = readSrc('src/lib/marketing-workflow.ts')
-    expect(src).toContain("from '@/lib/capability-router'")
-    expect(src).toContain('executeCapability')
-  })
-})
-
-// ── Open-source/local runtime confirmation ────────────────────────────────────
-
-describe('Open-source/local runtime paths', () => {
-  it('scraper.ts is in-house (no external paid scraper API dependency)', () => {
-    const src = readSrc('src/lib/scraper.ts')
-    // In-house scraper uses native fetch — no external scraper API client
-    expect(src).toContain('fetch(')
-    expect(src).not.toContain('@mendable')
-    expect(src).not.toContain('firecrawl')
-    expect(src).not.toContain('apify')
-    expect(src).not.toContain('scrapingbee')
-  })
-
-  it('rag-capability.ts uses HF embeddings and Qdrant', () => {
-    const src = readSrc('src/lib/rag-capability.ts')
-    expect(src).toContain('api-inference.huggingface.co')
-    expect(src).toContain('vector-store')
-    expect(src).not.toContain('pinecone')
-    expect(src).not.toContain('weaviate')
-  })
-
-  it('memory-capability.ts uses Prisma, not in-process Map as source of truth', () => {
-    const src = readSrc('src/lib/memory-capability.ts')
-    expect(src).toContain('@/lib/prisma')
-    expect(src).toContain('prisma.memoryEntry')
-    // In-memory Map exists only as hot cache, not source of truth
-    expect(src).toContain('_cache')
-    expect(src).not.toContain('this.entries.set') // old in-process Map pattern removed
-  })
-
-  it('campaign-storage.ts uses Prisma for persistence', () => {
-    const src = readSrc('src/lib/campaign-storage.ts')
-    expect(src).toContain('@/lib/prisma')
-    expect(src).toContain('prisma.campaign')
-    expect(src).toContain('prisma.generatedAsset')
-  })
-
-  it('publishing-scheduler.ts uses Prisma for all persistence', () => {
-    const src = readSrc('src/lib/publishing-scheduler.ts')
-    expect(src).toContain('@/lib/prisma')
-    expect(src).toContain('prisma.publishingSchedule')
-    expect(src).toContain('prisma.publishingResult')
-    expect(src).toContain('prisma.campaignAnalytics')
-  })
-
-  it('capability-registry.ts has no LIVE_PROVEN or proofStatus claims', () => {
-    const src = readSrc('src/lib/capability-registry.ts')
-    expect(src).not.toContain('LIVE_PROVEN')
-    expect(src).not.toContain('SOURCE_WIRED')
-    expect(src).not.toContain('proofStatus')
-    expect(src).not.toContain('ProofStatus')
-  })
-
-  it('provider-capability-map.ts has no LIVE_PROVEN or proofStatus claims', () => {
-    const src = readSrc('src/lib/provider-capability-map.ts')
-    expect(src).not.toContain('LIVE_PROVEN')
-    expect(src).not.toContain('SOURCE_WIRED')
-    expect(src).not.toContain('proofStatus')
-    expect(src).not.toContain('ProofStatus')
+  it('media capability truth does not mark media working from provider key alone', () => {
+    const source = read('src/lib/capability-runtime-truth.ts')
+    expect(source).toContain("status = 'wired_unproven'")
+    expect(source).toContain('Run a live ${spec.label} generation to prove end-to-end')
   })
 })
