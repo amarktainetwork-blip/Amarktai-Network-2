@@ -1,6 +1,6 @@
 import { getCapabilityRuntimeTruth, type CapabilityRuntimeTruthEntry } from '@/lib/capability-runtime-truth'
 
-export type CoreProofStatus = 'proven' | 'needs_proof' | 'blocked' | 'failed' | 'not_configured'
+export type CoreProofStatus = 'proven' | 'needs_proof' | 'blocked' | 'failed' | 'not_configured' | 'processing'
 
 export interface CoreProofCapabilitySpec {
   capability: string

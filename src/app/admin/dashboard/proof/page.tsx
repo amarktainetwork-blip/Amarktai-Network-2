@@ -26,6 +26,9 @@ export default async function ProofPage() {
             <div>
               <h2 className="font-black text-white">Core Launch Proof</h2>
               <p className="mt-1 text-sm text-slate-400">Live proof contract for launch Studio/runtime capabilities.</p>
+              <p className="mt-2 text-xs leading-6 text-slate-500">
+                The HTTP proof route is admin protected. VPS terminal proof uses <span className="font-mono text-slate-300">npm run proof</span>, which reuses the same core proof runner and does not bypass HTTP auth.
+              </p>
             </div>
             <a href="/api/admin/proof/core" className="text-sm font-bold text-cyan-300 underline">Open JSON</a>
           </div>

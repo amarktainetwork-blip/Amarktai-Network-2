@@ -9,6 +9,7 @@ import { PROVIDER_MESH } from '@/lib/provider-mesh'
 
 const root = process.cwd()
 const src = (relativePath: string) => fs.readFileSync(path.join(root, 'src', relativePath), 'utf8')
+const rootFile = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
 describe('core live proof pack and capabilities display', () => {
   it('does not mislabel audio or music artifact types as image', () => {
@@ -72,6 +73,50 @@ describe('core live proof pack and capabilities display', () => {
     expect(runner).toContain('success: boolean')
     expect(runner).toContain('ranAt: string')
     expect(runner).toContain('capabilities: CoreProofCapabilityResult[]')
+  })
+
+  it('HTTP core proof route remains admin protected', () => {
+    const route = src('app/api/admin/proof/core/route.ts')
+    expect(route).toContain('getSession')
+    expect(route).toContain('!session.isLoggedIn')
+    expect(route).toContain("error: 'Unauthorized'")
+    expect(route).toContain('status: 401')
+  })
+
+  it('package proof script runs the auth-safe local wrapper', () => {
+    const pkg = JSON.parse(rootFile('package.json')) as { scripts?: Record<string, string> }
+    expect(pkg.scripts?.proof).toBe('npx tsx scripts/run-core-proof.ts')
+    expect(fs.existsSync(path.join(root, 'scripts/run-core-proof.ts'))).toBe(true)
+  })
+
+  it('proof CLI reuses the existing runner and does not copy execution logic', () => {
+    const script = rootFile('scripts/run-core-proof.ts')
+    expect(script).toContain("from '../src/lib/core-capability-proof-runner'")
+    expect(script).toContain('runCoreCapabilityProofPack()')
+    expect(script).toContain('JSON.stringify(result, null, compact ? 0 : 2)')
+    expect(script).toContain("--compact")
+    for (const forbidden of [
+      'routeLiveModel',
+      'callProvider',
+      'callGenXMedia',
+      'fetch(',
+      '/api/brain/adult',
+      'adultTextPost',
+      'adultImagePost',
+      'providerOverride',
+      'modelOverride',
+    ]) {
+      expect(script).not.toContain(forbidden)
+    }
+  })
+
+  it('does not create a duplicate proof runner layer', () => {
+    const files = execFileSync('git', ['ls-files', 'src/lib', 'scripts'], {
+      cwd: root,
+      encoding: 'utf8',
+    }).split(/\r?\n/).filter(Boolean)
+    expect(files.filter((file) => file.endsWith('core-capability-proof-runner.ts'))).toEqual(['src/lib/core-capability-proof-runner.ts'])
+    expect(files.some((file) => /proof-v2|dashboard-v2|studio-v2/i.test(file))).toBe(false)
   })
 
   it('core proof normalization never marks missing config as proven', () => {

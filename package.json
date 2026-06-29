@@ -10,6 +10,7 @@
     "lint": "next lint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "proof": "npx tsx scripts/run-core-proof.ts",
     "worker": "node scripts/worker.mjs",
     "db:push": "prisma db push",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
