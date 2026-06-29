@@ -1,135 +1,85 @@
-import type React from 'react'
-import { Clock, CheckSquare, GitBranch, Layers } from 'lucide-react'
 import { getQueueStatus } from '@/lib/job-queue'
 
 export const dynamic = 'force-dynamic'
 
 export default async function AutomationPage() {
-  const queue = await getQueueStatus().catch(() => ({ healthy: false, backendAvailable: false, counts: {} }))
+  const queue = await getQueueStatus().catch(() => ({ healthy: false, backendAvailable: false, counts: {} as Record<string, number> }))
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg border border-cyan-300/15 bg-[#071019] p-6">
-        <div>
-          <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Automation</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Automation, Scheduler &amp; Approvals</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-            Honest status of automated workflows, scheduled jobs, approvals, and the job queue worker.
-            Nothing is marked active or working without proof.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6">
+        <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Admin</p>
+        <h1 className="mt-2 text-2xl font-black text-white">Automation</h1>
+        <p className="mt-1 text-sm text-slate-400">Scheduler, approvals, job flows, worker health, and publishing readiness.</p>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatusCard
-          icon={<Clock />}
-          label="Scheduler"
-          value="Needs proof"
-          tone="warn"
-          detail="No scheduler job has been proven. Status will update after a successful scheduled run."
-        />
-        <StatusCard
-          icon={<CheckSquare />}
-          label="Approvals"
-          value="Not configured"
-          tone="neutral"
-          detail="Approval workflows require a configured approval queue and at least one approval rule."
-        />
-        <StatusCard
-          icon={<GitBranch />}
-          label="Social publishing"
-          value="Not configured"
-          tone="neutral"
-          detail="No social platform credentials are wired. Configure provider keys to enable publishing."
-        />
-        <StatusCard
-          icon={<Layers />}
-          label="Trading execution"
-          value="Not configured"
-          tone="neutral"
-          detail="Trading execution is disabled. No exchange API keys are present in the mesh."
-        />
-      </div>
+      {/* Scheduler */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-white">Scheduler</h2>
+          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-black text-amber-300">Needs proof</span>
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          Scheduler routes exist but no scheduled jobs have been proven end-to-end.
+          Configure via <a href="/admin/dashboard/settings" className="text-cyan-400 underline">Settings</a> and run a test job to prove execution.
+        </p>
+      </section>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Panel title="Scheduler">
-          <Row label="Status" value="Needs proof" valueClass="text-amber-300" />
-          <Row label="Last run" value="Never recorded" />
-          <Row label="Next run" value="Unknown" />
-          <Row label="Next action" value="Run a scheduled job successfully to prove scheduler is operational." />
-        </Panel>
+      {/* Approvals */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-white">Approvals</h2>
+          <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-black text-amber-300">Wired</span>
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          Approval routes are wired. Storage must be writable for approvals to persist.
+        </p>
+      </section>
 
-        <Panel title="Approvals">
-          <Row label="Status" value="Not configured" valueClass="text-slate-400" />
-          <Row label="Pending approvals" value="0" />
-          <Row label="Approval rules" value="None configured" />
-          <Row label="Next action" value="Define approval rules in settings to enable workflow approvals." />
-        </Panel>
-      </div>
+      {/* Worker / Queue */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-white">Worker / Queue</h2>
+          <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${queue.healthy ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/30 bg-amber-400/10 text-amber-300'}`}>
+            {queue.healthy ? 'Working' : queue.backendAvailable ? 'Degraded' : 'Backend unavailable'}
+          </span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {(['queued', 'running', 'processing', 'pending'] as const).map((key) => (
+            <div key={key} className="rounded-xl border border-slate-800 bg-slate-950/55 p-3 text-center">
+              <p className="text-xl font-black text-slate-200">{queue.counts?.[key] ?? 0}</p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{key}</p>
+            </div>
+          ))}
+        </div>
+        {!queue.backendAvailable && (
+          <p className="mt-3 text-sm text-amber-200">Queue backend unavailable. Configure REDIS_URL to enable BullMQ-backed job processing.</p>
+        )}
+      </section>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Panel title="Job flow status">
-          <Row label="Queue backend" value={queue.backendAvailable ? 'Available' : 'Not configured or unreachable'} valueClass={queue.backendAvailable ? 'text-emerald-300' : 'text-red-300'} />
-          <Row label="Queue health" value={queue.healthy ? 'Healthy' : 'Needs attention'} valueClass={queue.healthy ? 'text-emerald-300' : 'text-amber-300'} />
-          {Object.keys(queue.counts).length > 0 ? (
-            Object.entries(queue.counts).map(([name, count]) => (
-              <Row key={name} label={name} value={String(count)} />
-            ))
-          ) : (
-            <Row label="Job counts" value="No counts returned — queue may be idle or Redis unavailable." />
-          )}
-        </Panel>
+      {/* Social Publishing */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-white">Social Publishing</h2>
+          <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-black text-slate-500">Not configured</span>
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          Social publishing routes are planned. No platform connections are configured or proven.
+          Connect accounts and configure publishing credentials to enable.
+        </p>
+      </section>
 
-        <Panel title="Worker / Queue">
-          <Row label="Status" value={queue.healthy ? 'Healthy' : 'Needs attention'} valueClass={queue.healthy ? 'text-emerald-300' : 'text-amber-300'} />
-          <Row label="Backend" value={queue.backendAvailable ? 'Redis / BullMQ available' : 'Backend unavailable'} />
-          <Row label="Social publishing" value="Not configured" />
-          <Row label="Next action for social" value="Wire social provider credentials and configure publishing queue." />
-          <Row label="Trading execution" value="Not configured" />
-          <Row label="Next action for trading" value="Wire exchange API keys to enable automated trading execution." />
-        </Panel>
-      </div>
-    </div>
-  )
-}
-
-function StatusCard({ icon, label, value, tone, detail }: {
-  icon: React.ReactElement
-  label: string
-  value: string
-  tone: 'good' | 'warn' | 'bad' | 'neutral'
-  detail: string
-}) {
-  const valueClass =
-    tone === 'good' ? 'text-emerald-300' :
-    tone === 'warn' ? 'text-amber-300' :
-    tone === 'bad' ? 'text-red-300' :
-    'text-slate-400'
-  const iconClass = tone === 'neutral' ? 'text-slate-500' : 'text-cyan-300'
-  return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
-      <span className={['[&_svg]:h-5 [&_svg]:w-5', iconClass].join(' ')}>{icon}</span>
-      <p className="mt-3 text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={['mt-1 text-xl font-black', valueClass].join(' ')}>{value}</p>
-      <p className="mt-2 text-xs leading-5 text-slate-500">{detail}</p>
-    </div>
-  )
-}
-
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-      <h2 className="text-lg font-black text-white">{title}</h2>
-      <div className="mt-4 space-y-2">{children}</div>
-    </section>
-  )
-}
-
-function Row({ label, value, valueClass }: { label: string; value: string; valueClass?: string }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-2 text-xs last:border-0">
-      <span className="font-bold text-slate-500">{label}</span>
-      <span className={['max-w-[65%] break-words text-right font-bold', valueClass ?? 'text-slate-300'].join(' ')}>{value}</span>
+      {/* Trading */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="font-black text-white">Trading</h2>
+          <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-black text-slate-500">Not configured</span>
+        </div>
+        <p className="mt-2 text-sm text-slate-400">
+          Trading strategy and execution routes are planned. No exchange connections are configured or proven.
+          Configure exchange credentials and paper-trade proof before enabling live execution.
+        </p>
+      </section>
     </div>
   )
 }

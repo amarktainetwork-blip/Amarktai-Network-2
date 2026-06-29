@@ -1,3 +1,10 @@
+/**
+ * Capability UI Schema
+ *
+ * Defines the schema for Studio mode rendering and future App capability requests.
+ * Apps request capabilities using this schema shape — never provider or model.
+ */
+
 export type FieldType =
   | 'text'
   | 'textarea'
@@ -9,795 +16,523 @@ export type FieldType =
   | 'file'
   | 'status'
   | 'duration'
-  | 'structure';
+  | 'structure'
+
+export interface FieldOption {
+  value: string
+  label: string
+}
 
 export interface CapabilityField {
-  id: string;
-  label: string;
-  type: FieldType;
-  required?: boolean;
-  defaultValue?: string | number | boolean;
-  placeholder?: string;
-  helpText?: string;
-  options?: Array<{ value: string; label: string }>;
-  statusCapabilityId?: string;
-  visibleWhen?: Record<string, string | boolean>;
+  id: string
+  label: string
+  type: FieldType
+  required?: boolean
+  defaultValue?: string | number | boolean
+  placeholder?: string
+  helpText?: string
+  options?: FieldOption[]
+  statusCapabilityId?: string
+  visibleWhen?: string
 }
 
 export interface CapabilityUiMode {
-  id: string;
-  label: string;
-  shortLabel: string;
-  category: string;
-  description: string;
-  requestCapability: string;
-  statusCapabilityId: string;
-  knownRoute?: string;
-  artifactType?: string;
-  adminOnly?: boolean;
-  adultPrivate?: boolean;
-  appUsable: boolean;
-  proofRequirements?: string[];
-  fields: CapabilityField[];
-  musicSubSections?: string[];
+  id: string
+  label: string
+  shortLabel: string
+  category: string
+  description: string
+  requestCapability: string
+  statusCapabilityId: string
+  knownRoute?: string
+  artifactType?: string
+  adminOnly?: boolean
+  adultPrivate?: boolean
+  appUsable: boolean
+  proofRequirements?: string[]
+  musicSubSections?: string[]
+  fields: CapabilityField[]
 }
 
+// ── Shared field helpers ───────────────────────────────────────────────────────
+
+const qualityField: CapabilityField = {
+  id: 'quality',
+  label: 'Quality / Cost',
+  type: 'select',
+  defaultValue: 'balanced',
+  options: [
+    { value: 'cheap', label: 'Economy' },
+    { value: 'balanced', label: 'Balanced' },
+    { value: 'premium', label: 'Premium' },
+  ],
+}
+
+const saveArtifactField: CapabilityField = {
+  id: 'save_artifact',
+  label: 'Save artifact',
+  type: 'toggle',
+  defaultValue: true,
+}
+
+const aspectRatioField: CapabilityField = {
+  id: 'aspect_ratio',
+  label: 'Aspect ratio',
+  type: 'select',
+  defaultValue: '16:9',
+  options: [
+    { value: '16:9', label: '16:9 Landscape' },
+    { value: '9:16', label: '9:16 Portrait' },
+    { value: '1:1', label: '1:1 Square' },
+  ],
+}
+
+// ── Mode definitions ───────────────────────────────────────────────────────────
+
 export const CAPABILITY_UI_MODES: readonly CapabilityUiMode[] = [
+  // ── Chat ──────────────────────────────────────────────────────────────────
   {
     id: 'chat',
     label: 'Chat',
     shortLabel: 'Chat',
     category: 'text',
-    description: 'Conversational AI chat with optional memory and streaming.',
+    description: 'Conversational AI — reasoning, drafting, planning, summarization.',
     requestCapability: 'chat',
     statusCapabilityId: 'chat',
-    knownRoute: '/chat',
-    artifactType: 'chat_message',
+    knownRoute: '/api/brain/request',
+    artifactType: 'document',
     appUsable: true,
+    proofRequirements: ['provider_connected', 'last_test_passed'],
     fields: [
-      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Enter your message…' },
-      {
-        id: 'quality',
-        label: 'Quality',
-        type: 'select',
-        options: [
-          { value: 'cheap', label: 'Cheap' },
-          { value: 'balanced', label: 'Balanced' },
-          { value: 'premium', label: 'Premium' },
-        ],
-        defaultValue: 'balanced',
-      },
-      { id: 'save_artifact', label: 'Save Artifact', type: 'toggle', defaultValue: false },
-      { id: 'memory', label: 'Memory', type: 'toggle', defaultValue: false },
-      { id: 'streaming', label: 'Streaming', type: 'toggle', defaultValue: true },
+      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Ask the platform to reason, draft, plan, or explain.' },
+      { id: 'streaming', label: 'Streaming', type: 'toggle', defaultValue: false },
+      { id: 'memory', label: 'Use memory', type: 'toggle', defaultValue: false },
+      qualityField,
+      saveArtifactField,
     ],
   },
+
+  // ── Image ─────────────────────────────────────────────────────────────────
   {
     id: 'image',
-    label: 'Image Generation',
+    label: 'Image',
     shortLabel: 'Image',
     category: 'image',
     description: 'Generate images from text prompts.',
     requestCapability: 'image_generation',
     statusCapabilityId: 'image_generation',
-    knownRoute: '/image',
+    knownRoute: '/api/brain/image',
     artifactType: 'image',
     appUsable: true,
+    proofRequirements: ['provider_connected', 'storage_writable'],
     fields: [
-      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe the image…' },
-      { id: 'negative_prompt', label: 'Negative Prompt', type: 'textarea', placeholder: 'What to avoid…' },
-      {
-        id: 'style',
-        label: 'Style',
-        type: 'select',
-        options: [
-          { value: 'photorealistic', label: 'Photorealistic' },
-          { value: 'anime', label: 'Anime' },
-          { value: 'illustration', label: 'Illustration' },
-          { value: 'oil_painting', label: 'Oil Painting' },
-          { value: 'watercolor', label: 'Watercolor' },
-          { value: 'sketch', label: 'Sketch' },
-        ],
-      },
-      {
-        id: 'aspect_ratio',
-        label: 'Aspect Ratio',
-        type: 'select',
-        options: [
-          { value: '1:1', label: '1:1 Square' },
-          { value: '16:9', label: '16:9 Landscape' },
-          { value: '9:16', label: '9:16 Portrait' },
-          { value: '4:3', label: '4:3' },
-          { value: '3:4', label: '3:4' },
-        ],
-        defaultValue: '1:1',
-      },
-      { id: 'count', label: 'Count', type: 'number', defaultValue: 1 },
-      {
-        id: 'quality',
-        label: 'Quality',
-        type: 'select',
-        options: [
-          { value: 'cheap', label: 'Cheap' },
-          { value: 'balanced', label: 'Balanced' },
-          { value: 'premium', label: 'Premium' },
-        ],
-        defaultValue: 'balanced',
-      },
-      { id: 'seed', label: 'Seed', type: 'number', placeholder: 'Random' },
+      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe the image, style, references, and intended use.' },
+      { id: 'negative_prompt', label: 'Negative prompt', type: 'textarea', placeholder: 'What to avoid in the image.' },
+      { id: 'style', label: 'Style', type: 'select', options: [
+        { value: 'realistic', label: 'Realistic' },
+        { value: 'cinematic', label: 'Cinematic' },
+        { value: 'anime', label: 'Anime' },
+        { value: 'digital_art', label: 'Digital Art' },
+        { value: 'painting', label: 'Painting' },
+        { value: 'sketch', label: 'Sketch' },
+      ]},
+      aspectRatioField,
+      { id: 'count', label: 'Number of images', type: 'number', defaultValue: 1 },
+      qualityField,
+      { id: 'seed', label: 'Seed (optional)', type: 'number', placeholder: 'For reproducibility' },
     ],
   },
+
+  // ── Video ─────────────────────────────────────────────────────────────────
   {
     id: 'video',
-    label: 'Video Generation',
+    label: 'Video',
     shortLabel: 'Video',
     category: 'video',
-    description: 'Generate short videos from text prompts.',
+    description: 'Generate short video clips from text prompts.',
     requestCapability: 'video_generation',
     statusCapabilityId: 'video_generation',
-    knownRoute: '/video',
+    knownRoute: '/api/brain/video-generate',
     artifactType: 'video',
     appUsable: true,
+    proofRequirements: ['provider_connected', 'storage_writable'],
     fields: [
-      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe the video…' },
-      { id: 'duration', label: 'Duration', type: 'duration' },
-      {
-        id: 'aspect_ratio',
-        label: 'Aspect Ratio',
-        type: 'select',
-        options: [
-          { value: '16:9', label: '16:9 Landscape' },
-          { value: '9:16', label: '9:16 Portrait' },
-          { value: '1:1', label: '1:1 Square' },
-        ],
-        defaultValue: '16:9',
-      },
-      {
-        id: 'style',
-        label: 'Style',
-        type: 'select',
-        options: [
-          { value: 'cinematic', label: 'Cinematic' },
-          { value: 'animation', label: 'Animation' },
-          { value: 'documentary', label: 'Documentary' },
-          { value: 'vlog', label: 'Vlog' },
-        ],
-      },
-      { id: 'count', label: 'Count', type: 'number', defaultValue: 1 },
-      {
-        id: 'quality',
-        label: 'Quality',
-        type: 'select',
-        options: [
-          { value: 'cheap', label: 'Cheap' },
-          { value: 'balanced', label: 'Balanced' },
-          { value: 'premium', label: 'Premium' },
-        ],
-        defaultValue: 'balanced',
-      },
+      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe a short video, reference image, camera motion, and format.' },
+      { id: 'duration', label: 'Target duration', type: 'duration', defaultValue: '4s', helpText: 'Max 8s per clip for short video.' },
+      aspectRatioField,
+      { id: 'style', label: 'Style', type: 'select', options: [
+        { value: 'cinematic', label: 'Cinematic' },
+        { value: 'animated', label: 'Animated' },
+        { value: 'realistic', label: 'Realistic' },
+        { value: 'documentary', label: 'Documentary' },
+        { value: 'commercial', label: 'Commercial' },
+      ]},
+      { id: 'count', label: 'Number of videos', type: 'number', defaultValue: 1 },
+      qualityField,
     ],
   },
+
+  // ── Long-form Video ────────────────────────────────────────────────────────
   {
     id: 'long_form_video',
-    label: 'Long-Form Video',
+    label: 'Long-form Video',
     shortLabel: 'Long Video',
     category: 'video',
-    description: 'Generate multi-scene long-form videos.',
-    requestCapability: 'long_form_video_generation',
-    statusCapabilityId: 'long_form_video_generation',
-    knownRoute: '/long-video',
+    description: 'Plan and assemble multi-scene long-form video.',
+    requestCapability: 'long_form_video',
+    statusCapabilityId: 'long_form_video',
+    knownRoute: '/api/brain/long-form-video',
     artifactType: 'video',
     appUsable: false,
+    proofRequirements: ['provider_connected', 'storage_writable', 'video_executable'],
     fields: [
-      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe the full video…' },
-      { id: 'target_duration', label: 'Target Duration', type: 'duration' },
-      { id: 'scene_count', label: 'Scene Count', type: 'number', defaultValue: 5 },
-      { id: 'scene_length', label: 'Scene Length', type: 'duration' },
-      {
-        id: 'style',
-        label: 'Style',
-        type: 'select',
-        options: [
-          { value: 'cinematic', label: 'Cinematic' },
-          { value: 'documentary', label: 'Documentary' },
-          { value: 'explainer', label: 'Explainer' },
-          { value: 'vlog', label: 'Vlog' },
-        ],
-      },
-      {
-        id: 'aspect_ratio',
-        label: 'Aspect Ratio',
-        type: 'select',
-        options: [
-          { value: '16:9', label: '16:9 Landscape' },
-          { value: '9:16', label: '9:16 Portrait' },
-          { value: '1:1', label: '1:1 Square' },
-        ],
-        defaultValue: '16:9',
-      },
-      { id: 'voice', label: 'Voiceover', type: 'toggle', defaultValue: false },
-      { id: 'music', label: 'Background Music', type: 'toggle', defaultValue: false },
-      { id: 'stitching', label: 'Auto-Stitch Scenes', type: 'toggle', defaultValue: true },
-      { id: 'production_notes', label: 'Production Notes', type: 'textarea', placeholder: 'Additional instructions…' },
+      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe script, scenes, music, voice, stitching, and final format.' },
+      { id: 'target_duration', label: 'Target duration', type: 'duration', defaultValue: '90s', helpText: 'Long-form uses multiple 4-8s scenes assembled together. Not a single clip.' },
+      { id: 'scene_count', label: 'Scene count', type: 'number', defaultValue: 6 },
+      { id: 'scene_length', label: 'Scene length', type: 'duration', defaultValue: '8s' },
+      aspectRatioField,
+      { id: 'style', label: 'Style', type: 'select', options: [{ value: 'cinematic', label: 'Cinematic' }, { value: 'documentary', label: 'Documentary' }, { value: 'commercial', label: 'Commercial' }] },
+      { id: 'voice', label: 'Voice toggle', type: 'toggle', defaultValue: false },
+      { id: 'music', label: 'Music toggle', type: 'toggle', defaultValue: false },
+      { id: 'stitching', label: 'Stitching option', type: 'toggle', defaultValue: false },
+      { id: 'production_notes', label: 'Production notes', type: 'textarea' },
     ],
   },
+
+  // ── Image-to-Video ────────────────────────────────────────────────────────
   {
     id: 'image_to_video',
-    label: 'Image to Video',
-    shortLabel: 'Img→Video',
+    label: 'Image-to-Video',
+    shortLabel: 'I2V',
     category: 'video',
-    description: 'Animate a reference image into a video.',
-    requestCapability: 'image_to_video_generation',
-    statusCapabilityId: 'image_to_video_generation',
-    knownRoute: '/image-to-video',
+    description: 'Animate an image into a video clip.',
+    requestCapability: 'image_to_video',
+    statusCapabilityId: 'image_to_video',
+    knownRoute: '/api/brain/video-generate',
     artifactType: 'video',
-    appUsable: false,
+    appUsable: true,
+    proofRequirements: ['provider_connected', 'storage_writable', 'reference_image_required'],
     fields: [
-      { id: 'prompt', label: 'Motion Prompt', type: 'textarea', required: true, placeholder: 'Describe the motion…' },
-      { id: 'reference_image', label: 'Reference Image URL', type: 'url', required: true },
-      { id: 'duration', label: 'Duration', type: 'duration' },
-      {
-        id: 'aspect_ratio',
-        label: 'Aspect Ratio',
-        type: 'select',
-        options: [
-          { value: '16:9', label: '16:9 Landscape' },
-          { value: '9:16', label: '9:16 Portrait' },
-          { value: '1:1', label: '1:1 Square' },
-        ],
-        defaultValue: '16:9',
-      },
-      {
-        id: 'style',
-        label: 'Style',
-        type: 'select',
-        options: [
-          { value: 'cinematic', label: 'Cinematic' },
-          { value: 'animation', label: 'Animation' },
-          { value: 'realistic', label: 'Realistic' },
-        ],
-      },
+      { id: 'prompt', label: 'Prompt', type: 'textarea', required: true, placeholder: 'Describe motion, camera move, and transformation from the reference image.' },
+      { id: 'reference_image', label: 'Reference image URL', type: 'url', required: true, helpText: 'Required for image-to-video.' },
+      { id: 'duration', label: 'Target duration', type: 'duration', defaultValue: '4s' },
+      aspectRatioField,
+      { id: 'style', label: 'Style', type: 'select', options: [{ value: 'cinematic', label: 'Cinematic' }, { value: 'animated', label: 'Animated' }, { value: 'realistic', label: 'Realistic' }] },
     ],
   },
+
+  // ── Music ─────────────────────────────────────────────────────────────────
   {
     id: 'music',
-    label: 'Music Generation',
+    label: 'Music / Audio',
     shortLabel: 'Music',
     category: 'audio',
-    description: 'Generate original music tracks with full production controls.',
+    description: 'Generate original songs, instrumentals, and audio compositions.',
     requestCapability: 'music_generation',
     statusCapabilityId: 'music_generation',
-    knownRoute: '/music',
+    knownRoute: '/api/admin/music-studio',
     artifactType: 'audio',
     appUsable: true,
+    proofRequirements: ['provider_connected', 'storage_writable'],
     musicSubSections: ['Song', 'Lyrics', 'Production', 'Structure', 'Remix / Variations', 'Video / Outputs'],
     fields: [
-      // Song
-      {
-        id: 'theme',
-        label: 'Theme / Prompt',
-        type: 'textarea',
-        placeholder: 'Describe the mood, theme, or concept of the song…',
-      },
-      // Lyrics
-      { id: 'lyrics', label: 'Lyrics', type: 'textarea', placeholder: 'Enter custom lyrics or leave blank to auto-generate…' },
-      { id: 'generate_lyrics', label: 'Auto-Generate Lyrics', type: 'toggle', defaultValue: false },
-      // Production
-      {
-        id: 'genre',
-        label: 'Genre',
-        type: 'select',
-        options: [
-          { value: 'pop', label: 'Pop' },
-          { value: 'rock', label: 'Rock' },
-          { value: 'jazz', label: 'Jazz' },
-          { value: 'hip-hop', label: 'Hip-Hop' },
-          { value: 'electronic', label: 'Electronic' },
-          { value: 'classical', label: 'Classical' },
-          { value: 'country', label: 'Country' },
-          { value: 'r&b', label: 'R&B' },
-          { value: 'folk', label: 'Folk' },
-          { value: 'metal', label: 'Metal' },
-        ],
-      },
-      {
-        id: 'genres_multi',
-        label: 'Genres (Multi)',
-        type: 'multi_select',
-        options: [
-          { value: 'pop', label: 'Pop' },
-          { value: 'rock', label: 'Rock' },
-          { value: 'jazz', label: 'Jazz' },
-          { value: 'hip-hop', label: 'Hip-Hop' },
-          { value: 'electronic', label: 'Electronic' },
-          { value: 'classical', label: 'Classical' },
-          { value: 'country', label: 'Country' },
-          { value: 'r&b', label: 'R&B' },
-          { value: 'folk', label: 'Folk' },
-          { value: 'metal', label: 'Metal' },
-        ],
-      },
+      // ── Song ──
+      { id: 'theme', label: 'Song theme / prompt', type: 'textarea', required: true, placeholder: 'Describe the song concept, emotion, story, or vibe.' },
+      { id: 'genre', label: 'Primary genre', type: 'select', options: [
+        { value: 'pop', label: 'Pop' }, { value: 'rock', label: 'Rock' }, { value: 'jazz', label: 'Jazz' },
+        { value: 'hip-hop', label: 'Hip-hop' }, { value: 'electronic', label: 'Electronic' },
+        { value: 'classical', label: 'Classical' }, { value: 'country', label: 'Country' },
+        { value: 'rnb', label: 'R&B' }, { value: 'folk', label: 'Folk' }, { value: 'metal', label: 'Metal' },
+      ]},
+      { id: 'genres_multi', label: 'Multi-genre tags', type: 'multi_select', options: [
+        { value: 'pop', label: 'Pop' }, { value: 'rock', label: 'Rock' }, { value: 'jazz', label: 'Jazz' },
+        { value: 'hip-hop', label: 'Hip-hop' }, { value: 'electronic', label: 'Electronic' },
+      ]},
+      { id: 'mood', label: 'Mood', type: 'select', options: [
+        { value: 'uplifting', label: 'Uplifting' }, { value: 'melancholic', label: 'Melancholic' },
+        { value: 'energetic', label: 'Energetic' }, { value: 'calm', label: 'Calm' }, { value: 'dark', label: 'Dark' },
+      ]},
+      { id: 'vocal_mode', label: 'Vocal / No vocal', type: 'select', defaultValue: 'vocal', options: [
+        { value: 'vocal', label: 'Vocal' }, { value: 'instrumental', label: 'Instrumental' }, { value: 'no_vocal', label: 'No vocal' },
+      ]},
+      { id: 'vocal_style', label: 'Vocal style', type: 'select', visibleWhen: 'vocal_mode=vocal', options: [
+        { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'choir', label: 'Choir' },
+      ]},
+      { id: 'language', label: 'Language', type: 'select', defaultValue: 'en', options: [
+        { value: 'en', label: 'English' }, { value: 'es', label: 'Spanish' }, { value: 'fr', label: 'French' },
+      ]},
+      { id: 'target_duration', label: 'Target duration', type: 'duration', defaultValue: '180s' },
+      { id: 'track_count', label: 'Number of songs', type: 'number', defaultValue: 1 },
+      { id: 'instrumental_only', label: 'Instrumental only', type: 'toggle', defaultValue: false },
+      { id: 'generate_lyrics', label: 'Generate lyrics', type: 'toggle', defaultValue: true },
+      qualityField,
+      // ── Lyrics ──
+      { id: 'lyrics', label: 'Lyrics textarea', type: 'textarea', placeholder: 'Paste your lyrics or leave blank to generate.' },
+      // ── Production ──
       { id: 'bpm', label: 'BPM', type: 'number', defaultValue: 120 },
-      {
-        id: 'key',
-        label: 'Key',
-        type: 'select',
-        options: [
-          { value: 'C', label: 'C Major' },
-          { value: 'Cm', label: 'C Minor' },
-          { value: 'D', label: 'D Major' },
-          { value: 'Dm', label: 'D Minor' },
-          { value: 'E', label: 'E Major' },
-          { value: 'Em', label: 'E Minor' },
-          { value: 'F', label: 'F Major' },
-          { value: 'Fm', label: 'F Minor' },
-          { value: 'G', label: 'G Major' },
-          { value: 'Gm', label: 'G Minor' },
-          { value: 'A', label: 'A Major' },
-          { value: 'Am', label: 'A Minor' },
-          { value: 'B', label: 'B Major' },
-          { value: 'Bm', label: 'B Minor' },
-        ],
-      },
-      {
-        id: 'mood',
-        label: 'Mood',
-        type: 'select',
-        options: [
-          { value: 'happy', label: 'Happy' },
-          { value: 'sad', label: 'Sad' },
-          { value: 'energetic', label: 'Energetic' },
-          { value: 'calm', label: 'Calm' },
-          { value: 'romantic', label: 'Romantic' },
-          { value: 'dark', label: 'Dark' },
-          { value: 'epic', label: 'Epic' },
-          { value: 'playful', label: 'Playful' },
-        ],
-      },
-      {
-        id: 'vocal_mode',
-        label: 'Vocal Mode',
-        type: 'select',
-        options: [
-          { value: 'vocal', label: 'Vocal' },
-          { value: 'instrumental', label: 'Instrumental' },
-          { value: 'no_vocal', label: 'No Vocal' },
-        ],
-        defaultValue: 'vocal',
-      },
-      {
-        id: 'vocal_style',
-        label: 'Vocal Style',
-        type: 'select',
-        options: [
-          { value: 'pop', label: 'Pop' },
-          { value: 'opera', label: 'Opera' },
-          { value: 'rap', label: 'Rap' },
-          { value: 'soulful', label: 'Soulful' },
-          { value: 'breathy', label: 'Breathy' },
-          { value: 'powerful', label: 'Powerful' },
-        ],
-      },
-      // Structure
-      { id: 'target_duration', label: 'Target Duration', type: 'duration' },
-      { id: 'track_count', label: 'Track Count', type: 'number', defaultValue: 1 },
-      { id: 'instrumental_only', label: 'Instrumental Only', type: 'toggle', defaultValue: false },
-      {
-        id: 'quality',
-        label: 'Quality',
-        type: 'select',
-        options: [
-          { value: 'cheap', label: 'Cheap' },
-          { value: 'balanced', label: 'Balanced' },
-          { value: 'premium', label: 'Premium' },
-        ],
-        defaultValue: 'balanced',
-      },
-      // Remix / Variations
-      { id: 'remix', label: 'Remix', type: 'toggle', defaultValue: false },
-      {
-        id: 'remix_style',
-        label: 'Remix Style',
-        type: 'select',
-        visibleWhen: { remix: true },
-        options: [
-          { value: 'acoustic', label: 'Acoustic' },
-          { value: 'edm', label: 'EDM' },
-          { value: 'lofi', label: 'Lo-Fi' },
-          { value: 'orchestral', label: 'Orchestral' },
-          { value: 'jazz', label: 'Jazz' },
-        ],
-      },
-      // Outputs
-      { id: 'stems', label: 'Stems', type: 'status', statusCapabilityId: 'music_generation' },
-      { id: 'cover_art', label: 'Cover Art', type: 'status', statusCapabilityId: 'image_generation' },
-      { id: 'music_video', label: 'Music Video', type: 'toggle', defaultValue: false },
-      {
-        id: 'music_video_style',
-        label: 'Music Video Style',
-        type: 'select',
-        visibleWhen: { music_video: true },
-        options: [
-          { value: 'lyric', label: 'Lyric Video' },
-          { value: 'cinematic', label: 'Cinematic' },
-          { value: 'visualizer', label: 'Visualizer' },
-          { value: 'animated', label: 'Animated' },
-        ],
-      },
-      { id: 'lyric_video', label: 'Lyric Video', type: 'toggle', defaultValue: false },
-      { id: 'download_artifact', label: 'Download', type: 'status', statusCapabilityId: 'music_generation' },
+      { id: 'key', label: 'Key', type: 'select', options: [
+        { value: 'c', label: 'C' }, { value: 'g', label: 'G' }, { value: 'd', label: 'D' },
+        { value: 'a', label: 'A' }, { value: 'e', label: 'E' }, { value: 'am', label: 'Am' },
+      ]},
+      { id: 'energy', label: 'Energy level', type: 'select', options: [
+        { value: 'low', label: 'Low' }, { value: 'medium', label: 'Medium' }, { value: 'high', label: 'High' },
+      ]},
+      { id: 'production_notes', label: 'Production notes', type: 'textarea' },
+      // ── Structure ──
+      { id: 'structure_intro', label: 'Intro', type: 'text', placeholder: 'Intro length / style' },
+      { id: 'structure_verse', label: 'Verse', type: 'text', placeholder: 'Verse style' },
+      { id: 'structure_chorus', label: 'Chorus', type: 'text', placeholder: 'Chorus style' },
+      { id: 'structure_bridge', label: 'Bridge', type: 'text', placeholder: 'Bridge style' },
+      { id: 'structure_outro', label: 'Outro', type: 'text', placeholder: 'Outro style' },
+      // ── Remix / Variations ──
+      { id: 'remix', label: 'Create remix', type: 'toggle', defaultValue: false },
+      { id: 'remix_style', label: 'Remix style', type: 'select', visibleWhen: 'remix=true', options: [
+        { value: 'acoustic', label: 'Acoustic' }, { value: 'dance', label: 'Dance' },
+        { value: 'cinematic', label: 'Cinematic' }, { value: 'radio_edit', label: 'Radio edit' },
+        { value: 'extended', label: 'Extended mix' }, { value: 'instrumental', label: 'Instrumental version' },
+      ]},
+      { id: 'stems', label: 'Stems / vocals-only', type: 'status', statusCapabilityId: 'music_generation' },
+      // ── Video / Outputs ──
+      { id: 'cover_art', label: 'Cover art', type: 'status', statusCapabilityId: 'image_generation' },
+      { id: 'music_video', label: 'Music video handoff', type: 'toggle', defaultValue: false },
+      { id: 'music_video_style', label: 'Music video visual style', type: 'select', visibleWhen: 'music_video=true', options: [
+        { value: 'abstract', label: 'Abstract' }, { value: 'narrative', label: 'Narrative' }, { value: 'lyric', label: 'Lyric' },
+      ]},
+      { id: 'lyric_video', label: 'Lyric video', type: 'toggle', defaultValue: false },
+      { id: 'download_artifact', label: 'Download artifact', type: 'status', statusCapabilityId: 'music_generation' },
     ],
   },
+
+  // ── TTS ────────────────────────────────────────────────────────────────────
   {
     id: 'tts',
-    label: 'Text to Speech',
+    label: 'Voice / TTS',
     shortLabel: 'TTS',
     category: 'audio',
-    description: 'Convert text to natural-sounding speech.',
+    description: 'Convert text to speech audio.',
     requestCapability: 'tts',
     statusCapabilityId: 'tts',
-    knownRoute: '/tts',
+    knownRoute: '/api/brain/tts',
     artifactType: 'audio',
     appUsable: true,
+    proofRequirements: ['provider_connected'],
     fields: [
-      { id: 'text', label: 'Text', type: 'textarea', required: true, placeholder: 'Enter text to convert to speech…' },
-      {
-        id: 'voice',
-        label: 'Voice',
-        type: 'select',
-        options: [
-          { value: 'alloy', label: 'Alloy' },
-          { value: 'echo', label: 'Echo' },
-          { value: 'fable', label: 'Fable' },
-          { value: 'onyx', label: 'Onyx' },
-          { value: 'nova', label: 'Nova' },
-          { value: 'shimmer', label: 'Shimmer' },
-        ],
-        defaultValue: 'alloy',
-      },
-      {
-        id: 'language',
-        label: 'Language',
-        type: 'select',
-        options: [
-          { value: 'en', label: 'English' },
-          { value: 'es', label: 'Spanish' },
-          { value: 'fr', label: 'French' },
-          { value: 'de', label: 'German' },
-          { value: 'it', label: 'Italian' },
-          { value: 'pt', label: 'Portuguese' },
-          { value: 'zh', label: 'Chinese' },
-          { value: 'ja', label: 'Japanese' },
-          { value: 'ko', label: 'Korean' },
-          { value: 'ar', label: 'Arabic' },
-        ],
-        defaultValue: 'en',
-      },
+      { id: 'text', label: 'Text', type: 'textarea', required: true, placeholder: 'Paste the voice script and choose delivery style.' },
+      { id: 'voice', label: 'Voice', type: 'select', options: [
+        { value: 'auto', label: 'Auto (provider default)' }, { value: 'Arista-PlayAI', label: 'Arista' },
+        { value: 'Chloe-PlayAI', label: 'Chloe' }, { value: 'Nova-PlayAI', label: 'Nova' },
+      ]},
+      { id: 'language', label: 'Language', type: 'select', defaultValue: 'en', options: [
+        { value: 'en', label: 'English' }, { value: 'es', label: 'Spanish' }, { value: 'fr', label: 'French' },
+      ]},
       { id: 'speed', label: 'Speed', type: 'number', defaultValue: 1.0 },
-      {
-        id: 'emotion',
-        label: 'Emotion',
-        type: 'select',
-        options: [
-          { value: 'neutral', label: 'Neutral' },
-          { value: 'happy', label: 'Happy' },
-          { value: 'sad', label: 'Sad' },
-          { value: 'excited', label: 'Excited' },
-          { value: 'calm', label: 'Calm' },
-        ],
-        defaultValue: 'neutral',
-      },
-      {
-        id: 'output_format',
-        label: 'Output Format',
-        type: 'select',
-        options: [
-          { value: 'mp3', label: 'MP3' },
-          { value: 'wav', label: 'WAV' },
-          { value: 'flac', label: 'FLAC' },
-          { value: 'ogg', label: 'OGG' },
-        ],
-        defaultValue: 'mp3',
-      },
+      { id: 'emotion', label: 'Emotion', type: 'select', options: [
+        { value: 'neutral', label: 'Neutral' }, { value: 'calm', label: 'Calm' }, { value: 'energetic', label: 'Energetic' },
+      ]},
+      { id: 'output_format', label: 'Output format', type: 'select', defaultValue: 'mp3', options: [
+        { value: 'mp3', label: 'MP3' }, { value: 'wav', label: 'WAV' },
+      ]},
     ],
   },
+
+  // ── STT ────────────────────────────────────────────────────────────────────
   {
     id: 'stt',
-    label: 'Speech to Text',
+    label: 'STT / Transcription',
     shortLabel: 'STT',
     category: 'audio',
-    description: 'Transcribe audio or video files to text.',
+    description: 'Transcribe audio to text.',
     requestCapability: 'stt',
     statusCapabilityId: 'stt',
-    knownRoute: '/stt',
-    artifactType: 'text',
+    knownRoute: '/api/brain/stt',
+    artifactType: 'transcript',
     appUsable: true,
+    proofRequirements: ['provider_connected'],
     fields: [
-      { id: 'audio', label: 'Audio File', type: 'file', required: true },
-      {
-        id: 'language',
-        label: 'Language',
-        type: 'select',
-        options: [
-          { value: 'auto', label: 'Auto-detect' },
-          { value: 'en', label: 'English' },
-          { value: 'es', label: 'Spanish' },
-          { value: 'fr', label: 'French' },
-          { value: 'de', label: 'German' },
-          { value: 'zh', label: 'Chinese' },
-          { value: 'ja', label: 'Japanese' },
-          { value: 'ko', label: 'Korean' },
-          { value: 'ar', label: 'Arabic' },
-        ],
-        defaultValue: 'auto',
-      },
-      { id: 'diarization', label: 'Speaker Diarization', type: 'toggle', defaultValue: false },
-      { id: 'timestamps', label: 'Include Timestamps', type: 'toggle', defaultValue: false },
+      { id: 'audio', label: 'Audio upload', type: 'file', required: true, helpText: 'Upload audio or record.' },
+      { id: 'language', label: 'Language', type: 'select', defaultValue: 'auto', options: [
+        { value: 'auto', label: 'Auto-detect' }, { value: 'en', label: 'English' }, { value: 'es', label: 'Spanish' },
+      ]},
+      { id: 'diarization', label: 'Speaker diarization', type: 'toggle', defaultValue: false },
+      { id: 'timestamps', label: 'Include timestamps', type: 'toggle', defaultValue: false },
       { id: 'translate', label: 'Translate to English', type: 'toggle', defaultValue: false },
     ],
   },
+
+  // ── Avatar ────────────────────────────────────────────────────────────────
   {
     id: 'avatar',
-    label: 'Avatar',
+    label: 'Avatar / Talking Video',
     shortLabel: 'Avatar',
     category: 'video',
-    description: 'Create a talking avatar from an image with voice and script.',
+    description: 'Generate avatar images or talking avatar video.',
     requestCapability: 'avatar_generation',
     statusCapabilityId: 'avatar_generation',
-    knownRoute: '/avatar',
-    artifactType: 'video',
-    appUsable: false,
+    knownRoute: '/api/brain/avatar-video',
+    artifactType: 'image',
+    appUsable: true,
+    proofRequirements: ['provider_connected', 'storage_writable'],
     fields: [
-      { id: 'avatar_name', label: 'Avatar Name', type: 'text', placeholder: 'Name your avatar…' },
-      {
-        id: 'style',
-        label: 'Style',
-        type: 'select',
-        options: [
-          { value: 'realistic', label: 'Realistic' },
-          { value: 'animated', label: 'Animated' },
-          { value: 'cartoon', label: 'Cartoon' },
-          { value: 'sketch', label: 'Sketch' },
-        ],
-      },
-      { id: 'reference_image', label: 'Reference Image URL', type: 'url' },
-      {
-        id: 'mode',
-        label: 'Mode',
-        type: 'select',
-        options: [
-          { value: 'image', label: 'Image' },
-          { value: 'video', label: 'Video' },
-        ],
-        defaultValue: 'video',
-      },
-      {
-        id: 'voice',
-        label: 'Voice',
-        type: 'select',
-        options: [
-          { value: 'alloy', label: 'Alloy' },
-          { value: 'echo', label: 'Echo' },
-          { value: 'nova', label: 'Nova' },
-          { value: 'shimmer', label: 'Shimmer' },
-        ],
-      },
-      { id: 'script', label: 'Script', type: 'textarea', placeholder: 'What should the avatar say?' },
-      { id: 'lip_sync', label: 'Lip Sync', type: 'status', statusCapabilityId: 'avatar_generation' },
+      { id: 'avatar_name', label: 'Avatar name', type: 'text', required: true, placeholder: 'e.g. Alex Companion' },
+      { id: 'avatar_library', label: 'Avatar library', type: 'select', options: [
+        { value: 'default', label: 'Default library' }, { value: 'custom', label: 'Custom' },
+      ]},
+      { id: 'prompt', label: 'Avatar image prompt', type: 'textarea', placeholder: 'Describe appearance, style, expression.' },
+      { id: 'reference_image_url', label: 'Reference image URL', type: 'url', helpText: 'For consistency reference.' },
+      { id: 'consistency', label: 'Consistency toggle', type: 'toggle', defaultValue: false },
+      { id: 'mode', label: 'Mode', type: 'select', defaultValue: 'image', options: [
+        { value: 'image', label: 'Avatar image' }, { value: 'video', label: 'Talking avatar video' },
+      ]},
+      { id: 'script', label: 'Script', type: 'textarea', visibleWhen: 'mode=video', placeholder: 'Script for the talking avatar.' },
+      { id: 'voice', label: 'Voice', type: 'select', visibleWhen: 'mode=video', options: [
+        { value: 'auto', label: 'Auto' }, { value: 'Arista-PlayAI', label: 'Arista' },
+      ]},
+      { id: 'lip_sync', label: 'Lip sync status', type: 'status', statusCapabilityId: 'avatar_generation' },
     ],
   },
+
+  // ── Research / RAG ────────────────────────────────────────────────────────
   {
     id: 'research_rag',
     label: 'Research / RAG',
     shortLabel: 'Research',
     category: 'text',
-    description: 'Deep research with retrieval-augmented generation and source citations.',
-    requestCapability: 'research_rag',
-    statusCapabilityId: 'research_rag',
-    knownRoute: '/research',
+    description: 'Web research, document ingestion, and retrieval-augmented generation.',
+    requestCapability: 'research',
+    statusCapabilityId: 'rag',
+    knownRoute: '/api/admin/research/assist',
     artifactType: 'document',
     appUsable: true,
+    proofRequirements: ['provider_connected'],
     fields: [
-      { id: 'question', label: 'Research Question', type: 'textarea', required: true, placeholder: 'What do you want to research?' },
-      { id: 'url', label: 'Source URL', type: 'url', placeholder: 'Optional URL to include as source…' },
-      {
-        id: 'depth',
-        label: 'Research Depth',
-        type: 'select',
-        options: [
-          { value: 'quick', label: 'Quick' },
-          { value: 'standard', label: 'Standard' },
-          { value: 'deep', label: 'Deep' },
-        ],
-        defaultValue: 'standard',
-      },
-      { id: 'cite_sources', label: 'Cite Sources', type: 'toggle', defaultValue: true },
-      { id: 'memory_ingest', label: 'Ingest into Memory', type: 'toggle', defaultValue: false },
+      { id: 'question', label: 'Research question', type: 'textarea', required: true, placeholder: 'Add a source URL, document note, or research query.' },
+      { id: 'url', label: 'URL input for scrape', type: 'url', placeholder: 'Optional website URL to scrape.' },
+      { id: 'document_upload', label: 'Document upload', type: 'file', helpText: 'Upload a document for ingestion.' },
+      { id: 'depth', label: 'Scrape depth', type: 'select', defaultValue: 'standard', options: [
+        { value: 'shallow', label: 'Shallow' }, { value: 'standard', label: 'Standard' }, { value: 'deep', label: 'Deep' },
+      ]},
+      { id: 'cite_sources', label: 'Cite sources', type: 'toggle', defaultValue: true },
+      { id: 'memory_ingest', label: 'Ingest to memory', type: 'toggle', defaultValue: false },
     ],
   },
+
+  // ── Campaign ──────────────────────────────────────────────────────────────
   {
     id: 'campaign',
     label: 'Campaign',
     shortLabel: 'Campaign',
-    category: 'marketing',
-    description: 'Generate multi-channel marketing campaigns.',
-    requestCapability: 'campaign_generation',
-    statusCapabilityId: 'campaign_generation',
-    knownRoute: '/campaign',
-    artifactType: 'campaign',
+    category: 'system',
+    description: 'Generate marketing campaigns and assets.',
+    requestCapability: 'campaigns',
+    statusCapabilityId: 'campaigns',
+    knownRoute: '/api/admin/campaigns',
+    artifactType: 'document',
     appUsable: true,
+    proofRequirements: ['provider_connected'],
     fields: [
-      { id: 'brand', label: 'Brand', type: 'text', required: true, placeholder: 'Brand name…' },
-      { id: 'objective', label: 'Campaign Objective', type: 'textarea', required: true, placeholder: 'What is the goal of this campaign?' },
-      { id: 'audience', label: 'Target Audience', type: 'text', placeholder: 'Describe your target audience…' },
-      {
-        id: 'channels',
-        label: 'Channels',
-        type: 'multi_select',
-        options: [
-          { value: 'instagram', label: 'Instagram' },
-          { value: 'twitter', label: 'Twitter / X' },
-          { value: 'facebook', label: 'Facebook' },
-          { value: 'linkedin', label: 'LinkedIn' },
-          { value: 'tiktok', label: 'TikTok' },
-          { value: 'youtube', label: 'YouTube' },
-          { value: 'email', label: 'Email' },
-        ],
-      },
-      { id: 'posts_count', label: 'Number of Posts', type: 'number', defaultValue: 5 },
-      {
-        id: 'tone',
-        label: 'Tone',
-        type: 'select',
-        options: [
-          { value: 'professional', label: 'Professional' },
-          { value: 'casual', label: 'Casual' },
-          { value: 'humorous', label: 'Humorous' },
-          { value: 'inspirational', label: 'Inspirational' },
-          { value: 'urgent', label: 'Urgent' },
-        ],
-        defaultValue: 'professional',
-      },
-      {
-        id: 'approval_mode',
-        label: 'Approval Mode',
-        type: 'select',
-        options: [
-          { value: 'auto', label: 'Auto-publish' },
-          { value: 'manual', label: 'Manual Review' },
-          { value: 'draft', label: 'Draft Only' },
-        ],
-        defaultValue: 'draft',
-      },
+      { id: 'brand', label: 'Brand / source', type: 'text', required: true, placeholder: 'Brand name or app context.' },
+      { id: 'objective', label: 'Campaign objective', type: 'textarea', required: true },
+      { id: 'audience', label: 'Target audience', type: 'text' },
+      { id: 'asset_type_selector', label: 'Asset type selector', type: 'multi_select', options: [
+        { value: 'post', label: 'Post' }, { value: 'ad', label: 'Ad' }, { value: 'reel', label: 'Reel' }, { value: 'email', label: 'Email' },
+      ]},
+      { id: 'posts_count', label: 'Number of posts', type: 'number', defaultValue: 3 },
+      { id: 'tone', label: 'Tone', type: 'select', options: [
+        { value: 'professional', label: 'Professional' }, { value: 'casual', label: 'Casual' }, { value: 'exciting', label: 'Exciting' },
+      ]},
+      { id: 'approval_mode', label: 'Approval mode', type: 'select', options: [
+        { value: 'manual', label: 'Manual review' }, { value: 'auto', label: 'Auto approve' },
+      ]},
     ],
   },
+
+  // ── Automation ────────────────────────────────────────────────────────────
   {
     id: 'automation',
     label: 'Automation',
     shortLabel: 'Automation',
-    category: 'ops',
-    description: 'Create automated workflows triggered by events or schedules.',
-    requestCapability: 'automation',
-    statusCapabilityId: 'automation',
-    knownRoute: '/automation',
-    artifactType: 'automation',
+    category: 'system',
+    description: 'Configure scheduled jobs, workflows, and approval flows.',
+    requestCapability: 'scheduler',
+    statusCapabilityId: 'scheduler',
+    knownRoute: '/api/admin/scheduler',
     adminOnly: true,
     appUsable: false,
     fields: [
-      { id: 'name', label: 'Automation Name', type: 'text', required: true, placeholder: 'Name this automation…' },
-      {
-        id: 'capability',
-        label: 'Capability',
-        type: 'select',
-        options: [
-          { value: 'chat', label: 'Chat' },
-          { value: 'image_generation', label: 'Image Generation' },
-          { value: 'music_generation', label: 'Music Generation' },
-          { value: 'campaign_generation', label: 'Campaign' },
-          { value: 'publishing', label: 'Publishing' },
-        ],
-      },
-      {
-        id: 'trigger',
-        label: 'Trigger',
-        type: 'select',
-        options: [
-          { value: 'schedule', label: 'Schedule' },
-          { value: 'webhook', label: 'Webhook' },
-          { value: 'event', label: 'Event' },
-          { value: 'manual', label: 'Manual' },
-        ],
-        defaultValue: 'manual',
-      },
-      { id: 'schedule', label: 'Schedule (CRON)', type: 'text', placeholder: '0 9 * * 1 (every Monday 9am)' },
-      { id: 'approval_required', label: 'Approval Required', type: 'toggle', defaultValue: true },
+      { id: 'name', label: 'Automation name', type: 'text', required: true },
+      { id: 'capability', label: 'Target capability', type: 'select', options: [
+        { value: 'chat', label: 'Chat' }, { value: 'image_generation', label: 'Image' }, { value: 'music_generation', label: 'Music' },
+      ]},
+      { id: 'trigger', label: 'Trigger type', type: 'select', options: [
+        { value: 'schedule', label: 'Schedule' }, { value: 'webhook', label: 'Webhook' }, { value: 'manual', label: 'Manual' },
+      ]},
+      { id: 'schedule', label: 'Schedule', type: 'text', placeholder: 'cron expression or interval', visibleWhen: 'trigger=schedule' },
+      { id: 'approval_required', label: 'Approval required', type: 'toggle', defaultValue: true },
     ],
   },
+
+  // ── Publishing ────────────────────────────────────────────────────────────
   {
     id: 'publishing',
     label: 'Publishing',
     shortLabel: 'Publish',
-    category: 'marketing',
-    description: 'Schedule and publish content to social platforms.',
-    requestCapability: 'publishing',
-    statusCapabilityId: 'publishing',
-    knownRoute: '/publishing',
-    artifactType: 'post',
+    category: 'system',
+    description: 'Schedule and publish content to connected platforms.',
+    requestCapability: 'social_publishing',
+    statusCapabilityId: 'scheduler',
     adminOnly: true,
     appUsable: false,
     fields: [
-      {
-        id: 'platform',
-        label: 'Platform',
-        type: 'multi_select',
-        required: true,
-        options: [
-          { value: 'instagram', label: 'Instagram' },
-          { value: 'twitter', label: 'Twitter / X' },
-          { value: 'facebook', label: 'Facebook' },
-          { value: 'linkedin', label: 'LinkedIn' },
-          { value: 'tiktok', label: 'TikTok' },
-          { value: 'youtube', label: 'YouTube' },
-        ],
-      },
-      { id: 'content', label: 'Content', type: 'textarea', required: true, placeholder: 'Post content…' },
-      { id: 'schedule_time', label: 'Schedule Time', type: 'text', placeholder: 'ISO datetime or "now"' },
-      { id: 'approval_required', label: 'Approval Required', type: 'toggle', defaultValue: true },
+      { id: 'platform', label: 'Platform', type: 'multi_select', options: [
+        { value: 'twitter', label: 'X/Twitter' }, { value: 'instagram', label: 'Instagram' }, { value: 'linkedin', label: 'LinkedIn' },
+      ]},
+      { id: 'content', label: 'Post content', type: 'textarea', required: true },
+      { id: 'schedule_time', label: 'Schedule time', type: 'text', placeholder: 'ISO datetime or leave blank for now' },
+      { id: 'approval_required', label: 'Approval required', type: 'toggle', defaultValue: true },
     ],
   },
+
+  // ── Trading ───────────────────────────────────────────────────────────────
   {
     id: 'trading',
     label: 'Trading',
     shortLabel: 'Trading',
-    category: 'finance',
-    description: 'Automated trading strategy execution.',
-    requestCapability: 'trading',
-    statusCapabilityId: 'trading',
-    knownRoute: '/trading',
-    artifactType: 'trade',
+    category: 'system',
+    description: 'Trading strategy analysis and execution.',
+    requestCapability: 'trading_analysis',
+    statusCapabilityId: 'trading_analysis',
     adminOnly: true,
     appUsable: false,
     fields: [
-      { id: 'strategy', label: 'Strategy', type: 'textarea', required: true, placeholder: 'Describe trading strategy…' },
-      { id: 'symbol', label: 'Symbol', type: 'text', required: true, placeholder: 'e.g. BTC/USD, AAPL' },
-      {
-        id: 'timeframe',
-        label: 'Timeframe',
-        type: 'select',
-        options: [
-          { value: '1m', label: '1 Minute' },
-          { value: '5m', label: '5 Minutes' },
-          { value: '15m', label: '15 Minutes' },
-          { value: '1h', label: '1 Hour' },
-          { value: '4h', label: '4 Hours' },
-          { value: '1d', label: '1 Day' },
-        ],
-        defaultValue: '1h',
-      },
-      { id: 'max_position', label: 'Max Position Size', type: 'number' },
-      { id: 'daily_loss_limit', label: 'Daily Loss Limit', type: 'number' },
+      { id: 'strategy', label: 'Strategy', type: 'textarea', required: true, placeholder: 'Describe the trading strategy.' },
+      { id: 'symbol', label: 'Market / symbol', type: 'text', placeholder: 'e.g. BTC/USD' },
+      { id: 'timeframe', label: 'Timeframe', type: 'select', options: [
+        { value: '1m', label: '1 minute' }, { value: '5m', label: '5 minutes' }, { value: '1h', label: '1 hour' }, { value: '1d', label: '1 day' },
+      ]},
+      { id: 'max_position', label: 'Max position size', type: 'number' },
+      { id: 'daily_loss_limit', label: 'Daily loss limit', type: 'number' },
     ],
   },
+
+  // ── Adult Private ─────────────────────────────────────────────────────────
   {
     id: 'adult_private',
-    label: 'Adult (Private)',
+    label: 'Adult Private',
     shortLabel: 'Adult',
-    category: 'adult',
-    description: 'Adult content generation — age-verified and private.',
-    requestCapability: 'adult_private',
-    statusCapabilityId: 'adult_private',
-    knownRoute: '/adult',
-    artifactType: 'adult',
+    category: 'system',
+    description: 'Adult-gated capabilities via Hugging Face dedicated endpoints only.',
+    requestCapability: 'adult_text',
+    statusCapabilityId: 'adult_text',
     adminOnly: true,
     adultPrivate: true,
     appUsable: false,
-    proofRequirements: ['age_verification', 'consent'],
+    proofRequirements: ['adult_permission_gate', 'hf_adult_endpoint_configured'],
     fields: [
-      { id: 'adult_text', label: 'Text Generation', type: 'status', statusCapabilityId: 'adult_private' },
-      { id: 'adult_image', label: 'Image Generation', type: 'status', statusCapabilityId: 'adult_private' },
-      { id: 'adult_voice', label: 'Voice Generation', type: 'status', statusCapabilityId: 'adult_private' },
-      { id: 'adult_avatar', label: 'Avatar Generation', type: 'status', statusCapabilityId: 'adult_private' },
-      { id: 'adult_video', label: 'Video Generation', type: 'status', statusCapabilityId: 'adult_private' },
+      { id: 'adult_text', label: 'Adult text', type: 'status', statusCapabilityId: 'adult_text' },
+      { id: 'adult_image', label: 'Adult image', type: 'status', statusCapabilityId: 'adult_image' },
+      { id: 'adult_voice', label: 'Adult voice', type: 'status', statusCapabilityId: 'adult_voice' },
+      { id: 'adult_avatar', label: 'Adult avatar', type: 'status', statusCapabilityId: 'adult_avatar' },
+      { id: 'adult_video', label: 'Adult video', type: 'status', statusCapabilityId: 'adult_video' },
     ],
   },
-] as const;
+] as const

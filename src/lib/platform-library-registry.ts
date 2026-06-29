@@ -1,9 +1,12 @@
 /**
- * Platform Library Registry — tracks external libraries, their install status,
- * and which capabilities they power.
+ * Platform Library Registry
+ *
+ * Tracks the status of platform libraries: planned, installed, wired, proven, or blocked.
+ * Status is determined from package.json and real code evidence only.
+ * Do not mark a library as installed unless it appears in package.json.
+ * Do not mark wired/proven without code evidence.
  */
 
-// Valid status:'planned'|'installed'|'wired'|'proven'|'blocked'
 export type LibraryStatus = 'planned' | 'installed' | 'wired' | 'proven' | 'blocked'
 
 export interface PlatformLibrary {
@@ -17,145 +20,145 @@ export interface PlatformLibrary {
   evidence: string
 }
 
+// Packages confirmed in package.json (checked at write time):
+// - @qdrant/js-client-rest: ^1.17.0
+// - bullmq: ^5.73.0
+// - playwright: ^1.60.0
+// All others: not in package.json
+
 export const PLATFORM_LIBRARIES: readonly PlatformLibrary[] = [
   {
     id: 'crawlee',
     name: 'Crawlee',
-    purpose: 'web crawling',
+    purpose: 'Advanced web crawling with anti-bot evasion and Playwright integration',
     status: 'planned',
     usedByCapabilities: ['website_scraping', 'research'],
     installedPackageName: 'crawlee',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add crawlee to package.json and wire to /api/brain/research and scraper lib',
     evidence: 'Not in package.json',
   },
   {
     id: 'docling',
     name: 'Docling',
-    purpose: 'document ingestion/parsing',
+    purpose: 'Document ingestion and parsing (PDF, Word, HTML to structured text)',
     status: 'planned',
     usedByCapabilities: ['document_ingestion', 'rag'],
     installedPackageName: 'docling',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add docling to package.json and wire to RAG ingest pipeline',
     evidence: 'Not in package.json',
   },
   {
     id: 'qdrant',
-    name: 'Qdrant JS Client',
-    purpose: 'vector store for RAG',
-    status: 'wired',
+    name: 'Qdrant',
+    purpose: 'Vector store for embeddings and RAG retrieval',
+    status: 'installed',
     usedByCapabilities: ['embeddings', 'rag'],
     installedPackageName: '@qdrant/js-client-rest',
-    nextAction: 'Expand coverage to all RAG and embedding routes',
-    evidence:
-      'Found in package.json (@qdrant/js-client-rest ^1.17.0); actively imported and used in vector-store.ts, rag-capability.ts, emotion-persistence.ts, federated-memory.ts',
+    nextAction: 'Configure QDRANT_URL env var and prove live connection',
+    evidence: 'Found in package.json: @qdrant/js-client-rest ^1.17.0',
   },
   {
     id: 'bullmq_flows',
-    name: 'BullMQ',
-    purpose: 'job flow orchestration',
-    status: 'wired',
+    name: 'BullMQ Flows',
+    purpose: 'Job flow orchestration, queues, and retry policies',
+    status: 'installed',
     usedByCapabilities: ['automation', 'scheduler'],
     installedPackageName: 'bullmq',
-    nextAction: 'Expand to flow-based orchestration patterns (BullMQ Flows API)',
-    evidence:
-      'Found in package.json (bullmq ^5.73.0); Queue/Worker imported in job-queue.ts; referenced in batch-processor.ts',
+    nextAction: 'Configure REDIS_URL and wire BullMQ flows to automation routes',
+    evidence: 'Found in package.json: bullmq ^5.73.0',
   },
   {
     id: 'promptfoo',
     name: 'Promptfoo',
-    purpose: 'prompt evaluation and testing',
+    purpose: 'Prompt evaluation, regression testing, and model comparison',
     status: 'planned',
     usedByCapabilities: ['proof'],
     installedPackageName: 'promptfoo',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add promptfoo to package.json and wire to /api/admin/proof routes',
     evidence: 'Not in package.json',
   },
   {
     id: 'litellm',
     name: 'LiteLLM',
-    purpose: 'multi-provider LLM proxy',
+    purpose: 'Multi-provider LLM proxy with unified API and fallback routing',
     status: 'planned',
     usedByCapabilities: ['chat', 'reasoning_code'],
     installedPackageName: 'litellm',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add litellm to package.json and evaluate as routing proxy layer',
     evidence: 'Not in package.json',
   },
   {
     id: 'langfuse',
     name: 'Langfuse',
-    purpose: 'observability and tracing',
+    purpose: 'LLM observability, tracing, and cost tracking',
     status: 'planned',
     usedByCapabilities: ['chat', 'proof'],
     installedPackageName: 'langfuse',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add langfuse to package.json and instrument capability routes',
     evidence: 'Not in package.json',
   },
   {
     id: 'file_type',
     name: 'file-type',
-    purpose: 'file type detection',
+    purpose: 'Detect file MIME types from binary content',
     status: 'planned',
     usedByCapabilities: ['assets', 'document_ingestion'],
     installedPackageName: 'file-type',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add file-type to package.json and use in artifact upload handling',
     evidence: 'Not in package.json',
   },
   {
     id: 'sharp',
-    name: 'Sharp',
-    purpose: 'image processing',
+    name: 'sharp',
+    purpose: 'High-performance image processing (resize, convert, optimize)',
     status: 'planned',
     usedByCapabilities: ['image_generation', 'image_edit'],
     installedPackageName: 'sharp',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add sharp to package.json and wire to image artifact post-processing',
     evidence: 'Not in package.json',
   },
   {
     id: 'pdfkit',
     name: 'PDFKit',
-    purpose: 'PDF generation',
+    purpose: 'PDF generation for campaign reports, artifacts, and exports',
     status: 'planned',
     usedByCapabilities: ['campaigns', 'assets'],
     installedPackageName: 'pdfkit',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add pdfkit to package.json and wire to campaign/report generation',
     evidence: 'Not in package.json',
   },
   {
     id: 'ffmpeg',
-    name: 'FFmpeg Static',
-    purpose: 'audio/video processing',
+    name: 'ffmpeg',
+    purpose: 'Audio/video processing, transcoding, and assembly',
     status: 'planned',
     usedByCapabilities: ['video_generation', 'tts', 'music_generation'],
     installedPackageName: 'ffmpeg-static',
-    nextAction: 'Add to package.json and wire to capability',
-    evidence:
-      'Not in package.json; referenced by name in command-router.ts comments but not imported',
+    nextAction: 'Add ffmpeg-static to package.json and wire to video assembly and audio processing',
+    evidence: 'Not in package.json (ffmpeg-static). Local ffmpeg binary may exist separately.',
   },
   {
     id: 'playwright',
     name: 'Playwright',
-    purpose: 'browser automation for scraping',
+    purpose: 'Browser automation for web scraping and research',
     status: 'installed',
     usedByCapabilities: ['website_scraping'],
     installedPackageName: 'playwright',
-    nextAction: 'Wire to capability route',
-    evidence:
-      'Found in package.json (playwright ^1.60.0); referenced in capability-runtime-truth.ts as provider candidate but not directly imported in capability handlers',
+    nextAction: 'Wire Playwright to scraper lib and prove website scraping execution',
+    evidence: 'Found in package.json: playwright ^1.60.0',
   },
   {
     id: 'tanstack_table',
     name: 'TanStack Table',
-    purpose: 'data table UI',
+    purpose: 'Headless UI table for data-heavy dashboard views',
     status: 'planned',
     usedByCapabilities: ['assets'],
     installedPackageName: '@tanstack/react-table',
-    nextAction: 'Add to package.json and wire to capability',
+    nextAction: 'Add @tanstack/react-table to package.json and use in Assets & Jobs page',
     evidence: 'Not in package.json',
   },
-] as const
+]
 
 export function getLibraryByCapability(capabilityId: string): PlatformLibrary[] {
-  return PLATFORM_LIBRARIES.filter((lib) =>
-    lib.usedByCapabilities.includes(capabilityId)
-  )
+  return PLATFORM_LIBRARIES.filter((lib) => lib.usedByCapabilities.includes(capabilityId))
 }

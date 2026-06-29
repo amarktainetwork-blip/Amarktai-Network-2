@@ -1,170 +1,87 @@
-import type React from 'react'
-import { CheckCircle2, Cpu, ArrowRight, Zap } from 'lucide-react'
+export const dynamic = 'force-dynamic'
+
+const REQUEST_EXAMPLE = `{
+  "capability": "music_generation",
+  "input": "song lyrics or prompt",
+  "controls": {
+    "genre": "pop",
+    "bpm": 120,
+    "lyrics": "...",
+    "vocalMode": "vocal"
+  }
+}`
+
+const RESPONSE_EXAMPLE = `{
+  "capability": "music_generation",
+  "success": true,
+  "provider": "runtime-selected-provider",
+  "model": "runtime-selected-model",
+  "artifactId": "artifact-id",
+  "storageUrl": "storage-url",
+  "proofStatus": "proven",
+  "attempts": [],
+  "nextAction": null
+}`
+
+const PRINCIPLES = [
+  { title: 'Apps request capabilities', body: 'Apps send a capability id, input, and optional controls. They never specify a provider or model.' },
+  { title: 'AmarktAI Network routes', body: 'The platform selects the best available provider based on capability, cost tier, proof status, and budget.' },
+  { title: 'AmarktAI Network executes', body: 'The platform calls the selected provider API, handles retries, and falls back to next eligible provider on failure.' },
+  { title: 'AmarktAI Network stores artifacts', body: 'Generated output is persisted as a typed artifact with a stable storageUrl and artifactId.' },
+  { title: 'AmarktAI Network records proof', body: 'Each execution is recorded with provider, model, proofStatus, and attempt history.' },
+  { title: 'AmarktAI Network returns structured results', body: 'The result includes provider/model only in the response — not in the request.' },
+]
 
 export default function AppRuntimePage() {
-  const exampleRequest = {
-    capability: 'music_generation',
-    input: {
-      prompt: 'Upbeat jazz instrumental, 30 seconds',
-      duration: 30,
-    },
-    sessionId: 'app-session-abc123',
-  }
-
-  const exampleResponse = {
-    ok: true,
-    result: {
-      provider: 'runtime-selected',
-      model: 'runtime-selected',
-      artifactUrl: 'https://cdn.example.com/artifacts/music-abc123.mp3',
-      durationMs: 4200,
-      proofRecorded: true,
-    },
-  }
-
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg border border-cyan-300/15 bg-[#071019] p-6">
-        <div>
-          <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">App Runtime</p>
-          <h1 className="mt-3 text-3xl font-black tracking-tight text-white">App Runtime API</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-            Apps request capabilities, not providers or models.
-            The AmarktAI Network routes, executes, stores artifacts, and records proof.
-            Apps never specify which provider or model to use.
-          </p>
+    <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6">
+        <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Admin</p>
+        <h1 className="mt-2 text-2xl font-black text-white">App Runtime</h1>
+        <p className="mt-1 text-sm text-slate-400">
+          Apps request capabilities. AmarktAI Network routes, executes, stores artifacts, and records proof.
+          Apps do not choose providers or models.
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <h2 className="font-black text-white">Platform contract</h2>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {PRINCIPLES.map((p) => (
+            <div key={p.title} className="rounded-xl border border-slate-800 bg-slate-950/55 p-4">
+              <p className="text-sm font-black text-cyan-300">{p.title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-400">{p.body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="rounded-lg border border-emerald-400/15 bg-emerald-400/5 p-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-          <div>
-            <span className="text-sm font-black text-emerald-200">Execute route wired</span>
-            <span className="ml-2 font-mono text-xs text-emerald-400">/api/admin/studio/execute</span>
-          </div>
-        </div>
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-          <div className="flex items-center gap-2 text-cyan-300">
-            <Zap className="h-4 w-4" />
-            <h2 className="text-lg font-black text-white">Platform contract</h2>
-          </div>
-          <div className="mt-4 space-y-3">
-            <ContractRow
-              label="Apps request capabilities, not providers or models"
-              detail="The payload must not include provider or model fields. Routing is server-side only."
-            />
-            <ContractRow
-              label="The network routes execution"
-              detail="AmarktAI Network selects the provider and model based on the capability mesh, proof status, and fallback chains."
-            />
-            <ContractRow
-              label="Artifacts are stored"
-              detail="On success, output artifacts are persisted and a URL is returned to the app."
-            />
-            <ContractRow
-              label="Proof is recorded"
-              detail="Every successful execution records provider proof. Proof status drives future routing decisions."
-            />
-            <ContractRow
-              label="runtime-selected in responses"
-              detail="Provider and model fields in the response carry the value 'runtime-selected' to reflect that the app did not specify them."
-            />
-          </div>
-        </section>
-
-        <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-cyan-300" />
-            <h2 className="text-lg font-black text-white">API readiness</h2>
-          </div>
-          <div className="mt-4 space-y-2">
-            <ReadinessRow label="Execute route" route="/api/admin/studio/execute" status="Wired" />
-            <ReadinessRow label="Capability" route="music_generation" status="Wired" />
-            <ReadinessRow label="Provider / model in request" route="(not allowed)" status="Rejected by server" tone="neutral" />
-            <ReadinessRow label="Artifact storage" route="On success" status="Active" />
-            <ReadinessRow label="Proof recording" route="On success" status="Active" />
-          </div>
-        </section>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-          <h2 className="text-lg font-black text-white">Example request</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Capability: <span className="font-mono text-cyan-300">music_generation</span>
-            &nbsp;— no provider or model fields.
-          </p>
-          <pre className="mt-4 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-xs leading-6 text-slate-300">
-            {JSON.stringify(exampleRequest, null, 2)}
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <h2 className="font-black text-white">App request — no provider or model</h2>
+          <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300 leading-5">
+            {REQUEST_EXAMPLE}
           </pre>
-        </section>
+          <p className="mt-2 text-xs text-slate-500">Provider and model are runtime-selected. Apps never include them.</p>
+        </div>
 
-        <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-          <h2 className="text-lg font-black text-white">Example response</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Provider and model are <span className="font-mono text-cyan-300">runtime-selected</span> — the app never chose them.
-          </p>
-          <pre className="mt-4 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-xs leading-6 text-slate-300">
-            {JSON.stringify(exampleResponse, null, 2)}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <h2 className="font-black text-white">Runtime result — provider in response only</h2>
+          <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs text-slate-300 leading-5">
+            {RESPONSE_EXAMPLE}
           </pre>
-        </section>
-      </div>
-
-      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
-        <h2 className="text-lg font-black text-white">How execution flows</h2>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          <FlowStep label="App sends capability request" />
-          <ArrowRight className="h-4 w-4 text-slate-600" />
-          <FlowStep label="Network validates capability" />
-          <ArrowRight className="h-4 w-4 text-slate-600" />
-          <FlowStep label="Network routes to provider" />
-          <ArrowRight className="h-4 w-4 text-slate-600" />
-          <FlowStep label="Execution runs" />
-          <ArrowRight className="h-4 w-4 text-slate-600" />
-          <FlowStep label="Artifact stored + proof recorded" />
-          <ArrowRight className="h-4 w-4 text-slate-600" />
-          <FlowStep label="Response with runtime-selected fields returned" />
+          <p className="mt-2 text-xs text-slate-500">Provider and model appear in the result for proof/audit. Not in the request.</p>
         </div>
       </section>
-    </div>
-  )
-}
 
-function ContractRow({ label, detail }: { label: string; detail: string }) {
-  return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/55 p-3">
-      <p className="text-xs font-black text-slate-200">{label}</p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <h2 className="font-black text-white">Execution route status</h2>
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/55 px-4 py-3">
+          <span className="text-sm text-slate-300">/api/admin/studio/execute</span>
+          <span className="ml-auto rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-black text-emerald-300">Wired</span>
+        </div>
+        <p className="mt-2 text-xs text-slate-500">Studio and future apps call this endpoint with a capability request. The runtime handles provider selection.</p>
+      </section>
     </div>
-  )
-}
-
-function ReadinessRow({ label, route, status, tone = 'good' }: {
-  label: string
-  route: string
-  status: string
-  tone?: 'good' | 'neutral'
-}) {
-  const statusClass = tone === 'good' ? 'text-emerald-300' : 'text-slate-400'
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-2 text-xs last:border-0">
-      <span className="font-bold text-slate-500">{label}</span>
-      <div className="flex items-center gap-3">
-        <span className="font-mono text-slate-400">{route}</span>
-        <span className={['font-black', statusClass].join(' ')}>{status}</span>
-      </div>
-    </div>
-  )
-}
-
-function FlowStep({ label }: { label: string }) {
-  return (
-    <span className="rounded-lg border border-slate-700 bg-slate-800/60 px-3 py-1.5 font-bold text-slate-300">
-      {label}
-    </span>
   )
 }

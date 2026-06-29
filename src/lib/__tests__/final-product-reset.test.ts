@@ -45,7 +45,6 @@ const deletedDashboardRouteDirs = [
   'network-apps',
   'operations',
   'outputs',
-  'providers',
   'publishing',
   'rag',
   'scheduler',
@@ -93,7 +92,7 @@ describe('final product reset dashboard topology', () => {
   })
 
   it('does not link active dashboard UI back to deleted dashboard routes', () => {
-    const deletedRoutePattern = /\/admin\/dashboard\/(adult-mode|agents|analytics|app-builder|approvals|apps-agents|avatars|brand-memory|campaigns|command|marketing|memory-learning|network-apps|operations|outputs|providers|publishing|rag|scheduler|voice-agent|vps-health|workbench|workspace)\b/
+    const deletedRoutePattern = /\/admin\/dashboard\/(adult-mode|agents|analytics|app-builder|approvals|apps-agents|avatars|brand-memory|campaigns|command|marketing|memory-learning|network-apps|operations|outputs|publishing|rag|scheduler|voice-agent|vps-health|workbench|workspace)\b/
     const activeUiFiles = [
       'lib/dashboard-nav.ts',
       'components/dashboard/CommandCenter.tsx',

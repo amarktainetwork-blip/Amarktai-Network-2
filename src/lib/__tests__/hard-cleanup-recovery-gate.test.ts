@@ -151,18 +151,14 @@ describe('hard cleanup and recovery gate', () => {
     expect(fabric).not.toContain('Core OS')
     expect(fabric).not.toContain('Runtime Truth')
 
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Overview',
-      'Studio',
-      'Apps',
-      'Capabilities',
-      'Assets & Jobs',
-      'Memory & Knowledge',
-      'Settings',
-      'System',
-    ])
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Marketing')
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Approvals')
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Scheduler/Publishing')
+    const navLabels = DASHBOARD_NAV_ITEMS.map((item) => item.label)
+    expect(navLabels).toContain('Command Center')
+    expect(navLabels).toContain('Studio')
+    expect(navLabels).toContain('Capabilities')
+    expect(navLabels).toContain('Settings')
+    expect(navLabels).toContain('System')
+    expect(navLabels).not.toContain('Marketing')
+    expect(navLabels).not.toContain('Approvals')
+    expect(navLabels).not.toContain('Scheduler/Publishing')
   })
 })

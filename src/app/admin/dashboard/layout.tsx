@@ -3,7 +3,7 @@
 import '@fontsource-variable/inter'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Activity, Headphones, LogOut, Mic, Network, SlidersHorizontal, X } from 'lucide-react'
+import { Headphones, LogOut, Mic, Network, SlidersHorizontal, X } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 import BrandName from '@/components/BrandName'
@@ -78,75 +78,78 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#030712] text-slate-100" style={{ fontFamily: "'Inter Variable','Inter',system-ui,-apple-system,sans-serif" }}>
+      {/* Background glows */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -left-64 -top-64 h-[600px] w-[600px] rounded-full bg-cyan-950/20 blur-[120px]" />
+        <div className="absolute -right-64 top-1/3 h-[500px] w-[500px] rounded-full bg-indigo-950/25 blur-[120px]" />
+      </div>
+
+      {/* Top navigation header */}
       <header className="sticky top-0 z-40 border-b border-slate-800/60 bg-slate-950/90 backdrop-blur-2xl">
-        <div className="flex min-h-14 items-center gap-3 px-4 lg:px-6">
+        <div className="flex min-h-12 items-center gap-3 px-4 lg:px-5">
           {/* Logo */}
-          <Link href="/admin/dashboard" className="flex shrink-0 items-center gap-2 mr-3">
-            <Network className="h-4 w-4 text-cyan-300" />
-            <span className="text-sm font-black tracking-tight text-slate-100"><BrandName /></span>
-            <span className="hidden text-xs font-bold text-slate-500 sm:inline">Network</span>
+          <Link href="/admin/dashboard" className="flex shrink-0 items-center gap-2 pr-3 border-r border-slate-800/60">
+            <Network className="h-4 w-4 text-cyan-300" aria-hidden />
+            <span className="hidden text-xs font-black tracking-tight text-slate-100 sm:inline"><BrandName /></span>
           </Link>
 
-          {/* Nav links — scrollable */}
+          {/* Nav links — horizontal scroll on mobile */}
           <nav
-            className="flex flex-1 items-center gap-1 overflow-x-auto scrollbar-none"
+            className="flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto scrollbar-none"
             aria-label="Dashboard navigation"
           >
-            {DASHBOARD_NAV_ITEMS.map(item => {
+            {DASHBOARD_NAV_ITEMS.map((item) => {
               const active = isActive(item.href)
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={[
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all duration-150 whitespace-nowrap',
+                    'shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-150 whitespace-nowrap',
                     active
                       ? 'border-cyan-500/25 bg-cyan-500/10 text-cyan-300'
-                      : 'border-transparent text-slate-500 hover:text-slate-300',
+                      : 'border-transparent text-slate-500 hover:border-slate-700/50 hover:bg-slate-800/40 hover:text-slate-300',
                   ].join(' ')}
                 >
-                  <item.icon className={['h-3.5 w-3.5 shrink-0', active ? 'text-cyan-400' : 'text-slate-600'].join(' ')} />
-                  <span>{item.label}</span>
+                  {item.label}
                 </Link>
               )
             })}
           </nav>
 
-          {/* Right side */}
-          <div className="flex shrink-0 items-center gap-2 ml-2">
-            {/* Pulse status */}
-            <div className="hidden items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 px-2.5 py-1.5 sm:flex">
+          {/* Right: pulse indicator + voice + logout */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="hidden items-center gap-1.5 sm:flex">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_rgba(34,211,238,0.8)] transition-opacity duration-700"
-                style={{ opacity: pulse ? 1 : 0.4 }}
+                className="h-1.5 w-1.5 rounded-full bg-cyan-400 transition-opacity duration-700"
+                style={{ opacity: pulse ? 1 : 0.3, boxShadow: pulse ? '0 0 6px rgba(34,211,238,0.8)' : 'none' }}
               />
-              <Activity className="h-3 w-3 text-cyan-400" />
-              <p className="max-w-32 truncate text-[11px] font-bold text-slate-300">{status.appStatus}</p>
+              <span className="hidden text-[10px] font-bold text-slate-500 lg:inline">{status.appStatus}</span>
             </div>
-
             <VoiceAssistantButton
               open={assistantOpen}
               voice={assistantVoice}
               status={voiceTruth.tts.status}
-              onClick={() => setAssistantOpen((current) => !current)}
+              onClick={() => setAssistantOpen((c) => !c)}
             />
-
             <button
+              type="button"
               onClick={handleLogout}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/60 px-2.5 py-1.5 text-xs font-bold text-slate-500 transition-all hover:border-slate-600 hover:bg-slate-800 hover:text-slate-300"
+              className="rounded-lg border border-slate-700/60 bg-slate-800/60 p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
               aria-label="Sign out"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
+      {/* Main content */}
+      <main className="relative mx-auto w-full max-w-[1600px] px-4 py-6 lg:px-6">
         {children}
       </main>
 
+      {/* Floating voice assistant panel */}
       <VoiceAssistantPanel
         open={assistantOpen}
         voice={assistantVoice}
@@ -182,7 +185,7 @@ function VoiceAssistantButton({ open, voice, status, onClick }: { open: boolean;
       onClick={onClick}
       data-dashboard-voice-assistant="trigger"
       className={[
-        'inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-black transition',
+        'inline-flex items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-black transition',
         open ? 'border-blue-400/30 bg-blue-400/12 text-blue-200' : 'border-slate-700/60 bg-slate-800/60 text-slate-300 hover:border-blue-400/25 hover:text-blue-200',
       ].join(' ')}
       aria-expanded={open}
@@ -196,20 +199,15 @@ function VoiceAssistantButton({ open, voice, status, onClick }: { open: boolean;
 }
 
 function VoiceAssistantPanel({
-  open,
-  voice,
-  truth,
-  setVoice,
-  onClose,
+  open, voice, truth, setVoice, onClose,
 }: {
   open: boolean
   voice: string
   truth: VoiceTruth
-  setVoice: (voice: string) => void
+  setVoice: (v: string) => void
   onClose: () => void
 }) {
   if (!open) return null
-
   return (
     <aside
       id="dashboard-voice-assistant"
@@ -223,14 +221,13 @@ function VoiceAssistantPanel({
           </span>
           <div>
             <p className="text-sm font-black text-white">Dashboard Assistant</p>
-            <p className="mt-0.5 text-xs font-bold text-amber-200">TTS {voiceStatusLabel(truth.tts.status)}; STT {voiceStatusLabel(truth.stt.status)}; Realtime voice {voiceStatusLabel(truth.realtime.status)}</p>
+            <p className="mt-0.5 text-xs font-bold text-amber-200">TTS {voiceStatusLabel(truth.tts.status)}; STT {voiceStatusLabel(truth.stt.status)}; realtime {voiceStatusLabel(truth.realtime.status)}</p>
           </div>
         </div>
         <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200" aria-label="Close assistant">
           <X className="h-4 w-4" />
         </button>
       </div>
-
       <label className="mt-4 block">
         <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
           <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -238,13 +235,12 @@ function VoiceAssistantPanel({
         </span>
         <select
           value={voice}
-          onChange={(event) => setVoice(event.target.value)}
+          onChange={(e) => setVoice(e.target.value)}
           className="mt-2 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-200 outline-none focus:border-blue-400/50"
         >
-          {['AmarktAI Voice', 'Calm Operator', 'Fast Assistant', 'Narrator'].map((option) => <option key={option}>{option}</option>)}
+          {['AmarktAI Voice', 'Calm Operator', 'Fast Assistant', 'Narrator'].map((o) => <option key={o}>{o}</option>)}
         </select>
       </label>
-
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <button type="button" className="rounded-xl border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-xs font-black text-blue-200">
           TTS preview: {voiceStatusLabel(truth.tts.status)}
@@ -253,7 +249,6 @@ function VoiceAssistantPanel({
           Realtime session: {voiceStatusLabel(truth.realtime.status)}
         </button>
       </div>
-
       <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
         <div className="space-y-2 text-xs leading-6 text-slate-400">
           <VoiceTruthLine label="TTS" item={truth.tts} />
