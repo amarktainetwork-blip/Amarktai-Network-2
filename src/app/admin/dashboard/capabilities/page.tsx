@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2, CircleDashed, CircleSlash } from 'lucide-r
 import { getCapabilityRuntimeTruth, type CapabilityRuntimeTruthEntry } from '@/lib/capability-runtime-truth'
 import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 import { CAPABILITY_UI_MODES } from '@/lib/capability-ui-schema'
+import { getArtifactType, getCapabilityRoute } from '@/lib/capability-display'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,7 @@ function getSchemaMetadata(capabilityId: string) {
   const mode = CAPABILITY_UI_MODES.find((m) => m.requestCapability === capabilityId || m.statusCapabilityId === capabilityId || m.id === capabilityId)
   return {
     artifactType: mode?.artifactType ?? null,
+    knownRoute: mode?.knownRoute ?? null,
     requiredConfig: mode?.proofRequirements?.join(', ') ?? null,
     jobType: mode?.artifactType === 'video' || mode?.id === 'long_form_video' ? 'async_job' : mode?.artifactType === 'audio' ? 'sync_or_async' : null,
   }
@@ -120,12 +122,12 @@ function CapabilityRow({
         {meta.requiredConfig ?? (entry.hasRequiredKey ? 'Key required' : entry.hasRequiredEndpoint !== undefined && !entry.hasRequiredEndpoint ? 'Endpoint required' : 'Not specified')}
       </td>
       <td className="bg-slate-950/55 px-3 py-3 font-semibold text-slate-400">
-        {meta.artifactType ?? entry.capabilityId.includes('image') ? 'image' : entry.capabilityId.includes('video') ? 'video' : entry.capabilityId.includes('audio') || entry.capabilityId.includes('tts') || entry.capabilityId.includes('music') ? 'audio' : 'document'}
+        {getArtifactType(entry, meta)}
       </td>
       <td className="bg-slate-950/55 px-3 py-3 font-semibold text-slate-400">
         {meta.jobType ?? (entry.capabilityId.includes('video') || entry.capabilityId.includes('long_form') ? 'async_job' : 'sync')}
       </td>
-      <td className="bg-slate-950/55 px-3 py-3 font-mono font-semibold text-slate-500">{entry.hasExecutionRoute ? entry.capabilityId : 'Missing'}</td>
+      <td className="bg-slate-950/55 px-3 py-3 font-mono font-semibold text-slate-500">{getCapabilityRoute(entry, meta)}</td>
       <td className="max-w-xs bg-slate-950/55 px-3 py-3 font-semibold text-slate-400">{entry.blocker || 'None'}</td>
       <td className="max-w-xs bg-slate-950/55 px-3 py-3 font-semibold text-slate-400">{entry.nextAction || 'No action required'}</td>
     </tr>

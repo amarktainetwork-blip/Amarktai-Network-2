@@ -110,8 +110,8 @@ describe('Studio execution proof pack', () => {
     const avatarRoute = source('app/api/brain/avatar-video/route.ts')
     const jobs = source('lib/media-job-store.ts')
 
-    expect(route).toContain("if (bodyMode === 'long-video') return 'long_video'")
-    expect(route).toContain("if (bodyMode === 'image-to-video') return 'image_to_video'")
+    expect(route).toContain("if (bodyMode === 'long-video' || bodyMode === 'long_form_video') return 'long_video'")
+    expect(route).toContain("if (bodyMode === 'image-to-video' || bodyMode === 'image_to_video') return 'image_to_video'")
     expect(route).toContain("if (mode === 'image_to_video' && !referenceImageUrl)")
     expect(route).toContain('Image-to-video requires a referenceImageUrl or uploaded image artifact before execution.')
     expect(route).toContain("capability: mode === 'image_to_video' ? 'image_to_video' : capability")

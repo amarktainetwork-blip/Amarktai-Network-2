@@ -1,9 +1,13 @@
 import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
+import { runCoreCapabilityProofPack } from '@/lib/core-capability-proof-runner'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ProofPage() {
-  const providers = await getProviderRuntimeTruth().catch(() => [])
+  const [providers, coreProof] = await Promise.all([
+    getProviderRuntimeTruth().catch(() => []),
+    runCoreCapabilityProofPack().catch(() => null),
+  ])
 
   return (
     <div className="space-y-6">
@@ -15,6 +19,48 @@ export default async function ProofPage() {
           Run tests in <a href="/admin/dashboard/settings" className="text-cyan-400 underline">Settings</a>.
         </p>
       </section>
+
+      {coreProof && (
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-black text-white">Core Launch Proof</h2>
+              <p className="mt-1 text-sm text-slate-400">Live proof contract for launch Studio/runtime capabilities.</p>
+            </div>
+            <a href="/api/admin/proof/core" className="text-sm font-bold text-cyan-300 underline">Open JSON</a>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                <tr>
+                  <th className="px-3 py-2">Capability</th>
+                  <th className="px-3 py-2">Status</th>
+                  <th className="px-3 py-2">Provider</th>
+                  <th className="px-3 py-2">Model</th>
+                  <th className="px-3 py-2">Artifact</th>
+                  <th className="px-3 py-2">Job / Poll</th>
+                  <th className="px-3 py-2">Blocker</th>
+                  <th className="px-3 py-2">Next action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {coreProof.capabilities.map((capability) => (
+                  <tr key={capability.capability}>
+                    <td className="px-3 py-3 font-black text-slate-200">{capability.capability}</td>
+                    <td className="px-3 py-3 font-bold text-slate-300">{capability.status}</td>
+                    <td className="px-3 py-3 text-slate-400">{capability.provider ?? 'None yet'}</td>
+                    <td className="px-3 py-3 text-slate-400">{capability.model ?? 'None yet'}</td>
+                    <td className="px-3 py-3 text-slate-400">{capability.artifactId ?? capability.storageUrl ?? 'None yet'}</td>
+                    <td className="px-3 py-3 text-slate-400">{capability.jobId ?? capability.pollUrl ?? 'None'}</td>
+                    <td className="max-w-xs px-3 py-3 text-slate-400">{capability.blocker ?? 'None'}</td>
+                    <td className="max-w-xs px-3 py-3 text-slate-400">{capability.nextAction ?? 'No action required'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
         <h2 className="font-black text-white">Provider proof records</h2>

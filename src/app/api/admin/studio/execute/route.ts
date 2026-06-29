@@ -8,7 +8,7 @@ import { type AdultPolicyValue } from '@/lib/universal-model-catalog'
 import { getCapabilityRuntimeTruthEntry, type CapabilityRuntimeTruthEntry } from '@/lib/capability-runtime-truth'
 import { normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { recordProviderResult } from '@/lib/provider-result-log'
-import { getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
+import { STUDIO_ROUTE_MAP, getStudioRouteConfig, type StudioTab } from '@/lib/studio-route-map'
 import { callProvider } from '@/lib/brain'
 import { recordEstimatedCost } from '@/lib/cost-tracking'
 import { callGenXChat } from '@/lib/genx-client'
@@ -25,7 +25,7 @@ import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 
 type ExecuteBody = {
-  tab?: StudioTab
+  tab?: StudioTab | string
   prompt?: string
   provider?: unknown
   model?: unknown
@@ -38,16 +38,16 @@ type ExecuteBody = {
   workspaceId?: string
   brandId?: string
   adultPolicy?: string
-  mode?: 'chat' | 'text' | 'image' | 'music' | 'video' | 'long-video' | 'image-to-video' | 'voice' | 'avatar'
+  mode?: string
   voiceId?: string
   size?: string
   style?: string
   controls?: Record<string, unknown>
 }
 
-type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'long_video' | 'image_to_video' | 'voice' | 'avatar'
+type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'long_video' | 'image_to_video' | 'voice' | 'avatar' | 'stt'
 type RouteProofMode = 'chat' | 'image' | 'music'
-type ProofMode = RouteProofMode | 'video' | 'avatar'
+type ProofMode = RouteProofMode | 'video' | 'avatar' | 'voice'
 type StudioChatProvider = 'groq' | 'together' | 'genx' | 'huggingface'
 
 const STUDIO_CHAT_EXECUTION_MODELS = {
@@ -156,8 +156,10 @@ function stringArrayControl(controls: Record<string, unknown>, key: string, fall
 }
 
 function normalizeMode(bodyMode: ExecuteBody['mode'], tab: StudioTab): StudioExecutionMode {
-  if (bodyMode === 'long-video') return 'long_video'
-  if (bodyMode === 'image-to-video') return 'image_to_video'
+  if (bodyMode === 'long-video' || bodyMode === 'long_form_video') return 'long_video'
+  if (bodyMode === 'image-to-video' || bodyMode === 'image_to_video') return 'image_to_video'
+  if (bodyMode === 'tts') return 'voice'
+  if (bodyMode === 'stt') return 'stt'
   if (bodyMode === 'avatar') return 'avatar'
   if (bodyMode === 'chat' || bodyMode === 'image' || bodyMode === 'music' || bodyMode === 'text' || bodyMode === 'video' || bodyMode === 'voice') {
     return bodyMode
@@ -168,6 +170,42 @@ function normalizeMode(bodyMode: ExecuteBody['mode'], tab: StudioTab): StudioExe
   if (tab === 'Video') return 'video'
   if (tab === 'Voice / TTS') return 'voice'
   return 'text'
+}
+
+function isStudioTab(value: unknown): value is StudioTab {
+  return typeof value === 'string' && value in STUDIO_ROUTE_MAP
+}
+
+function nonExecutableModeBlocker(mode: unknown) {
+  if (mode === 'automation') {
+    return {
+      capability: 'scheduler',
+      blocker: 'Automation setup is visible in Studio, but execution is not wired through the Studio execute route.',
+      nextAction: 'Use the Scheduler admin route after an automation execution contract is implemented.',
+    }
+  }
+  if (mode === 'publishing') {
+    return {
+      capability: 'social_publishing',
+      blocker: 'Social publishing execution is not implemented in this proof pack.',
+      nextAction: 'Wire a real publishing provider and approval flow before enabling Studio publishing execution.',
+    }
+  }
+  if (mode === 'trading') {
+    return {
+      capability: 'trading_analysis',
+      blocker: 'Trading execution is not implemented in this proof pack.',
+      nextAction: 'Wire read-only analysis first; do not enable trade execution without a proven broker contract.',
+    }
+  }
+  if (mode === 'adult_private') {
+    return {
+      capability: 'adult_private',
+      blocker: 'Adult private generation execution is intentionally blocked in this proof pack.',
+      nextAction: 'Use dedicated Hugging Face adult routes only after endpoint/model configuration and live proof are complete.',
+    }
+  }
+  return null
 }
 
 function proofCapability(mode: StudioExecutionMode, capability: AiCapability) {
@@ -564,6 +602,28 @@ export async function POST(request: NextRequest) {
   if (!tab) return NextResponse.json({ success: false, error: 'tab is required' }, { status: 400 })
   if (!prompt) return NextResponse.json({ success: false, error: 'prompt is required' }, { status: 400 })
 
+  const blockedMode = nonExecutableModeBlocker(body.mode)
+  if (blockedMode) {
+    return NextResponse.json(blockerResponse({
+      mode: 'text',
+      capability: blockedMode.capability,
+      status: 'blocked',
+      blocker: blockedMode.blocker,
+      nextAction: blockedMode.nextAction,
+    }), { status: 501 })
+  }
+
+  if (!isStudioTab(tab)) {
+    return NextResponse.json({
+      success: false,
+      executed: false,
+      capability: String(body.capability ?? body.mode ?? 'unknown'),
+      status: 'blocked',
+      blocker: `Studio tab "${String(tab)}" is not wired to an executable backend route.`,
+      nextAction: 'Use a core launch Studio mode or add a real route contract before enabling this mode.',
+    }, { status: 501 })
+  }
+
   const config = getStudioRouteConfig(tab)
   if (config.status === 'missing') {
     return NextResponse.json({
@@ -747,7 +807,6 @@ export async function POST(request: NextRequest) {
         // to the next eligible provider if the preferred one fails.
         // noFallback is not set — Studio always wants a result if any provider can deliver it.
         preferProvider: route.selectedProvider,
-        modelOverride: route.selectedModel,
         costMode,
       }))
       const data = await readJson(response)
@@ -1187,12 +1246,60 @@ export async function POST(request: NextRequest) {
       }))
       const data = await readJson(response)
       const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      return NextResponse.json({
-        ...data,
-        result: data,
+      const status = String(data.jobStatus ?? data.status ?? 'failed')
+      const completed = ['completed', 'succeeded'].includes(status) && Boolean(data.artifactId && data.storageUrl)
+      const processing = ['queued', 'processing', 'submitted'].includes(status)
+      const selectedProvider = canonicalProviderValue(data.provider, route.selectedProvider)
+      const selectedModel = data.model ?? route.selectedModel
+      const proof = completed
+        ? await recordStudioProof({
+          mode: 'voice',
+          capability,
+          appSlug,
+          provider: selectedProvider,
+          model: selectedModel,
+          success: true,
+          executed: true,
+          artifactId: data.artifactId ?? null,
+          artifactPath: data.storageUrl ?? null,
+          jobId: data.jobId ?? null,
+          routePath: '/api/brain/tts',
+          metadata: { source: 'studio_execute', truth: preflight?.truth ? capabilityTruthProof(preflight.truth) : null },
+        })
+        : studioProofSnapshot({
+          capability,
+          provider: selectedProvider,
+          model: selectedModel,
+          route: '/api/brain/tts',
+          artifactId: null,
+          jobId: data.jobId ?? null,
+          proofStatus: processing ? 'processing' : 'failed',
+          error: data.blocker ?? data.error ?? null,
+        })
+      return NextResponse.json(structuredResult({
+        ok: Boolean(data.success),
+        mode: 'voice',
+        capability,
+        status,
+        output: data.audioUrl ?? data.storageUrl ?? null,
         artifact,
-        route,
-      }, { status: response.status })
+        job: data.jobId ? { jobId: data.jobId, pollUrl: data.pollUrl ?? null, status } : null,
+        selectedProvider,
+        selectedModel,
+        proof,
+        blocker: data.blocker ?? data.error ?? null,
+        nextAction: completed ? 'Open the artifact.' : processing ? 'Poll the job until completed.' : data.blocker ?? data.error ?? 'TTS provider did not return persisted audio.',
+        extra: {
+          ...data,
+          result: data,
+          artifactId: data.artifactId ?? null,
+          storageUrl: data.storageUrl ?? null,
+          audioUrl: data.audioUrl ?? data.storageUrl ?? null,
+          jobId: data.jobId ?? null,
+          pollUrl: data.pollUrl ?? null,
+          route,
+        },
+      }), { status: response.status })
     }
 
     if (tab === 'Adult') {

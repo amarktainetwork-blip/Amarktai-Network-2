@@ -19,6 +19,9 @@ type StudioResult = {
   model?: string
   artifactId?: string
   artifactUrl?: string
+  storageUrl?: string
+  jobId?: string
+  pollUrl?: string
   jobUrl?: string
   outputUrl?: string
   blocker?: string
@@ -356,6 +359,9 @@ export default function StudioPage() {
               <ProofCard label="Model" value={result.model ?? 'Runtime selected'} />
               {result.proofStatus && <ProofCard label="Proof status" value={result.proofStatus} />}
               {result.artifactId && <ProofCard label="Artifact ID" value={result.artifactId} />}
+              {result.storageUrl && <ProofLink label="Storage URL" value={result.storageUrl} />}
+              {result.jobId && <ProofCard label="Job ID" value={result.jobId} />}
+              {result.pollUrl && <ProofLink label="Poll URL" value={result.pollUrl} />}
               {result.artifactUrl && <ProofLink label="Artifact link" value={result.artifactUrl} />}
               {result.jobUrl && <ProofLink label="Job / poll URL" value={result.jobUrl} />}
               {result.blocker && <ProofCard label="Blocker" value={result.blocker} wide />}
@@ -682,7 +688,9 @@ function normalizeResult(data: Record<string, unknown>, modeId: string): StudioR
   const storageUrl = firstStr(data.storageUrl, data.mediaUrl, artifact?.storageUrl, result?.storageUrl)
   const rawOut = firstStr(data.output, data.imageUrl, data.videoUrl, data.musicUrl, data.audioUrl, data.mediaUrl, data.storageUrl, result?.output, result?.imageUrl, result?.videoUrl, result?.musicUrl, result?.audioUrl, result?.storageUrl)
   const outputUrl = rawOut?.startsWith('/api/artifacts/file/') ? rawOut : undefined
-  const jobUrl = firstStr(data.pollUrl, (job as Record<string, unknown>)?.pollUrl, result?.pollUrl)
+  const jobId = firstStr(data.jobId, job?.jobId, result?.jobId)
+  const pollUrl = firstStr(data.pollUrl, job?.pollUrl, result?.pollUrl)
+  const jobUrl = pollUrl
   const blocker = firstStr(data.blocker, data.error, result?.blocker, result?.error)
 
   if (['image', 'music', 'video', 'long_form_video', 'image_to_video', 'avatar'].includes(modeId) && execStatus === 'completed' && (!artifactId || !outputUrl)) {
@@ -697,6 +705,9 @@ function normalizeResult(data: Record<string, unknown>, modeId: string): StudioR
     model: firstStr(data.selectedModel, data.model, result?.selectedModel, result?.model),
     artifactId,
     artifactUrl: storageUrl?.startsWith('/api/artifacts/file/') ? storageUrl : undefined,
+    storageUrl,
+    jobId,
+    pollUrl,
     jobUrl,
     outputUrl,
     blocker: execStatus === 'failed' ? (blocker ?? 'Job completed but no artifact was returned.') : blocker,
