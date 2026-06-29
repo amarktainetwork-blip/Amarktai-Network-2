@@ -1,41 +1,133 @@
 import {
-  Activity,
-  Blocks,
-  Database,
-  FolderOpen,
   LayoutDashboard,
-  Settings2,
-  Shield,
   Sparkles,
-} from 'lucide-react'
-import type { ComponentType, SVGProps } from 'react'
+  Blocks,
+  Server,
+  Shield,
+  Database,
+  Activity,
+  Zap,
+  Lock,
+  AppWindow,
+  Package,
+  Settings2,
+  Monitor,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 export type DashboardSectionId =
-  | 'overview'
+  | 'command-center'
   | 'studio'
-  | 'apps'
   | 'capabilities'
-  | 'assets-jobs'
-  | 'memory-knowledge'
+  | 'providers'
+  | 'proof'
+  | 'assets'
+  | 'memory'
+  | 'automation'
+  | 'adult'
+  | 'app-runtime'
+  | 'libraries'
   | 'settings'
-  | 'system'
+  | 'system';
 
 export type DashboardNavItem = {
-  id: DashboardSectionId
-  href: string
-  label: string
-  description: string
-  icon: ComponentType<SVGProps<SVGSVGElement>>
-  group?: string
-}
+  id: DashboardSectionId;
+  href: string;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+};
 
 export const DASHBOARD_NAV_ITEMS: readonly DashboardNavItem[] = [
-  { id: 'overview',          href: '/admin/dashboard',              label: 'Overview',           description: 'VPS, apps, provider, capability, job, storage, worker, Redis, and Qdrant summary.', icon: LayoutDashboard, group: 'Platform' },
-  { id: 'studio',            href: '/admin/dashboard/studio',        label: 'Studio',             description: 'Permanent chat and task workspace for runtime-selected capability execution.', icon: Sparkles,        group: 'Platform' },
-  { id: 'apps',              href: '/admin/dashboard/apps',          label: 'Apps',               description: 'Connected and planned thin apps, usage, memory, storage, and capability context.', icon: FolderOpen,      group: 'Platform' },
-  { id: 'capabilities',      href: '/admin/dashboard/capabilities',  label: 'Capabilities',       description: 'Canonical capability runtime truth from the shared source of truth.', icon: Blocks,          group: 'Runtime' },
-  { id: 'assets-jobs',       href: '/admin/dashboard/assets',        label: 'Assets & Jobs',      description: 'Generated assets, artifacts, queued jobs, failures, downloads, and references.', icon: Database,        group: 'Runtime' },
-  { id: 'memory-knowledge',  href: '/admin/dashboard/memory',        label: 'Memory & Knowledge', description: 'User memory, app memory, brand memory, RAG sources, scrape results, and ingestion state.', icon: Activity,      group: 'Runtime' },
-  { id: 'settings',          href: '/admin/dashboard/settings',      label: 'Settings',           description: 'The only dashboard place to add, save, test, and verify provider keys and integrations.', icon: Settings2,      group: 'System' },
-  { id: 'system',            href: '/admin/dashboard/system',        label: 'System',             description: 'Technical VPS diagnostics, logs, worker, database, Redis, Qdrant, and health checks.', icon: Shield,          group: 'System' },
-] as const
+  {
+    id: 'command-center',
+    href: '/admin/dashboard',
+    label: 'Command Center',
+    description: 'Overview and control hub for the entire platform',
+    icon: LayoutDashboard,
+  },
+  {
+    id: 'studio',
+    href: '/admin/dashboard/studio',
+    label: 'Studio',
+    description: 'Create and manage AI-powered content and workflows',
+    icon: Sparkles,
+  },
+  {
+    id: 'capabilities',
+    href: '/admin/dashboard/capabilities',
+    label: 'Capabilities',
+    description: 'Configure and extend platform capabilities',
+    icon: Blocks,
+  },
+  {
+    id: 'providers',
+    href: '/admin/dashboard/providers',
+    label: 'Providers & Models',
+    description: 'Manage AI providers, models, and API connections',
+    icon: Server,
+  },
+  {
+    id: 'proof',
+    href: '/admin/dashboard/proof',
+    label: 'Proof & Tests',
+    description: 'Run tests and validate platform functionality',
+    icon: Shield,
+  },
+  {
+    id: 'assets',
+    href: '/admin/dashboard/assets',
+    label: 'Assets & Jobs',
+    description: 'Manage media assets and background job queues',
+    icon: Database,
+  },
+  {
+    id: 'memory',
+    href: '/admin/dashboard/memory',
+    label: 'Memory & Knowledge',
+    description: 'Manage knowledge bases, embeddings, and memory stores',
+    icon: Activity,
+  },
+  {
+    id: 'automation',
+    href: '/admin/dashboard/automation',
+    label: 'Automation',
+    description: 'Build and manage automated workflows and triggers',
+    icon: Zap,
+  },
+  {
+    id: 'adult',
+    href: '/admin/dashboard/adult',
+    label: 'Adult Private',
+    description: 'Restricted adult content management and controls',
+    icon: Lock,
+  },
+  {
+    id: 'app-runtime',
+    href: '/admin/dashboard/app-runtime',
+    label: 'App Runtime',
+    description: 'Monitor and control application runtime environments',
+    icon: AppWindow,
+  },
+  {
+    id: 'libraries',
+    href: '/admin/dashboard/libraries',
+    label: 'Libraries & Integrations',
+    description: 'Manage third-party libraries and service integrations',
+    icon: Package,
+  },
+  {
+    id: 'settings',
+    href: '/admin/dashboard/settings',
+    label: 'Settings',
+    description: 'Configure platform preferences and account settings',
+    icon: Settings2,
+  },
+  {
+    id: 'system',
+    href: '/admin/dashboard/system',
+    label: 'System',
+    description: 'System health, logs, and infrastructure management',
+    icon: Monitor,
+  },
+] as const;

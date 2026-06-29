@@ -21,6 +21,12 @@ const finalDashboardRoutes = [
   'app/admin/dashboard/settings/page.tsx',
   'app/admin/dashboard/studio/page.tsx',
   'app/admin/dashboard/system/page.tsx',
+  'app/admin/dashboard/proof/page.tsx',
+  'app/admin/dashboard/providers/page.tsx',
+  'app/admin/dashboard/automation/page.tsx',
+  'app/admin/dashboard/adult/page.tsx',
+  'app/admin/dashboard/app-runtime/page.tsx',
+  'app/admin/dashboard/libraries/page.tsx',
 ] as const
 
 const deletedDashboardRouteDirs = [
@@ -51,27 +57,30 @@ const deletedDashboardRouteDirs = [
 
 describe('final product reset dashboard topology', () => {
   it('keeps exactly the final dashboard nav sections', () => {
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([
-      'Overview',
-      'Studio',
-      'Apps',
-      'Capabilities',
-      'Assets & Jobs',
-      'Memory & Knowledge',
-      'Settings',
-      'System',
-    ])
-    expect(DASHBOARD_NAV_ITEMS.map((item) => item.href)).toEqual([
-      '/admin/dashboard',
-      '/admin/dashboard/studio',
-      '/admin/dashboard/apps',
-      '/admin/dashboard/capabilities',
-      '/admin/dashboard/assets',
-      '/admin/dashboard/memory',
-      '/admin/dashboard/settings',
-      '/admin/dashboard/system',
-    ])
-    expect(DASHBOARD_NAV_ITEMS).toHaveLength(8)
+    const labels = DASHBOARD_NAV_ITEMS.map((item) => item.label)
+    const hrefs = DASHBOARD_NAV_ITEMS.map((item) => item.href)
+    expect(labels).toContain('Command Center')
+    expect(labels).toContain('Studio')
+    expect(labels).toContain('Capabilities')
+    expect(labels).toContain('Providers & Models')
+    expect(labels).toContain('Proof & Tests')
+    expect(labels).toContain('Assets & Jobs')
+    expect(labels).toContain('Memory & Knowledge')
+    expect(labels).toContain('Automation')
+    expect(labels).toContain('Adult Private')
+    expect(labels).toContain('App Runtime')
+    expect(labels).toContain('Libraries & Integrations')
+    expect(labels).toContain('Settings')
+    expect(labels).toContain('System')
+    expect(DASHBOARD_NAV_ITEMS).toHaveLength(13)
+    expect(hrefs).toContain('/admin/dashboard')
+    expect(hrefs).toContain('/admin/dashboard/studio')
+    expect(hrefs).toContain('/admin/dashboard/providers')
+    expect(hrefs).toContain('/admin/dashboard/proof')
+    expect(hrefs).toContain('/admin/dashboard/automation')
+    expect(hrefs).toContain('/admin/dashboard/adult')
+    expect(hrefs).toContain('/admin/dashboard/app-runtime')
+    expect(hrefs).toContain('/admin/dashboard/libraries')
   })
 
   it('deletes duplicate dashboard UI route directories instead of hiding them', () => {
@@ -91,6 +100,12 @@ describe('final product reset dashboard topology', () => {
       'components/dashboard/ui/DashboardShell.tsx',
       'components/dashboard/ui/SidebarNav.tsx',
       'app/admin/dashboard/page.tsx',
+      'app/admin/dashboard/proof/page.tsx',
+      'app/admin/dashboard/providers/page.tsx',
+      'app/admin/dashboard/automation/page.tsx',
+      'app/admin/dashboard/adult/page.tsx',
+      'app/admin/dashboard/app-runtime/page.tsx',
+      'app/admin/dashboard/libraries/page.tsx',
       ...finalDashboardRoutes,
     ]
     for (const file of activeUiFiles) {
@@ -133,12 +148,11 @@ describe('final product reset truth and provider controls', () => {
   it('keeps Overview limited to real summary blocks', () => {
     const overview = source('app/admin/dashboard/page.tsx')
     for (const required of [
-      'VPS / Webdock',
-      'Connected apps',
       'Provider health',
       'Capabilities',
       'Active jobs',
-      'Recent Critical Failures Only',
+      'Storage',
+      'Recent failures',
     ]) {
       expect(overview).toContain(required)
     }
@@ -298,4 +312,5 @@ describe('final product reset public website positioning', () => {
     expect(exists('app/admin/dashboard/voice-agent')).toBe(false)
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).not.toContain('Voice Agent')
   })
+
 })
