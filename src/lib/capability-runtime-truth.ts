@@ -55,6 +55,8 @@ interface CapabilitySpec {
   requiresDedicatedEndpoint: boolean
   /** Env var names for required dedicated endpoints (any one non-empty = satisfied) */
   dedicatedEndpointEnvs?: string[]
+  providerRequiredEnv?: Record<string, string[]>
+  proofNextAction?: string
   /** When true this capability is purely a storage/system operation — no provider key needed */
   storageOnly?: boolean
 }
@@ -147,31 +149,35 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     capabilityId: 'video_generation',
     label: 'Video Generation',
     category: 'video',
-    providerCandidates: ['genx'],
+    providerCandidates: ['together', 'genx'],
     executionRoute: '/api/brain/video-generate',
     requiresStorage: true,
     requiresAdultGate: false,
     requiresDedicatedEndpoint: false,
+    providerRequiredEnv: { together: ['TOGETHER_VIDEO_MODEL'] },
   },
   {
     capabilityId: 'image_to_video',
     label: 'Image to Video',
     category: 'video',
-    providerCandidates: ['genx'],
+    providerCandidates: ['together', 'genx'],
     executionRoute: '/api/brain/video-generate',
     requiresStorage: true,
     requiresAdultGate: false,
     requiresDedicatedEndpoint: false,
+    providerRequiredEnv: { together: ['TOGETHER_VIDEO_MODEL'] },
   },
   {
     capabilityId: 'long_form_video',
     label: 'Long-form Video',
     category: 'video',
-    providerCandidates: ['genx'],
+    providerCandidates: ['together', 'genx'],
     executionRoute: '/api/brain/long-form-video',
     requiresStorage: true,
     requiresAdultGate: false,
     requiresDedicatedEndpoint: false,
+    providerRequiredEnv: { together: ['TOGETHER_VIDEO_MODEL'] },
+    proofNextAction: 'Prove scene jobs, scene artifact persistence, fallback/retry, and final assembled artifact/storageUrl.',
   },
   // ── Audio ────────────────────────────────────────────────────────────────
   {
@@ -242,12 +248,12 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     capabilityId: 'avatar_generation',
     label: 'Avatar Generation',
     category: 'image',
-    providerCandidates: ['huggingface'],
-    executionRoute: null,
+    providerCandidates: ['together', 'genx', 'huggingface'],
+    executionRoute: '/api/admin/avatars/generate',
     requiresStorage: true,
     requiresAdultGate: false,
-    requiresDedicatedEndpoint: true,
-    dedicatedEndpointEnvs: ['HF_AVATAR_IMAGE_ENDPOINT'],
+    requiresDedicatedEndpoint: false,
+    providerRequiredEnv: { huggingface: ['HF_AVATAR_IMAGE_ENDPOINT'] },
   },
   {
     capabilityId: 'avatar_lipsync',
@@ -389,6 +395,24 @@ function evalEndpoint(spec: CapabilitySpec): boolean {
   return togetherConfigured || (hfEndpointConfigured && hfModelConfigured)
 }
 
+function missingProviderRequiredEnv(spec: CapabilitySpec, providerId: string): string[] {
+  return (spec.providerRequiredEnv?.[providerId] ?? []).filter((name) => !process.env[name]?.trim())
+}
+
+function providerMeetsCapabilityConfig(spec: CapabilitySpec, providerId: string): boolean {
+  return missingProviderRequiredEnv(spec, providerId).length === 0
+}
+
+function providerConfigBlocker(spec: CapabilitySpec, providerIds: string[]): string {
+  return providerIds
+    .map((id) => {
+      const missing = missingProviderRequiredEnv(spec, id)
+      return missing.length ? `${id} requires ${missing.join(' or ')}` : ''
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 function evalStorage(): boolean {
   return checkWritable(LOCAL_STORE_FILES.artifacts).writable
 }
@@ -413,18 +437,21 @@ function buildEntry(
   const providerMap = new Map(providers.map((p) => [p.providerId, p]))
 
   const candidates = spec.providerCandidates
-  const connectedCandidates = candidates.filter((id) => providerMap.get(id as never)?.connected)
-  const configuredCandidates = candidates.filter((id) => providerMap.get(id as never)?.configured)
+  const rawConnectedCandidates = candidates.filter((id) => providerMap.get(id as never)?.connected)
+  const rawConfiguredCandidates = candidates.filter((id) => providerMap.get(id as never)?.configured)
+  const connectedCandidates = rawConnectedCandidates.filter((id) => providerMeetsCapabilityConfig(spec, id))
+  const configuredCandidates = rawConfiguredCandidates.filter((id) => providerMeetsCapabilityConfig(spec, id))
+  const configBlockedCandidates = rawConfiguredCandidates.filter((id) => !providerMeetsCapabilityConfig(spec, id))
 
   const hasRoute = Boolean(spec.executionRoute)
-  const hasEndpoint = evalEndpoint(spec)
+  const hasEndpoint = evalEndpoint(spec) && (connectedCandidates.length > 0 || configuredCandidates.length > 0 || configBlockedCandidates.length === 0)
   const hasStorage = !spec.requiresStorage || storageOk
   const hasPermission = !spec.requiresAdultGate || adultGateOk
 
   // For storage-only capabilities (no provider key needed)
   const hasRequiredKey = spec.storageOnly
     ? true
-    : connectedCandidates.length > 0 || configuredCandidates.length > 0
+    : rawConnectedCandidates.length > 0 || rawConfiguredCandidates.length > 0
 
   let status: CapabilityStatus
   let proofStatus: ProofStatus
@@ -473,7 +500,12 @@ function buildEntry(
   }
 
   // Evaluate hard blockers in priority order
-  if (connectedCandidates.length === 0 && configuredCandidates.length === 0 && candidates.length > 0) {
+  if (connectedCandidates.length === 0 && configuredCandidates.length === 0 && configBlockedCandidates.length > 0) {
+    status = 'blocked'
+    proofStatus = 'not_tested'
+    blocker = providerConfigBlocker(spec, configBlockedCandidates) || 'Provider has a key but is missing capability-specific configuration.'
+    nextAction = `Set ${(spec.providerRequiredEnv?.[configBlockedCandidates[0]] ?? []).join(' or ')}`
+  } else if (connectedCandidates.length === 0 && configuredCandidates.length === 0 && candidates.length > 0) {
     status = 'missing'
     proofStatus = 'not_tested'
     blocker = `No configured provider for: ${candidates.join(', ')}`
@@ -530,12 +562,12 @@ function buildEntry(
         status = 'wired_unproven'
         proofStatus = 'not_tested'
         blocker = ''
-        nextAction = `Run a live ${spec.label} generation to prove end-to-end`
+        nextAction = spec.proofNextAction ?? `Run a live ${spec.label} generation to prove end-to-end`
       } else {
         status = 'wired_unproven'
         proofStatus = 'not_tested'
         blocker = spec.requiresDedicatedEndpoint ? `requires_endpoint: set ${(spec.dedicatedEndpointEnvs ?? []).join(' or ')}` : ''
-        nextAction = `Configure dedicated endpoint and run live test`
+        nextAction = spec.proofNextAction ?? `Configure dedicated endpoint and run live test`
       }
     } else {
       // Text/system: connected provider + route = working

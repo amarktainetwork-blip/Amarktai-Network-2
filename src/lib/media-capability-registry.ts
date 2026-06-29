@@ -84,6 +84,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'video',
     providers: [
+      { provider: 'together', model: process.env.TOGETHER_VIDEO_MODEL?.trim() || 'TOGETHER_VIDEO_MODEL' },
       { provider: 'genx', model: GENX_DEFAULT_VIDEO_MODEL },
     ],
   },

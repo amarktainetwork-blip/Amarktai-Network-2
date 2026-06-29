@@ -57,6 +57,11 @@ beforeEach(() => {
   delete process.env.HF_ADULT_VIDEO_MODEL
   delete process.env.HF_ADULT_VOICE_ENDPOINT
   delete process.env.HF_ADULT_VOICE_MODEL
+  delete process.env.TOGETHER_VIDEO_MODEL
+  delete process.env.HF_AVATAR_IMAGE_ENDPOINT
+  delete process.env.GENX_AVATAR_VIDEO_MODEL
+  delete process.env.GENX_LIPSYNC_MODEL
+  delete process.env.KLING_AVATAR_MODEL
 })
 
 // Import after mocks
@@ -119,6 +124,109 @@ describe('route-only capability is wired_unproven, not working', () => {
     expect(entry!.status).toBe('wired_unproven')
     expect(entry!.proofStatus).not.toBe('passed')
     expect(entry!.connectedProviderCandidates).toContain('genx')
+  })
+
+  it('video_generation and image_to_video list Together and GenX but require TOGETHER_VIDEO_MODEL for Together video', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'together' ? 'together-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'together' ? passedNotes : noNotes,
+    )
+
+    const video = await getCapabilityRuntimeTruthEntry('video_generation')
+    const i2v = await getCapabilityRuntimeTruthEntry('image_to_video')
+    expect(video!.providerCandidates).toEqual(['together', 'genx'])
+    expect(i2v!.providerCandidates).toEqual(['together', 'genx'])
+    expect(video!.connectedProviderCandidates).not.toContain('together')
+    expect(video!.status).toBe('blocked')
+    expect(video!.blocker).toContain('TOGETHER_VIDEO_MODEL')
+
+    process.env.TOGETHER_VIDEO_MODEL = 'together-video-model'
+    const configuredVideo = await getCapabilityRuntimeTruthEntry('video_generation')
+    expect(configuredVideo!.connectedProviderCandidates).toContain('together')
+    expect(configuredVideo!.status).toBe('wired_unproven')
+    expect(configuredVideo!.proofStatus).not.toBe('passed')
+  })
+
+  it('GenX remains a video fallback when Together video model is missing', async () => {
+    process.env.GENX_BASE_URL = 'https://query.genx.sh'
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'genx' || id === 'together' ? `${id}-key` : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'genx' || id === 'together' ? passedNotes : noNotes,
+    )
+
+    const entry = await getCapabilityRuntimeTruthEntry('video_generation')
+    expect(entry!.providerCandidates).toEqual(['together', 'genx'])
+    expect(entry!.connectedProviderCandidates).toEqual(['genx'])
+    expect(entry!.status).toBe('wired_unproven')
+  })
+
+  it('long_form_video uses Together/GenX scene providers and remains unproven until final artifact proof', async () => {
+    process.env.GENX_BASE_URL = 'https://query.genx.sh'
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'genx' ? 'genx-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'genx' ? passedNotes : noNotes,
+    )
+
+    const entry = await getCapabilityRuntimeTruthEntry('long_form_video')
+    expect(entry!.providerCandidates).toEqual(['together', 'genx'])
+    expect(entry!.status).toBe('wired_unproven')
+    expect(entry!.proofStatus).not.toBe('passed')
+    expect(entry!.nextAction).toContain('scene jobs')
+    expect(entry!.nextAction).toContain('final assembled artifact')
+  })
+
+  it('avatar_generation uses image providers and is not blocked solely by HF avatar endpoint when Together is connected', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'together' ? 'together-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'together' ? passedNotes : noNotes,
+    )
+
+    const entry = await getCapabilityRuntimeTruthEntry('avatar_generation')
+    expect(entry!.providerCandidates).toEqual(['together', 'genx', 'huggingface'])
+    expect(entry!.executionRoute).toBe('/api/admin/avatars/generate')
+    expect(entry!.connectedProviderCandidates).toContain('together')
+    expect(entry!.status).toBe('wired_unproven')
+    expect(entry!.blocker).not.toContain('HF_AVATAR_IMAGE_ENDPOINT')
+  })
+
+  it('avatar_lipsync remains separate from static avatar image generation', async () => {
+    process.env.GENX_BASE_URL = 'https://query.genx.sh'
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'genx' ? 'genx-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'genx' ? passedNotes : noNotes,
+    )
+
+    const lipsync = await getCapabilityRuntimeTruthEntry('avatar_lipsync')
+    expect(lipsync!.providerCandidates).toEqual(['genx'])
+    expect(lipsync!.executionRoute).toBe('/api/brain/avatar-video')
+    expect(lipsync!.status).toBe('blocked')
+    expect(lipsync!.blocker).toContain('GENX_AVATAR_VIDEO_MODEL')
+  })
+
+  it('adult_avatar remains Hugging Face adult-gated', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? 'hf-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'huggingface' ? passedNotes : noNotes,
+    )
+
+    const entry = await getCapabilityRuntimeTruthEntry('adult_avatar')
+    expect(entry!.providerCandidates).toEqual(['huggingface'])
+    expect(entry!.executionRoute).toBeNull()
+    expect(entry!.hasPermission).toBe(false)
+    expect(entry!.status).not.toBe('working')
+    expect(entry!.blocker).toContain('requires_endpoint')
   })
 
   it('proofStatus is not_tested or route_only — never passed for media without explicit proof', async () => {

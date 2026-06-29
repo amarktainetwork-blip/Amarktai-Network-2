@@ -48,6 +48,7 @@ beforeEach(() => {
   delete process.env.TOGETHER_ADULT_FALLBACK_ENABLED
   delete process.env.TOGETHER_ADULT_TEXT_MODEL
   delete process.env.TOGETHER_ADULT_IMAGE_MODEL
+  delete process.env.TOGETHER_VIDEO_MODEL
   delete process.env.HF_ADULT_TEXT_ENDPOINT
   delete process.env.HF_ADULT_TEXT_MODEL
 })
@@ -111,6 +112,8 @@ describe('Video routing: no Veo default', () => {
     const source = src('src/app/api/brain/video-generate/route.ts')
     expect(source).toContain("provider === 'together'")
     expect(source).toContain('v1/video/generations')
+    expect(source).toContain('TOGETHER_VIDEO_MODEL')
+    expect(source).toContain('No default video model is assumed')
   })
 
   it('provider-video-policy max duration is 8s (scene-based, not one long clip)', async () => {
@@ -128,6 +131,15 @@ describe('Video routing: no Veo default', () => {
     expect(scenes.length).toBeGreaterThanOrEqual(11)
     const total = scenes.reduce((a: number, b: number) => a + b, 0)
     expect(total).toBe(90)
+  })
+
+  it('long-form video execution does not use Gemini as an active provider or fallback', () => {
+    const truth = src('src/lib/capability-runtime-truth.ts')
+    const store = src('src/lib/long-form-video-store.ts')
+    const longFormSpec = truth.slice(truth.indexOf("capabilityId: 'long_form_video'"), truth.indexOf("capabilityId: 'tts'"))
+    expect(longFormSpec).toContain("providerCandidates: ['together', 'genx']")
+    expect(longFormSpec.toLowerCase()).not.toContain('gemini')
+    expect(store.toLowerCase()).not.toContain('gemini')
   })
 })
 
@@ -220,6 +232,21 @@ describe('Capability truth: proof required', () => {
     const entry = await getCapabilityRuntimeTruthEntry('video_generation')
     expect(entry!.status).toBe('wired_unproven')
     expect(entry!.proofStatus).not.toBe('passed')
+  })
+
+  it('video truth includes Together and blocks Together video without TOGETHER_VIDEO_MODEL', async () => {
+    mockGetMeshCredential.mockImplementation(async (id: string) =>
+      id === 'together' ? 'together-key' : null,
+    )
+    mockGetMeshTestNotes.mockImplementation(async (id: string) =>
+      id === 'together' ? passedNotes : noNotes,
+    )
+    const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
+    const entry = await getCapabilityRuntimeTruthEntry('video_generation')
+    expect(entry!.providerCandidates).toEqual(['together', 'genx'])
+    expect(entry!.connectedProviderCandidates).not.toContain('together')
+    expect(entry!.status).toBe('blocked')
+    expect(entry!.blocker).toContain('TOGETHER_VIDEO_MODEL')
   })
 })
 

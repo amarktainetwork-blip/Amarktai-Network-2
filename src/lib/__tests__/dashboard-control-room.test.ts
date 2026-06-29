@@ -82,7 +82,9 @@ describe('dashboard layout: top nav, no sidebar', () => {
     expect(layout).toContain('data-dashboard-voice-assistant')
     expect(layout).toContain('TTS {voiceStatusLabel')
     expect(layout).toContain('Realtime voice')
-    expect(layout).toContain('/api/realtime/session')
+    expect(layout).toContain('/api/admin/system/capabilities')
+    expect(layout).not.toContain("fetch('/api/realtime/session', { method: 'POST' })")
+    expect(layout).not.toContain('/api/realtime/session')
   })
 })
 

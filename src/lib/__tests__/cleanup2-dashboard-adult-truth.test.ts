@@ -42,6 +42,7 @@ beforeEach(() => {
   delete process.env.HF_ADULT_VIDEO_MODEL_FALLBACK
   delete process.env.TOGETHER_ADULT_FALLBACK_ENABLED
   delete process.env.TOGETHER_ADULT_VIDEO_MODEL
+  delete process.env.TOGETHER_VIDEO_MODEL
 })
 
 describe('cleanup 2 dashboard truth and adult routing', () => {
@@ -109,7 +110,21 @@ describe('cleanup 2 dashboard truth and adult routing', () => {
     expect(layout).not.toContain('Voice backend not wired')
     expect(layout).not.toContain('Mic stream disabled')
     expect(layout).toContain('/api/admin/system/capabilities')
-    expect(layout).toContain('/api/realtime/session')
+    expect(layout).not.toContain("fetch('/api/realtime/session', { method: 'POST' })")
+    expect(layout).not.toContain('/api/realtime/session')
+    expect(layout).toContain('Realtime voice is not configured.')
+  })
+
+  it('realtime session route remains unavailable and does not fake success', () => {
+    const route = source('src/app/api/realtime/session/route.ts')
+    expect(route).toContain('getSession')
+    expect(route).toContain('!session.isLoggedIn')
+    expect(route).toContain("error: 'Unauthorized'")
+    expect(route).toContain('status: 401')
+    expect(route).toContain('executed: false')
+    expect(route).toContain("availabilityLevel: 'NOT_AVAILABLE'")
+    expect(route).toContain('status: 501')
+    expect(route).not.toContain('executed: true')
   })
 
   it('dashboard overview preserves needs_proof instead of showing it as blocked', () => {

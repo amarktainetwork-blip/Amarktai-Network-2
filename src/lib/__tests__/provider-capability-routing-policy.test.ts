@@ -128,6 +128,7 @@ describe('provider capability truth and routing policy', () => {
     expect(routeLiveModel({ capability: 'chat' }).selectedProvider).toMatch(/^(groq|together|genx|huggingface)$/)
     expect(routeLiveModel({ capability: 'image_generation' }).selectedProvider).toMatch(/^(genx|together|huggingface)$/)
     expect(routeLiveModel({ capability: 'music_generation' }).selectedProvider).toBe('genx')
-    expect(MEDIA_CAPABILITY_ROUTES.video_generation.providers.map((entry) => entry.provider)).toEqual(['genx'])
+    expect(MEDIA_CAPABILITY_ROUTES.video_generation.providers.map((entry) => entry.provider)).toEqual(['together', 'genx'])
+    expect(MEDIA_CAPABILITY_ROUTES.video_generation.providers[0].model).toBe(process.env.TOGETHER_VIDEO_MODEL?.trim() || 'TOGETHER_VIDEO_MODEL')
   })
 })

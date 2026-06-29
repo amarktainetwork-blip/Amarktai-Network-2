@@ -19,7 +19,7 @@ type VoiceTruth = {
 const DEFAULT_VOICE_TRUTH: VoiceTruth = {
   tts: { status: 'missing', blocker: 'TTS truth has not loaded yet.', nextAction: 'Open Capabilities for current TTS status.' },
   stt: { status: 'missing', blocker: 'STT truth has not loaded yet.', nextAction: 'Open Capabilities for current STT status.' },
-  realtime: { status: 'missing', blocker: 'Realtime voice has not been checked yet.', nextAction: 'Check /api/realtime/session.' },
+  realtime: { status: 'missing', blocker: 'Realtime voice is not configured.', nextAction: 'Wire realtime voice sessions to an approved active provider.' },
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,8 +36,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     Promise.all([
       fetch('/api/admin/settings/status').then(r => r.json()).catch(() => null),
       fetch('/api/admin/system/capabilities').then(r => r.json()).catch(() => null),
-      fetch('/api/realtime/session', { method: 'POST' }).then(async (r) => ({ ok: r.ok, status: r.status, body: await r.json().catch(() => ({})) })).catch(() => null),
-    ]).then(([response, capabilityResponse, realtimeResponse]) => {
+    ]).then(([response, capabilityResponse]) => {
       if (!mounted) return
       const truth = response?.truth
       const connected = Number(truth?.connectedCount ?? 0)
@@ -48,13 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setVoiceTruth({
         tts: voiceCapabilityTruth(capability('tts')),
         stt: voiceCapabilityTruth(capability('stt')),
-        realtime: realtimeResponse?.ok
-          ? { status: 'working', blocker: '', nextAction: '' }
-          : {
-            status: realtimeResponse?.status === 501 ? 'missing' : 'blocked',
-            blocker: String(realtimeResponse?.body?.error ?? 'Realtime voice session endpoint did not return a working session.'),
-            nextAction: realtimeResponse?.status === 501 ? 'Wire realtime voice sessions to an approved active provider.' : 'Check realtime voice session route.',
-          },
+        realtime: voiceCapabilityTruth(capability('realtime_voice'), DEFAULT_VOICE_TRUTH.realtime),
       })
       setPulse(true)
     })
@@ -161,14 +154,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 }
 
-function voiceCapabilityTruth(entry?: Record<string, unknown>): VoiceTruth['tts'] {
+function voiceCapabilityTruth(entry?: Record<string, unknown>, fallback: VoiceTruth['tts'] = {
+  status: 'missing',
+  blocker: '',
+  nextAction: '',
+}): VoiceTruth['tts'] {
   const status = entry?.status === 'working' || entry?.status === 'wired_unproven' || entry?.status === 'blocked' || entry?.status === 'missing'
     ? entry.status
-    : 'missing'
+    : fallback.status
   return {
     status,
-    blocker: typeof entry?.blocker === 'string' ? entry.blocker : '',
-    nextAction: typeof entry?.nextAction === 'string' ? entry.nextAction : '',
+    blocker: typeof entry?.blocker === 'string' ? entry.blocker : fallback.blocker,
+    nextAction: typeof entry?.nextAction === 'string' ? entry.nextAction : fallback.nextAction,
   }
 }
 
