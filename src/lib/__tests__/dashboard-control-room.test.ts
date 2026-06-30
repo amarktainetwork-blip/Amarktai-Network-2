@@ -7,7 +7,6 @@ import {
   CAPABILITY_STUDIOS,
   DASHBOARD_CONTROL_ROOM_SECTIONS,
   FUTURE_DASHBOARD_PROVIDER_IDS,
-  JOB_LIFECYCLE_STATES,
   PLANNED_CONNECTED_APPS,
   PROVIDER_MODEL_SURFACE,
 } from '@/lib/dashboard-control-room'
@@ -21,23 +20,30 @@ describe('dashboard control room navigation', () => {
   const requiredLabels = [
     'Command Center',
     'Studio',
-    'App Connections',
     'Capabilities',
-    'Providers & Models',
     'Jobs & Artifacts',
-    'Webhooks / Handoff',
-    'Agents / Learning',
-    'System / Settings',
+    'App Connections',
+    'Providers & Models',
+    'Agents & Learning',
+    'Settings',
   ] as const
 
-  it('is capability-first and uses the requested sections', () => {
+  it('has exactly 8 primary nav sections', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label)).toEqual([...requiredLabels])
     expect(DASHBOARD_CONTROL_ROOM_SECTIONS.map((item) => item.label)).toEqual([...requiredLabels])
+    expect(DASHBOARD_NAV_ITEMS.length).toBe(8)
   })
 
   it('does not expose Adult as an active dashboard section', () => {
     expect(DASHBOARD_NAV_ITEMS.map((item) => item.label).join(' ')).not.toMatch(/Adult/i)
     expect(DASHBOARD_CONTROL_ROOM_SECTIONS.map((item) => item.label).join(' ')).not.toMatch(/Adult/i)
+  })
+
+  it('does not include removed clutter sections in nav', () => {
+    const labels = DASHBOARD_NAV_ITEMS.map((item) => item.label)
+    for (const removed of ['App Runtime', 'Assets', 'Automation', 'Memory', 'Proof', 'Libraries', 'Readiness', 'Truth', 'VPS', 'Labs', 'App Builder', 'Provider Governance', 'Provider Contracts', 'Webhooks / Handoff', 'System / Settings']) {
+      expect(labels).not.toContain(removed)
+    }
   })
 
   it('does not create duplicate dashboard-v2, router-v2, or proof-v2 folders', () => {
@@ -76,13 +82,14 @@ describe('capability studio architecture', () => {
     'Avatar Studio',
     'Scrape / Brand Studio',
     'RAG / Knowledge Studio',
-    'Jobs / Artifacts Studio',
-    'App Connections Studio',
-    'Agents / Learning Studio',
   ] as const
 
   it.each(requiredStudios)('includes %s', (studioName) => {
     expect(CAPABILITY_STUDIOS.map((studio) => studio.displayName)).toContain(studioName)
+  })
+
+  it('has exactly 9 studio tabs', () => {
+    expect(CAPABILITY_STUDIOS.length).toBe(9)
   })
 
   it('all studios include capability ids and example app request payloads', () => {
@@ -145,27 +152,8 @@ describe('capability studio architecture', () => {
     }
   })
 
-  it('Jobs/Artifacts includes lifecycle states and webhook handoff', () => {
-    const jobs = CAPABILITY_STUDIOS.find((studio) => studio.id === 'jobs-artifacts')!
-    expect([...JOB_LIFECYCLE_STATES]).toEqual(['draft', 'validating', 'queued', 'running', 'awaiting_review', 'completed', 'artifact_persisted', 'webhook_sent', 'delivered', 'failed', 'cancelled', 'retrying'])
-    for (const token of ['jobTimeline', 'artifactLineage', 'webhookDeliveryState', 'appDestination']) {
-      expect(jobs.controls).toContain(token)
-    }
-  })
-
-  it('App Connections includes app IDs, API keys, webhooks, budgets, and rate limits', () => {
-    const appStudio = CAPABILITY_STUDIOS.find((studio) => studio.id === 'app-connections')!
-    for (const token of ['appId', 'apiKeyStatus', 'webhookUrl', 'allowedCapabilities', 'budgetLimits', 'rateLimits']) {
-      expect(appStudio.controls).toContain(token)
-    }
+  it('Planned connected apps include all 5 apps', () => {
     expect(PLANNED_CONNECTED_APPS.map((app) => app.displayName)).toEqual(['Marketing App', 'Music App', 'Religious App', 'Crypto App', 'Horse App'])
-  })
-
-  it('Agents/Learning is present but controlled/future where incomplete', () => {
-    const agents = CAPABILITY_STUDIOS.find((studio) => studio.id === 'agents-learning')!
-    expect(agents.proofStatus).toBe('deferred')
-    expect(agents.providerPolicy).toContain('Controlled learning only')
-    expect(agents.currentBlocker).toContain('not live-ready')
   })
 })
 
@@ -181,31 +169,41 @@ describe('dashboard app-facing controls', () => {
     expect(payloadBlock).not.toMatch(/providerOverride|modelOverride|provider:\s|model:\s/)
   })
 
-  it('App Connections example request does not include provider/model overrides', () => {
-    const page = read('app/admin/dashboard/app-runtime/page.tsx')
-    const requestBlock = page.slice(page.indexOf('const REQUEST_EXAMPLE'), page.indexOf('const RESPONSE_EXAMPLE'))
-    expect(requestBlock).not.toMatch(/providerOverride|modelOverride|provider:\s|model:\s/)
-  })
-
   it('opencode.json is unchanged and valid if present', () => {
     const file = path.join(root, 'opencode.json')
     if (!fs.existsSync(file)) return
     expect(() => JSON.parse(fs.readFileSync(file, 'utf8'))).not.toThrow()
   })
 
-  it('keeps legacy routes available while control room nav is consolidated', () => {
+  it('new dashboard pages exist', () => {
     for (const route of [
+      'app/admin/dashboard/page.tsx',
       'app/admin/dashboard/studio/page.tsx',
       'app/admin/dashboard/capabilities/page.tsx',
+      'app/admin/dashboard/jobs/page.tsx',
+      'app/admin/dashboard/apps/page.tsx',
       'app/admin/dashboard/providers/page.tsx',
-      'app/admin/dashboard/app-runtime/page.tsx',
-      'app/admin/dashboard/assets/page.tsx',
-      'app/admin/dashboard/automation/page.tsx',
-      'app/admin/dashboard/memory/page.tsx',
-      'app/admin/dashboard/system/page.tsx',
+      'app/admin/dashboard/agents/page.tsx',
       'app/admin/dashboard/settings/page.tsx',
     ]) {
       expect(srcExists(route), route).toBe(true)
+    }
+  })
+
+  it('old routes redirect to new locations', () => {
+    const redirects: Record<string, string> = {
+      'app/admin/dashboard/app-runtime/page.tsx': '/admin/dashboard/apps',
+      'app/admin/dashboard/assets/page.tsx': '/admin/dashboard/jobs',
+      'app/admin/dashboard/automation/page.tsx': '/admin/dashboard/agents',
+      'app/admin/dashboard/memory/page.tsx': '/admin/dashboard/agents',
+      'app/admin/dashboard/proof/page.tsx': '/admin/dashboard/settings',
+      'app/admin/dashboard/libraries/page.tsx': '/admin/dashboard/settings',
+      'app/admin/dashboard/adult/page.tsx': '/admin/dashboard/settings',
+    }
+    for (const [file, target] of Object.entries(redirects)) {
+      expect(srcExists(file), file).toBe(true)
+      const content = read(file)
+      expect(content).toContain(`redirect('${target}')`)
     }
   })
 })
