@@ -24,6 +24,7 @@ import { getAppAgent, buildAgentSystemPrompt } from '@/lib/app-agent'
 import { dispatchEvent } from '@/lib/webhook-manager'
 import { emitSystemEvent } from '@/lib/event-bus'
 import { resolveCapability } from '@/lib/capability-engine'
+import { getCapabilityContract } from '@/lib/capability-contracts'
 
 const SETTINGS_BLOCKED_CAPABILITIES = new Set([
   'adult_18plus_image',
@@ -260,6 +261,21 @@ export async function POST(request: NextRequest) {
   }
 
   const effectiveTaskType = capabilityResolution.primaryCapability
+
+  const contract = getCapabilityContract(effectiveTaskType)
+  if (contract && (contract.status === 'blocked' || contract.status === 'deferred')) {
+    return NextResponse.json(
+      errorResponse({
+        traceId,
+        taskType: body.taskType,
+        app,
+        error: contract.blockedOrDeferredReason ?? `Capability ${effectiveTaskType} is ${contract.status}.`,
+        statusCode: 409,
+        latencyMs: Date.now() - start,
+      }),
+      { status: 409 },
+    )
+  }
 
   // ── Load App Agent system prompt (B1 fix) ─────────────────────────────
   // If the app has an active App Agent configured, inject its system prompt

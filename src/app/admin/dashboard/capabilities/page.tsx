@@ -5,6 +5,7 @@ import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 import { CAPABILITY_UI_MODES } from '@/lib/capability-ui-schema'
 import { getArtifactType, getCapabilityRoute } from '@/lib/capability-display'
 import { CAPABILITY_STUDIOS } from '@/lib/dashboard-control-room'
+import { listAppFacingCapabilities } from '@/lib/capability-contracts'
 
 export const dynamic = 'force-dynamic'
 
@@ -79,6 +80,23 @@ export default async function CapabilitiesPage() {
               </div>
               <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{studio.purpose}</p>
               <p className="mt-2 font-mono text-[10px] leading-5 text-slate-600">{studio.capabilityIds.join(', ')}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+        <h2 className="text-lg font-black text-white">App-facing capability contracts</h2>
+        <p className="mt-1 text-xs text-slate-500">Canonical contracts with example app request payloads. Apps use capability IDs — never provider/model.</p>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {listAppFacingCapabilities().slice(0, 12).map((contract) => (
+            <article key={contract.capabilityId} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-black text-slate-100">{contract.displayName}</p>
+                <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-2 py-0.5 font-mono text-[10px] font-bold text-cyan-200">{contract.capabilityId}</span>
+              </div>
+              <p className="mt-1 font-mono text-[10px] text-slate-600">mode: {contract.mode} | providers: {contract.providerPolicy.allowedActiveProviders.join(', ')}</p>
+              <pre className="mt-2 max-h-24 overflow-auto rounded bg-slate-900/80 p-2 text-[10px] leading-4 text-slate-400">{JSON.stringify(contract.exampleAppRequest.payload, null, 2)}</pre>
             </article>
           ))}
         </div>

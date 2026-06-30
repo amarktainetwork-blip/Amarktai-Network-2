@@ -14,6 +14,7 @@ import { recordEstimatedCost } from '@/lib/cost-tracking'
 import { callGenXChat } from '@/lib/genx-client'
 import { normalizeProviderVideoCount, normalizeProviderVideoDuration } from '@/lib/provider-video-policy'
 import type { LiveRouteResult } from '@/lib/live-ai-routing'
+import { getCapabilityContract } from '@/lib/capability-contracts'
 import { POST as researchAssistPost } from '@/app/api/admin/research/assist/route'
 import { POST as imagePost } from '@/app/api/brain/image/route'
 import { POST as videoPost } from '@/app/api/brain/video-generate/route'
@@ -633,6 +634,23 @@ export async function POST(request: NextRequest) {
   const mode = normalizeMode(body.mode, tab)
   const costMode = effectiveStudioCostMode(body)
   const proofCapabilityId = proofCapability(mode, capability)
+
+  const contract = getCapabilityContract(proofCapabilityId) ?? getCapabilityContract(capability)
+  if (contract) {
+    const contractBlocker =
+      contract.status === 'blocked' ? contract.blockedOrDeferredReason ?? 'Capability is blocked.' :
+      contract.status === 'deferred' ? contract.blockedOrDeferredReason ?? 'Capability is deferred.' :
+      null
+    if (contractBlocker) {
+      return NextResponse.json(blockerResponse({
+        mode,
+        capability: proofCapabilityId,
+        status: contract.status,
+        blocker: contractBlocker,
+        nextAction: contract.nextActionIfBlocked,
+      }), { status: 409 })
+    }
+  }
   const preflight = await preflightCapability(mode, proofCapabilityId)
   if (preflight?.response) {
     return NextResponse.json(preflight.response, { status: preflight.statusCode })
