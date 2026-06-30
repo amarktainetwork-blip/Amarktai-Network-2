@@ -326,12 +326,16 @@ describe('core live proof pack and capabilities display', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api-inference.huggingface.co/models/facebook/musicgen-small',
+      'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer hf_test_token' }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer hf_test_token',
+          Accept: 'audio/*, application/octet-stream',
+        }),
       }),
     )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(result.provider).toBe('huggingface')
     expect(result.model).toBe('facebook/musicgen-small')
     expect(result.rawType).toBe('blob')
@@ -342,7 +346,7 @@ describe('core live proof pack and capabilities display', () => {
 
   it('Hugging Face text-to-audio rejects JSON/text and tiny audio responses', async () => {
     const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({ error: 'loading' }), {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'loading' }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
     }))
@@ -352,7 +356,7 @@ describe('core live proof pack and capabilities display', () => {
       prompt: 'proof',
     })).rejects.toThrow('instead of audio')
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(new Blob([Buffer.from('RIFF')], { type: 'audio/wav' }), {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Blob([Buffer.from('RIFF')], { type: 'audio/wav' }), {
       status: 200,
       headers: { 'content-type': 'audio/wav' },
     }))
@@ -361,6 +365,76 @@ describe('core live proof pack and capabilities display', () => {
       model: 'facebook/musicgen-small',
       prompt: 'proof',
     })).rejects.toThrow('unusable audio')
+  })
+
+  it('Hugging Face text-to-audio falls back from router DNS failure to legacy endpoint', async () => {
+    const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
+    const cause = Object.assign(new Error('getaddrinfo ENOTFOUND router.huggingface.co'), {
+      name: 'Error',
+      code: 'ENOTFOUND',
+    })
+    const routerFailure = Object.assign(new TypeError('fetch failed'), { cause })
+    const audioBlob = new Blob([Buffer.from('RIFF....WAVE....legacy-audio-data'.repeat(200))], {
+      type: 'audio/wav',
+    })
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(routerFailure)
+      .mockResolvedValueOnce(new Response(audioBlob, {
+        status: 200,
+        headers: { 'content-type': 'audio/wav' },
+      }))
+
+    const result = await generateHuggingFaceTextToAudio({
+      token: 'hf_secret_token_for_test',
+      model: 'facebook/musicgen-small',
+      prompt: 'proof',
+      durationSeconds: 8,
+    })
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small',
+      expect.any(Object),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      'https://api-inference.huggingface.co/models/facebook/musicgen-small',
+      expect.any(Object),
+    )
+    expect(result.provider).toBe('huggingface')
+    expect(result.bytes).toBeGreaterThan(1024)
+  })
+
+  it('Hugging Face text-to-audio reports combined endpoint errors without tokens', async () => {
+    const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
+    const token = 'hf_secret_token_for_test'
+    const cause = Object.assign(new Error('getaddrinfo ENOTFOUND api-inference.huggingface.co'), {
+      name: 'Error',
+      code: 'ENOTFOUND',
+    })
+    const legacyFailure = Object.assign(new TypeError('fetch failed'), { cause })
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ error: `loading ${token}` }), {
+        status: 503,
+        headers: { 'content-type': 'application/json' },
+      }))
+      .mockRejectedValueOnce(legacyFailure)
+
+    let message = ''
+    await generateHuggingFaceTextToAudio({
+      token,
+      model: 'facebook/musicgen-small',
+      prompt: 'proof',
+    }).catch((error) => {
+      message = error instanceof Error ? error.message : String(error)
+    })
+
+    expect(message).toContain('Hugging Face textToAudio failed.')
+    expect(message).toContain('router.huggingface.co')
+    expect(message).toContain('HTTP 503')
+    expect(message).toContain('api-inference.huggingface.co')
+    expect(message).toContain('ENOTFOUND')
+    expect(message).not.toContain(token)
   })
 
   it('music proof supports Hugging Face then GenX real audio fallback with canonical model settings', () => {

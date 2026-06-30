@@ -142,49 +142,110 @@ function encodedHuggingFaceModelPath(model: string) {
   return model.split('/').map(encodeURIComponent).join('/')
 }
 
-export async function generateHuggingFaceTextToAudio(input: {
-  token: string
-  model: string
-  prompt: string
-  durationSeconds?: number
-}): Promise<HuggingFaceTextToAudioResult> {
-  const response = await fetch(`https://api-inference.huggingface.co/models/${encodedHuggingFaceModelPath(input.model)}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${input.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      inputs: input.prompt,
-      parameters: input.durationSeconds ? { duration: input.durationSeconds } : undefined,
-      options: { wait_for_model: true },
-    }),
-    signal: AbortSignal.timeout(90_000),
-  })
+const HF_TEXT_TO_AUDIO_FETCH_TIMEOUT_MS = 180_000
 
+function textToAudioEndpoints(encodedModel: string) {
+  return [
+    `https://router.huggingface.co/hf-inference/models/${encodedModel}`,
+    `https://api-inference.huggingface.co/models/${encodedModel}`,
+  ] as const
+}
+
+function safeProviderText(raw: string, token: string) {
+  let value = raw.replace(/Bearer\s+[A-Za-z0-9._:-]+/gi, 'Bearer [redacted]')
+  if (token) value = value.split(token).join('[redacted]')
+  return value.slice(0, 240)
+}
+
+function errorDetailForEndpoint(error: unknown, endpoint: string) {
+  const host = new URL(endpoint).host
+  if (!(error instanceof Error)) return `${host}: unknown error`
+  const cause = error.cause instanceof Error
+    ? error.cause as Error & { code?: string }
+    : null
+  const causeParts = [
+    cause?.name,
+    cause?.code,
+    cause?.message,
+  ].filter(Boolean)
+  const message = error.message.startsWith(`${host}:`) ? error.message.slice(host.length + 1).trim() : error.message
+  const errorName = error.name === 'Error' ? '' : error.name
+  return `${host}: ${[
+    errorName,
+    message,
+    causeParts.length ? `cause ${causeParts.join(' ')}` : '',
+  ].filter(Boolean).join(' ')}`
+}
+
+async function readHuggingFaceAudioResponse(
+  response: Response,
+  endpoint: string,
+  token: string,
+): Promise<{ buffer: Buffer; contentType: string; extension: string; bytes: number }> {
+  const host = new URL(endpoint).host
   const responseContentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || ''
   if (!response.ok) {
     const providerBody = await response.text().catch(() => '')
-    throw new Error(`Hugging Face textToAudio returned HTTP ${response.status}: ${providerBody.slice(0, 240) || 'no provider error body'}`)
+    throw new Error(`${host}: HTTP ${response.status}: ${safeProviderText(providerBody, token) || 'no provider error body'}`)
   }
   if (/json|text\/plain|text\/html/i.test(responseContentType)) {
     const providerBody = await response.text().catch(() => '')
-    throw new Error(`Hugging Face textToAudio returned ${responseContentType} instead of audio: ${providerBody.slice(0, 240)}`)
+    throw new Error(`${host}: returned ${responseContentType} instead of audio: ${safeProviderText(providerBody, token)}`)
   }
 
   const blob = await response.blob()
   const contentType = blob.type || responseContentType || 'audio/wav'
   const buffer = Buffer.from(await blob.arrayBuffer())
   if (!isUsableAudioBuffer(buffer, contentType)) {
-    throw new Error(`Hugging Face textToAudio returned unusable audio (${buffer.length} bytes, ${contentType || 'unknown content type'}).`)
+    throw new Error(`${host}: returned unusable audio (${buffer.length} bytes, ${contentType || 'unknown content type'}).`)
   }
-
   return {
-    provider: 'huggingface',
-    model: input.model,
     buffer,
     contentType,
     extension: extensionForAudioContentType(contentType),
     bytes: buffer.length,
-    rawType: 'blob',
   }
+}
+
+export async function generateHuggingFaceTextToAudio(input: {
+  token: string
+  model: string
+  prompt: string
+  durationSeconds?: number
+}): Promise<HuggingFaceTextToAudioResult> {
+  const encodedModel = encodedHuggingFaceModelPath(input.model)
+  const errors: string[] = []
+  for (const endpoint of textToAudioEndpoints(encodedModel)) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${input.token}`,
+          'Content-Type': 'application/json',
+          Accept: 'audio/*, application/octet-stream',
+        },
+        body: JSON.stringify({
+          inputs: input.prompt,
+          parameters: input.durationSeconds ? { duration: input.durationSeconds } : undefined,
+          options: { wait_for_model: true },
+        }),
+        signal: AbortSignal.timeout(HF_TEXT_TO_AUDIO_FETCH_TIMEOUT_MS),
+      })
+      const audio = await readHuggingFaceAudioResponse(response, endpoint, input.token)
+      return {
+        provider: 'huggingface',
+        model: input.model,
+        buffer: audio.buffer,
+        contentType: audio.contentType,
+        extension: audio.extension,
+        bytes: audio.bytes,
+        rawType: 'blob',
+      }
+    } catch (error) {
+      errors.push(errorDetailForEndpoint(error, endpoint))
+    }
+  }
+  throw new Error(`Hugging Face textToAudio failed. ${errors.join('; ')}`)
 }
 
 // ---------------------------------------------------------------------------
