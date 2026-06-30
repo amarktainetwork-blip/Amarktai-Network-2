@@ -106,6 +106,87 @@ const HF_FALLBACK_MODELS: Partial<Record<CapabilityClass, HfFallbackSpec[]>> = {
   ],
 };
 
+export const HF_MUSIC_MODEL_ENV = 'HF_MUSIC_MODEL'
+
+export function getConfiguredHuggingFaceMusicModel(): string | null {
+  return process.env[HF_MUSIC_MODEL_ENV]?.trim() || null
+}
+
+export interface HuggingFaceTextToAudioResult {
+  provider: 'huggingface'
+  model: string
+  buffer: Buffer
+  contentType: string
+  extension: string
+  bytes: number
+  rawType: 'blob' | 'arrayBuffer' | 'buffer'
+}
+
+export function isUsableAudioBuffer(buffer: Buffer, contentType?: string): boolean {
+  if (!buffer || buffer.length < 1024) return false
+  if (contentType && /json|text\/plain|text\/html/i.test(contentType)) return false
+  return true
+}
+
+function extensionForAudioContentType(contentType: string): string {
+  const normalized = contentType.toLowerCase().split(';')[0]?.trim()
+  if (normalized === 'audio/wav' || normalized === 'audio/x-wav') return 'wav'
+  if (normalized === 'audio/mpeg' || normalized === 'audio/mp3') return 'mp3'
+  if (normalized === 'audio/ogg') return 'ogg'
+  if (normalized === 'audio/flac') return 'flac'
+  if (normalized === 'audio/mp4') return 'm4a'
+  return 'wav'
+}
+
+function encodedHuggingFaceModelPath(model: string) {
+  return model.split('/').map(encodeURIComponent).join('/')
+}
+
+export async function generateHuggingFaceTextToAudio(input: {
+  token: string
+  model: string
+  prompt: string
+  durationSeconds?: number
+}): Promise<HuggingFaceTextToAudioResult> {
+  const response = await fetch(`https://api-inference.huggingface.co/models/${encodedHuggingFaceModelPath(input.model)}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${input.token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      inputs: input.prompt,
+      parameters: input.durationSeconds ? { duration: input.durationSeconds } : undefined,
+      options: { wait_for_model: true },
+    }),
+    signal: AbortSignal.timeout(90_000),
+  })
+
+  const responseContentType = response.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase() || ''
+  if (!response.ok) {
+    const providerBody = await response.text().catch(() => '')
+    throw new Error(`Hugging Face textToAudio returned HTTP ${response.status}: ${providerBody.slice(0, 240) || 'no provider error body'}`)
+  }
+  if (/json|text\/plain|text\/html/i.test(responseContentType)) {
+    const providerBody = await response.text().catch(() => '')
+    throw new Error(`Hugging Face textToAudio returned ${responseContentType} instead of audio: ${providerBody.slice(0, 240)}`)
+  }
+
+  const blob = await response.blob()
+  const contentType = blob.type || responseContentType || 'audio/wav'
+  const buffer = Buffer.from(await blob.arrayBuffer())
+  if (!isUsableAudioBuffer(buffer, contentType)) {
+    throw new Error(`Hugging Face textToAudio returned unusable audio (${buffer.length} bytes, ${contentType || 'unknown content type'}).`)
+  }
+
+  return {
+    provider: 'huggingface',
+    model: input.model,
+    buffer,
+    contentType,
+    extension: extensionForAudioContentType(contentType),
+    bytes: buffer.length,
+    rawType: 'blob',
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Fallback resolution
 // ---------------------------------------------------------------------------

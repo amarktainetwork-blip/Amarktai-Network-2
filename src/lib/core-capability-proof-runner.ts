@@ -53,6 +53,20 @@ export interface CoreProofAudioSource {
   audioUrl: string | null
 }
 
+export type CoreMusicProofAttemptStatus = 'not_configured' | 'failed' | 'processing' | 'ok'
+
+export interface CoreMusicProofAttempt {
+  provider: 'huggingface' | 'genx'
+  model: string | null
+  status: CoreMusicProofAttemptStatus
+  blocker?: string | null
+  error?: string | null
+  artifactId?: string | null
+  storageUrl?: string | null
+  jobId?: string | null
+  pollUrl?: string | null
+}
+
 export const CORE_PROOF_CAPABILITIES: readonly CoreProofCapabilitySpec[] = [
   { capability: 'chat', mode: 'chat', route: '/api/admin/studio/execute' },
   { capability: 'image_generation', mode: 'image', route: '/api/admin/studio/execute' },
@@ -510,54 +524,191 @@ async function runLiveSttProof(ttsAudioSource: CoreProofAudioSource | null): Pro
   }
 }
 
-async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
-  const route = '/api/admin/music-studio'
-  try {
-    const { callGenXMedia, getConfiguredGenXMusicModel } = await import('@/lib/genx-client')
-    const { persistCanonicalMediaResult } = await import('@/lib/canonical-media-artifact')
-    const { createLocalMediaJob, localMediaJobResponse } = await import('@/lib/media-job-store')
-    const model = getConfiguredGenXMusicModel()
-    if (!model) {
-      return normalizeCoreProofRouteResult('music_generation', route, {
-        success: false,
-        executed: false,
-        status: 'needs_setup',
-        jobStatus: 'needs_setup',
-        provider: 'genx',
-        model: null,
-        blocker: 'GenX music audio requires GENX_MUSIC_MODEL. Set GENX_MUSIC_MODEL to a GenX audio/music model.',
-      })
-    }
+function appendMusicAttempt(
+  attempts: CoreMusicProofAttempt[],
+  attempt: CoreMusicProofAttempt,
+): CoreMusicProofAttempt[] {
+  attempts.push(attempt)
+  return attempts
+}
 
-    const durationSeconds = Math.min(Math.max(options.maxDurationSeconds ?? 8, 5), 10)
-    const generated = await callGenXMedia({
+function musicMissingSettingsBlocker(attempts: CoreMusicProofAttempt[]) {
+  const hasMissingProviders = attempts.some((attempt) => attempt.status === 'not_configured')
+  return hasMissingProviders
+    ? 'Music audio generation requires one configured real audio provider: HF_MUSIC_MODEL with Hugging Face credentials, or GENX_MUSIC_MODEL with GenX credentials.'
+    : 'No configured music/audio provider can run Pack A proof.'
+}
+
+function finalMusicFailureBlocker(attempts: CoreMusicProofAttempt[]) {
+  return attempts
+    .map((attempt) => `${attempt.provider}: ${attempt.blocker ?? attempt.error ?? attempt.status}`)
+    .join('; ') || 'All configured music/audio providers failed.'
+}
+
+async function runHuggingFaceMusicProofAttempt(
+  options: CoreProofPackOptions,
+  attempts: CoreMusicProofAttempt[],
+): Promise<CoreProofCapabilityResult | null> {
+  const route = '/api/admin/music-studio'
+  const {
+    generateHuggingFaceTextToAudio,
+    getConfiguredHuggingFaceMusicModel,
+    HF_MUSIC_MODEL_ENV,
+  } = await import('@/lib/hf-fallback')
+  const { getMeshCredential } = await import('@/lib/provider-mesh-status')
+  const { persistCanonicalMediaResult } = await import('@/lib/canonical-media-artifact')
+  const model = getConfiguredHuggingFaceMusicModel()
+  const apiKey = await getMeshCredential('huggingface')
+  const missing: string[] = []
+  if (!apiKey) missing.push('HUGGINGFACE_API_KEY or HF_TOKEN')
+  if (!model) missing.push(HF_MUSIC_MODEL_ENV)
+  if (missing.length || !apiKey || !model) {
+    appendMusicAttempt(attempts, {
+      provider: 'huggingface',
       model,
+      status: 'not_configured',
+      blocker: 'Missing HF_MUSIC_MODEL or Hugging Face token.',
+    })
+    return null
+  }
+  const hfApiKey = apiKey
+  const hfModel = model
+
+  const durationSeconds = Math.min(Math.max(options.maxDurationSeconds ?? 8, 5), 10)
+  let generated: Awaited<ReturnType<typeof generateHuggingFaceTextToAudio>>
+  try {
+    generated = await generateHuggingFaceTextToAudio({
+      token: hfApiKey,
+      model: hfModel,
       prompt: PACK_A_PROMPTS.music_generation,
-      type: 'audio',
-      duration: durationSeconds,
-      params: {
-        style: 'ambient',
-        instrumental: true,
+      durationSeconds,
+    })
+  } catch (error) {
+    appendMusicAttempt(attempts, {
+      provider: 'huggingface',
+      model: hfModel,
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Hugging Face music request failed.',
+    })
+    return null
+  }
+
+  try {
+    const persisted = await persistCanonicalMediaResult({
+      result: {
+        audioBase64: generated.buffer.toString('base64'),
+        mimeType: generated.contentType === 'application/octet-stream' ? 'audio/wav' : generated.contentType,
+        provider: 'huggingface',
+        model: generated.model,
       },
+      appSlug: 'amarktai-network',
+      type: 'music',
+      subType: 'core_proof_music',
+      title: 'Core proof music',
+      description: PACK_A_PROMPTS.music_generation,
+      provider: 'huggingface',
+      model: generated.model,
       metadata: {
         source: 'core_proof_cli',
         capability: 'music_generation',
         durationSeconds,
+        bytes: generated.bytes,
+        rawType: generated.rawType,
+        extension: generated.extension,
       },
     })
-
-    if (!generated.success || (!generated.url && !generated.jobId)) {
-      return normalizeCoreProofRouteResult('music_generation', route, {
-        success: false,
-        executed: true,
+    if (!persisted.artifactId || !persisted.storageUrl) {
+      appendMusicAttempt(attempts, {
+        provider: 'huggingface',
+        model: hfModel,
         status: 'failed',
-        provider: 'genx',
-        model: generated.model,
-        blocker: generated.error ?? 'GenX music generation returned no playable audio or trackable provider job.',
+        blocker: 'Hugging Face music completed but artifact persistence failed.',
       })
+      return null
     }
+    appendMusicAttempt(attempts, {
+      provider: 'huggingface',
+      model: generated.model,
+      status: 'ok',
+      artifactId: persisted.artifactId,
+      storageUrl: persisted.storageUrl,
+    })
+    return normalizeCoreProofRouteResult('music_generation', route, {
+      success: true,
+      executed: true,
+      status: persisted.status,
+      provider: 'huggingface',
+      model: generated.model,
+      artifactId: persisted.artifactId,
+      storageUrl: persisted.storageUrl,
+      audioUrl: persisted.mediaUrl,
+      attempts,
+    })
+  } catch (error) {
+    appendMusicAttempt(attempts, {
+      provider: 'huggingface',
+      model: hfModel,
+      status: 'failed',
+      blocker: `Hugging Face music completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+    })
+    return null
+  }
+}
 
-    if (generated.url) {
+async function runGenXMusicProofAttempt(
+  options: CoreProofPackOptions,
+  attempts: CoreMusicProofAttempt[],
+): Promise<CoreProofCapabilityResult | null> {
+  const route = '/api/admin/music-studio'
+  const { callGenXMedia, getConfiguredGenXMusicModel } = await import('@/lib/genx-client')
+  const { getMeshCredential } = await import('@/lib/provider-mesh-status')
+  const { persistCanonicalMediaResult } = await import('@/lib/canonical-media-artifact')
+  const { createLocalMediaJob, localMediaJobResponse } = await import('@/lib/media-job-store')
+  const model = getConfiguredGenXMusicModel()
+  const apiKey = await getMeshCredential('genx')
+  const missing: string[] = []
+  if (!apiKey) missing.push('GENX_API_KEY')
+  if (!model) missing.push('GENX_MUSIC_MODEL')
+  if (missing.length || !apiKey || !model) {
+    appendMusicAttempt(attempts, {
+      provider: 'genx',
+      model,
+      status: 'not_configured',
+      blocker: 'Missing GENX_MUSIC_MODEL or GenX credential.',
+    })
+    return null
+  }
+  const genxModel = model
+
+  const durationSeconds = Math.min(Math.max(options.maxDurationSeconds ?? 8, 5), 10)
+  const generated = await callGenXMedia({
+    model: genxModel,
+    prompt: PACK_A_PROMPTS.music_generation,
+    type: 'audio',
+    duration: durationSeconds,
+    params: {
+      style: 'ambient',
+      instrumental: true,
+    },
+    metadata: {
+      source: 'core_proof_cli',
+      capability: 'music_generation',
+      durationSeconds,
+    },
+  })
+
+  if (!generated.success || (!generated.url && !generated.jobId)) {
+    appendMusicAttempt(attempts, {
+      provider: 'genx',
+      model: generated.model,
+      status: 'failed',
+      error: generated.error ?? 'GenX music generation returned no playable audio or trackable provider job.',
+    })
+    return null
+  }
+
+  if (generated.url) {
+    try {
       const persisted = await persistCanonicalMediaResult({
         result: generated,
         appSlug: 'amarktai-network',
@@ -569,8 +720,24 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
         model: generated.model,
         metadata: { source: 'core_proof_cli', capability: 'music_generation', durationSeconds },
       })
+      if (!persisted.artifactId || !persisted.storageUrl) {
+        appendMusicAttempt(attempts, {
+          provider: 'genx',
+          model: generated.model,
+          status: 'failed',
+          blocker: 'GenX music completed but artifact persistence failed.',
+        })
+        return null
+      }
+      appendMusicAttempt(attempts, {
+        provider: 'genx',
+        model: generated.model,
+        status: 'ok',
+        artifactId: persisted.artifactId,
+        storageUrl: persisted.storageUrl,
+      })
       return normalizeCoreProofRouteResult('music_generation', route, {
-        success: Boolean(persisted.artifactId),
+        success: true,
         executed: true,
         status: persisted.status,
         provider: 'genx',
@@ -578,25 +745,75 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
         artifactId: persisted.artifactId,
         storageUrl: persisted.storageUrl,
         audioUrl: persisted.mediaUrl,
-        blocker: persisted.artifactId ? null : 'Music generation completed but artifact persistence failed.',
+        attempts,
       })
+    } catch (error) {
+      appendMusicAttempt(attempts, {
+        provider: 'genx',
+        model: generated.model,
+        status: 'failed',
+        blocker: `GenX music completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      })
+      return null
     }
+  }
 
-    const job = createLocalMediaJob({
-      capability: 'music_generation',
-      appSlug: 'amarktai-network',
-      type: 'music',
-      subType: 'core_proof_music',
-      title: 'Core proof music',
-      description: PACK_A_PROMPTS.music_generation,
-      prompt: PACK_A_PROMPTS.music_generation,
-      provider: 'genx',
-      model: generated.model,
-      providerJobId: generated.jobId!,
-      metadata: { source: 'core_proof_cli', capability: 'music_generation', durationSeconds },
+  const job = createLocalMediaJob({
+    capability: 'music_generation',
+    appSlug: 'amarktai-network',
+    type: 'music',
+    subType: 'core_proof_music',
+    title: 'Core proof music',
+    description: PACK_A_PROMPTS.music_generation,
+    prompt: PACK_A_PROMPTS.music_generation,
+    provider: 'genx',
+    model: generated.model,
+    providerJobId: generated.jobId!,
+    metadata: { source: 'core_proof_cli', capability: 'music_generation', durationSeconds },
+  })
+  const polled = await pollMediaJobProof('music_generation', route, localMediaJobResponse(job) as Record<string, unknown>, options)
+  appendMusicAttempt(attempts, {
+    provider: 'genx',
+    model: generated.model,
+    status: polled.result.status === 'proven' ? 'ok' : polled.result.status === 'processing' ? 'processing' : 'failed',
+    blocker: polled.result.blocker,
+    artifactId: polled.result.artifactId,
+    storageUrl: polled.result.storageUrl,
+    jobId: polled.result.jobId,
+    pollUrl: polled.result.pollUrl,
+  })
+  if (polled.result.status === 'proven' || polled.result.status === 'processing') {
+    return {
+      ...polled.result,
+      attempts,
+    }
+  }
+  return null
+}
+
+async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
+  const route = '/api/admin/music-studio'
+  try {
+    const attempts: CoreMusicProofAttempt[] = []
+    const hfResult = await runHuggingFaceMusicProofAttempt(options, attempts)
+    if (hfResult) return hfResult
+
+    const genxResult = await runGenXMusicProofAttempt(options, attempts)
+    if (genxResult) return genxResult
+
+    const configuredAttempts = attempts.filter((attempt) => attempt.status !== 'not_configured')
+    const allNotConfigured = attempts.length > 0 && configuredAttempts.length === 0
+    return normalizeCoreProofRouteResult('music_generation', route, {
+      success: false,
+      executed: configuredAttempts.length > 0,
+      status: allNotConfigured ? 'needs_setup' : 'failed',
+      jobStatus: allNotConfigured ? 'needs_setup' : 'failed',
+      provider: null,
+      model: null,
+      blocker: allNotConfigured ? musicMissingSettingsBlocker(attempts) : finalMusicFailureBlocker(attempts),
+      nextAction: 'Set HF_MUSIC_MODEL with a Hugging Face key, or GENX_MUSIC_MODEL with GenX, then rerun live Pack A proof.',
+      attempts,
     })
-    const polled = await pollMediaJobProof('music_generation', route, localMediaJobResponse(job) as Record<string, unknown>, options)
-    return polled.result
   } catch (error) {
     return normalizeCoreProofRouteResult('music_generation', route, {
       success: false,

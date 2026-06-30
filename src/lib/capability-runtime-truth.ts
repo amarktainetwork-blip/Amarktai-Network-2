@@ -204,11 +204,13 @@ const CAPABILITY_SPECS: CapabilitySpec[] = [
     capabilityId: 'music_generation',
     label: 'Music / Audio Generation',
     category: 'audio',
-    providerCandidates: ['genx'],
+    providerCandidates: ['huggingface', 'genx'],
     executionRoute: '/api/admin/music-studio',
     requiresStorage: true,
     requiresAdultGate: false,
     requiresDedicatedEndpoint: false,
+    providerRequiredEnv: { huggingface: ['HF_MUSIC_MODEL'], genx: ['GENX_MUSIC_MODEL'] },
+    proofNextAction: 'Set HF_MUSIC_MODEL for Hugging Face or GENX_MUSIC_MODEL for GenX, then run live Pack A music proof.',
   },
   {
     capabilityId: 'voice_clone',
@@ -404,6 +406,9 @@ function providerMeetsCapabilityConfig(spec: CapabilitySpec, providerId: string)
 }
 
 function providerConfigBlocker(spec: CapabilitySpec, providerIds: string[]): string {
+  if (spec.capabilityId === 'music_generation') {
+    return 'Music audio generation requires one configured real audio provider: HF_MUSIC_MODEL with Hugging Face credentials, or GENX_MUSIC_MODEL with GenX credentials.'
+  }
   return providerIds
     .map((id) => {
       const missing = missingProviderRequiredEnv(spec, id)
@@ -504,7 +509,7 @@ function buildEntry(
     status = 'blocked'
     proofStatus = 'not_tested'
     blocker = providerConfigBlocker(spec, configBlockedCandidates) || 'Provider has a key but is missing capability-specific configuration.'
-    nextAction = `Set ${(spec.providerRequiredEnv?.[configBlockedCandidates[0]] ?? []).join(' or ')}`
+    nextAction = spec.proofNextAction ?? `Set ${(spec.providerRequiredEnv?.[configBlockedCandidates[0]] ?? []).join(' or ')}`
   } else if (connectedCandidates.length === 0 && configuredCandidates.length === 0 && candidates.length > 0) {
     status = 'missing'
     proofStatus = 'not_tested'

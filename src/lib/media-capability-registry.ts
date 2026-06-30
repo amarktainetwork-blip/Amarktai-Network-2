@@ -5,6 +5,7 @@ import {
   GENX_DEFAULT_VIDEO_MODEL,
   getConfiguredGenXMusicModel,
 } from '@/lib/genx-client'
+import { getConfiguredHuggingFaceMusicModel } from '@/lib/hf-fallback'
 import type { ProviderMeshId } from '@/lib/provider-mesh'
 
 export type FirstClassMediaCapability =
@@ -94,6 +95,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'music',
     providers: [
+      { provider: 'huggingface', model: getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL' },
       { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },
@@ -125,6 +127,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'audio',
     providers: [
+      { provider: 'huggingface', model: getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL' },
       { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },

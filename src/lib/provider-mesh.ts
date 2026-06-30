@@ -85,7 +85,7 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
     envAliases: ['HUGGINGFACE_API_KEY', 'HUGGINGFACEHUB_API_TOKEN', 'HF_TOKEN'],
     baseUrl: 'https://router.huggingface.co/v1',
     authMethod: 'Bearer token',
-    capabilities: ['text', 'vision', 'embeddings', 'rerank', 'image', 'video', 'stt', 'audio'],
+    capabilities: ['text', 'vision', 'embeddings', 'rerank', 'image', 'video', 'music', 'stt', 'audio'],
     testRoute: '/api/admin/settings/test-provider',
     normalUserVisible: false,
     settingsVisible: true,
