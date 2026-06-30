@@ -27,7 +27,7 @@ cd "$APP_ROOT"
 npx playwright install --with-deps chromium
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is required for the managed Qdrant service. Install Docker, then rerun the Qdrant command in docs/FINAL_VPS_INSTALL_PLAN.md."
+  echo "Docker is required for the managed Qdrant service. Install Docker, then rerun the Qdrant command from the canonical README or deployment notes."
 else
   docker rm -f amarktai-qdrant >/dev/null 2>&1 || true
   docker run -d --name amarktai-qdrant --restart unless-stopped -p 127.0.0.1:6333:6333 -v "$QDRANT_DIR:/qdrant/storage" qdrant/qdrant:latest

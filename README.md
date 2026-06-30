@@ -1,416 +1,374 @@
-# Amarktai Network
+# AmarktAI Network V1
 
-**The AI Ecosystem** — A cinematic, premium technology platform built with Next.js 15, TypeScript, Tailwind CSS, and Framer Motion.
+AmarktAI Network V1 is the central AI capability infrastructure for the AmarktAI ecosystem.
 
----
+It is a reusable capability gateway, runtime, media/job system, artifact handoff layer, provider router, and control room. External product apps connect to it. External apps do not live inside it.
 
-## Tech Stack
+This local repository is the source of truth for the project.
 
-| Layer | Technology |
-|---|---|
-| Framework | Next.js 15 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS + custom CSS |
-| Animation | Framer Motion |
-| Database ORM | Prisma |
-| Database | PostgreSQL |
-| Auth | iron-session + bcryptjs |
-| UI Components | Lucide React, Recharts |
-| Runtime | Node.js 20+ |
+Current source baseline for this handover: `828f98a fix: collapse v1 provider runtime policy`.
 
----
+## Project Identity
 
-## Quick Start
+AmarktAI Network provides the hard reusable AI infrastructure that many apps can share:
 
-### 1. Install Dependencies
+- provider and model-family governance
+- capability routing
+- GenX, Together, and Groq execution paths
+- media generation, image, video, long-form video, voice, STT, TTS, music/song, and avatar foundations
+- scraper, brand, RAG, and knowledge capabilities
+- jobs, artifacts, callbacks, and webhook handoff
+- app API keys and app capability permissions
+- future agent, learning, self-improvement, and self-healing foundations
+- dashboard control room for proof, status, providers, jobs, artifacts, and system health
 
-```bash
-npm install
-```
+It is not the Marketing App, Music App, Crypto App, Religious App, Horse App, or any other external product app.
 
-### 2. Configure Environment
+## Architecture Overview
 
-```bash
-cp .env.example .env
-```
+External apps own their own product surface:
 
-Edit `.env`:
+- users
+- databases
+- storage
+- UI
+- business rules
+- workflows
+- permissions
+- publishing, social, exchange, community, or domain-specific integrations
+- app-specific records and data
 
-```env
-DATABASE_URL="postgresql://user:password@host:5432/amarktai_network"
-SESSION_SECRET="your-super-secret-session-key-min-32-chars-long"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-```
+AmarktAI Network owns shared AI execution:
 
-### 3. Set Up Database
+- authenticating connected apps
+- checking allowed capabilities
+- accepting prompt/context/payload data
+- validating temporary asset references
+- choosing provider and model internally
+- executing the capability
+- storing temporary generated artifacts
+- returning job, artifact, and callback results
 
-```bash
-# Push schema to database
-npm run db:push
+Final product records and durable customer-facing storage remain with the external app unless a specific handoff contract says otherwise.
 
-# (Optional) Seed with sample data
-npm run db:seed
-```
+## How Apps Connect
 
-### 4. Bootstrap Admin User
+Apps connect by API key and capability jobs.
 
-```bash
-# Create initial admin account via Prisma seed or direct DB
-npx ts-node prisma/seed.ts
-```
+A connected app sends:
 
-### 5. Run Development Server
+- `appId` or app identity
+- tenant, workspace, user, and request context such as `tenantId`, `userId`, or app-specific IDs
+- the requested capability
+- prompts, instructions, and domain context
+- brand data or app data
+- temporary signed asset references
+- callback or webhook destination
 
-```bash
-npm run dev
-```
+Examples of signed asset references:
 
-### 6. Build for Production
+- logos
+- product images
+- brand guides
+- PDFs and source documents
+- audio references
+- video references
+- image references
+- product, campaign, or customer support attachments
+
+AmarktAI Network then:
+
+- validates the app credential
+- checks the app is allowed to use the requested capability
+- downloads or validates temporary asset references
+- rejects provider/model override attempts from app routes
+- chooses the provider/model internally
+- executes the capability
+- stores temporary generated artifacts
+- returns a result by response, artifact handoff, job polling, or webhook callback
+
+External apps then store final outputs in their own database and storage.
+
+## Provider Policy
+
+Active V1 runtime providers are exactly:
+
+- GenX
+- Together
+- Groq
+
+Future/workbench only:
+
+- MiMo
+
+MiMo is preserved for future coding, workbench, reasoning, and V2 agent support. It is not an active app runtime provider in V1.
+
+Removed or deferred from active V1 runtime:
+
+- Hugging Face
+- Adult mode
+- Qwen
+- Gemini
+- MiniMax
+
+Kling is not a top-level active provider unless a direct Kling API is added and approved later. If Kling is reachable through GenX, it is a GenX video/model family for Video Studio, Long-form Video, or Avatar workflows.
+
+Apps do not choose providers or models. Apps request capabilities. AmarktAI Network chooses providers and models.
+
+## Capability Model
+
+A capability is a reusable unit of AI work. Build it once in AmarktAI Network, then connected apps can use it through their own products.
+
+Examples:
+
+- chat and text generation
+- image generation
+- image editing
+- video generation
+- image-to-video
+- long-form video assembly
+- music and song generation
+- text-to-speech
+- speech-to-text
+- avatar image/video foundations
+- scraper and brand extraction
+- RAG and knowledge workflows
+- research summaries
+- campaign generation
+- artifact creation
+- webhook and handoff jobs
+
+The runtime must not mark route existence as proof. A capability is proven only when real execution, artifact persistence, and truthful status reporting prove it.
+
+## External App Examples
+
+Marketing App may use:
+
+- website scraping
+- brand identity extraction
+- logo, product, and brand-file references
+- copy generation
+- image generation
+- reels
+- long-form video
+- voiceover
+- music
+- avatar presenter
+- daily content generation
+- webhook and artifact handoff
+
+Music App may use:
+
+- lyrics
+- genre selectors
+- song generation
+- instrumental generation
+- cover art
+- music video
+- avatar performer
+- promo reels
+- voice
+- webhook and artifact handoff
+
+Religious App may use:
+
+- source-grounded RAG content
+- sermon, devotional, and study generation
+- voice/audio
+- short video clips
+- image generation
+
+Crypto App may use:
+
+- research summaries
+- market commentary
+- education content
+- chart-aware context from the app
+- alert copy
+- video and social posts
+
+Horse App may use:
+
+- summaries
+- health and training reports
+- document and image support
+- voice notes and STT
+- educational content
+
+Each app keeps its own users, storage, database, permissions, publishing connections, and business rules.
+
+## Asset Reference Model
+
+External apps should not permanently move all product data into AmarktAI Network.
+
+Instead, apps can provide signed or temporary references for assets required by a job:
+
+- logos
+- product images
+- brand books
+- PDFs
+- audio samples
+- video clips
+- source images
+- reference campaigns
+
+AmarktAI Network validates, fetches, and uses those references during execution. Generated outputs are stored temporarily as artifacts and returned to the app. The app stores final outputs in its own storage and database.
+
+This keeps tenant data boundaries clean while still allowing shared AI capability execution.
+
+## Dashboard Model
+
+The dashboard is the AmarktAI Network control room. It is not a product app.
+
+The dashboard should show real status only:
+
+- proven
+- blocked
+- configured
+- missing
+- deferred
+- failed
+
+No fake readiness. No route-only proof. No stale provider clutter.
+
+Expected control-room areas:
+
+- Command Center
+- Studio
+- App Connections
+- Capabilities
+- Text & Chat Studio
+- Image Studio
+- Video Studio
+- Long-form Video Studio
+- Music / Song Studio
+- Voice Studio
+- Avatar Studio
+- Scrape / Brand Studio
+- RAG / Knowledge Studio
+- Providers & Models
+- Jobs & Artifacts
+- Webhooks / Handoff
+- Agents / Learning
+- System / Settings
+
+The full dashboard redesign is not complete in this handover.
+
+## Capability Studios
+
+Studios are focused control surfaces for exercising and proving capabilities.
+
+Expected studios:
+
+- Text & Chat: chat, text, reasoning, copy, and text proof.
+- Image: image generation, image variants, asset ingestion, and proof.
+- Video: short video and image-to-video job execution.
+- Long-form Video: scene planning, clip execution, ffmpeg assembly, and final artifact proof.
+- Music / Song: lyrics, structure, genre, vocals, instrumental/full-song generation, and audio artifact proof.
+- Voice: TTS, STT, transcription, and voice artifact proof.
+- Avatar: avatar image, avatar video/lip-sync, and presenter workflows.
+- Scrape / Brand: website scraping, product/brand extraction, and brand memory inputs.
+- RAG / Knowledge: source ingestion, retrieval, grounded answer generation, and research outputs.
+- Jobs / Webhooks: job state, retries, callback delivery, artifact handoff, and proof.
+
+Studios should display the provider/model selected by runtime after execution. They must not add provider/model selectors for app-facing requests.
+
+## Agents And Learning
+
+Agents and learning are future platform foundations. They are important, but they are not fully done unless code and proof say so.
+
+The intended platform direction includes:
+
+- app-specific agents
+- agents that operate connected apps
+- shared learning across apps without leaking private tenant data
+- provider performance learning
+- creative performance learning
+- daily improvement loops
+- self-healing and retry intelligence
+- capability recommendations
+- cross-app pattern learning
+
+For V1, preserve the foundations and avoid claiming complete agent autonomy until live execution proves it.
+
+## Current Known State
+
+As of `828f98a fix: collapse v1 provider runtime policy`:
+
+- provider runtime policy has been cleaned
+- active runtime providers are GenX, Together, and Groq
+- Groq remains active for proven/wired STT, chat, text, and voice-related paths where appropriate
+- MiMo is preserved as future/workbench only
+- Hugging Face is removed/deferred from active runtime, proof, readiness, and provider candidate lists
+- adult mode is removed/deferred from active V1 runtime and proof
+- Qwen, Gemini, and MiniMax are not active V1 runtime providers
+- Pack A music must not use Hugging Face
+- music proof requires `GENX_MUSIC_MODEL`
+- dashboard redesign is not complete
+- live beta is not complete
+- capability packs and studios still need proof/build phases
+- route existence is not proof
+
+## Development Rules
+
+- The local repo is the source of truth.
+- Do not clone again to solve confusion.
+- Do not use VPS state as the source of truth.
+- Do not touch `opencode.json` unless explicitly instructed.
+- Do not create duplicate `proof-v2`, `router-v2`, or `dashboard-v2` truth layers.
+- Do not create new competing audit/truth/readiness documents.
+- Do not claim ready without proof.
+- Do not expose provider/model overrides to app routes.
+- Do not mark route existence as proof.
+- Do not add providers casually. V1 active providers are GenX, Together, and Groq.
+- Do not re-activate Hugging Face or adult mode for V1 without an explicit approved task.
+- Commit only after relevant checks pass: typecheck, build, proof where required, and `git diff --check`.
+
+## Build Path From Here
+
+Remaining stages:
+
+1. Dashboard control-room rebuild.
+2. Capability studio architecture.
+3. Pack A proof for core media paths.
+4. Pack B video, image-to-video, and long-form proof.
+5. Music/song proof using GenX and `GENX_MUSIC_MODEL`.
+6. Voice and avatar proof.
+7. Scraper, brand, and asset reference pipeline.
+8. External app gateway hardening.
+9. Webhook and artifact handoff proof.
+10. Agent and learning phase.
+11. Fake external app simulation for safe end-to-end validation.
+12. Marketing App connection first.
+
+## Quick Commands
+
+Use these from the repo root:
 
 ```bash
 npm run build
-npm run start
+npx tsc --noEmit
+git diff --check
+npm run proof
+npm run proof -- --compact
 ```
 
----
-
-## Project Structure
-
-```
-amarktai-network/
-├── prisma/
-│   ├── schema.prisma       # Database schema
-│   └── seed.ts             # DB seed script
-├── src/
-│   ├── app/
-│   │   ├── (pages)/        # Public pages
-│   │   ├── admin/          # Admin dashboard + login
-│   │   ├── api/            # API routes
-│   │   ├── globals.css     # Global styles + design tokens
-│   │   └── layout.tsx      # Root layout
-│   ├── components/
-│   │   ├── layout/         # Header, Footer
-│   │   └── ui/             # Reusable UI components
-│   ├── lib/
-│   │   ├── auth.ts         # Admin auth helpers
-│   │   ├── prisma.ts       # Prisma client singleton
-│   │   ├── session.ts      # iron-session config
-│   │   └── utils.ts        # Utilities
-│   └── middleware.ts       # Route protection
-├── .env.example
-├── deploy.sh               # Production deploy script
-├── next.config.mjs
-├── tailwind.config.ts
-└── tsconfig.json
-```
-
----
-
-## Site Pages
-
-| Route | Description |
-|---|---|
-| `/` | Landing page |
-| `/about` | Company story & values |
-| `/apps` | Ecosystem showcase |
-| `/contact` | Contact + waitlist forms |
-| `/admin/login` | Admin gateway (hidden) |
-| `/admin/dashboard` | Main overview |
-| `/admin/dashboard/products` | Manage products |
-| `/admin/dashboard/api-keys` | API key management |
-| `/admin/dashboard/integrations` | App integrations |
-| `/admin/dashboard/vps` | VPS monitoring |
-| `/admin/dashboard/contacts` | Contact submissions |
-| `/admin/dashboard/waitlist` | Waitlist entries |
-
----
-
-## Hidden Admin Discovery Flow
-
-The public site includes a **hidden admin reveal interaction**.
-
-To discover the admin access path:
-1. Navigate to any public page (Home, About, Apps, Contact)
-2. Type `show admin` anywhere (not in a form input)
-3. A reveal notification appears in the UI
-4. Click "Proceed to secure login" or click the Admin link in the nav
-
-This triggers the admin login page at `/admin/login`.
-
-**Security note:** The admin login is password-gated via server-side session authentication. No secrets are exposed in frontend code.
-
----
-
-## VPS Deployment
-
-### Prerequisites
-
-- Ubuntu 22.04+ VPS
-- Node.js 20+
-- PostgreSQL 15+
-- PM2 (`npm install -g pm2`)
-- Nginx
-
-### Deploy Steps
+Vitest note:
 
 ```bash
-# 1. Clone repo
-git clone https://github.com/your-org/amarktai-network /var/www/amarktai-network
-cd /var/www/amarktai-network
-
-# 2. Set environment
-cp .env.example .env
-nano .env  # fill in DATABASE_URL, SESSION_SECRET, NEXT_PUBLIC_APP_URL
-
-# 3. Install & build
-npm ci
-npx prisma generate
-npx prisma migrate deploy  # or: npx prisma db push
-npm run build
-
-# 4. Start with PM2
-pm2 start npm --name "amarktai-network" -- start
-pm2 save
-pm2 startup
-
-# 5. Configure Nginx (see below)
+npm test
 ```
 
-### Live Domains (Single Source of Truth)
+If monolithic Vitest hangs on Windows/local worker cleanup, use bounded batches of test files and isolate any hanging batch into single-file runs. Do not treat a monolithic worker-cleanup hang as a product failure if the same test files pass in bounded runs.
 
-This VPS hosts exactly three live domains:
+## Glossary
 
-| Domain | App | Port |
-|---|---|---|
-| `amarktai.com` | AmarktAI Network (Next.js) | 3000 |
-| `marketing.amarktai.com` | Marketing app | 3001 |
-| `travel.amarktai.com` | Travel app | 3002 |
-
-**Canonical Nginx configs** are in `nginx/sites-available/`.  No other subdomains
-(e.g. `faith-haven.amarktai.com`) should be active.
-
-### Nginx Setup
-
-```bash
-# 1. Copy configs to Nginx
-sudo cp nginx/sites-available/amarktai.com           /etc/nginx/sites-available/
-sudo cp nginx/sites-available/marketing.amarktai.com /etc/nginx/sites-available/
-sudo cp nginx/sites-available/travel.amarktai.com    /etc/nginx/sites-available/
-
-# 2. Enable the three live domains
-sudo ln -sf /etc/nginx/sites-available/amarktai.com           /etc/nginx/sites-enabled/
-sudo ln -sf /etc/nginx/sites-available/marketing.amarktai.com /etc/nginx/sites-enabled/
-sudo ln -sf /etc/nginx/sites-available/travel.amarktai.com    /etc/nginx/sites-enabled/
-
-# 3. Test and reload
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-Or use the automated cleanup script (see below).
-
-### Nginx amarktai.com config (summary)
-
-```nginx
-# HTTP → HTTPS
-server {
-    listen 80;
-    server_name amarktai.com www.amarktai.com;
-    return 301 https://amarktai.com$request_uri;
-}
-
-# HTTPS → Next.js app on port 3000
-server {
-    listen 443 ssl;
-    server_name amarktai.com www.amarktai.com;
-    ssl_certificate     /etc/letsencrypt/live/amarktai.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/amarktai.com/privkey.pem;
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-
-Issue SSL certificates with Certbot (run once per domain):
-
-```bash
-certbot --nginx -d amarktai.com -d www.amarktai.com
-certbot --nginx -d marketing.amarktai.com
-certbot --nginx -d travel.amarktai.com
-```
-
-### VPS Cleanup / Audit
-
-Two helper scripts are included in `scripts/`:
-
-```bash
-# Audit only — no changes made
-sudo bash scripts/nginx-audit.sh
-
-# Apply cleanup: disable stale configs, install canonical configs, reload Nginx
-sudo bash scripts/vps-cleanup.sh
-
-# Dry-run: preview what vps-cleanup.sh would do without applying it
-sudo bash scripts/vps-cleanup.sh --dry-run
-```
-
-`vps-cleanup.sh` will:
-1. Back up the current `/etc/nginx/sites-enabled/` and `sites-available/`
-2. Disable any configs not in the three live domains (e.g. `faith-haven.amarktai.com`)
-3. Copy canonical configs from `nginx/sites-available/` and symlink them
-4. Remove the default Nginx placeholder if present
-5. Run `nginx -t` — rolls back and aborts if it fails
-6. Reload Nginx
-
-### Redeploy
-
-```bash
-cd /var/www/amarktai-network
-bash deploy.sh
-```
-
----
-
-## Admin Login
-
-The admin login at `/admin/login` uses a three-tier credential fallback:
-
-1. **Database** — a hashed `adminUser` row created via `npx ts-node prisma/seed.ts`
-2. **Environment variables** — `ADMIN_EMAIL` + `ADMIN_PASSWORD` in `.env`
-3. **Hardcoded hash** — last-resort fallback (change in production)
-
-If login returns "Invalid credentials":
-- Verify `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set correctly in `/var/www/amarktai-network/.env`
-- Or seed a DB admin user: `npx ts-node prisma/seed.ts`
-- Default fallback email is `admin@amarktai.com`
-
----
-
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `SESSION_SECRET` | ✅ | Min 32-char secret for iron-session |
-| `NEXT_PUBLIC_APP_URL` | ✅ | Public URL of the app |
-| `ADMIN_EMAIL` | ✅ (prod) | Admin login email (defaults to `admin@amarktai.com`) |
-| `ADMIN_PASSWORD` | ✅ (prod) | Admin login password fallback when no DB user exists |
-
----
-
-## Database Setup
-
-```bash
-# Push schema (dev / first deploy)
-npm run db:push
-
-# Run migrations (production with migration history)
-npx prisma migrate deploy
-
-# Open Prisma Studio (dev only)
-npm run db:studio
-```
-
----
-
-## Post-Deploy Checks
-
-- [ ] Site loads at public URL
-- [ ] Contact form submits successfully
-- [ ] Waitlist form submits successfully
-- [ ] Admin login works at `/admin/login`
-- [ ] Dashboard loads after login
-- [ ] Session persists correctly
-- [ ] Hidden `show admin` reveal works on public pages
-- [ ] SSL certificate active
-- [ ] PM2 process auto-restarts on reboot
-
----
-
-## Deployment Notes — Redis, Qdrant & Memory Layer
-
-The Amarktai Network memory and emotion systems have three storage tiers:
-
-| Tier | Technology | Purpose | Required? |
-|------|-----------|---------|-----------|
-| Primary | PostgreSQL (`Memory` table) | Persistent long-term memory | ✅ Always |
-| Cache | Redis | Short-term session cache, emotion profiles, rate-limit counters | ⚠️ Recommended |
-| Vector | Qdrant | Semantic similarity search, emotion vectors | ⚠️ Recommended |
-
-### Docker / VPS (Recommended)
-
-`docker-compose.yml` includes PostgreSQL 16 + Redis 7 + Qdrant — all three tiers work automatically:
-
-```bash
-docker compose up -d
-```
-
-### Vercel / Serverless
-
-Redis and Qdrant are **not** available on Vercel's default infrastructure. Without them:
-
-- Memory retrieval degrades to **Postgres-only** full-text search (slower, lower recall)
-- Emotion profiles are stored in Postgres instead of Redis (no TTL expiry)
-- Semantic similarity search is disabled
-
-**To restore full functionality on Vercel**, add external services and set these env vars:
-
-```env
-REDIS_URL=redis://...          # e.g. Upstash Redis
-QDRANT_URL=https://...         # e.g. Qdrant Cloud
-QDRANT_API_KEY=...
-```
-
-### Provider Health Scheduling
-
-Provider health is refreshed:
-- **On demand**: Admin dashboard → AI Providers → individual health check
-- **Bulk refresh**: `POST /api/admin/providers/health-check-all` (admin session or `Bearer $CRON_SECRET`)
-- **Automated (recommended)**: Set a cron job / Vercel Cron to call this endpoint every 15 minutes:
-
-```
-# crontab (VPS)
-*/15 * * * * curl -s -X POST https://your-domain.com/api/admin/providers/health-check-all \
-  -H "Authorization: Bearer $CRON_SECRET"
-```
-
-```json
-// vercel.json (Vercel Cron)
-{
-  "crons": [{
-    "path": "/api/admin/providers/health-check-all",
-    "schedule": "*/15 * * * *"
-  }]
-}
-```
-
----
-
-## Apps in the Ecosystem
-
-| App | Status |
-|---|---|
-| EquiProfile | Live |
-| Amarktai Marketing | In Development |
-| Amarktai Crypto | Invite Only |
-| Amarktai Forex | Invite Only |
-| Amarktai Family | In Development |
-| Faith Haven | In Development |
-| Learn Digital | In Development |
-| Jobs SA | In Development |
-| Amarktai Secure | Concept |
-| Crowd Lens | Concept |
-
----
-
-## License
-
-Proprietary — Amarktai Network © 2025. All rights reserved.
+- Capability: a reusable AI job type, such as chat, image generation, TTS, STT, video, music, scraper, RAG, or artifact handoff.
+- Provider: an execution backend approved by the runtime. Active V1 providers are GenX, Together, and Groq.
+- Model family: a model or model group selected internally by the runtime for a capability.
+- App connection: an external app credential and permission contract for calling AmarktAI Network.
+- Artifact: a temporary or persisted output produced by a capability job, such as image, video, audio, transcript, document, or metadata.
+- Webhook: a callback destination used to notify an external app when a job completes or fails.
+- Asset reference: a signed or temporary URL/file reference supplied by an external app for logos, products, guides, PDFs, audio, video, or other job inputs.
+- Studio: a dashboard control surface for running, proving, and inspecting a capability.
+- Agent/learning: future intelligence layers for app-specific operation, performance learning, recommendations, retries, and improvement loops.
