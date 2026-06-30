@@ -417,12 +417,12 @@ describe('Test 6: Settings and System Monitoring consume the same provider truth
 
   it('A provider missing its key shows the same blocker in both truth consumers', async () => {
     const allEntries = await getProviderRuntimeTruth()
-    const hfEntry = allEntries.find((e) => e.providerId === 'huggingface')
+    const groqEntry = allEntries.find((e) => e.providerId === 'groq')
     const genxEntry = allEntries.find((e) => e.providerId === 'genx')
 
-    expect(hfEntry!.hasKey).toBe(false)
+    expect(groqEntry!.hasKey).toBe(false)
     expect(genxEntry!.hasKey).toBe(false)
-    expect(hfEntry!.blocker).toContain('HUGGINGFACE_API_KEY')
+    expect(groqEntry!.blocker).toContain('GROQ_API_KEY')
     expect(genxEntry!.blocker).toContain('GENX_API_KEY')
   })
 

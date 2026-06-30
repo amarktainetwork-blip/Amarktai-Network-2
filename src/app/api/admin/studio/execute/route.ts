@@ -19,8 +19,6 @@ import { POST as imagePost } from '@/app/api/brain/image/route'
 import { POST as videoPost } from '@/app/api/brain/video-generate/route'
 import { POST as longFormVideoPost } from '@/app/api/brain/long-form-video/route'
 import { POST as ttsPost } from '@/app/api/brain/tts/route'
-import { POST as adultTextPost } from '@/app/api/brain/adult-text/route'
-import { POST as adultImagePost } from '@/app/api/brain/adult-image/route'
 import { POST as avatarVideoPost } from '@/app/api/brain/avatar-video/route'
 import { POST as musicPost } from '@/app/api/admin/music-studio/route'
 
@@ -48,13 +46,12 @@ type ExecuteBody = {
 type StudioExecutionMode = 'chat' | 'image' | 'music' | 'text' | 'video' | 'long_video' | 'image_to_video' | 'voice' | 'avatar' | 'stt'
 type RouteProofMode = 'chat' | 'image' | 'music'
 type ProofMode = RouteProofMode | 'video' | 'avatar' | 'voice'
-type StudioChatProvider = 'groq' | 'together' | 'genx' | 'huggingface'
+type StudioChatProvider = 'groq' | 'together' | 'genx'
 
 const STUDIO_CHAT_EXECUTION_MODELS = {
   genx: 'gpt-5.4-mini',
   groq: 'llama-3.3-70b-versatile',
   together: 'meta-llama/Llama-3-70b-chat-hf',
-  huggingface: 'meta-llama/Llama-3-8b-chat-hf',
 } satisfies Record<StudioChatProvider, string>
 
 function jsonRequest(path: string, body: Record<string, unknown>) {
@@ -199,11 +196,11 @@ function nonExecutableModeBlocker(mode: unknown) {
     }
   }
   if (mode === 'adult_private') {
-    return {
-      capability: 'adult_private',
-      blocker: 'Adult private generation execution is intentionally blocked in this proof pack.',
-      nextAction: 'Use dedicated Hugging Face adult routes only after endpoint/model configuration and live proof are complete.',
-    }
+      return {
+        capability: 'adult_private',
+        blocker: 'Adult private generation is deferred from the active V1 runtime.',
+        nextAction: 'Reintroduce adult execution only through a separate approved V2 policy, endpoint, and proof gate.',
+      }
   }
   return null
 }
@@ -796,9 +793,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Image') {
-      if (route.selectedProvider === 'huggingface') {
-        return NextResponse.json({ success: false, executed: false, error: 'Hugging Face image generation is task-based and is not wired to this image execution route yet.', route }, { status: 409 })
-      }
       const response = await imagePost(jsonRequest('/api/brain/image', {
         prompt,
         size: body.size ?? stringControl(controls, 'size', '1024x1024'),
@@ -909,7 +903,7 @@ export async function POST(request: NextRequest) {
       }), { status: tracked ? 202 : success ? 200 : response.ok ? 502 : response.status })
     }
 
-    if (tab === 'Video' || capability === 'adult_video') {
+    if (tab === 'Video') {
       const requestedDuration = durationSeconds(stringControl(controls, 'duration', mode === 'long_video' ? '90s' : '30s'), mode === 'long_video' ? 90 : 30)
       const aspectRatio = stringControl(controls, 'format', '16:9')
       const style = body.style ?? stringControl(controls, 'style', 'cinematic')
@@ -1231,8 +1225,8 @@ export async function POST(request: NextRequest) {
       }), { status: response.status })
     }
 
-    if (tab === 'Voice / TTS' || capability === 'adult_voice') {
-      const provider = ['genx', 'huggingface'].includes(String(route.selectedProvider))
+    if (tab === 'Voice / TTS') {
+      const provider = ['genx', 'groq'].includes(String(route.selectedProvider))
         ? route.selectedProvider
         : 'auto'
       const response = await ttsPost(jsonRequest('/api/brain/tts', {
@@ -1303,27 +1297,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (tab === 'Adult') {
-      if (body.mode === 'image') {
-        const response = await adultImagePost(jsonRequest('/api/brain/adult-image', {
-          prompt,
-          appSlug,
-          size: body.size ?? '768x768',
-          provider: route.selectedProvider,
-          model: route.selectedModel,
-        }))
-        const data = await readJson(response)
-        const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-        return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
-      }
-      const response = await adultTextPost(jsonRequest('/api/brain/adult-text', {
-        prompt,
-        appSlug,
-        provider: route.selectedProvider,
-        model: route.selectedModel,
-      }))
-      const data = await readJson(response)
-      const artifact = data.artifactId ? { id: data.artifactId, storageUrl: data.storageUrl } : null
-      return NextResponse.json({ ...data, result: data, artifact, route }, { status: response.status })
+      return NextResponse.json(blockerResponse({
+        mode,
+        capability,
+        status: 'blocked',
+        blocker: 'Adult execution is deferred from the active V1 runtime.',
+        nextAction: 'Keep adult disabled until a separate approved policy, endpoint, and proof gate is introduced.',
+        route,
+      }), { status: 409 })
     }
 
     return NextResponse.json({ success: false, executed: false, error: `${tab} execution is not available through this route.`, route }, { status: 400 })

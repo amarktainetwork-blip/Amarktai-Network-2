@@ -159,9 +159,7 @@ describe('core live proof pack and capabilities display', () => {
     expect(runner).toContain("await import('@/app/api/brain/image/route')")
     expect(runner).toContain("await import('@/app/api/brain/tts/route')")
     expect(runner).toContain("await import('@/app/api/brain/stt/route')")
-    expect(runner).toContain("await import('@/lib/hf-fallback')")
     expect(runner).toContain("await import('@/lib/genx-client')")
-    expect(runner).toContain("HF_MUSIC_MODEL")
     expect(runner).toContain("getConfiguredGenXMusicModel")
     expect(runner).toContain("GENX_MUSIC_MODEL")
     expect(runner).toContain("await import('@/lib/media-job-store')")
@@ -308,148 +306,18 @@ describe('core live proof pack and capabilities display', () => {
     expect(transcript.status).toBe('proven')
   })
 
-  it('Hugging Face text-to-audio converts Blob audio to a usable Buffer', async () => {
-    const { generateHuggingFaceTextToAudio, isUsableAudioBuffer } = await import('@/lib/hf-fallback')
-    const audioBlob = new Blob([Buffer.from('RIFF....WAVE....audio-data'.repeat(200))], {
-      type: 'audio/wav',
-    })
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(audioBlob, {
-      status: 200,
-      headers: { 'content-type': 'audio/wav' },
-    }))
-
-    const result = await generateHuggingFaceTextToAudio({
-      token: 'hf_test_token',
-      model: 'facebook/musicgen-small',
-      prompt: 'A very short instrumental proof loop, calm electronic pulse, no vocals.',
-      durationSeconds: 8,
-    })
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          Authorization: 'Bearer hf_test_token',
-          Accept: 'audio/*, application/octet-stream',
-        }),
-      }),
-    )
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(result.provider).toBe('huggingface')
-    expect(result.model).toBe('facebook/musicgen-small')
-    expect(result.rawType).toBe('blob')
-    expect(result.contentType).toBe('audio/wav')
-    expect(result.extension).toBe('wav')
-    expect(isUsableAudioBuffer(result.buffer, result.contentType)).toBe(true)
-  })
-
-  it('Hugging Face text-to-audio rejects JSON/text and tiny audio responses', async () => {
-    const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'loading' }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    }))
-    await expect(generateHuggingFaceTextToAudio({
-      token: 'hf_test_token',
-      model: 'facebook/musicgen-small',
-      prompt: 'proof',
-    })).rejects.toThrow('instead of audio')
-
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(new Blob([Buffer.from('RIFF')], { type: 'audio/wav' }), {
-      status: 200,
-      headers: { 'content-type': 'audio/wav' },
-    }))
-    await expect(generateHuggingFaceTextToAudio({
-      token: 'hf_test_token',
-      model: 'facebook/musicgen-small',
-      prompt: 'proof',
-    })).rejects.toThrow('unusable audio')
-  })
-
-  it('Hugging Face text-to-audio falls back from router DNS failure to legacy endpoint', async () => {
-    const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
-    const cause = Object.assign(new Error('getaddrinfo ENOTFOUND router.huggingface.co'), {
-      name: 'Error',
-      code: 'ENOTFOUND',
-    })
-    const routerFailure = Object.assign(new TypeError('fetch failed'), { cause })
-    const audioBlob = new Blob([Buffer.from('RIFF....WAVE....legacy-audio-data'.repeat(200))], {
-      type: 'audio/wav',
-    })
-    const fetchMock = vi.spyOn(globalThis, 'fetch')
-      .mockRejectedValueOnce(routerFailure)
-      .mockResolvedValueOnce(new Response(audioBlob, {
-        status: 200,
-        headers: { 'content-type': 'audio/wav' },
-      }))
-
-    const result = await generateHuggingFaceTextToAudio({
-      token: 'hf_secret_token_for_test',
-      model: 'facebook/musicgen-small',
-      prompt: 'proof',
-      durationSeconds: 8,
-    })
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      1,
-      'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small',
-      expect.any(Object),
-    )
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      'https://api-inference.huggingface.co/models/facebook/musicgen-small',
-      expect.any(Object),
-    )
-    expect(result.provider).toBe('huggingface')
-    expect(result.bytes).toBeGreaterThan(1024)
-  })
-
-  it('Hugging Face text-to-audio reports combined endpoint errors without tokens', async () => {
-    const { generateHuggingFaceTextToAudio } = await import('@/lib/hf-fallback')
-    const token = 'hf_secret_token_for_test'
-    const cause = Object.assign(new Error('getaddrinfo ENOTFOUND api-inference.huggingface.co'), {
-      name: 'Error',
-      code: 'ENOTFOUND',
-    })
-    const legacyFailure = Object.assign(new TypeError('fetch failed'), { cause })
-    vi.spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(JSON.stringify({ error: `loading ${token}` }), {
-        status: 503,
-        headers: { 'content-type': 'application/json' },
-      }))
-      .mockRejectedValueOnce(legacyFailure)
-
-    let message = ''
-    await generateHuggingFaceTextToAudio({
-      token,
-      model: 'facebook/musicgen-small',
-      prompt: 'proof',
-    }).catch((error) => {
-      message = error instanceof Error ? error.message : String(error)
-    })
-
-    expect(message).toContain('Hugging Face textToAudio failed.')
-    expect(message).toContain('router.huggingface.co')
-    expect(message).toContain('HTTP 503')
-    expect(message).toContain('api-inference.huggingface.co')
-    expect(message).toContain('ENOTFOUND')
-    expect(message).not.toContain(token)
-  })
-
-  it('music proof supports Hugging Face then GenX real audio fallback with canonical model settings', () => {
+  it('music proof uses GenX real audio only with canonical model settings', () => {
     const missingModel = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
       success: false,
       executed: false,
       status: 'needs_setup',
-      blocker: 'Music audio generation requires one configured real audio provider: HF_MUSIC_MODEL with Hugging Face credentials, or GENX_MUSIC_MODEL with GenX credentials.',
+      blocker: 'GenX music audio requires GENX_MUSIC_MODEL with GenX credentials.',
       attempts: [
-        { provider: 'huggingface', model: null, status: 'not_configured', blocker: 'Missing HF_MUSIC_MODEL or Hugging Face token.' },
         { provider: 'genx', model: null, status: 'not_configured', blocker: 'Missing GENX_MUSIC_MODEL or GenX credential.' },
       ],
     })
     expect(missingModel.status).toBe('not_configured')
-    expect(missingModel.attempts).toHaveLength(2)
+    expect(missingModel.attempts).toHaveLength(1)
 
     const blueprintOnly = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
       success: false,
@@ -460,23 +328,7 @@ describe('core live proof pack and capabilities display', () => {
     })
     expect(blueprintOnly.status).not.toBe('proven')
 
-    const hfGenerated = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
-      success: true,
-      executed: true,
-      status: 'completed',
-      provider: 'huggingface',
-      model: 'facebook/musicgen-small',
-      artifactId: 'hf_music_artifact',
-      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/hf-song.mp3',
-      audioUrl: '/api/artifacts/file/artifacts/amarktai-network/music/hf-song.mp3',
-      attempts: [
-        { provider: 'huggingface', model: 'facebook/musicgen-small', status: 'ok', artifactId: 'hf_music_artifact', storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/hf-song.mp3' },
-      ],
-    })
-    expect(hfGenerated.status).toBe('proven')
-    expect(hfGenerated.provider).toBe('huggingface')
-
-    const genxFallback = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
+    const genxGenerated = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
       success: true,
       executed: true,
       status: 'completed',
@@ -486,33 +338,12 @@ describe('core live proof pack and capabilities display', () => {
       storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/genx-song.mp3',
       audioUrl: '/api/artifacts/file/artifacts/amarktai-network/music/genx-song.mp3',
       attempts: [
-        { provider: 'huggingface', model: 'facebook/musicgen-small', status: 'failed', error: 'Hugging Face music returned HTTP 503.' },
         { provider: 'genx', model: 'lyria-real-model', status: 'ok', artifactId: 'genx_music_artifact', storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/genx-song.mp3' },
       ],
     })
-    expect(genxFallback.status).toBe('proven')
-    expect(genxFallback.provider).toBe('genx')
-    expect(genxFallback.attempts).toEqual(expect.arrayContaining([
-      expect.objectContaining({ provider: 'huggingface', status: 'failed' }),
-      expect.objectContaining({ provider: 'genx', status: 'ok' }),
-    ]))
-
-    const genxOnly = normalizeCoreProofRouteResult('music_generation', '/api/admin/music-studio', {
-      success: true,
-      executed: true,
-      status: 'completed',
-      provider: 'genx',
-      model: 'lyria-real-model',
-      artifactId: 'genx_music_artifact',
-      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/music/genx-song.mp3',
-      attempts: [
-        { provider: 'huggingface', model: null, status: 'not_configured', blocker: 'Missing HF_MUSIC_MODEL or Hugging Face token.' },
-        { provider: 'genx', model: 'lyria-real-model', status: 'ok' },
-      ],
-    })
-    expect(genxOnly.status).toBe('proven')
-    expect(genxOnly.attempts).toEqual(expect.arrayContaining([
-      expect.objectContaining({ provider: 'huggingface', status: 'not_configured' }),
+    expect(genxGenerated.status).toBe('proven')
+    expect(genxGenerated.provider).toBe('genx')
+    expect(genxGenerated.attempts).toEqual(expect.arrayContaining([
       expect.objectContaining({ provider: 'genx', status: 'ok' }),
     ]))
 
@@ -520,23 +351,21 @@ describe('core live proof pack and capabilities display', () => {
       success: true,
       executed: true,
       status: 'completed',
-      provider: 'huggingface',
-      model: 'facebook/musicgen-small',
+      provider: 'genx',
+      model: 'lyria-real-model',
     })
     expect(missingArtifact.status).not.toBe('proven')
 
     const media = src('lib/media-capability-registry.ts')
     const runner = src('lib/core-capability-proof-runner.ts')
     const truth = src('lib/capability-runtime-truth.ts')
-    const hfIndex = runner.indexOf('runHuggingFaceMusicProofAttempt')
     const genxIndex = runner.indexOf('runGenXMusicProofAttempt')
-    expect(hfIndex).toBeGreaterThan(-1)
-    expect(genxIndex).toBeGreaterThan(hfIndex)
-    expect(media).toContain("getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL'")
+    expect(genxIndex).toBeGreaterThan(-1)
     expect(media).toContain("getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL'")
-    expect(truth).toContain("providerCandidates: ['huggingface', 'genx']")
-    expect(truth).toContain('Music audio generation requires one configured real audio provider: HF_MUSIC_MODEL with Hugging Face credentials, or GENX_MUSIC_MODEL with GenX credentials.')
-    expect(runner).toContain('generateHuggingFaceTextToAudio')
+    expect(truth).toContain("providerCandidates: ['genx']")
+    expect(truth).toContain('GenX music audio requires GENX_MUSIC_MODEL')
+    expect(runner).not.toContain('generateHuggingFaceTextToAudio')
+    expect(runner).not.toContain('runHuggingFaceMusicProofAttempt')
     expect(runner).not.toContain('textToSpeech')
     expect(media).not.toContain("{ provider: 'genx', model: GENX_DEFAULT_AUDIO_MODEL }")
   })
@@ -559,7 +388,7 @@ describe('core live proof pack and capabilities display', () => {
   it('adult private is blocked and not included in core proof execution', () => {
     expect(CORE_PROOF_CAPABILITIES.some((entry) => entry.capability.startsWith('adult') || entry.mode === 'adult_private')).toBe(false)
     const route = src('app/api/admin/studio/execute/route.ts')
-    expect(route).toContain('Adult private generation execution is intentionally blocked')
+    expect(route).toContain('Adult private generation is deferred from the active V1 runtime.')
   })
 
   it('Qwen is not active and opencode.json is unchanged', () => {

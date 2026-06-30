@@ -19,7 +19,7 @@
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
-const ACTIVE_PROVIDER_KEYS = new Set(['genx', 'huggingface', 'together', 'groq', 'mimo'])
+const ACTIVE_PROVIDER_KEYS = new Set(['genx', 'together', 'groq'])
 
 interface HealthCheckResult {
   provider: string
@@ -37,7 +37,6 @@ async function checkProvider(
   const ENDPOINTS: Record<string, string> = {
     groq:       'https://api.groq.com/openai/v1/models',
     together:   'https://api.together.xyz/v1/models',
-    huggingface:'https://api-inference.huggingface.co/models',
   }
 
   const endpoint = baseUrl ?? ENDPOINTS[providerKey]

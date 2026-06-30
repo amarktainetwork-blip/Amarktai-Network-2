@@ -2,7 +2,6 @@ import {
   APPROVED_AI_PROVIDERS,
   APPROVED_ASSISTANT_MODELS,
   APPROVED_WORKBENCH_MODELS,
-  HUGGING_FACE_TASK_ROUTES,
   isApprovedAIProvider,
   type ApprovedProviderKey,
 } from '@/lib/approved-ai-catalog'
@@ -38,26 +37,11 @@ export interface ProviderModelCatalog {
   notes: string[]
 }
 
-const COST_TO_TIER: Record<string, CostTier> = {
-  cheap: 'low',
-  balanced: 'medium',
-  premium: 'premium',
-}
-
 const PROVIDER_MODELS: Record<ApprovedProviderKey, ProviderModelOption[]> = {
   genx: [
     model('genx', 'auto:coding-balanced', 'GenX Coding Balanced', 'GenX', ['text'], ['coding', 'reasoning', 'agent_planning'], 'medium', 'Workbench planning and patch generation.'),
     model('genx', 'auto:coding-best', 'GenX Coding Best', 'GenX', ['text'], ['coding', 'reasoning', 'agent_planning'], 'premium', 'Complex repo changes and release reviews.'),
     model('genx', 'auto:assistant', 'GenX Assistant Route', 'GenX', ['text'], ['chat', 'reasoning'], 'medium', 'Dashboard and Workbench assistant route.'),
-  ],
-  huggingface: HUGGING_FACE_TASK_ROUTES.map((route) =>
-    model('huggingface', route.id, route.label, 'Hugging Face Tasks', taskModality(route.capability), ['chat'], COST_TO_TIER[route.costMode], 'Task-based route.'),
-  ),
-  mimo: [
-    model('mimo', 'mimo-v2.5', 'Xiaomi MiMo V2.5', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'medium', 'OpenAI-compatible reasoning, coding, and multimodal route.'),
-    model('mimo', 'mimo-v2.5-pro', 'Xiaomi MiMo V2.5 Pro', 'Xiaomi MiMo', ['multimodal', 'text'], ['chat', 'reasoning', 'coding', 'vision'], 'premium', 'Long-context reasoning and coding route.'),
-    model('mimo', 'task:voice-tts', 'Xiaomi MiMo TTS', 'Xiaomi MiMo', ['voice_tts'], ['chat'], 'low', 'Speech synthesis route when enabled on the account.'),
-    model('mimo', 'task:voice-stt', 'Xiaomi MiMo STT', 'Xiaomi MiMo', ['voice_stt'], ['chat'], 'low', 'Speech recognition route when enabled on the account.'),
   ],
   groq: [
     model('groq', 'llama-3.3-70b-versatile', 'Llama 3.3 70B Versatile', 'Groq', ['text'], ['chat', 'reasoning', 'coding'], 'low', 'Fast workbench and assistant route.'),
@@ -94,13 +78,6 @@ function model(
     enabled: true,
     notes,
   }
-}
-
-function taskModality(capability: string): ModelModality[] {
-  if (capability === 'image') return ['image']
-  if (capability === 'voice') return ['voice_tts', 'voice_stt']
-  if (capability === 'embedding') return ['embedding']
-  return ['text']
 }
 
 async function configured(provider: ApprovedProviderKey) {

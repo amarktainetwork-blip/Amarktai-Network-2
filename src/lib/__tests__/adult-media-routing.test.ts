@@ -3,11 +3,11 @@ import { getMediaCapabilityRoute, MEDIA_CAPABILITY_ROUTES } from '@/lib/media-ca
 import { routeLiveModel } from '@/lib/live-ai-routing'
 
 describe('adult and media capability routing', () => {
-  it('routes adult_text to a real text provider route', () => {
+  it('keeps adult_text route metadata but no active V1 provider', () => {
     const route = getMediaCapabilityRoute('adult_text')
     expect(route?.route).toBe('/api/brain/adult-text')
     expect(route?.artifactType).toBe('document')
-    expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
+    expect(route?.providers).toEqual([])
   })
 
   it('routes adult_image to image generation', () => {
@@ -23,16 +23,16 @@ describe('adult and media capability routing', () => {
     expect(route?.providers).toEqual([])
   })
 
-  it('routes adult_voice through audio/TTS executors', () => {
+  it('keeps adult_voice route metadata but no active V1 provider', () => {
     const route = getMediaCapabilityRoute('adult_voice')
     expect(route?.route).toBe('/api/brain/tts')
     expect(route?.artifactType).toBe('audio')
-    expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
+    expect(route?.providers).toEqual([])
   })
 
   it('blocks adult capabilities when policy is disabled', () => {
     const route = routeLiveModel({ capability: 'adult_video', adultPolicy: 'off' })
-    expect(route.blockedReason).toContain('Adult capability needs an app policy')
+    expect(route.blockedReason).toContain('Adult capability is deferred from active V1 runtime')
   })
 
   it('returns a clear provider error for providers outside the mesh', () => {

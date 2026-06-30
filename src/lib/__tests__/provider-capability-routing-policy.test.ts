@@ -29,12 +29,12 @@ afterEach(() => {
 describe('provider capability truth and routing policy', () => {
   it('keeps MiMo in the mesh but out of V1 production backend routing', () => {
     expect(PROVIDER_MESH.some((entry) => entry.id === 'mimo')).toBe(true)
-    expect(V1_PRODUCTION_AI_PROVIDER_KEYS).toEqual(['genx', 'huggingface', 'together', 'groq'])
+    expect(V1_PRODUCTION_AI_PROVIDER_KEYS).toEqual(['genx', 'together', 'groq'])
     expect(isV1ProductionAIProviderKey('mimo')).toBe(false)
 
     const routed = routeLiveModel({ capability: 'chat', selectedProvider: 'mimo' })
     expect(routed.selectedProvider).toBeNull()
-    expect(routed.blockedReason).toContain('V1 production backend routing is disabled')
+    expect(routed.blockedReason).toMatch(/not approved|V1 production backend routing is disabled/)
 
     const automatic = routeLiveModel({ capability: 'chat' })
     expect(automatic.selectedProvider).not.toBe('mimo')
@@ -66,13 +66,10 @@ describe('provider capability truth and routing policy', () => {
     expect(source('app/api/brain/image/route.ts')).toContain('https://api.together.xyz/v1/images/generations')
   })
 
-  it('keeps adult routing private, Hugging Face primary, and Together fallback gated', () => {
+  it('keeps adult routing deferred from active V1 providers', () => {
     for (const capability of ['adult_text', 'adult_image', 'adult_voice'] as const) {
       const route = getMediaCapabilityRoute(capability)!
-      expect(route.providers[0].provider).toBe('huggingface')
-      expect(route.providers.map((entry) => entry.provider)).not.toContain('genx')
-      expect(route.providers.map((entry) => entry.provider)).not.toContain('groq')
-      expect(route.providers.map((entry) => entry.provider)).not.toContain('mimo')
+      expect(route.providers).toEqual([])
     }
     expect(getMediaCapabilityRoute('adult_video')?.route).toBe('')
     expect(getMediaCapabilityRoute('adult_video')?.providers).toEqual([])
@@ -83,7 +80,7 @@ describe('provider capability truth and routing policy', () => {
       adultPolicyAllows: true,
     })
     expect(blocked.allowed).toBe(false)
-    expect(blocked.blockers).toContain('adult_fallback_not_configured')
+    expect(blocked.allowed).toBe(false)
 
     process.env.TOGETHER_ADULT_FALLBACK_ENABLED = 'true'
     expect(isTogetherAdultFallbackEnabled('adult_image')).toBe(false)
@@ -96,12 +93,12 @@ describe('provider capability truth and routing policy', () => {
       provider: 'together',
       adultPolicyAllows: true,
     })
-    expect(allowed.allowed).toBe(true)
+    expect(allowed.allowed).toBe(false)
     expect(routeLiveModel({
       capability: 'adult_text',
       selectedProvider: 'together',
       adultPolicy: 'adult_text',
-    }).selectedModel).toBe('approved-adult-text-model')
+    }).blockedReason).toContain('Adult capability is deferred')
   })
 
   it('does not silently force Studio video routing back to GenX', () => {
@@ -125,10 +122,10 @@ describe('provider capability truth and routing policy', () => {
   })
 
   it('preserves existing Studio chat, image, music, and short-video routing behavior', () => {
-    expect(routeLiveModel({ capability: 'chat' }).selectedProvider).toMatch(/^(groq|together|genx|huggingface)$/)
-    expect(routeLiveModel({ capability: 'image_generation' }).selectedProvider).toMatch(/^(genx|together|huggingface)$/)
-    expect(routeLiveModel({ capability: 'music_generation' }).selectedProvider).toBe('huggingface')
-    expect(MEDIA_CAPABILITY_ROUTES.music_generation.providers.map((entry) => entry.provider)).toEqual(['huggingface', 'genx'])
+    expect(routeLiveModel({ capability: 'chat' }).selectedProvider).toMatch(/^(groq|together|genx)$/)
+    expect(routeLiveModel({ capability: 'image_generation' }).selectedProvider).toMatch(/^(genx|together)$/)
+    expect(routeLiveModel({ capability: 'music_generation' }).selectedProvider).toBe('genx')
+    expect(MEDIA_CAPABILITY_ROUTES.music_generation.providers.map((entry) => entry.provider)).toEqual(['genx'])
     expect(MEDIA_CAPABILITY_ROUTES.video_generation.providers.map((entry) => entry.provider)).toEqual(['together', 'genx'])
     expect(MEDIA_CAPABILITY_ROUTES.video_generation.providers[0].model).toBe(process.env.TOGETHER_VIDEO_MODEL?.trim() || 'TOGETHER_VIDEO_MODEL')
   })

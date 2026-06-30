@@ -291,7 +291,16 @@ export const PROVIDER_MESH: readonly ProviderMeshNode[] = [
   },
 ] as const
 
-export const AI_PROVIDER_MESH = PROVIDER_MESH.filter((node) => node.kind === 'provider')
+export const ACTIVE_V1_PROVIDER_MESH_IDS = ['genx', 'together', 'groq'] as const
+export const FUTURE_WORKBENCH_PROVIDER_MESH_IDS = ['mimo'] as const
+const VISIBLE_PROVIDER_MESH_IDS = new Set<string>([
+  ...ACTIVE_V1_PROVIDER_MESH_IDS,
+  ...FUTURE_WORKBENCH_PROVIDER_MESH_IDS,
+])
+
+export const AI_PROVIDER_MESH = PROVIDER_MESH.filter((node) =>
+  node.kind === 'provider' && VISIBLE_PROVIDER_MESH_IDS.has(node.id),
+)
 
 export function getProviderMeshNode(id: string) {
   return PROVIDER_MESH.find((node) => node.id === id)

@@ -1,7 +1,11 @@
 import { STATIC_PROVIDER_MODELS } from '@/lib/ai-model-catalog'
 import { PROVIDER_MESH, normalizeProviderMeshId, type ProviderMeshId } from '@/lib/provider-mesh'
 import { MEDIA_CAPABILITY_ROUTES } from '@/lib/media-capability-registry'
-import { isV1ProductionAIProviderKey } from '@/lib/provider-runtime'
+import {
+  FUTURE_WORKBENCH_PROVIDERS,
+  isActiveV1RuntimeProvider,
+  isFutureWorkbenchProvider,
+} from '@/lib/provider-runtime'
 
 export type RootWorkspaceIdentity = {
   appSlug: 'amarktai-network'
@@ -158,9 +162,12 @@ export const PROVIDER_GOVERNANCE: ProviderGovernance[] = PROVIDER_MESH.map((node
   requiredEnv: [...node.envAliases],
   unlocks: node.capabilities.join(', '),
   liveTestRequired: true,
-  liveTestStatus: node.envAliases.length ? 'needs_live_test' : 'configured',
+  liveTestStatus: node.envAliases.length ? 'needs_live_test' as const : 'configured' as const,
   notes: 'Compatibility metadata generated from provider-mesh.ts.',
-}))
+})).filter((entry) =>
+  isActiveV1RuntimeProvider(entry.provider) ||
+  (FUTURE_WORKBENCH_PROVIDERS as readonly string[]).includes(entry.provider),
+)
 
 function roleCapabilities(roles: readonly string[], modalities: readonly string[]): GovernedCapability[] {
   const capabilities = new Set<GovernedCapability>()
@@ -184,7 +191,7 @@ function roleCapabilities(roles: readonly string[], modalities: readonly string[
 const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_MODELS).flatMap(
   ([provider, models]) => models.map((model) => {
     const node = PROVIDER_MESH.find((entry) => entry.id === provider)!
-    const productionEligible = provider !== 'mimo' && isV1ProductionAIProviderKey(provider)
+    const productionEligible = isActiveV1RuntimeProvider(provider)
     return {
       provider: provider as GovernedProviderKey,
       providerLabel: node.displayName,
@@ -199,7 +206,7 @@ const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_M
       artifacts: node.artifactHandling !== 'none',
       approved: productionEligible,
       routePresent: productionEligible,
-      notes: provider === 'mimo'
+      notes: isFutureWorkbenchProvider(provider)
         ? 'MiMo Token Plan is reserved for developer/repo/tooling or V2; V1 production backend routing is disabled.'
         : model.notes ?? 'Approved provider-mesh model.',
     }
@@ -207,7 +214,7 @@ const STATIC_GOVERNED_MODELS: GovernedModel[] = Object.entries(STATIC_PROVIDER_M
 )
 
 const MEDIA_GOVERNED_MODELS: GovernedModel[] = Object.values(MEDIA_CAPABILITY_ROUTES).flatMap((route) =>
-  route.providers.map((entry) => {
+  route.providers.filter((entry) => isActiveV1RuntimeProvider(entry.provider)).map((entry) => {
     const node = PROVIDER_MESH.find((provider) => provider.id === entry.provider)!
     return {
       provider: entry.provider,
@@ -369,8 +376,16 @@ export function validateCapabilitySelection(input: CapabilityValidationInput): C
     return {
       allowed: false,
       capability,
-      reason: 'GenX is not permitted for adult capabilities. Use Hugging Face dedicated endpoints (HF_ADULT_*_ENDPOINT).',
+      reason: 'GenX is not permitted for adult capabilities.',
       blockers: ['adult_provider_forbidden'],
+    }
+  }
+  if (capability.startsWith('adult_')) {
+    return {
+      allowed: false,
+      capability,
+      reason: 'Adult capability is deferred from active V1 runtime.',
+      blockers: ['adult_deferred'],
     }
   }
   if (capability.startsWith('adult_') && providerId === 'together' && !isTogetherAdultFallbackEnabled(capability)) {

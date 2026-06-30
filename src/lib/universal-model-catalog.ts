@@ -1,6 +1,5 @@
 import {
   APPROVED_AI_PROVIDERS,
-  HUGGING_FACE_TASK_ROUTES,
   type ApprovedProviderKey,
 } from '@/lib/approved-ai-catalog'
 import {
@@ -95,16 +94,7 @@ export async function getUniversalModelCatalog(): Promise<UniversalModelCatalog>
   const staticModels = providerCatalogs
     .flatMap((catalog) => catalog.models.map((model) => fromStaticModel(model, catalog.configured)))
     .filter((model) => model.provider !== 'genx')
-  const hfTasks = HUGGING_FACE_TASK_ROUTES.map((route) => ({
-    provider: 'huggingface' as const,
-    modelId: route.id,
-    displayName: route.taskLabel ?? route.label,
-    capabilities: taskCapabilities(route.id),
-    costTier: route.costMode,
-    source: 'huggingface_task' as const,
-    taskBased: true,
-  }))
-  const models = dedupeModels([...genxModels, ...staticModels, ...hfTasks])
+  const models = dedupeModels([...genxModels, ...staticModels])
   return {
     providers: APPROVED_AI_PROVIDERS,
     models,
@@ -169,15 +159,6 @@ function capabilityGroups(haystackInput: string, category = ''): UniversalCapabi
   if (/adult|nsfw/.test(haystack)) groups.add('adult')
   if (groups.size === 0) groups.add('chat')
   return [...groups]
-}
-
-function taskCapabilities(taskId: string): UniversalCapabilityGroup[] {
-  if (taskId.includes('image')) return ['image']
-  if (taskId.includes('video')) return ['video']
-  if (taskId.includes('speech-to-text')) return ['STT']
-  if (taskId.includes('text-to-speech')) return ['voice/TTS']
-  if (taskId.includes('embedding')) return ['embeddings/moderation']
-  return ['chat', 'coding']
 }
 
 function groupModels(models: UniversalModelRoute[]): Record<UniversalCapabilityGroup, UniversalModelRoute[]> {

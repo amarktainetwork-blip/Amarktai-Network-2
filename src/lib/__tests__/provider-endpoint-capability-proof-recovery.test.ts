@@ -56,12 +56,15 @@ beforeEach(() => {
 
 describe('provider endpoint and capability proof recovery', () => {
   it('keeps the active provider set exact and excludes removed providers', () => {
-    expect(ACTIVE_AI_PROVIDER_KEYS).toEqual(['genx', 'huggingface', 'together', 'groq', 'mimo'])
+    expect(ACTIVE_AI_PROVIDER_KEYS).toEqual(['genx', 'together', 'groq'])
 
     const runtimeKeys = getAllProviderRuntimes().map((provider) => provider.key)
     expect(runtimeKeys).toEqual([...ACTIVE_AI_PROVIDER_KEYS])
 
     const meshKeys = AI_PROVIDER_MESH.map((provider) => provider.id)
+    expect(meshKeys).toEqual(expect.arrayContaining(['genx', 'together', 'groq', 'mimo']))
+    expect(meshKeys).toHaveLength(4)
+    expect(meshKeys).not.toContain('huggingface')
     for (const removed of REMOVED_AI_PROVIDER_KEYS) {
       expect(runtimeKeys).not.toContain(removed)
       expect(meshKeys).not.toContain(removed)
@@ -88,13 +91,13 @@ describe('provider endpoint and capability proof recovery', () => {
     expect(mimo.unsupportedCapabilityKeys).toEqual(expect.arrayContaining(['text_to_image', 'text_to_video', 'text_to_speech']))
   })
 
-  it('keeps adult providers hidden from normal routing and HF-only behind endpoint gates', () => {
+  it('keeps adult providers deferred from active V1 routing', () => {
     expect(getEligibleProvidersForCapability('adult_text').map((provider) => provider.key)).toEqual([])
-    expect(getEligibleProvidersForCapability('adult_text', { adult: true }).map((provider) => provider.key)).toEqual(['huggingface'])
+    expect(getEligibleProvidersForCapability('adult_text', { adult: true }).map((provider) => provider.key)).toEqual([])
 
     for (const capability of ['adult_text', 'adult_image', 'adult_voice'] as const) {
       const route = getMediaCapabilityRoute(capability)
-      expect([...new Set(route?.providers.map((entry) => entry.provider))]).toEqual(['huggingface'])
+      expect(route?.providers).toEqual([])
     }
     expect(getMediaCapabilityRoute('adult_video')?.route).toBe('')
     expect(getMediaCapabilityRoute('adult_video')?.providers).toEqual([])
@@ -223,8 +226,8 @@ describe('capability runtime truth: proof-based status (replaces hardcoded proof
     }
   })
 
-  // 5. Adult capabilities blocked when endpoint/gate missing
-  it('adult capabilities are blocked when required endpoints and gates are missing', async () => {
+  // 5. Adult capabilities are deferred from active V1 runtime
+  it('adult capabilities are deferred from active V1 runtime', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -238,13 +241,14 @@ describe('capability runtime truth: proof-based status (replaces hardcoded proof
 
     for (const id of ['adult_text', 'adult_image', 'adult_video', 'adult_voice']) {
       const entry = entries.find((e) => e.capabilityId === id)!
-      expect(entry.status).not.toBe('working')
-      // Either blocked (endpoint missing) or permission issue
-      expect(['blocked', 'missing', 'wired_unproven']).toContain(entry.status)
+      expect(entry.status).toBe('blocked')
+      expect(entry.providerCandidates).toEqual([])
+      expect(entry.connectedProviderCandidates).toEqual([])
+      expect(entry.blocker).toContain('deferred')
     }
   })
 
-  it('adult_text remains blocked when HF connected but dedicated endpoint missing', async () => {
+  it('adult_text stays deferred even when legacy HF adult endpoint config exists', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -252,13 +256,14 @@ describe('capability runtime truth: proof-based status (replaces hardcoded proof
       id === 'huggingface' ? passedNotes : noNotes,
     )
     process.env.ADULT_MODE_ENABLED = 'true'
-    // HF_ADULT_TEXT_ENDPOINT deliberately not set
+    process.env.HF_ADULT_TEXT_ENDPOINT = 'https://legacy-hf.example/adult-text'
 
     const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
 
-    expect(entry!.hasRequiredEndpoint).toBe(false)
     expect(entry!.status).toBe('blocked')
-    expect(entry!.blocker).toMatch(/requires_endpoint/)
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.connectedProviderCandidates).toEqual([])
+    expect(entry!.blocker).toContain('deferred')
   })
 })

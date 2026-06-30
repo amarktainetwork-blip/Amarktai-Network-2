@@ -5,7 +5,6 @@ import {
   GENX_DEFAULT_VIDEO_MODEL,
   getConfiguredGenXMusicModel,
 } from '@/lib/genx-client'
-import { getConfiguredHuggingFaceMusicModel } from '@/lib/hf-fallback'
 import type { ProviderMeshId } from '@/lib/provider-mesh'
 
 export type FirstClassMediaCapability =
@@ -37,20 +36,14 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     route: '/api/brain/adult-text',
     execution: 'sync',
     artifactType: 'document',
-    providers: [
-      { provider: 'huggingface', model: process.env.HF_ADULT_TEXT_MODEL?.trim() || 'HF_ADULT_TEXT_MODEL' },
-      { provider: 'huggingface', model: process.env.HF_ADULT_TEXT_MODEL_FALLBACK?.trim() || 'HF_ADULT_TEXT_MODEL_FALLBACK' },
-    ],
+    providers: [],
   },
   adult_image: {
     capability: 'adult_image',
     route: '/api/brain/adult-image',
     execution: 'sync',
     artifactType: 'image',
-    providers: [
-      { provider: 'huggingface', model: process.env.HF_ADULT_IMAGE_MODEL?.trim() || 'HF_ADULT_IMAGE_MODEL' },
-      { provider: 'huggingface', model: process.env.HF_ADULT_IMAGE_MODEL_FALLBACK?.trim() || 'HF_ADULT_IMAGE_MODEL_FALLBACK' },
-    ],
+    providers: [],
   },
   adult_video: {
     capability: 'adult_video',
@@ -64,10 +57,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     route: '/api/brain/tts',
     execution: 'sync',
     artifactType: 'audio',
-    providers: [
-      { provider: 'huggingface', model: process.env.HF_ADULT_VOICE_MODEL?.trim() || 'HF_ADULT_VOICE_MODEL' },
-      { provider: 'huggingface', model: process.env.HF_ADULT_VOICE_MODEL_FALLBACK?.trim() || 'HF_ADULT_VOICE_MODEL_FALLBACK' },
-    ],
+    providers: [],
   },
   image_generation: {
     capability: 'image_generation',
@@ -95,7 +85,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'music',
     providers: [
-      { provider: 'huggingface', model: getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL' },
       { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },
@@ -107,7 +96,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     providers: [
       { provider: 'genx', model: GENX_DEFAULT_TTS_MODEL },
       { provider: 'groq', model: 'playai-tts' },
-      { provider: 'huggingface', model: 'facebook/mms-tts-eng' },
     ],
   },
   stt: {
@@ -117,8 +105,7 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     artifactType: 'transcript',
     providers: [
       { provider: 'genx', model: GENX_DEFAULT_STT_MODEL },
-      { provider: 'groq', model: 'whisper-large-v3-turbo' },
-      { provider: 'huggingface', model: 'openai/whisper-large-v3' },
+      { provider: 'groq', model: 'whisper-large-v3' },
     ],
   },
   audio: {
@@ -127,7 +114,6 @@ export const MEDIA_CAPABILITY_ROUTES: Record<FirstClassMediaCapability, MediaCap
     execution: 'async_job',
     artifactType: 'audio',
     providers: [
-      { provider: 'huggingface', model: getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL' },
       { provider: 'genx', model: getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL' },
     ],
   },

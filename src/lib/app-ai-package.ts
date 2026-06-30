@@ -98,7 +98,7 @@ export async function recommendAppAiPackage(input: AppAiPackageRecommendationInp
   const adultRequested = capabilities.some((capability) => capability.id.includes('adult')) || input.allowAdult === true
   const mediaRequested = capabilities.some((capability) => capability.group === 'computer_vision' || capability.group === 'multimodal')
   const voiceRequested = capabilities.some((capability) => capability.group === 'audio' || capability.id === 'text_to_speech')
-  const allowedCapabilities = mapCapabilities(capabilities, adultRequested)
+  const allowedCapabilities = mapCapabilities(capabilities)
   const budgetMode: CostMode = input.preferCheap ? 'cheap' : 'balanced'
 
   return {
@@ -153,7 +153,7 @@ function resolveCapabilities(input: AppAiPackageRecommendationInput): AiCapabili
 
 function selectForCapability(capability: AiCapabilityDefinition, catalogs: ProviderModelCatalog[], preferCheap: boolean): AppAiModelSelection {
   const providerOrder = preferCheap
-    ? [...capability.defaultProviders.filter((provider) => ['huggingface', 'groq', 'together', 'mimo'].includes(provider)), ...capability.defaultProviders]
+    ? [...capability.defaultProviders.filter((provider) => ['groq', 'together', 'genx'].includes(provider)), ...capability.defaultProviders]
     : capability.defaultProviders
 
   for (const provider of [...new Set(providerOrder)]) {
@@ -210,15 +210,15 @@ function defaultSafetyProfile(appType: string, allowAdult: boolean) {
   return 'standard'
 }
 
-function mapCapabilities(capabilities: AiCapabilityDefinition[], adultRequested: boolean): AiCapability[] {
+function mapCapabilities(capabilities: AiCapabilityDefinition[]): AiCapability[] {
   const mapped = new Set<AiCapability>()
   for (const capability of capabilities) {
     if (capability.id === 'repo_coding_agent') mapped.add('coding')
     if (capability.id.includes('crawl')) mapped.add('research')
-    if (capability.id.includes('image')) mapped.add(adultRequested ? 'adult_image' : 'image')
+    if (capability.id.includes('image')) mapped.add('image')
     if (capability.id.includes('speech') || capability.id.includes('voice')) mapped.add('voice_tts')
     if (capability.group === 'audio') mapped.add('voice_tts')
-    if (capability.group === 'natural_language_processing') mapped.add(adultRequested ? 'adult_text' : 'chat')
+    if (capability.group === 'natural_language_processing') mapped.add('chat')
   }
   if (mapped.size === 0) mapped.add('chat')
   return [...mapped]

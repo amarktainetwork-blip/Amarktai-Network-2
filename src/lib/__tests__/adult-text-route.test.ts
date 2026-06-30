@@ -59,7 +59,7 @@ describe('/api/brain/adult-text', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   }, 30_000)
 
-  it('requires an endpoint for cataloged Hugging Face GGUF adult text models', async () => {
+  it('does not expose Hugging Face as an active V1 adult text provider', async () => {
     const { POST } = await import('@/app/api/brain/adult-text/route')
 
     const response = await POST(new Request('http://test.local/api/brain/adult-text', {
@@ -74,7 +74,9 @@ describe('/api/brain/adult-text', () => {
 
     expect(response.status).toBe(503)
     expect(data.status).toBe('needs_setup')
-    expect(data.attempts[0].status).toBe('needs_endpoint')
+    expect(data.attempts ?? []).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: 'huggingface', status: 'ready' }),
+    ]))
   })
 
   it('blocks Together adult text fallback until explicit config is enabled', async () => {
@@ -131,7 +133,7 @@ describe('/api/brain/adult-text', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('routes adult_text capability through Hugging Face endpoints without GenX fallback', async () => {
+  it('does not route adult_text through active V1 runtime execution', async () => {
     vi.stubEnv('HF_ADULT_TEXT_ENDPOINT', 'https://hf.test/adult-text')
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       expect(String(input)).toBe('https://hf.test/adult-text')
@@ -151,10 +153,9 @@ describe('/api/brain/adult-text', () => {
       providerOverride: 'huggingface',
     })
 
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
     expect(result.capability).toBe('adult_text')
-    expect(result.provider).toBe('huggingface')
-    expect(result.fallbackUsed).toBe(false)
-    expect(result.output).toContain('consenting adult')
+    expect(result.provider).not.toBe('genx')
+    expect(result.output).toBeNull()
   }, 30_000)
 })

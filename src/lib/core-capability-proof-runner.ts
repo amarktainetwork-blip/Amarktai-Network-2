@@ -56,7 +56,7 @@ export interface CoreProofAudioSource {
 export type CoreMusicProofAttemptStatus = 'not_configured' | 'failed' | 'processing' | 'ok'
 
 export interface CoreMusicProofAttempt {
-  provider: 'huggingface' | 'genx'
+  provider: 'genx'
   model: string | null
   status: CoreMusicProofAttemptStatus
   blocker?: string | null
@@ -535,7 +535,7 @@ function appendMusicAttempt(
 function musicMissingSettingsBlocker(attempts: CoreMusicProofAttempt[]) {
   const hasMissingProviders = attempts.some((attempt) => attempt.status === 'not_configured')
   return hasMissingProviders
-    ? 'Music audio generation requires one configured real audio provider: HF_MUSIC_MODEL with Hugging Face credentials, or GENX_MUSIC_MODEL with GenX credentials.'
+    ? 'GenX music audio requires GENX_MUSIC_MODEL with GenX credentials.'
     : 'No configured music/audio provider can run Pack A proof.'
 }
 
@@ -543,116 +543,6 @@ function finalMusicFailureBlocker(attempts: CoreMusicProofAttempt[]) {
   return attempts
     .map((attempt) => `${attempt.provider}: ${attempt.blocker ?? attempt.error ?? attempt.status}`)
     .join('; ') || 'All configured music/audio providers failed.'
-}
-
-async function runHuggingFaceMusicProofAttempt(
-  options: CoreProofPackOptions,
-  attempts: CoreMusicProofAttempt[],
-): Promise<CoreProofCapabilityResult | null> {
-  const route = '/api/admin/music-studio'
-  const {
-    generateHuggingFaceTextToAudio,
-    getConfiguredHuggingFaceMusicModel,
-    HF_MUSIC_MODEL_ENV,
-  } = await import('@/lib/hf-fallback')
-  const { getMeshCredential } = await import('@/lib/provider-mesh-status')
-  const { persistCanonicalMediaResult } = await import('@/lib/canonical-media-artifact')
-  const model = getConfiguredHuggingFaceMusicModel()
-  const apiKey = await getMeshCredential('huggingface')
-  const missing: string[] = []
-  if (!apiKey) missing.push('HUGGINGFACE_API_KEY or HF_TOKEN')
-  if (!model) missing.push(HF_MUSIC_MODEL_ENV)
-  if (missing.length || !apiKey || !model) {
-    appendMusicAttempt(attempts, {
-      provider: 'huggingface',
-      model,
-      status: 'not_configured',
-      blocker: 'Missing HF_MUSIC_MODEL or Hugging Face token.',
-    })
-    return null
-  }
-  const hfApiKey = apiKey
-  const hfModel = model
-
-  const durationSeconds = Math.min(Math.max(options.maxDurationSeconds ?? 8, 5), 10)
-  let generated: Awaited<ReturnType<typeof generateHuggingFaceTextToAudio>>
-  try {
-    generated = await generateHuggingFaceTextToAudio({
-      token: hfApiKey,
-      model: hfModel,
-      prompt: PACK_A_PROMPTS.music_generation,
-      durationSeconds,
-    })
-  } catch (error) {
-    appendMusicAttempt(attempts, {
-      provider: 'huggingface',
-      model: hfModel,
-      status: 'failed',
-      error: error instanceof Error ? error.message : 'Hugging Face music request failed.',
-    })
-    return null
-  }
-
-  try {
-    const persisted = await persistCanonicalMediaResult({
-      result: {
-        audioBase64: generated.buffer.toString('base64'),
-        mimeType: generated.contentType === 'application/octet-stream' ? 'audio/wav' : generated.contentType,
-        provider: 'huggingface',
-        model: generated.model,
-      },
-      appSlug: 'amarktai-network',
-      type: 'music',
-      subType: 'core_proof_music',
-      title: 'Core proof music',
-      description: PACK_A_PROMPTS.music_generation,
-      provider: 'huggingface',
-      model: generated.model,
-      metadata: {
-        source: 'core_proof_cli',
-        capability: 'music_generation',
-        durationSeconds,
-        bytes: generated.bytes,
-        rawType: generated.rawType,
-        extension: generated.extension,
-      },
-    })
-    if (!persisted.artifactId || !persisted.storageUrl) {
-      appendMusicAttempt(attempts, {
-        provider: 'huggingface',
-        model: hfModel,
-        status: 'failed',
-        blocker: 'Hugging Face music completed but artifact persistence failed.',
-      })
-      return null
-    }
-    appendMusicAttempt(attempts, {
-      provider: 'huggingface',
-      model: generated.model,
-      status: 'ok',
-      artifactId: persisted.artifactId,
-      storageUrl: persisted.storageUrl,
-    })
-    return normalizeCoreProofRouteResult('music_generation', route, {
-      success: true,
-      executed: true,
-      status: persisted.status,
-      provider: 'huggingface',
-      model: generated.model,
-      artifactId: persisted.artifactId,
-      storageUrl: persisted.storageUrl,
-      audioUrl: persisted.mediaUrl,
-      attempts,
-    })
-  } catch (error) {
-    appendMusicAttempt(attempts, {
-      provider: 'huggingface',
-      model: hfModel,
-      status: 'failed',
-      blocker: `Hugging Face music completed but artifact persistence failed: ${error instanceof Error ? error.message : 'unknown error'}`,
-    })
-    return null
-  }
 }
 
 async function runGenXMusicProofAttempt(
@@ -795,9 +685,6 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
   const route = '/api/admin/music-studio'
   try {
     const attempts: CoreMusicProofAttempt[] = []
-    const hfResult = await runHuggingFaceMusicProofAttempt(options, attempts)
-    if (hfResult) return hfResult
-
     const genxResult = await runGenXMusicProofAttempt(options, attempts)
     if (genxResult) return genxResult
 
@@ -811,7 +698,7 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
       provider: null,
       model: null,
       blocker: allNotConfigured ? musicMissingSettingsBlocker(attempts) : finalMusicFailureBlocker(attempts),
-      nextAction: 'Set HF_MUSIC_MODEL with a Hugging Face key, or GENX_MUSIC_MODEL with GenX, then rerun live Pack A proof.',
+      nextAction: 'Set GENX_MUSIC_MODEL to a valid GenX audio/music model, then rerun live Pack A proof.',
       attempts,
     })
   } catch (error) {

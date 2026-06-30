@@ -269,7 +269,7 @@ export async function discoverApp(
   const confidence = computeConfidence(topMatchCount)
 
   // ── Build proposed config from the pack (or sensible defaults) ──
-  const providers = pack?.allowedProviders ?? ['genx', 'huggingface', 'together', 'groq', 'mimo']
+  const providers = pack?.allowedProviders ?? ['genx', 'together', 'groq']
   const models = pack?.recommendedModels ?? ['genx/default-chat']
   const budget = pack?.defaultBudget ?? { daily: 5_000, monthly: 100_000 }
   const safetyMode = pack?.safetyLevel ?? 'standard'

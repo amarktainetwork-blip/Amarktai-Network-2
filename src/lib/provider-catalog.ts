@@ -17,8 +17,6 @@ export interface CanonicalProviderEntry {
 
 const CAPABILITY_FAMILIES: Record<ApprovedProviderKey, readonly string[]> = {
   genx: ['chat', 'reasoning', 'code', 'media_requires_verification', 'voice_requires_verification', 'agent_planning'],
-  huggingface: ['task_text', 'task_image', 'task_voice', 'embeddings', 'dedicated_endpoint_media'],
-  mimo: ['chat_requires_verification', 'reasoning', 'code', 'vision_ocr_requires_verification'],
   groq: ['chat', 'streaming_chat', 'reasoning', 'code', 'speech_to_text'],
   together: ['chat', 'streaming_requires_verification', 'image_generation', 'embeddings_requires_verification', 'rerank_requires_verification'],
 }

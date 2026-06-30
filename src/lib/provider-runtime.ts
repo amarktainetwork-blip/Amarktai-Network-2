@@ -1,9 +1,24 @@
 import type { ProviderMeshId } from '@/lib/provider-mesh'
 
-export const ACTIVE_AI_PROVIDER_KEYS = ['genx', 'huggingface', 'together', 'groq', 'mimo'] as const
+export const ACTIVE_V1_RUNTIME_PROVIDERS = ['genx', 'together', 'groq'] as const
+export type ActiveV1RuntimeProviderKey = (typeof ACTIVE_V1_RUNTIME_PROVIDERS)[number]
+
+export const FUTURE_WORKBENCH_PROVIDERS = ['mimo'] as const
+export type FutureWorkbenchProviderKey = (typeof FUTURE_WORKBENCH_PROVIDERS)[number]
+
+export const INACTIVE_V1_PROVIDERS = ['huggingface', 'qwen', 'gemini', 'minimax'] as const
+export type InactiveV1ProviderKey = (typeof INACTIVE_V1_PROVIDERS)[number]
+
+export const ACTIVE_AI_PROVIDER_KEYS = ACTIVE_V1_RUNTIME_PROVIDERS
 export type ActiveAIProviderKey = (typeof ACTIVE_AI_PROVIDER_KEYS)[number]
-export const V1_PRODUCTION_AI_PROVIDER_KEYS = ['genx', 'huggingface', 'together', 'groq'] as const
+export const V1_PRODUCTION_AI_PROVIDER_KEYS = ACTIVE_V1_RUNTIME_PROVIDERS
 export type V1ProductionAIProviderKey = (typeof V1_PRODUCTION_AI_PROVIDER_KEYS)[number]
+export const KNOWN_AI_PROVIDER_KEYS = [
+  ...ACTIVE_V1_RUNTIME_PROVIDERS,
+  ...FUTURE_WORKBENCH_PROVIDERS,
+  'huggingface',
+] as const
+export type KnownAIProviderKey = (typeof KNOWN_AI_PROVIDER_KEYS)[number]
 
 export const REMOVED_AI_PROVIDER_KEYS = [
   'qwen',
@@ -21,6 +36,25 @@ export const REMOVED_AI_PROVIDER_KEYS = [
   'nvidia',
   'mistral',
 ] as const
+
+export function isActiveV1RuntimeProvider(value: string): value is ActiveV1RuntimeProviderKey {
+  return (ACTIVE_V1_RUNTIME_PROVIDERS as readonly string[]).includes(value)
+}
+
+export function isFutureWorkbenchProvider(value: string): value is FutureWorkbenchProviderKey {
+  return (FUTURE_WORKBENCH_PROVIDERS as readonly string[]).includes(value)
+}
+
+export function isInactiveV1Provider(value: string): value is InactiveV1ProviderKey {
+  return (INACTIVE_V1_PROVIDERS as readonly string[]).includes(value)
+}
+
+export function assertActiveV1Provider(value: string): ActiveV1RuntimeProviderKey {
+  if (!isActiveV1RuntimeProvider(value)) {
+    throw new Error(`Provider "${value}" is not an active V1 runtime provider.`)
+  }
+  return value
+}
 
 export type CapabilityProofStatus =
   | 'untested'
@@ -94,7 +128,7 @@ export interface ProviderTaskRuntime {
 }
 
 export interface ProviderRuntime {
-  readonly key: ActiveAIProviderKey
+  readonly key: KnownAIProviderKey
   readonly displayName: string
   readonly envAliases: readonly string[]
   readonly baseUrl: string
@@ -114,7 +148,7 @@ export interface ProviderRuntime {
 const chatShape = 'OpenAI-compatible /chat/completions JSON messages'
 const hfTaskShape = 'Hugging Face task-specific Inference API or configured Inference Endpoint'
 
-export const PROVIDER_RUNTIME: Record<ActiveAIProviderKey, ProviderRuntime> = {
+export const PROVIDER_RUNTIME: Record<KnownAIProviderKey, ProviderRuntime> = {
   genx: {
     key: 'genx',
     displayName: 'GenX',
@@ -281,7 +315,7 @@ export function isActiveAIProviderKey(value: string): value is ActiveAIProviderK
 }
 
 export function getProviderRuntime(key: string): ProviderRuntime | null {
-  return isActiveAIProviderKey(key) ? PROVIDER_RUNTIME[key] : null
+  return (KNOWN_AI_PROVIDER_KEYS as readonly string[]).includes(key) ? PROVIDER_RUNTIME[key as KnownAIProviderKey] : null
 }
 
 export function getAllProviderRuntimes(): ProviderRuntime[] {

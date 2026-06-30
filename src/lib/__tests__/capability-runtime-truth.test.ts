@@ -181,7 +181,7 @@ describe('route-only capability is wired_unproven, not working', () => {
     expect(entry!.nextAction).toContain('final assembled artifact')
   })
 
-  it('avatar_generation uses image providers and is not blocked solely by HF avatar endpoint when Together is connected', async () => {
+  it('avatar_generation uses active image providers and is not blocked by HF avatar endpoint', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'together' ? 'together-key' : null,
     )
@@ -190,7 +190,7 @@ describe('route-only capability is wired_unproven, not working', () => {
     )
 
     const entry = await getCapabilityRuntimeTruthEntry('avatar_generation')
-    expect(entry!.providerCandidates).toEqual(['together', 'genx', 'huggingface'])
+    expect(entry!.providerCandidates).toEqual(['together', 'genx'])
     expect(entry!.executionRoute).toBe('/api/admin/avatars/generate')
     expect(entry!.connectedProviderCandidates).toContain('together')
     expect(entry!.status).toBe('wired_unproven')
@@ -213,7 +213,7 @@ describe('route-only capability is wired_unproven, not working', () => {
     expect(lipsync!.blocker).toContain('GENX_AVATAR_VIDEO_MODEL')
   })
 
-  it('adult_avatar remains Hugging Face adult-gated', async () => {
+  it('adult_avatar is deferred from active V1 runtime', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -222,11 +222,10 @@ describe('route-only capability is wired_unproven, not working', () => {
     )
 
     const entry = await getCapabilityRuntimeTruthEntry('adult_avatar')
-    expect(entry!.providerCandidates).toEqual(['huggingface'])
+    expect(entry!.providerCandidates).toEqual([])
     expect(entry!.executionRoute).toBeNull()
     expect(entry!.hasPermission).toBe(false)
     expect(entry!.status).not.toBe('working')
-    expect(entry!.blocker).toContain('requires_endpoint')
   })
 
   it('proofStatus is not_tested or route_only — never passed for media without explicit proof', async () => {
@@ -275,7 +274,7 @@ describe('missing key blocks working status', () => {
     expect(entry!.connectedProviderCandidates).toContain('genx')
   })
 
-  it('embeddings with no huggingface key is missing', async () => {
+  it('embeddings with no active provider key is missing', async () => {
     const entry = await getCapabilityRuntimeTruthEntry('embeddings')
     expect(entry!.status).toBe('missing')
     expect(entry!.hasRequiredKey).toBe(false)
@@ -285,7 +284,7 @@ describe('missing key blocks working status', () => {
 // ── Test: missing endpoint blocks working ─────────────────────────────────────
 
 describe('missing endpoint blocks working status', () => {
-  it('adult_text with no dedicated endpoint is blocked', async () => {
+  it('adult_text remains deferred even when legacy adult env is absent', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -296,12 +295,12 @@ describe('missing endpoint blocks working status', () => {
     // No HF_ADULT_TEXT_ENDPOINT set
 
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
-    expect(entry!.status).toBe('blocked')
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.status).not.toBe('working')
     expect(entry!.hasRequiredEndpoint).toBe(false)
-    expect(entry!.blocker).toMatch(/requires_endpoint/)
   })
 
-  it('adult_text with dedicated endpoint and model passes endpoint gate', async () => {
+  it('adult_text stays out of active V1 even with legacy endpoint env', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -313,9 +312,8 @@ describe('missing endpoint blocks working status', () => {
     process.env.HF_ADULT_TEXT_MODEL = 'adult-text-model'
 
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
-    expect(entry!.hasRequiredEndpoint).toBe(true)
-    // status is blocked because adult gate fails without adultGateOk
-    // (endpoint is set but adult_mode check uses env or endpoint)
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.status).not.toBe('working')
   })
 })
 
@@ -365,7 +363,7 @@ describe('missing storage blocks media capabilities', () => {
 // ── Test: adult gate blocks adult capabilities ─────────────────────────────────
 
 describe('adult gate blocks adult capabilities when not configured', () => {
-  it('adult_text is blocked when adult gate is not enabled', async () => {
+  it('adult_text is deferred when adult gate env exists', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -378,8 +376,8 @@ describe('adult gate blocks adult capabilities when not configured', () => {
     delete process.env.ADULT_MODE_ENABLED
 
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
-    // endpoint is set, so adultGateOk = true via evalAdultGate
-    expect(entry!.hasPermission).toBe(true)
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.executionRoute).toBeNull()
   })
 
   it('adult_image is blocked when adult gate is off and no endpoint', async () => {
@@ -428,12 +426,12 @@ describe('connected provider + route + proof → working', () => {
     expect(entry!.status).toBe('working')
   })
 
-  it('rag with connected huggingface and writable storage is working', async () => {
+  it('rag with connected together and writable storage is working', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
-      id === 'huggingface' ? 'hf-key' : null,
+      id === 'together' ? 'together-key' : null,
     )
     mockGetMeshTestNotes.mockImplementation(async (id: string) =>
-      id === 'huggingface' ? passedNotes : noNotes,
+      id === 'together' ? passedNotes : noNotes,
     )
 
     const entry = await getCapabilityRuntimeTruthEntry('rag')
@@ -497,7 +495,7 @@ describe('Capabilities API does not show working when proofStatus is route_only 
     // Even with connected providers, media is wired_unproven (no explicit media proof)
     process.env.GENX_BASE_URL = 'https://query.genx.sh'
     mockGetMeshCredential.mockImplementation(async (id: string) =>
-      ['genx', 'groq', 'together', 'huggingface', 'mimo'].includes(id) ? `${id}-key` : null,
+      ['genx', 'groq', 'together'].includes(id) ? `${id}-key` : null,
     )
     mockGetMeshTestNotes.mockImplementation(async () => passedNotes)
 

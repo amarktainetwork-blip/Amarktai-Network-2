@@ -20,7 +20,7 @@
  */
 
 import { randomUUID } from 'crypto'
-import { getVaultApiKey } from '@/lib/brain'
+import { callProvider, getVaultApiKey } from '@/lib/brain'
 import { isUsableServiceKey } from '@/lib/service-vault'
 import { callGenXMedia, getConfiguredGenXMusicModel, getGenXStatusAsync } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
@@ -653,28 +653,16 @@ async function saveCanonicalMusicArtifact(artifact: MusicArtifact): Promise<stri
 async function generateLyricsViaChat(
   request: MusicCreationRequest,
 ): Promise<{ lyrics: string; model: string }> {
-  // Groq fallback (vault or env) for text generation.
-  const groqKey = (await getVaultApiKey('groq').catch(() => null)) ?? process.env.GROQ_API_KEY?.trim() ?? null
-  if (groqKey) {
-    const prompt = buildLyricsPrompt(request)
+  const prompt = buildLyricsPrompt(request)
+  for (const [provider, model] of [
+    ['groq', 'llama-3.3-70b-versatile'],
+    ['genx', 'gpt-5.4-mini'],
+    ['together', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+  ] as const) {
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 1500,
-          temperature: 0.85,
-        }),
-      })
-      if (res.ok) {
-        const data = await res.json() as { choices: Array<{ message: { content: string } }>; model: string }
-        const content = data?.choices?.[0]?.message?.content ?? ''
-        return { lyrics: content, model: data.model ?? 'llama-3.3-70b-versatile' }
+      const result = await callProvider(provider, model, prompt)
+      if (result.ok && result.output) {
+        return { lyrics: result.output, model: result.model }
       }
     } catch { /* fall through to template */ }
   }
@@ -994,23 +982,21 @@ export async function getMusicStudioStatusAsync(): Promise<MusicStudioStatus & {
     return Boolean(vaultVal)
   }
 
-  const [hasGroq, hasTogether, hasMimo, genxStatus] = await Promise.all([
+  const [hasGroq, hasTogether, genxStatus] = await Promise.all([
     resolveKey('groq'),
     resolveKey('together'),
-    resolveKey('mimo'),
     getGenXStatusAsync().catch(() => ({ available: false })),
   ])
 
   const musicModel = getConfiguredGenXMusicModel()
   const hasGenX = Boolean(genxStatus.available)
-  const hasChatKey = hasGenX || hasGroq || hasTogether || hasMimo
+  const hasChatKey = hasGenX || hasGroq || hasTogether
   const audioProvider: MusicProvider | null = hasGenX && musicModel ? 'genx' : null
 
   const configuredProviders: string[] = []
   if (hasGenX) configuredProviders.push('genx')
   if (hasGroq) configuredProviders.push('groq')
   if (hasTogether) configuredProviders.push('together')
-  if (hasMimo) configuredProviders.push('mimo')
 
   const note = hasChatKey
     ? audioProvider

@@ -150,35 +150,37 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       prompt,
-      model: requestedModel,
       size = '1024x1024',
-      providerOverride,
       preferProvider,
-      modelOverride,
       costMode = 'balanced',
       noFallback = false,
       capability = 'image_generation',
     } = body as {
       prompt?: string;
-      model?: string;
       size?: string;
-      providerOverride?: string;
       preferProvider?: string;
-      modelOverride?: string;
       costMode?: string;
       noFallback?: boolean;
       capability?: string;
     };
+
+    for (const field of ['provider', 'model', 'providerOverride', 'modelOverride', 'provider_override', 'model_override']) {
+      if ((body as Record<string, unknown>)[field] !== undefined) {
+        return NextResponse.json({
+          error: `Provider/model override field "${field}" is not allowed. Apps request capabilities; runtime selects provider and model.`,
+        }, { status: 400 });
+      }
+    }
 
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ error: 'prompt is required and must be a non-empty string' }, { status: 400 });
     }
 
     const resolvedSize: ImageSize = ALLOWED_SIZES.includes(size as ImageSize) ? (size as ImageSize) : '1024x1024';
-    const effectiveModel = modelOverride ?? requestedModel;
-    // preferProvider / providerOverride both act as preference hints.
+    const effectiveModel = undefined;
+    // preferProvider is an internal Studio hint.
     // noFallback=true makes them hard overrides (used by direct provider test flows).
-    const preferredProvider = (preferProvider ?? providerOverride ?? '').trim().toLowerCase() || null;
+    const preferredProvider = (preferProvider ?? '').trim().toLowerCase() || null;
     const effectiveCostMode = ['cheap', 'balanced', 'premium'].includes(costMode) ? costMode : 'balanced';
     const isAdult = capability === 'adult_image';
     const togetherKey = await getVaultApiKey('together');

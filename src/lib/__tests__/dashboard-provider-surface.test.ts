@@ -3,9 +3,9 @@
  *
  * Proves:
  * 1. Providers page/API uses shared provider truth (getProviderRuntimeTruth).
- * 2. Settings connected state and Providers connected state match for the 5 active providers.
+ * 2. Settings connected state and Providers connected state match for the 4 visible runtime providers.
  * 3. Provider test action uses /api/admin/settings/test-provider with field `key`.
- * 4. Unknown connection is not returned for the five active providers.
+ * 4. Unknown connection is not returned for the visible runtime providers.
  * 5. Overview provider count uses shared truth.
  */
 
@@ -41,7 +41,7 @@ const noNotes = { lastTestStatus: undefined, lastTestPassed: undefined, lastTest
 const passedNotes = { lastTestStatus: 'passed' as const, lastTestPassed: true, lastTestedAt: '2026-06-26T10:00:00Z', lastError: '' }
 const failedNotes = { lastTestStatus: 'failed' as const, lastTestPassed: false, lastTestedAt: '2026-06-26T10:00:00Z', lastError: 'API error' }
 
-const ACTIVE_PROVIDERS = ['genx', 'huggingface', 'together', 'groq', 'mimo'] as const
+const ACTIVE_PROVIDERS = ['genx', 'together', 'groq', 'mimo'] as const
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -54,7 +54,7 @@ beforeEach(() => {
 // ── Test 1: Providers page/API uses shared provider truth ─────────────────────
 
 describe('Test 1: /api/admin/providers/status uses getProviderRuntimeTruth', () => {
-  it('returns entries for all 5 active providers', async () => {
+  it('returns entries for all 4 visible runtime providers', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 
@@ -108,7 +108,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
     expect(settingsGenX.connected).toBe(truthGenX.connected)
   })
 
-  it('all 5 active providers agree: no key = not connected in both surfaces', async () => {
+  it('all 4 visible runtime providers agree: no key = not connected in both surfaces', async () => {
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
 
@@ -128,7 +128,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
     }
   })
 
-  it('all 5 providers agree when all have keys + passed tests', async () => {
+  it('all 4 visible runtime providers agree when all have keys + passed tests', async () => {
     process.env.GENX_BASE_URL = 'https://query.genx.sh'
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       ACTIVE_PROVIDERS.includes(id as typeof ACTIVE_PROVIDERS[number]) ? `${id}-key` : null,
@@ -206,7 +206,7 @@ describe('Test 3: dashboard-api.testProvider sends field `key` not `providerKey`
 // ── Test 4: Unknown connection never returned for active providers ─────────────
 
 describe('Test 4: Unknown connection not returned for active providers', () => {
-  it('getProviderRuntimeTruth has entries for all 5 active providers', async () => {
+  it('getProviderRuntimeTruth has entries for all 4 visible runtime providers', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 

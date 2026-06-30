@@ -1,6 +1,5 @@
 import {
   APPROVED_AI_PROVIDERS,
-  HUGGING_FACE_TASK_ROUTES,
   isApprovedAIProvider,
   type ApprovedProviderKey,
   type CostMode,
@@ -8,7 +7,6 @@ import {
 import { STATIC_PROVIDER_MODELS, type ProviderModelOption } from '@/lib/ai-model-catalog'
 import {
   getModelsForCapability,
-  isTogetherAdultFallbackEnabled,
   normalizeGovernedCapability,
   validateCapabilitySelection,
   type GovernedCapability,
@@ -183,6 +181,9 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   }
   const governedCapability = normalizeGovernedCapability(input.capability)
   if (!governedCapability) return blocked(input, costMode, `Unknown capability: ${input.capability}`)
+  if (input.capability.startsWith('adult_')) {
+    return blocked(input, costMode, 'Adult capability is deferred from active V1 runtime.')
+  }
   const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
   if (input.capability.startsWith('adult_') && !adultPolicyAllows(adultPolicy, input.capability)) {
     return blocked(input, costMode, 'Adult capability needs an app policy that allows this content type.')
@@ -213,11 +214,10 @@ export function routeLiveModel(input: LiveRouteInput): LiveRouteResult {
   return {
     selectedProvider: selected.provider as ApprovedProviderKey,
     selectedModel: selected.modelId,
-    selectedTask: selected.provider === 'huggingface' ? selected.modelId : null,
+    selectedTask: null,
     fallbackChain: candidates.slice(1, 5).map((model) => ({
       provider: model.provider as ApprovedProviderKey,
       model: model.modelId,
-      task: model.provider === 'huggingface' ? model.modelId : undefined,
     })),
     estimatedCostUsd: COST_ESTIMATE[costMode],
     reason: `${providerName(selected.provider)} matches ${input.capability} with ${costMode} cost routing.`,
@@ -241,19 +241,10 @@ function normalizeLiveProvider(provider?: string | null): { provider: ApprovedPr
 
 function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   if (!input.selectedProvider || input.selectedProvider === 'auto') return null
-  const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
-  if (input.selectedProvider === 'together' && input.capability.startsWith('adult_') && !isTogetherAdultFallbackEnabled(input.capability)) {
-    return blocked(input, input.costMode ?? 'balanced', `Together adult fallback is blocked until TOGETHER_ADULT_FALLBACK_ENABLED=true and an approved ${input.capability} model env is configured.`)
+  if (input.capability.startsWith('adult_')) {
+    return blocked(input, input.costMode ?? 'balanced', 'Adult capability is deferred from active V1 runtime.')
   }
-  const configuredTogetherAdultModel = input.selectedProvider === 'together' && input.capability.startsWith('adult_')
-    ? input.capability === 'adult_image'
-      ? process.env.TOGETHER_ADULT_IMAGE_MODEL
-      : input.capability === 'adult_video'
-        ? process.env.TOGETHER_ADULT_VIDEO_MODEL
-        : input.capability === 'adult_voice'
-          ? process.env.TOGETHER_ADULT_VOICE_MODEL
-          : process.env.TOGETHER_ADULT_TEXT_MODEL
-    : null
+  const adultPolicy = input.adultPolicy === 'allowed' ? 'full_adult_app_mode' : normalizeAdultPolicy(input.adultPolicy)
   const validation = validateCapabilitySelection({
     appSlug: input.appSlug,
     capability: input.capability,
@@ -268,21 +259,17 @@ function explicitSelection(input: LiveRouteInput): LiveRouteResult | null {
   const governedModels = governedCapability
     ? getModelsForCapability(governedCapability, { provider: input.selectedProvider })
     : []
-  const selectedModel = input.selectedModel || configuredTogetherAdultModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
+  const selectedModel = input.selectedModel || governedModels[0]?.modelId || providerModels[0]?.modelId || null
   const selected = providerModels.find((model) => model.modelId === selectedModel)
   const governedSelected = governedModels.find((model) => model.modelId === selectedModel)
-  if (!selected && !governedSelected && !configuredTogetherAdultModel && input.selectedProvider !== 'huggingface') {
+  if (!selected && !governedSelected) {
     return blocked(input, input.costMode ?? 'balanced', 'Selected model is not in the approved catalog.')
   }
 
-  const task = input.selectedProvider === 'huggingface'
-    ? (HUGGING_FACE_TASK_ROUTES.find((route) => route.id === selectedModel)?.id ?? 'task:text')
-    : null
-
   return {
     selectedProvider: input.selectedProvider as ApprovedProviderKey,
-    selectedModel: selectedModel ?? task,
-    selectedTask: task,
+    selectedModel,
+    selectedTask: null,
     fallbackChain: modelCandidates(input.capability, input.costMode ?? 'balanced', input.requiresMedia)
       .filter((model) => model.provider !== input.selectedProvider)
       .slice(0, 4)
@@ -311,14 +298,11 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
     .filter((model) => model.enabled)
     .filter((model) => {
       if (!isV1ProductionAIProviderKey(model.provider)) return false
-      if (capability.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(capability)) return false
       if (requiresMedia && !model.modalities.some((modality) => ['image', 'video', 'multimodal'].includes(modality))) return false
-      // Adult routes must NEVER use GenX. HF primary; Together only when explicitly enabled.
-      if (capability === 'adult_text') return model.provider === 'huggingface' || (model.provider === 'together' && isTogetherAdultFallbackEnabled(capability))
-      if (capability === 'adult_image') return model.provider === 'huggingface' || (model.provider === 'together' && isTogetherAdultFallbackEnabled(capability))
       if (capability === 'adult_video' || capability === 'adult_voice' || capability === 'audio') return false
+      if (capability === 'adult_text' || capability === 'adult_image') return false
       if (capability === 'voice_tts' || capability === 'tts' || capability === 'voice_selection') return model.modalities.includes('voice_tts') || model.provider === 'genx'
-      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq' || model.provider === 'huggingface'
+      if (capability === 'voice_stt' || capability === 'stt') return model.modalities.includes('voice_stt') || model.provider === 'groq'
       if (capability === 'music_generation' || capability === 'song_generation' || capability === 'instrumental_music') return false
       if (capability === 'image' || capability === 'image_generation' || capability === 'image_editing') return model.modalities.includes('image') || model.modalities.includes('multimodal')
       if (capability === 'video' || capability === 'video_generation' || capability === 'image_to_video' || capability === 'avatar_video') return model.modalities.includes('video') || model.modalities.includes('multimodal')
@@ -335,12 +319,9 @@ function modelCandidates(capability: AiCapability, costMode: CostMode, requiresM
 function governedCandidates(capability: AiCapability): ProviderModelOption[] {
   const normalized = normalizeGovernedCapability(capability) as GovernedCapability | null
   if (!normalized) return []
+  if (normalized.startsWith('adult_')) return []
   return getModelsForCapability(normalized)
     .filter((model) => isV1ProductionAIProviderKey(model.provider))
-    // Adult routes must never use GenX
-    .filter((model) => !(normalized.startsWith('adult_') && model.provider === 'genx'))
-    // Together adult only when explicitly gate-enabled
-    .filter((model) => !(normalized.startsWith('adult_') && model.provider === 'together' && !isTogetherAdultFallbackEnabled(normalized)))
     .map(governedModelToProviderOption)
 }
 

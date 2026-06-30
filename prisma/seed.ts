@@ -411,10 +411,9 @@ async function main() {
   // ── AI Provider Vault — seeded from canonical provider catalog ────
   const aiProviders = [
     { providerKey: 'genx',        displayName: 'GenX',           sortOrder: 0 },
-    { providerKey: 'huggingface', displayName: 'Hugging Face',   sortOrder: 1 },
+    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 1 },
     { providerKey: 'groq',        displayName: 'Groq',           sortOrder: 2 },
-    { providerKey: 'together',    displayName: 'Together AI',    sortOrder: 3 },
-    { providerKey: 'mimo',        displayName: 'Xiaomi MiMo',    sortOrder: 4 },
+    { providerKey: 'mimo',        displayName: 'Xiaomi MiMo',    sortOrder: 3 },
   ]
   for (const p of aiProviders) {
     await prisma.aiProvider.upsert({
@@ -436,28 +435,28 @@ async function main() {
 
   // ── Runtime Registry — Capability Registry ────────────────────────
   const capabilities = [
-    { capabilityKey: 'chat', label: 'General Chat', description: 'Conversational AI chat completions', category: 'text', allowedProviders: '["genx","huggingface","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'code', label: 'Code Generation', description: 'Generate and edit code', category: 'code', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'file_analysis', label: 'File Analysis', description: 'Analyze and summarize documents', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'image_generation', label: 'Image Generation', description: 'Generate images from text prompts', category: 'image', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'image_edit', label: 'Image Editing', description: 'Edit existing images', category: 'image', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'chat', label: 'General Chat', description: 'Conversational AI chat completions', category: 'text', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'code', label: 'Code Generation', description: 'Generate and edit code', category: 'code', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'file_analysis', label: 'File Analysis', description: 'Analyze and summarize documents', category: 'text', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'image_generation', label: 'Image Generation', description: 'Generate images from text prompts', category: 'image', allowedProviders: '["genx","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'image_edit', label: 'Image Editing', description: 'Edit existing images', category: 'image', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime until an approved route is proven' },
     { capabilityKey: 'video_generation', label: 'Video Generation', description: 'Generate videos from text prompts', category: 'video', allowedProviders: '["genx","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
     { capabilityKey: 'image_to_video', label: 'Image to Video', description: 'Generate video from image input', category: 'video', allowedProviders: '["genx","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
     { capabilityKey: 'music_generation', label: 'Music Generation', description: 'Generate music and audio compositions', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'PARTIAL', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Blueprint fallback only when GenX unavailable' },
-    { capabilityKey: 'lyrics_generation', label: 'Lyrics Generation', description: 'Generate song lyrics', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'tts', label: 'Text-to-Speech', description: 'Convert text to speech audio', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'stt', label: 'Speech-to-Text', description: 'Transcribe audio to text', category: 'audio', allowedProviders: '["genx","huggingface","groq"]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Requires multipart audio file input' },
-    { capabilityKey: 'voice_response', label: 'Voice Response', description: 'Generate voice responses', category: 'audio', allowedProviders: '["genx"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'research', label: 'Research', description: 'Web research and fact-finding', category: 'text', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'lyrics_generation', label: 'Lyrics Generation', description: 'Generate song lyrics', category: 'text', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'tts', label: 'Text-to-Speech', description: 'Convert text to speech audio', category: 'audio', allowedProviders: '["genx","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'stt', label: 'Speech-to-Text', description: 'Transcribe audio to text', category: 'audio', allowedProviders: '["genx","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Requires multipart audio file input' },
+    { capabilityKey: 'voice_response', label: 'Voice Response', description: 'Generate voice responses', category: 'audio', allowedProviders: '["genx","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'research', label: 'Research', description: 'Web research and fact-finding', category: 'text', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
     { capabilityKey: 'scrape_website', label: 'Website Scraping', description: 'Crawl and extract website content', category: 'system_ops', allowedProviders: '["firecrawl"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'repo_edit', label: 'Repo Editing', description: 'Edit code in repositories', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'app_build', label: 'App Building', description: 'Generate complete applications', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'deploy_plan', label: 'Deploy Planning', description: 'Generate deployment plans', category: 'system_ops', allowedProviders: '["genx","mimo","groq","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'adult_text', label: 'Adult Text', description: 'Adult-oriented text generation', category: 'adult', allowedProviders: '["huggingface","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'adult_image', label: 'Adult Image', description: 'Adult-oriented image generation', category: 'adult', allowedProviders: '["huggingface","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'adult_video', label: 'Adult Video', description: 'Adult-oriented video generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'No adult video provider configured' },
-    { capabilityKey: 'suggestive_image', label: 'Suggestive Image', description: 'Non-explicit suggestive image generation', category: 'adult', allowedProviders: '["genx","huggingface","together"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
-    { capabilityKey: 'suggestive_video', label: 'Suggestive Video', description: 'Non-explicit suggestive video planning', category: 'adult', allowedProviders: '["genx","together"]', proofStatus: 'PARTIAL', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Returns scene plan only, not actual video' },
+    { capabilityKey: 'repo_edit', label: 'Repo Editing', description: 'Edit code in repositories', category: 'system_ops', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'app_build', label: 'App Building', description: 'Generate complete applications', category: 'system_ops', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'deploy_plan', label: 'Deploy Planning', description: 'Generate deployment plans', category: 'system_ops', allowedProviders: '["genx","together","groq"]', proofStatus: 'SOURCE_WIRED', sourceFile: 'src/lib/capability-router.ts' },
+    { capabilityKey: 'adult_text', label: 'Adult Text', description: 'Adult-oriented text generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime' },
+    { capabilityKey: 'adult_image', label: 'Adult Image', description: 'Adult-oriented image generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime' },
+    { capabilityKey: 'adult_video', label: 'Adult Video', description: 'Adult-oriented video generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime' },
+    { capabilityKey: 'suggestive_image', label: 'Suggestive Image', description: 'Non-explicit suggestive image generation', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime' },
+    { capabilityKey: 'suggestive_video', label: 'Suggestive Video', description: 'Non-explicit suggestive video planning', category: 'adult', allowedProviders: '[]', proofStatus: 'BLOCKED', sourceFile: 'src/lib/capability-router.ts', knownIssues: 'Deferred from active V1 runtime' },
   ]
 
   for (const cap of capabilities) {
@@ -490,7 +489,7 @@ async function main() {
   const avatars = [
     { avatarId: 'default-professional', name: 'Professional', style: 'realistic', provider: 'genx', enabled: true },
     { avatarId: 'default-friendly', name: 'Friendly', style: 'cartoon', provider: 'genx', enabled: true },
-    { avatarId: 'default-anime', name: 'Anime', style: 'anime', provider: 'huggingface', enabled: true },
+    { avatarId: 'default-anime', name: 'Anime', style: 'anime', provider: 'genx', enabled: false },
   ]
 
   for (const avatar of avatars) {

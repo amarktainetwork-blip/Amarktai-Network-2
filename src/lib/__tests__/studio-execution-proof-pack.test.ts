@@ -277,25 +277,25 @@ describe('Studio execution proof pack', () => {
     const sourceText = source('app/api/admin/studio/execute/route.ts')
 
     expect(route.blockedReason).not.toBe('Provider is not approved by the provider mesh.')
-    expect(route.selectedProvider).toMatch(/^(genx|groq|together|huggingface)$/)
+    expect(route.selectedProvider).toMatch(/^(genx|groq|together)$/)
     expect(normalizeProviderMeshId(route.selectedProvider)).toBe(route.selectedProvider)
     expect(normalizeProviderMeshId(route.selectedModel)).toBeNull()
     expect(sourceText).toContain("if (!value || value === 'auto' || value.startsWith('auto:') || value.startsWith('task:'))")
     expect(sourceText).toContain("genx: 'gpt-5.4-mini'")
-    expect(sourceText).toContain("huggingface: 'meta-llama/Llama-3-8b-chat-hf'")
+    expect(sourceText).toContain("groq: 'llama-3.3-70b-versatile'")
   })
 
-  it('Studio music keeps Hugging Face honest until a Studio music backend route is wired', () => {
+  it('Studio music uses GenX audio only and keeps Hugging Face out of Pack A music', () => {
     const route = source('app/api/admin/studio/execute/route.ts')
     const media = source('lib/media-capability-registry.ts')
     const music = source('lib/music-studio.ts')
 
-    expect(route).not.toContain("music: ['genx']")
     expect(media).toContain('music_generation')
     expect(media).toContain("capability: 'music_generation'")
-    expect(media).toContain("getConfiguredHuggingFaceMusicModel() ?? 'HF_MUSIC_MODEL'")
     expect(media).toContain("getConfiguredGenXMusicModel() ?? 'GENX_MUSIC_MODEL'")
     expect(music).toContain("export type MusicProvider = 'genx' | 'blueprint_only'")
+    expect(media).not.toContain('huggingface')
+    expect(route).not.toContain('Hugging Face music')
   })
 
   it('Studio image and music route through canonical provider mesh IDs', () => {
@@ -310,7 +310,7 @@ describe('Studio execution proof pack', () => {
     expect(route).not.toContain("'mimo-v2.5'")
     expect(route).not.toContain("'mimo-v2.5-pro'")
     expect(routed.selectedProvider).toBeNull()
-    expect(routed.blockedReason).toContain('V1 production backend routing is disabled')
+    expect(routed.blockedReason).toMatch(/not approved|V1 production backend routing is disabled/)
   })
 
   it('unknown provider still fails mesh approval while valid canonical providers do not', () => {

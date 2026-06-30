@@ -1,4 +1,5 @@
 import { PROVIDER_MESH } from '@/lib/provider-mesh'
+import { ACTIVE_V1_RUNTIME_PROVIDERS, FUTURE_WORKBENCH_PROVIDERS, isFutureWorkbenchProvider } from '@/lib/provider-runtime'
 
 export type ProviderGovernanceStatus =
   | 'core'
@@ -64,21 +65,32 @@ function governanceCapabilities(capabilities: readonly string[]): ProviderCapabi
   return [...mapped]
 }
 
-export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = PROVIDER_MESH.map((node) => ({
+const VISIBLE_PROVIDER_GOVERNANCE_IDS = new Set<string>([
+  ...ACTIVE_V1_RUNTIME_PROVIDERS,
+  ...FUTURE_WORKBENCH_PROVIDERS,
+])
+
+export const AI_PROVIDER_GOVERNANCE: readonly ProviderGovernanceEntry[] = PROVIDER_MESH
+  .filter((node) => node.kind !== 'provider' || VISIBLE_PROVIDER_GOVERNANCE_IDS.has(node.id))
+  .map((node) => ({
   key: node.id,
   displayName: node.displayName,
   integrationKey: node.id,
   envVar: node.envAliases[0] ?? '',
   envVarAliases: [...node.envAliases],
-  status: node.id === 'genx' ? 'core' : node.optional ? 'active_optional' : 'advanced_optional',
-  setupGroup: node.kind === 'provider' ? 'primary' : 'advanced',
-  reason: 'Approved by the canonical provider mesh.',
+  status: node.id === 'genx' ? 'core' : isFutureWorkbenchProvider(node.id) ? 'advanced_optional' : node.optional ? 'active_optional' : 'advanced_optional',
+  setupGroup: node.kind === 'provider' ? isFutureWorkbenchProvider(node.id) ? 'advanced' : 'primary' : 'advanced',
+  reason: isFutureWorkbenchProvider(node.id)
+    ? 'Kept for future coding/workbench use; not active V1 app runtime.'
+    : 'Approved by the canonical provider mesh.',
   capabilities: governanceCapabilities(node.capabilities),
   coveredByGenX: false,
   wired: true,
-  showInPrimarySetup: node.kind === 'provider',
+  showInPrimarySetup: node.kind === 'provider' && !isFutureWorkbenchProvider(node.id),
   defaultCostRole: node.id === 'genx' ? 'gateway' : node.kind === 'provider' ? 'specialist' : 'ops',
-  notes: 'Compatibility metadata generated from provider-mesh.ts.',
+  notes: isFutureWorkbenchProvider(node.id)
+    ? 'Future/workbench-only provider; V1 production app execution is disabled.'
+    : 'Compatibility metadata generated from provider-mesh.ts.',
 }))
 
 export const PROPOSED_PROVIDER_BACKLOG: readonly ProviderGovernanceEntry[] = []
@@ -124,5 +136,5 @@ export function getGenXCoveredProviderKeys(): Set<string> {
 }
 
 export function getAdultSpecialistProviderKeys(): Set<string> {
-  return new Set(['genx', 'huggingface', 'together'])
+  return new Set()
 }

@@ -181,12 +181,10 @@ describe('Adult routing: GenX is blocked', () => {
     }
   })
 
-  it('live-ai-routing source: adult_text filter explicitly excludes genx', () => {
+  it('live-ai-routing source: adult_text is deferred from active V1 runtime', () => {
     const source = src('src/lib/live-ai-routing.ts')
-    // Must not have the old genx in adult_text filter
     expect(source).not.toContain("'genx', 'together', 'huggingface'")
-    // Must have the correct adult filter
-    expect(source).toContain('Adult routes must NEVER use GenX')
+    expect(source).toContain('Adult capability is deferred from active V1 runtime.')
   })
 })
 
@@ -252,8 +250,8 @@ describe('Capability truth: proof required', () => {
 
 // ── Test 6: HF not executable for adult without endpoint env ─────────────────
 
-describe('HF adult: requires endpoint env', () => {
-  it('adult_text with HF key but no endpoint env is blocked', async () => {
+describe('Adult V1 runtime deferral', () => {
+  it('adult_text with legacy HF key remains deferred', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -263,10 +261,12 @@ describe('HF adult: requires endpoint env', () => {
     const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
     expect(entry!.status).toBe('blocked')
-    expect(entry!.hasRequiredEndpoint).toBe(false)
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.connectedProviderCandidates).toEqual([])
+    expect(entry!.blocker).toContain('deferred')
   })
 
-  it('adult_text with HF key + endpoint and model env passes endpoint gate', async () => {
+  it('adult_text with legacy HF endpoint env still does not enter active V1', async () => {
     mockGetMeshCredential.mockImplementation(async (id: string) =>
       id === 'huggingface' ? 'hf-key' : null,
     )
@@ -277,6 +277,9 @@ describe('HF adult: requires endpoint env', () => {
     process.env.HF_ADULT_TEXT_MODEL = 'adult-text-model'
     const { getCapabilityRuntimeTruthEntry } = await import('@/lib/capability-runtime-truth')
     const entry = await getCapabilityRuntimeTruthEntry('adult_text')
-    expect(entry!.hasRequiredEndpoint).toBe(true)
+    expect(entry!.status).toBe('blocked')
+    expect(entry!.providerCandidates).toEqual([])
+    expect(entry!.connectedProviderCandidates).toEqual([])
+    expect(entry!.blocker).toContain('deferred')
   })
 })

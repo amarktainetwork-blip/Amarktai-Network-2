@@ -230,13 +230,13 @@ function capabilityForIntent(intent: CommandIntent): CommandRoute['selectedCapab
 }
 
 function preferredProvidersForIntent(intent: CommandIntent): string[] {
-  if (intent === 'create_image') return ['genx', 'together', 'huggingface']
-  if (intent === 'create_movie') return ['genx', 'together', 'huggingface']
-  if (intent === 'create_song') return ['genx', 'together', 'huggingface']
-  if (intent === 'create_avatar') return ['genx', 'together', 'huggingface']
-  if (intent === 'create_voice') return ['genx', 'mimo', 'groq', 'huggingface']
-  if (intent === 'audit_repo' || intent === 'fix_repo' || intent === 'create_pr' || intent === 'build_new_app') return ['genx', 'mimo', 'groq', 'together', 'huggingface']
-  return ['genx', 'mimo', 'groq', 'together', 'huggingface']
+  if (intent === 'create_image') return ['genx', 'together']
+  if (intent === 'create_movie') return ['genx', 'together']
+  if (intent === 'create_song') return ['genx']
+  if (intent === 'create_avatar') return ['genx', 'together']
+  if (intent === 'create_voice') return ['genx', 'groq']
+  if (intent === 'audit_repo' || intent === 'fix_repo' || intent === 'create_pr' || intent === 'build_new_app') return ['genx', 'groq', 'together']
+  return ['genx', 'groq', 'together']
 }
 
 function isProviderCapability(value: string): value is ProviderCapability {

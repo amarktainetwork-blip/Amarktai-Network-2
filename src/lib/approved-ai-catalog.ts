@@ -1,6 +1,6 @@
-import { getAllProviderRuntimes, type ActiveAIProviderKey } from '@/lib/provider-runtime'
+import { getAllProviderRuntimes, type ActiveV1RuntimeProviderKey } from '@/lib/provider-runtime'
 
-export type ApprovedProviderKey = ActiveAIProviderKey
+export type ApprovedProviderKey = ActiveV1RuntimeProviderKey
 
 export type CostMode = 'cheap' | 'balanced' | 'premium'
 
@@ -16,7 +16,7 @@ export interface ApprovedProvider {
 }
 
 export interface ApprovedModel {
-  provider: ApprovedProviderKey
+  provider: string
   id: string
   label: string
   costMode: CostMode
@@ -25,7 +25,7 @@ export interface ApprovedModel {
 }
 
 export const APPROVED_AI_PROVIDERS: readonly ApprovedProvider[] = getAllProviderRuntimes().map((provider, sortOrder) => ({
-  key: provider.key,
+  key: provider.key as ApprovedProviderKey,
   displayName: provider.displayName,
   settingsLabel: provider.displayName,
   defaultBaseUrl: provider.baseUrl,

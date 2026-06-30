@@ -1,14 +1,14 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { getVaultApiKey } from '@/lib/brain'
 import { callGenXMedia, GENX_DEFAULT_TTS_MODEL, GENX_TTS_MODELS } from '@/lib/genx-client'
 import { createArtifact } from '@/lib/artifact-store'
+import { getVaultApiKey } from '@/lib/brain'
 import { getAppSafetyConfig, loadAppSafetyConfigFromDB, scanContent } from '@/lib/content-filter'
 import { getMediaCapabilityRoute } from '@/lib/media-capability-registry'
 import { createLocalMediaJob, localMediaJobResponse } from '@/lib/media-job-store'
 
 type TtsCapability = 'tts' | 'adult_voice'
-type TtsProvider = 'auto' | 'genx' | 'groq' | 'huggingface'
+type TtsProvider = 'auto' | 'genx' | 'groq'
 
 function result(input: {
   success: boolean
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const requestedProviderValue = typeof body.provider === 'string' ? body.provider : 'auto'
-    if (!['auto', 'genx', 'groq', 'huggingface'].includes(requestedProviderValue)) {
+    if (!['auto', 'genx', 'groq'].includes(requestedProviderValue)) {
       return NextResponse.json(result({
         success: false,
         capability,
@@ -141,26 +141,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      if (entry.provider === 'huggingface') {
-        const apiKey = await getVaultApiKey('huggingface')
-        if (!apiKey) {
-          error = 'Hugging Face API key is missing.'
-        } else {
-          const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inputs: text }),
-            signal: AbortSignal.timeout(60_000),
-          }).catch(() => null)
-          if (response?.ok) {
-            audio = Buffer.from(await response.arrayBuffer())
-            mimeType = response.headers.get('content-type') ?? mimeType
-          } else {
-            error = response ? `Hugging Face returned HTTP ${response.status}.` : 'Hugging Face TTS request failed.'
-          }
-        }
-      }
-
       if (entry.provider === 'groq') {
         const apiKey = await getVaultApiKey('groq')
         if (!apiKey) {
@@ -168,23 +148,23 @@ export async function POST(request: NextRequest) {
         } else {
           const response = await fetch('https://api.groq.com/openai/v1/audio/speech', {
             method: 'POST',
-            headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
               model,
+              voice: typeof body.voice === 'string' && body.voice ? body.voice : 'Fritz-PlayAI',
               input: text,
-              voice: typeof body.voice === 'string' && body.voice ? body.voice : 'Arista-PlayAI',
               response_format: 'mp3',
             }),
-            signal: AbortSignal.timeout(60_000),
-          }).catch(() => null)
-          if (response?.ok) {
+          })
+          if (response.ok) {
             audio = Buffer.from(await response.arrayBuffer())
             mimeType = response.headers.get('content-type') ?? mimeType
           } else {
-            const providerBody = response ? await response.text().catch(() => '') : ''
-            error = response
-              ? `Groq TTS returned HTTP ${response.status}: ${providerBody || 'no provider error body'}`
-              : 'Groq TTS request failed.'
+            const detail = await response.text().catch(() => '')
+            error = `Groq TTS returned HTTP ${response.status}${detail ? `: ${detail.slice(0, 240)}` : ''}`
           }
         }
       }

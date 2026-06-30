@@ -74,11 +74,11 @@ describe('Test 1: /api/admin/truth providers uses canonical truth', () => {
     expect(prismaAiProviderSpy).not.toHaveBeenCalled()
   })
 
-  it('all 5 active providers are present in the truth output', async () => {
+  it('all 4 visible runtime providers are present in the truth output', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const result = await getProviderRuntimeTruth()
     const ids = result.map((e) => e.providerId)
-    for (const id of ['genx', 'huggingface', 'together', 'groq', 'mimo']) {
+    for (const id of ['genx', 'together', 'groq', 'mimo']) {
       expect(ids).toContain(id)
     }
   })
@@ -131,11 +131,11 @@ describe('Test 2: DB key + passed test → HEALTHY / isActive', () => {
 // ── Test 3: Missing key → AVAILABLE_IN_CATALOG / isActive false ───────────────
 
 describe('Test 3: Missing key → AVAILABLE_IN_CATALOG / isActive false', () => {
-  it('all 5 providers with no key produce isActive=false', async () => {
+  it('all 4 visible runtime providers with no key produce isActive=false', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const raw = await getProviderRuntimeTruth()
 
-    for (const id of ['genx', 'huggingface', 'together', 'groq', 'mimo']) {
+    for (const id of ['genx', 'together', 'groq', 'mimo']) {
       const entry = raw.find((e) => e.providerId === id)!
       expect(entry.connected, `${id} should not be active`).toBe(false)
       expect(entry.hasKey, `${id} should have no key`).toBe(false)

@@ -46,8 +46,6 @@ export interface AmarktAIConfig {
 export interface ExecuteRequest {
   taskType: string
   message: string
-  provider?: string
-  model?: string
   systemPrompt?: string
   temperature?: number
   maxTokens?: number
@@ -68,8 +66,6 @@ export interface ExecuteResponse {
 export interface StreamRequest {
   taskType?: string
   message: string
-  provider?: string
-  model?: string
   systemPrompt?: string
   traceId?: string
 }
@@ -94,8 +90,6 @@ export interface AgentDispatchResponse {
 
 export interface ImageRequest {
   message: string
-  provider?: string
-  model?: string
   style?: string
   width?: number
   height?: number
@@ -242,7 +236,7 @@ export class AmarktAIClient {
   // ── TTS / STT ──────────────────────────────────────────────────────────
 
   /** Text-to-speech. Returns audio URL or base64 audio. */
-  async tts(text: string, opts?: { voice?: string; provider?: string; emotionAware?: boolean }): Promise<ExecuteResponse> {
+  async tts(text: string, opts?: { voice?: string; emotionAware?: boolean }): Promise<ExecuteResponse> {
     return this.post<ExecuteResponse>('/api/brain/tts', {
       appId: this.appId,
       appSecret: this.appSecret,
@@ -252,7 +246,7 @@ export class AmarktAIClient {
   }
 
   /** Speech-to-text. Accepts base64 audio. */
-  async stt(audioBase64: string, opts?: { provider?: string; language?: string }): Promise<ExecuteResponse> {
+  async stt(audioBase64: string, opts?: { language?: string }): Promise<ExecuteResponse> {
     return this.post<ExecuteResponse>('/api/brain/stt', {
       appId: this.appId,
       appSecret: this.appSecret,

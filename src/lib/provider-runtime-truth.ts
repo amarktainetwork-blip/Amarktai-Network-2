@@ -20,6 +20,10 @@
 import { PROVIDER_MESH, type ProviderMeshId, type ProviderCapability } from '@/lib/provider-mesh'
 import { getMeshCredential, getMeshTestNotes } from '@/lib/provider-mesh-status'
 import { checkWritable, LOCAL_STORE_FILES } from '@/lib/local-json-store'
+import {
+  ACTIVE_V1_RUNTIME_PROVIDERS,
+  FUTURE_WORKBENCH_PROVIDERS,
+} from '@/lib/provider-runtime'
 
 export type ProviderKeySource = 'db' | 'env' | 'none'
 export type ProviderEndpointStatus = 'ok' | 'missing' | 'not_required' | 'failed'
@@ -49,6 +53,20 @@ const LOCAL_RUNTIME_IDS: ReadonlySet<ProviderMeshId> = new Set([
 ])
 
 const GENX_DEFAULT_BASE_URL = 'https://query.genx.sh'
+const RUNTIME_TRUTH_VISIBLE_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshId>([
+  ...ACTIVE_V1_RUNTIME_PROVIDERS,
+  ...FUTURE_WORKBENCH_PROVIDERS,
+  'github',
+  'redis',
+  'qdrant',
+  'local-crawler',
+  'playwright',
+  'scrapy',
+  'trafilatura',
+  'ffmpeg',
+  'storage',
+  'smtp',
+])
 
 /** Providers that require a separate endpoint URL in addition to an API key. */
 const REQUIRES_ENDPOINT_IDS: ReadonlySet<ProviderMeshId> = new Set<ProviderMeshId>([])
@@ -172,7 +190,11 @@ function buildLocalCrawlerBlocker(notes: Record<string, unknown>): string {
 }
 
 export async function getProviderRuntimeTruth(): Promise<ProviderRuntimeTruthEntry[]> {
-  return Promise.all(PROVIDER_MESH.map((node) => buildEntry(node.id)))
+  return Promise.all(
+    PROVIDER_MESH
+      .filter((node) => RUNTIME_TRUTH_VISIBLE_IDS.has(node.id))
+      .map((node) => buildEntry(node.id)),
+  )
 }
 
 export async function getProviderRuntimeTruthEntry(
