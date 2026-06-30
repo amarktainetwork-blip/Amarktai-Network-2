@@ -76,6 +76,7 @@ export const CORE_PROOF_CAPABILITIES: readonly CoreProofCapabilitySpec[] = [
   { capability: 'tts', mode: 'tts', route: '/api/admin/studio/execute' },
   { capability: 'stt', mode: 'stt', route: '/api/admin/studio/stt' },
   { capability: 'avatar_generation', mode: 'avatar', route: '/api/admin/studio/execute' },
+  { capability: 'website_scraping', mode: 'scrape', route: '/api/brain/research' },
 ] as const
 
 export const LIVE_MEDIA_PROOF_CAPABILITIES = [
@@ -85,10 +86,14 @@ export const LIVE_MEDIA_PROOF_CAPABILITIES = [
   'stt',
 ] as const
 
-export const LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES = [
+export const LIVE_PACK_B_CAPABILITIES = [
   'video_generation',
   'long_form_video',
   'avatar_generation',
+  'website_scraping',
+] as const
+
+export const LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES = [
   'adult_text',
   'adult_image',
   'adult_voice',
@@ -97,6 +102,7 @@ export const LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES = [
 ] as const
 
 const LIVE_MEDIA_PROOF_SET = new Set<string>(LIVE_MEDIA_PROOF_CAPABILITIES)
+const LIVE_PACK_B_SET = new Set<string>(LIVE_PACK_B_CAPABILITIES)
 const CORE_PROOF_BY_CAPABILITY = new Map(CORE_PROOF_CAPABILITIES.map((spec) => [spec.capability, spec]))
 
 const PACK_A_PROMPTS = {
@@ -232,11 +238,11 @@ export function resolveLiveCoreProofCapabilities(requested?: readonly string[]):
 
   for (const capability of requestedCapabilities) {
     const spec = CORE_PROOF_BY_CAPABILITY.get(capability)
-    if (!spec || !LIVE_MEDIA_PROOF_SET.has(capability)) {
+    if (!spec || (!LIVE_MEDIA_PROOF_SET.has(capability) && !LIVE_PACK_B_SET.has(capability))) {
       rejected.push(blockedLiveCapability(
         capability,
-        `Live proof pack A does not run ${capability}.`,
-        'Use a later live proof pack for video, long-form video, avatar, or adult capabilities.',
+        `Live proof does not run ${capability}.`,
+        'Adult capabilities are deferred from active V1 runtime.',
       ))
       continue
     }
@@ -711,6 +717,112 @@ async function runLiveMusicProof(options: CoreProofPackOptions): Promise<CorePro
   }
 }
 
+async function runLiveVideoProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
+  try {
+    const { POST } = await import('@/app/api/brain/video-generate/route')
+    const route = '/api/brain/video-generate'
+    const response = await POST(await postJsonRoute(route, {
+      prompt: PACK_A_PROMPTS.image_generation.replace('image', 'video'),
+      style: 'cinematic',
+      duration: 4,
+      aspectRatio: '16:9',
+      count: 1,
+      costMode: options.costMode ?? 'cheap',
+      capability: 'video_generation',
+    }))
+    const data = await jsonFromResponse(response)
+    const polled = await pollMediaJobProof('video_generation', route, data, options)
+    return polled.result
+  } catch (error) {
+    return normalizeCoreProofRouteResult('video_generation', '/api/brain/video-generate', {
+      success: false,
+      executed: false,
+      status: 'failed',
+      blocker: error instanceof Error ? error.message : 'Video proof execution failed.',
+    })
+  }
+}
+
+async function runLiveLongFormVideoProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
+  try {
+    const { POST } = await import('@/app/api/brain/long-form-video/route')
+    const route = '/api/brain/long-form-video'
+    const durationSeconds = Math.max(90, options.maxDurationSeconds ?? 90)
+    const response = await POST(await postJsonRoute(route, {
+      prompt: 'A very short proof video: calm nature scene, simple transitions.',
+      style: 'cinematic',
+      duration: durationSeconds,
+      aspectRatio: '16:9',
+      sceneCount: 3,
+      appSlug: 'amarktai-network',
+    }))
+    const data = await jsonFromResponse(response)
+    const polled = await pollMediaJobProof('long_form_video', route, data, options)
+    return polled.result
+  } catch (error) {
+    return normalizeCoreProofRouteResult('long_form_video', '/api/brain/long-form-video', {
+      success: false,
+      executed: false,
+      status: 'failed',
+      blocker: error instanceof Error ? error.message : 'Long-form video proof execution failed.',
+    })
+  }
+}
+
+async function runLiveAvatarProof(options: CoreProofPackOptions): Promise<CoreProofCapabilityResult> {
+  try {
+    const { POST } = await import('@/app/api/brain/avatar-video/route')
+    const route = '/api/brain/avatar-video'
+    const response = await POST(await postJsonRoute(route, {
+      prompt: 'A proof avatar image for testing.',
+      appSlug: 'amarktai-network',
+      mode: 'image',
+      avatarName: 'Proof Avatar',
+      style: 'creator_avatar',
+    }))
+    const data = await jsonFromResponse(response)
+    const polled = await pollMediaJobProof('avatar_generation', route, data, options)
+    return polled.result
+  } catch (error) {
+    return normalizeCoreProofRouteResult('avatar_generation', '/api/brain/avatar-video', {
+      success: false,
+      executed: false,
+      status: 'failed',
+      blocker: error instanceof Error ? error.message : 'Avatar proof execution failed.',
+    })
+  }
+}
+
+async function runLiveScrapeProof(): Promise<CoreProofCapabilityResult> {
+  try {
+    const { POST } = await import('@/app/api/brain/research/route')
+    const route = '/api/brain/research'
+    const response = await POST(await postJsonRoute(route, {
+      query: 'AmarktAI proof scrape test',
+      depth: 'shallow',
+    }))
+    const data = await jsonFromResponse(response)
+    if (data.executed === true) {
+      return normalizeCoreProofRouteResult('website_scraping', route, {
+        ...data,
+        success: true,
+        status: 'completed',
+      })
+    }
+    return normalizeCoreProofRouteResult('website_scraping', route, {
+      ...data,
+      status: data.status ?? 'needs_setup',
+    })
+  } catch (error) {
+    return normalizeCoreProofRouteResult('website_scraping', '/api/brain/research', {
+      success: false,
+      executed: false,
+      status: 'failed',
+      blocker: error instanceof Error ? error.message : 'Scrape proof execution failed.',
+    })
+  }
+}
+
 async function runLiveCapabilityProof(
   spec: CoreProofCapabilitySpec,
   options: CoreProofPackOptions,
@@ -724,7 +836,11 @@ async function runLiveCapabilityProof(
     return tts.result
   }
   if (spec.capability === 'stt') return runLiveSttProof(context.ttsAudioSource)
-  return blockedLiveCapability(spec.capability, `Live proof pack A does not run ${spec.capability}.`)
+  if (spec.capability === 'video_generation') return runLiveVideoProof(options)
+  if (spec.capability === 'long_form_video') return runLiveLongFormVideoProof(options)
+  if (spec.capability === 'avatar_generation') return runLiveAvatarProof(options)
+  if (spec.capability === 'website_scraping') return runLiveScrapeProof()
+  return blockedLiveCapability(spec.capability, `Live proof does not run ${spec.capability}.`)
 }
 
 export async function runCoreCapabilityProofPack(options: CoreProofPackOptions = {}): Promise<CoreProofPackResult> {
@@ -733,7 +849,7 @@ export async function runCoreCapabilityProofPack(options: CoreProofPackOptions =
   const mode: CoreProofMode = options.live ? 'live' : 'status'
   const requestedCapabilities = options.capabilities?.length
     ? Array.from(new Set(options.capabilities))
-    : (options.live ? [...LIVE_MEDIA_PROOF_CAPABILITIES] : CORE_PROOF_CAPABILITIES.map((spec) => spec.capability))
+    : (options.live ? [...LIVE_MEDIA_PROOF_CAPABILITIES, ...LIVE_PACK_B_CAPABILITIES] : CORE_PROOF_CAPABILITIES.map((spec) => spec.capability))
 
   if (!options.live) {
     const capabilities = CORE_PROOF_CAPABILITIES.map((spec) => statusOnlyCapabilityResult(spec, truthByCapability.get(spec.capability)))

@@ -7,6 +7,7 @@ import { CAPABILITY_UI_MODES } from '@/lib/capability-ui-schema'
 import {
   CORE_PROOF_CAPABILITIES,
   LIVE_MEDIA_PROOF_CAPABILITIES,
+  LIVE_PACK_B_CAPABILITIES,
   LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES,
   extractCoreProofAudioSource,
   hasCoreProofAudioSource,
@@ -132,9 +133,6 @@ describe('core live proof pack and capabilities display', () => {
   it('live proof pack A only allows low-cost core media capabilities', () => {
     expect([...LIVE_MEDIA_PROOF_CAPABILITIES]).toEqual(['image_generation', 'tts', 'music_generation', 'stt'])
     expect([...LIVE_MEDIA_PROOF_EXCLUDED_CAPABILITIES]).toEqual(expect.arrayContaining([
-      'video_generation',
-      'long_form_video',
-      'avatar_generation',
       'adult_text',
       'adult_image',
       'adult_voice',
@@ -144,13 +142,37 @@ describe('core live proof pack and capabilities display', () => {
 
     const resolved = resolveLiveCoreProofCapabilities([
       'image_generation',
-      'video_generation',
       'adult_image',
       'tts',
     ])
     expect(resolved.selected.map((entry) => entry.capability)).toEqual(['image_generation', 'tts'])
-    expect(resolved.rejected.map((entry) => entry.capability)).toEqual(['video_generation', 'adult_image'])
+    expect(resolved.rejected.map((entry) => entry.capability)).toEqual(['adult_image'])
     expect(resolved.rejected.every((entry) => entry.status === 'blocked')).toBe(true)
+  })
+
+  it('live proof pack B includes video, long-form video, avatar, and scrape', () => {
+    expect([...LIVE_PACK_B_CAPABILITIES]).toEqual(['video_generation', 'long_form_video', 'avatar_generation', 'website_scraping'])
+
+    const resolved = resolveLiveCoreProofCapabilities([
+      'video_generation',
+      'long_form_video',
+      'avatar_generation',
+      'website_scraping',
+    ])
+    expect(resolved.selected.map((entry) => entry.capability)).toEqual([
+      'video_generation', 'long_form_video', 'avatar_generation', 'website_scraping',
+    ])
+    expect(resolved.rejected).toEqual([])
+  })
+
+  it('pack B excludes adult capabilities', () => {
+    const resolved = resolveLiveCoreProofCapabilities([
+      'video_generation',
+      'adult_video',
+      'avatar_generation',
+    ])
+    expect(resolved.selected.map((entry) => entry.capability)).toEqual(['video_generation', 'avatar_generation'])
+    expect(resolved.rejected.map((entry) => entry.capability)).toEqual(['adult_video'])
   })
 
   it('live proof runner calls existing execution routes/helpers only behind live mode', () => {
@@ -163,9 +185,10 @@ describe('core live proof pack and capabilities display', () => {
     expect(runner).toContain("getConfiguredGenXMusicModel")
     expect(runner).toContain("GENX_MUSIC_MODEL")
     expect(runner).toContain("await import('@/lib/media-job-store')")
-    expect(runner).not.toContain("await import('@/app/api/brain/video-generate/route')")
-    expect(runner).not.toContain("await import('@/app/api/brain/long-form-video/route')")
-    expect(runner).not.toContain("await import('@/app/api/brain/avatar-video/route')")
+    expect(runner).toContain("await import('@/app/api/brain/video-generate/route')")
+    expect(runner).toContain("await import('@/app/api/brain/long-form-video/route')")
+    expect(runner).toContain("await import('@/app/api/brain/avatar-video/route')")
+    expect(runner).toContain("await import('@/app/api/brain/research/route')")
     expect(runner).not.toContain("providerOverride:")
     expect(runner).not.toContain("modelOverride:")
   })
@@ -378,11 +401,77 @@ describe('core live proof pack and capabilities display', () => {
     expect(runner).toContain('getStorageDriver')
   })
 
+  it('video proof normalization handles async jobs with pollUrl correctly', () => {
+    const processing = normalizeCoreProofRouteResult('video_generation', '/api/brain/video-generate', {
+      success: true,
+      executed: true,
+      jobStatus: 'processing',
+      jobId: 'video_job_1',
+      pollUrl: '/api/brain/video-generate/video_job_1',
+      provider: 'genx',
+      model: 'kling-v2.5-turbo',
+    })
+    expect(processing.status).toBe('processing')
+    expect(processing.jobId).toBe('video_job_1')
+    expect(processing.pollUrl).toBe('/api/brain/video-generate/video_job_1')
+
+    const completed = normalizeCoreProofRouteResult('video_generation', '/api/brain/video-generate/video_job_1', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      jobId: 'video_job_1',
+      artifactId: 'video_artifact_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/gen.mp4',
+      provider: 'genx',
+      model: 'kling-v2.5-turbo',
+    })
+    expect(completed.status).toBe('proven')
+    expect(completed.proofStatus).toBe('passed')
+  })
+
+  it('long-form video proof normalization handles scene-stitched results', () => {
+    const sceneResult = normalizeCoreProofRouteResult('long_form_video', '/api/brain/long-form-video', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      artifactId: 'long_form_artifact_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/video/longform.mp4',
+      provider: 'genx',
+      model: 'kling-v2.5-turbo',
+      strategy: 'scene_stitched',
+      phase: 'completed',
+    })
+    expect(sceneResult.status).toBe('proven')
+    expect(sceneResult.artifactId).toBe('long_form_artifact_1')
+  })
+
+  it('avatar proof normalization handles image and video modes', () => {
+    const avatarImage = normalizeCoreProofRouteResult('avatar_generation', '/api/brain/avatar-video', {
+      success: true,
+      executed: true,
+      status: 'completed',
+      artifactId: 'avatar_img_1',
+      storageUrl: '/api/artifacts/file/artifacts/amarktai-network/image/avatar.png',
+      provider: 'genx',
+      model: 'genx/default-image',
+      capability: 'avatar_image',
+    })
+    expect(avatarImage.status).toBe('proven')
+  })
+
+  it('scrape proof normalization handles not-wired status', () => {
+    const notWired = normalizeCoreProofRouteResult('website_scraping', '/api/brain/research', {
+      executed: false,
+      availabilityLevel: 'NOT_AVAILABLE',
+      error: 'Research generation is not wired to an approved active provider.',
+    })
+    expect(notWired.status).not.toBe('proven')
+  })
+
   it('proof page documents status-only and live pack A commands', () => {
     const page = src('app/admin/dashboard/proof/page.tsx')
     expect(page).toContain('npm run proof</span> is status-only')
     expect(page).toContain('npm run proof -- --live --capabilities=image_generation,tts,music_generation,stt')
-    expect(page).toContain('Video, long-form video, and avatar proof remain later proof packs.')
   })
 
   it('adult private is blocked and not included in core proof execution', () => {

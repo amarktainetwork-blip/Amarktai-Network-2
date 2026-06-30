@@ -29,7 +29,8 @@ export default async function ProofPage() {
               <p className="mt-2 text-xs leading-6 text-slate-500">
                 The HTTP proof route is admin protected. <span className="font-mono text-slate-300">npm run proof</span> is status-only and makes no paid/generative calls.
                 Run <span className="font-mono text-slate-300">npm run proof -- --live --capabilities=image_generation,tts,music_generation,stt</span> for live media proof pack A.
-                Video, long-form video, and avatar proof remain later proof packs.
+                Run <span className="font-mono text-slate-300">npm run proof -- --live --capabilities=video_generation,long_form_video,avatar_generation,website_scraping</span> for live proof pack B (video, long-form video, avatar, scrape).
+                Adult capabilities are deferred from active V1 runtime.
               </p>
             </div>
             <a href="/api/admin/proof/core" className="text-sm font-bold text-cyan-300 underline">Open JSON</a>
