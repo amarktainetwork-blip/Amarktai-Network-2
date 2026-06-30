@@ -32,10 +32,10 @@ export default async function SystemPage() {
       <section className="rounded-lg border border-cyan-300/15 bg-[#071019] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">System</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">VPS, services, worker, logs, and database diagnostics</h1>
+            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">System / Settings</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">VPS, services, worker, logs, database, storage, and settings handoff</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-              Technical health lives here. Provider keys and tests stay in Settings, while product work stays in Studio.
+              Technical health lives here. Provider keys, app secrets, storage configuration, and live tests stay in Settings; product capability work stays in Studio.
             </p>
           </div>
           <StatusPill status={vps ? 'snapshot available' : 'snapshot unavailable'} />
@@ -43,7 +43,7 @@ export default async function SystemPage() {
       </section>
 
       <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="System sections">
-        {['VPS', 'Services', 'Worker', 'Logs', 'Database'].map((item) => (
+        {['VPS', 'Services', 'Worker', 'Logs', 'Database', 'Settings'].map((item) => (
           <a key={item} href={`#${item.toLowerCase()}`} className="rounded-lg px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800 hover:text-white">
             {item}
           </a>
@@ -95,6 +95,16 @@ export default async function SystemPage() {
           </div>
         </Panel>
       </section>
+
+      <Panel id="settings" title="Settings handoff">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {['provider keys and live tests', 'storage driver and artifact proof', 'Redis and queue configuration', 'Qdrant and local runtime tools'].map((item) => (
+            <a key={item} href="/admin/dashboard/settings" className="rounded-lg border border-slate-800 bg-slate-950/55 px-3 py-2 text-xs font-black text-cyan-200 hover:border-cyan-300/40">
+              {item}
+            </a>
+          ))}
+        </div>
+      </Panel>
     </div>
   )
 }

@@ -16,27 +16,17 @@ import { getQueueStatus } from '@/lib/job-queue'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { verifyStorage } from '@/lib/storage-driver'
 import { getVpsSnapshot } from '@/lib/vps-monitor'
+import {
+  CAPABILITY_STUDIOS,
+  DASHBOARD_MENTAL_LAYERS,
+  PROVIDER_MODEL_SURFACE,
+} from '@/lib/dashboard-control-room'
+import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-nav'
 
 export const dynamic = 'force-dynamic'
 
 type LocalArtifact = { id: string; status?: string; title?: string }
 type CommandJob = { id: string; prompt?: string; status?: string }
-
-const NAV_LINKS = [
-  { label: 'Command Center', href: '/admin/dashboard' },
-  { label: 'Studio', href: '/admin/dashboard/studio' },
-  { label: 'Capabilities', href: '/admin/dashboard/capabilities' },
-  { label: 'Providers & Models', href: '/admin/dashboard/providers' },
-  { label: 'Proof & Tests', href: '/admin/dashboard/proof' },
-  { label: 'Assets & Jobs', href: '/admin/dashboard/assets' },
-  { label: 'Memory & Knowledge', href: '/admin/dashboard/memory' },
-  { label: 'Automation', href: '/admin/dashboard/automation' },
-  { label: 'Adult Private', href: '/admin/dashboard/adult' },
-  { label: 'App Runtime', href: '/admin/dashboard/app-runtime' },
-  { label: 'Libraries & Integrations', href: '/admin/dashboard/libraries' },
-  { label: 'Settings', href: '/admin/dashboard/settings' },
-  { label: 'System', href: '/admin/dashboard/system' },
-]
 
 export default async function CommandCenterPage() {
   const [runtime, capabilityTruth, queue, storage, vps] = await Promise.all([
@@ -134,10 +124,10 @@ export default async function CommandCenterPage() {
       <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6 lg:p-8">
         <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Admin</p>
         <h1 className="mt-3 max-w-4xl text-3xl font-black tracking-tight text-white lg:text-5xl">
-          Command Center
+          AmarktAI Network control room
         </h1>
         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-400">
-          AmarktAI Network control surface
+          Capability-first operating view for what connected apps can use, what is live-proven, what is blocked, and what needs configuration before beta testing.
         </p>
       </section>
 
@@ -180,6 +170,34 @@ export default async function CommandCenterPage() {
         />
       </section>
 
+      <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+        <Panel title="Control-room layers">
+          <div className="grid gap-3">
+            {DASHBOARD_MENTAL_LAYERS.map((layer) => (
+              <div key={layer.id} className="rounded-xl border border-slate-800 bg-slate-950/55 p-3">
+                <p className="text-sm font-black text-cyan-200">{layer.label}</p>
+                <p className="mt-2 text-xs leading-6 text-slate-400">{layer.sections.join(' / ')}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+
+        <Panel title="Capability studios">
+          <div className="grid gap-2 md:grid-cols-2">
+            {CAPABILITY_STUDIOS.map((studio) => (
+              <div key={studio.id} className="rounded-xl border border-slate-800 bg-slate-950/55 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-black text-slate-100">{studio.displayName}</p>
+                  <span className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-black text-amber-100">{studio.proofStatus}</span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{studio.purpose}</p>
+                <p className="mt-2 font-mono text-[10px] text-slate-600">{studio.capabilityIds.slice(0, 3).join(', ')}</p>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </section>
+
       {/* Blockers + Provider readiness */}
       <section className="grid gap-5 xl:grid-cols-2">
         <Panel title="Blockers">
@@ -204,16 +222,22 @@ export default async function CommandCenterPage() {
 
         <Panel title="Provider readiness">
           <div className="space-y-2">
-            {providers.length > 0 ? providers.map((p) => (
-              <div key={p.key} className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
-                <span className="text-sm text-slate-300">{p.displayName}</span>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${p.connected ? 'border border-emerald-300/20 bg-emerald-300/10 text-emerald-200' : p.configured ? 'border border-amber-300/20 bg-amber-300/10 text-amber-200' : 'border border-slate-700 bg-slate-900 text-slate-500'}`}>
-                  {p.connected ? 'connected' : p.configured ? 'configured' : 'missing'}
+            {PROVIDER_MODEL_SURFACE.map((surface) => {
+              const p = providers.find((entry) => entry.key === surface.providerId)
+              return (
+              <div key={surface.providerId} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm font-black text-slate-300">{surface.displayName}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${surface.runtimeStatus === 'future_workbench' ? 'border border-blue-300/20 bg-blue-300/10 text-blue-200' : p?.connected ? 'border border-emerald-300/20 bg-emerald-300/10 text-emerald-200' : p?.configured ? 'border border-amber-300/20 bg-amber-300/10 text-amber-200' : 'border border-slate-700 bg-slate-900 text-slate-500'}`}>
+                    {surface.runtimeStatus === 'future_workbench' ? 'future/workbench' : p?.connected ? 'connected' : p?.configured ? 'configured' : 'missing'}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{surface.role}</p>
+                <span className="mt-2 inline-flex rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] font-black text-slate-400">
+                  {surface.runtimeStatus === 'active_v1' ? 'active V1 runtime' : 'not active app runtime'}
                 </span>
               </div>
-            )) : (
-              <p className="text-sm text-slate-500">No providers found.</p>
-            )}
+            )})}
           </div>
         </Panel>
       </section>
@@ -266,7 +290,7 @@ export default async function CommandCenterPage() {
       {/* Quick navigation */}
       <Panel title="Quick navigation">
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {NAV_LINKS.map((link) => (
+          {DASHBOARD_NAV_ITEMS.map((link) => (
             <a
               key={link.href}
               href={link.href}

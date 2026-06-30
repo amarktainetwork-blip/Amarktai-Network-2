@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { listArtifacts, type ArtifactRecord } from '@/lib/artifact-store'
 import { listRecords, LOCAL_STORE_FILES } from '@/lib/local-json-store'
 import { listAvatarLibraryEntries } from '@/lib/avatar-library-store'
+import { JOB_LIFECYCLE_STATES } from '@/lib/dashboard-control-room'
 
 export const dynamic = 'force-dynamic'
 
@@ -116,10 +117,10 @@ export default async function AssetsAndJobsPage() {
       <section className="rounded-lg border border-cyan-300/15 bg-[#071019] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Assets & Jobs</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Generated output and job lifecycle</h1>
+            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Jobs & Artifacts</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Job lifecycle, artifact proof, and handoff state</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-              Images, video, music, audio, documents, queued jobs, failures, downloads, and references live here. Publishing and approval state is shown as job/output metadata, not a separate main section.
+              Images, video, music, audio, avatar, document artifacts, queued jobs, provider attempts, failures, downloads, webhook delivery, and signed references live here.
             </p>
           </div>
           <StatusPill status={snapshot.database === 'working' ? 'database working' : 'database unavailable'} />
@@ -137,6 +138,17 @@ export default async function AssetsAndJobsPage() {
         <Metric icon={<Video />} label="Video jobs" value={String(snapshot.videoJobs.length)} />
         <Metric icon={<Archive />} label="Local artifacts" value={String(localArtifacts.length)} />
         <Metric icon={<FileImage />} label="Avatar library" value={String(avatarLibrary.length)} />
+      </section>
+
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">Lifecycle states</p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {JOB_LIFECYCLE_STATES.map((state) => (
+            <span key={state} className="rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-1 text-[10px] font-bold text-slate-400">
+              {state}
+            </span>
+          ))}
+        </div>
       </section>
 
       <nav className="flex flex-wrap gap-2 rounded-lg border border-slate-800 bg-slate-900/55 p-2" aria-label="Asset filters">

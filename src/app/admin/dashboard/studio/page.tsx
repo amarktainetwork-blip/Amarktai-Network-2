@@ -6,6 +6,7 @@ import { Loader2, Send, Upload } from 'lucide-react'
 import { STUDIO_ROUTE_MAP } from '@/lib/studio-route-map'
 import type { CostMode } from '@/lib/approved-ai-catalog'
 import { CAPABILITY_UI_MODES, type CapabilityUiMode, type CapabilityField } from '@/lib/capability-ui-schema'
+import { CAPABILITY_STUDIOS, JOB_LIFECYCLE_STATES, PLANNED_CONNECTED_APPS } from '@/lib/dashboard-control-room'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ type ActiveJob = {
 
 // ── Mode ribbon is derived from CAPABILITY_UI_MODES — no hardcoded mode list ──
 
-const ALL_MODES = CAPABILITY_UI_MODES
+const ALL_MODES = CAPABILITY_UI_MODES.filter((mode) => !mode.adultPrivate)
 
 export default function StudioPage() {
   const [modeId, setModeId] = useState<string>(ALL_MODES[0].id)
@@ -62,6 +63,7 @@ export default function StudioPage() {
   const [musicSubSection, setMusicSubSection] = useState('Song')
 
   const selectedMode = ALL_MODES.find((m) => m.id === modeId) ?? ALL_MODES[0]
+  const selectedStudio = resolveStudioForMode(selectedMode.id)
   const routeInfo = STUDIO_ROUTE_MAP[selectedMode.id as keyof typeof STUDIO_ROUTE_MAP]
     ?? STUDIO_ROUTE_MAP['Chat' as keyof typeof STUDIO_ROUTE_MAP]
   const canSubmit = modeId === 'stt' ? Boolean(sttFile) : prompt.trim().length > 0
@@ -190,9 +192,9 @@ export default function StudioPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Studio</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-white lg:text-4xl">Capability workspace</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-white lg:text-4xl">Capability Studio control room</h1>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-400">
-              Choose a capability, describe the outcome, and let the runtime select the provider after policy and budget checks.
+              Shared workbench for capability testing. Apps provide capability requests and asset references; runtime selects provider and model after policy, proof, budget, and validation checks.
             </p>
           </div>
           <div className="flex gap-2">
@@ -208,6 +210,62 @@ export default function StudioPage() {
             </select>
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-4 rounded-2xl border border-slate-800 bg-slate-900/55 p-4 xl:grid-cols-[0.85fr_1.15fr_0.85fr]">
+        <div className="space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Capability selector</span>
+            <select value={modeId} onChange={(e) => { setModeId(e.target.value); setResult(null); setMusicSubSection('Song') }} className="studio-select w-full">
+              {ALL_MODES.map((mode) => <option key={mode.id} value={mode.id}>{mode.label}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Preset selector</span>
+            <select value={String(controls.preset ?? 'default')} onChange={(e) => setControl('preset', e.target.value)} className="studio-select w-full">
+              <option value="default">Default capability preset</option>
+              <option value="brand_safe">Brand safe</option>
+              <option value="fast_preview">Fast preview</option>
+              <option value="artifact_proof">Artifact proof</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">App simulation</span>
+            <select value={String(controls.appSimulation ?? 'marketing-app')} onChange={(e) => setControl('appSimulation', e.target.value)} className="studio-select w-full">
+              {PLANNED_CONNECTED_APPS.map((app) => <option key={app.appId} value={app.appId}>{app.displayName}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-950/55 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-lg font-black text-white">{selectedStudio.displayName}</p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-400">{selectedStudio.purpose}</p>
+            </div>
+            <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[11px] font-black text-amber-100">
+              {selectedStudio.proofStatus}
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            <MiniSpec title="Capability IDs" values={selectedStudio.capabilityIds} />
+            <MiniSpec title="Outputs" values={selectedStudio.supportedOutputs} />
+            <MiniSpec title="Apps" values={selectedStudio.appsCanUse} />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <InfoBox title="Provider policy" value={selectedStudio.providerPolicy} />
+          <InfoBox title="Blocker" value={selectedStudio.currentBlocker || 'No current blocker in metadata.'} />
+          <InfoBox title="Run validation" value={selectedStudio.proofStatus === 'blocked' || selectedStudio.proofStatus === 'deferred' ? 'Run is disabled when real execution is blocked or deferred.' : 'Run submits only capability data; no provider/model override fields are sent.'} />
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-4">
+        <ShellPanel title="Inputs" values={selectedStudio.supportedInputs} />
+        <ShellPanel title="Asset references" values={selectedStudio.supportedAssetReferences} />
+        <ShellPanel title="Fallback policy" values={selectedStudio.activeProviderIds.map((id) => `${id}: runtime eligible where capability truth permits`)} />
+        <ShellPanel title="Job lifecycle" values={[...JOB_LIFECYCLE_STATES]} />
       </section>
 
       {/* Mode ribbon — derived from CAPABILITY_UI_MODES, not a hardcoded list */}
@@ -281,7 +339,7 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={!canSubmit || running}
+              disabled={!canSubmit || running || selectedStudio.proofStatus === 'blocked' || selectedStudio.proofStatus === 'deferred'}
               className="grid w-14 shrink-0 place-items-center rounded-2xl bg-cyan-300 text-slate-950 transition hover:bg-cyan-200 disabled:opacity-40"
               aria-label="Run Studio capability"
             >
@@ -300,7 +358,7 @@ export default function StudioPage() {
             <button
               type="button"
               onClick={() => void submit()}
-              disabled={!sttFile || running}
+              disabled={!sttFile || running || selectedStudio.proofStatus === 'blocked' || selectedStudio.proofStatus === 'deferred'}
               className="rounded-xl bg-cyan-300 px-5 py-2.5 text-sm font-black text-slate-950 transition hover:bg-cyan-200 disabled:opacity-40"
             >
               {running ? 'Transcribing…' : 'Transcribe'}
@@ -312,6 +370,13 @@ export default function StudioPage() {
           <p className="mt-2 text-xs font-bold text-slate-500">{labelState(status)}</p>
         )}
       </section>
+
+      <details className="rounded-2xl border border-slate-800 bg-slate-900/55 p-4">
+        <summary className="cursor-pointer text-sm font-black text-slate-400">Example app request payload</summary>
+        <pre className="mt-3 overflow-x-auto rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs leading-5 text-slate-300">
+          {JSON.stringify(selectedStudio.exampleAppRequestPayload, null, 2)}
+        </pre>
+      </details>
 
       {/* Route details (collapsed) */}
       <details className="rounded-2xl border border-slate-800 bg-slate-900/55 p-4">
@@ -482,6 +547,53 @@ function SchemaFields({
         />
       ))}
     </div>
+  )
+}
+
+function resolveStudioForMode(modeId: string) {
+  if (modeId === 'chat') return CAPABILITY_STUDIOS.find((s) => s.id === 'text-chat')!
+  if (modeId === 'image') return CAPABILITY_STUDIOS.find((s) => s.id === 'image')!
+  if (modeId === 'video' || modeId === 'image_to_video') return CAPABILITY_STUDIOS.find((s) => s.id === 'video')!
+  if (modeId === 'long_form_video') return CAPABILITY_STUDIOS.find((s) => s.id === 'long-form-video')!
+  if (modeId === 'music') return CAPABILITY_STUDIOS.find((s) => s.id === 'music-song')!
+  if (modeId === 'tts' || modeId === 'stt') return CAPABILITY_STUDIOS.find((s) => s.id === 'voice')!
+  if (modeId === 'avatar') return CAPABILITY_STUDIOS.find((s) => s.id === 'avatar')!
+  if (modeId === 'research_rag') return CAPABILITY_STUDIOS.find((s) => s.id === 'rag-knowledge')!
+  if (modeId === 'campaign') return CAPABILITY_STUDIOS.find((s) => s.id === 'scrape-brand')!
+  if (modeId === 'automation' || modeId === 'publishing') return CAPABILITY_STUDIOS.find((s) => s.id === 'jobs-artifacts')!
+  return CAPABILITY_STUDIOS.find((s) => s.id === 'text-chat')!
+}
+
+function MiniSpec({ title, values }: { title: string; values: readonly string[] }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{title}</p>
+      <p className="mt-2 line-clamp-4 text-xs leading-5 text-slate-300">{values.slice(0, 5).join(', ')}</p>
+    </div>
+  )
+}
+
+function InfoBox({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950/55 p-3">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">{title}</p>
+      <p className="mt-2 text-xs leading-5 text-slate-300">{value}</p>
+    </div>
+  )
+}
+
+function ShellPanel({ title, values }: { title: string; values: readonly string[] }) {
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-4">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-300">{title}</p>
+      <div className="mt-3 flex max-h-40 flex-wrap gap-1.5 overflow-hidden">
+        {values.slice(0, 18).map((value) => (
+          <span key={value} className="rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-1 text-[10px] font-bold text-slate-400">
+            {value}
+          </span>
+        ))}
+      </div>
+    </section>
   )
 }
 

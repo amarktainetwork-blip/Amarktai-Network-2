@@ -4,6 +4,7 @@ import { getCapabilityRuntimeTruth, type CapabilityRuntimeTruthEntry } from '@/l
 import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
 import { CAPABILITY_UI_MODES } from '@/lib/capability-ui-schema'
 import { getArtifactType, getCapabilityRoute } from '@/lib/capability-display'
+import { CAPABILITY_STUDIOS } from '@/lib/dashboard-control-room'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +65,22 @@ export default async function CapabilitiesPage() {
             <Summary label="Blocked" value={summary.blocked} />
             <Summary label="Missing" value={summary.missing} />
           </div>
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-slate-800 bg-slate-900/60 p-5">
+        <h2 className="text-lg font-black text-white">Capability Studio map</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {CAPABILITY_STUDIOS.map((studio) => (
+            <article key={studio.id} className="rounded-lg border border-slate-800 bg-slate-950/55 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-black text-slate-100">{studio.displayName}</p>
+                <span className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-0.5 text-[10px] font-black text-amber-100">{studio.proofStatus}</span>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">{studio.purpose}</p>
+              <p className="mt-2 font-mono text-[10px] leading-5 text-slate-600">{studio.capabilityIds.join(', ')}</p>
+            </article>
+          ))}
         </div>
       </section>
 

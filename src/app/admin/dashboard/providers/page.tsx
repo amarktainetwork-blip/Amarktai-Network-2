@@ -1,20 +1,49 @@
 import { getProviderRuntimeTruth } from '@/lib/provider-runtime-truth'
+import {
+  ACTIVE_DASHBOARD_PROVIDER_IDS,
+  FUTURE_DASHBOARD_PROVIDER_IDS,
+  PROVIDER_MODEL_SURFACE,
+} from '@/lib/dashboard-control-room'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ProvidersPage() {
   const providers = await getProviderRuntimeTruth().catch(() => [])
+  const providerById = new Map(providers.map((provider) => [provider.providerId, provider]))
+  const activeProviders = PROVIDER_MODEL_SURFACE.filter((provider) => provider.runtimeStatus === 'active_v1')
+  const futureProviders = PROVIDER_MODEL_SURFACE.filter((provider) => provider.runtimeStatus === 'future_workbench')
+  const visibleProviderIds = new Set<string>([
+    ...ACTIVE_DASHBOARD_PROVIDER_IDS,
+    ...FUTURE_DASHBOARD_PROVIDER_IDS,
+  ])
 
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6">
         <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Admin</p>
         <h1 className="mt-2 text-2xl font-black text-white">Providers &amp; Models</h1>
-        <p className="mt-1 text-sm text-slate-400">Provider configuration, connection status, and endpoint health. No override controls — runtime routes automatically.</p>
+        <p className="mt-1 max-w-4xl text-sm leading-7 text-slate-400">
+          Active V1 runtime providers are GenX, Together, and Groq. MiMo is preserved as future/workbench only. Provider/model overrides are not exposed to app requests.
+        </p>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        {activeProviders.map((surface) => (
+          <ProviderCard key={surface.providerId} surface={surface} runtime={providerById.get(surface.providerId)} />
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-blue-300/15 bg-blue-300/8 p-5">
+        <h2 className="font-black text-blue-100">Future/workbench only</h2>
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          {futureProviders.map((surface) => (
+            <ProviderCard key={surface.providerId} surface={surface} runtime={providerById.get(surface.providerId)} future />
+          ))}
+        </div>
       </section>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
-        <h2 className="font-black text-white">Provider status</h2>
+        <h2 className="font-black text-white">Provider status from runtime truth</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -29,7 +58,7 @@ export default async function ProvidersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {providers.map((p) => (
+              {providers.filter((provider) => visibleProviderIds.has(provider.providerId)).map((p) => (
                 <tr key={p.providerId} className="text-slate-300">
                   <td className="py-3 pr-4 font-black">{p.displayName}</td>
                   <td className="py-3 pr-4">
@@ -49,25 +78,71 @@ export default async function ProvidersPage() {
                   <td className="py-3 pr-4">
                     <StatusPill ok={p.connected} trueLabel="Connected" falseLabel="Not connected" />
                   </td>
-                  <td className="py-3 max-w-xs text-xs text-slate-500 truncate">{p.blocker || '—'}</td>
+                  <td className="max-w-xs truncate py-3 text-xs text-slate-500">{p.blocker || 'None'}</td>
                 </tr>
               ))}
-              {providers.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-sm text-slate-500">
-                    No provider data. Check Settings to configure providers.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </section>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
-        <h2 className="font-black text-white">Note</h2>
-        <p className="mt-2 text-sm text-slate-400">Provider and model overrides are not available here. AmarktAI Network selects providers automatically based on capability, cost tier, and proof status. To run live tests or change keys, go to <a href="/admin/dashboard/settings" className="text-cyan-400 underline">Settings</a>.</p>
+        <h2 className="font-black text-white">Runtime rule</h2>
+        <p className="mt-2 text-sm text-slate-400">
+          Apps send capability requests. The runtime selects providers and models internally, then returns selected provider/model in proof output after execution.
+        </p>
       </section>
+    </div>
+  )
+}
+
+function ProviderCard({
+  surface,
+  runtime,
+  future = false,
+}: {
+  surface: (typeof PROVIDER_MODEL_SURFACE)[number]
+  runtime?: Awaited<ReturnType<typeof getProviderRuntimeTruth>>[number]
+  future?: boolean
+}) {
+  return (
+    <article className={`rounded-2xl border p-5 ${future ? 'border-blue-300/20 bg-blue-300/8' : 'border-slate-800 bg-slate-900/55'}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-black text-white">{surface.displayName}</h2>
+          <p className="mt-1 text-xs font-black uppercase tracking-wide text-slate-500">
+            {surface.runtimeStatus === 'active_v1' ? 'Active V1 runtime' : 'Future/workbench only'}
+          </p>
+        </div>
+        <StatusPill
+          ok={future ? false : Boolean(runtime?.connected)}
+          trueLabel="Working"
+          falseLabel={future ? 'Future' : runtime?.configured ? 'Configured' : 'Missing'}
+        />
+      </div>
+      <p className="mt-4 text-sm leading-6 text-slate-400">{surface.role}</p>
+      <div className="mt-4 space-y-3">
+        <ChipGroup label="Supported capabilities" values={surface.supportedCapabilities} />
+        <ChipGroup label="Model families" values={surface.modelFamilies} />
+      </div>
+      <p className="mt-4 rounded-xl border border-slate-800 bg-slate-950/55 p-3 text-xs leading-5 text-slate-400">
+        {runtime?.blocker || surface.blocker}
+      </p>
+    </article>
+  )
+}
+
+function ChipGroup({ label, values }: { label: string; values: readonly string[] }) {
+  return (
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">{label}</p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {values.map((value) => (
+          <span key={value} className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-[10px] font-bold text-slate-300">
+            {value}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }

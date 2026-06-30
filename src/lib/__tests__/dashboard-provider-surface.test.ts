@@ -3,7 +3,7 @@
  *
  * Proves:
  * 1. Providers page/API uses shared provider truth (getProviderRuntimeTruth).
- * 2. Settings connected state and Providers connected state match for the 4 visible runtime providers.
+ * 2. Settings connected state and Providers connected state match for active V1 providers plus MiMo future/workbench.
  * 3. Provider test action uses /api/admin/settings/test-provider with field `key`.
  * 4. Unknown connection is not returned for the visible runtime providers.
  * 5. Overview provider count uses shared truth.
@@ -41,7 +41,9 @@ const noNotes = { lastTestStatus: undefined, lastTestPassed: undefined, lastTest
 const passedNotes = { lastTestStatus: 'passed' as const, lastTestPassed: true, lastTestedAt: '2026-06-26T10:00:00Z', lastError: '' }
 const failedNotes = { lastTestStatus: 'failed' as const, lastTestPassed: false, lastTestedAt: '2026-06-26T10:00:00Z', lastError: 'API error' }
 
-const ACTIVE_PROVIDERS = ['genx', 'together', 'groq', 'mimo'] as const
+const ACTIVE_PROVIDERS = ['genx', 'together', 'groq'] as const
+const FUTURE_WORKBENCH_PROVIDERS = ['mimo'] as const
+const VISIBLE_PROVIDERS = [...ACTIVE_PROVIDERS, ...FUTURE_WORKBENCH_PROVIDERS] as const
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -54,24 +56,24 @@ beforeEach(() => {
 // ── Test 1: Providers page/API uses shared provider truth ─────────────────────
 
 describe('Test 1: /api/admin/providers/status uses getProviderRuntimeTruth', () => {
-  it('returns entries for all 4 visible runtime providers', async () => {
+  it('returns entries for active V1 providers and MiMo future/workbench', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 
-    const activeKeys = ACTIVE_PROVIDERS as readonly string[]
+    const activeKeys = VISIBLE_PROVIDERS as readonly string[]
     const activeEntries = truth.filter((e) => activeKeys.includes(e.providerId))
 
-    expect(activeEntries).toHaveLength(ACTIVE_PROVIDERS.length)
-    for (const id of ACTIVE_PROVIDERS) {
+    expect(activeEntries).toHaveLength(VISIBLE_PROVIDERS.length)
+    for (const id of VISIBLE_PROVIDERS) {
       expect(activeEntries.some((e) => e.providerId === id), `${id} should be in truth`).toBe(true)
     }
   })
 
-  it('never returns "Unknown connection" error for active providers', async () => {
+  it('never returns "Unknown connection" error for visible providers', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 
-    for (const id of ACTIVE_PROVIDERS) {
+    for (const id of VISIBLE_PROVIDERS) {
       const entry = truth.find((e) => e.providerId === id)
       expect(entry, `${id} must be in truth`).toBeDefined()
       expect(entry!.blocker).not.toBe('Unknown connection')
@@ -108,7 +110,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
     expect(settingsGenX.connected).toBe(truthGenX.connected)
   })
 
-  it('all 4 visible runtime providers agree: no key = not connected in both surfaces', async () => {
+  it('visible providers agree: no key = not connected in both surfaces', async () => {
     const { getPlatformSettingsTruth } = await import('@/lib/platform-settings-truth')
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
 
@@ -117,7 +119,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
       getProviderRuntimeTruth(),
     ])
 
-    for (const id of ACTIVE_PROVIDERS) {
+    for (const id of VISIBLE_PROVIDERS) {
       const settingsEntry = settings.entries.find((e) => e.key === id)!
       const truthEntry = truth.find((e) => e.providerId === id)!
 
@@ -128,10 +130,10 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
     }
   })
 
-  it('all 4 visible runtime providers agree when all have keys + passed tests', async () => {
+  it('visible providers agree when all have keys + passed tests', async () => {
     process.env.GENX_BASE_URL = 'https://query.genx.sh'
     mockGetMeshCredential.mockImplementation(async (id: string) =>
-      ACTIVE_PROVIDERS.includes(id as typeof ACTIVE_PROVIDERS[number]) ? `${id}-key` : null,
+      VISIBLE_PROVIDERS.includes(id as typeof VISIBLE_PROVIDERS[number]) ? `${id}-key` : null,
     )
     mockGetMeshTestNotes.mockImplementation(async () => passedNotes)
 
@@ -143,7 +145,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
       getProviderRuntimeTruth(),
     ])
 
-    for (const id of ACTIVE_PROVIDERS) {
+    for (const id of VISIBLE_PROVIDERS) {
       if (id === 'genx') continue // genx needs URL which is set above
       const settingsEntry = settings.entries.find((e) => e.key === id)!
       const truthEntry = truth.find((e) => e.providerId === id)!
@@ -153,7 +155,7 @@ describe('Test 2: Settings and Providers agree on connected state', () => {
     // Count how many are connected in both
     const settingsConnected = settings.providers.filter((e) => e.connected).length
     const truthConnected = truth.filter((e) =>
-      ACTIVE_PROVIDERS.includes(e.providerId as typeof ACTIVE_PROVIDERS[number]) && e.connected,
+      VISIBLE_PROVIDERS.includes(e.providerId as typeof VISIBLE_PROVIDERS[number]) && e.connected,
     ).length
     expect(settingsConnected).toBe(truthConnected)
   })
@@ -206,11 +208,11 @@ describe('Test 3: dashboard-api.testProvider sends field `key` not `providerKey`
 // ── Test 4: Unknown connection never returned for active providers ─────────────
 
 describe('Test 4: Unknown connection not returned for active providers', () => {
-  it('getProviderRuntimeTruth has entries for all 4 visible runtime providers', async () => {
+  it('getProviderRuntimeTruth has entries for active providers plus MiMo future/workbench', async () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 
-    for (const id of ACTIVE_PROVIDERS) {
+    for (const id of VISIBLE_PROVIDERS) {
       const entry = truth.find((e) => e.providerId === id)
       expect(entry).toBeDefined()
       // blocker must never be the old "Unknown connection" message
@@ -222,7 +224,7 @@ describe('Test 4: Unknown connection not returned for active providers', () => {
     const { getProviderRuntimeTruth } = await import('@/lib/provider-runtime-truth')
     const truth = await getProviderRuntimeTruth()
 
-    for (const id of ACTIVE_PROVIDERS) {
+    for (const id of VISIBLE_PROVIDERS) {
       const entry = truth.find((e) => e.providerId === id)!
       // No key → blocker must be missing_key
       expect(entry.hasKey).toBe(false)
@@ -254,15 +256,15 @@ describe('Test 5: Overview provider count uses shared truth', () => {
     const truth = await getProviderRuntimeTruth()
 
     const activeConnected = truth.filter(
-      (e) => (ACTIVE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
+      (e) => (VISIBLE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
     )
     expect(activeConnected).toHaveLength(0)
   })
 
-  it('connected count is 5 when all providers have keys + passed tests', async () => {
+  it('connected count matches visible provider count when all visible providers have keys + passed tests', async () => {
     process.env.GENX_BASE_URL = 'https://query.genx.sh'
     mockGetMeshCredential.mockImplementation(async (id: string) =>
-      ACTIVE_PROVIDERS.includes(id as typeof ACTIVE_PROVIDERS[number]) ? `${id}-key` : null,
+      VISIBLE_PROVIDERS.includes(id as typeof VISIBLE_PROVIDERS[number]) ? `${id}-key` : null,
     )
     mockGetMeshTestNotes.mockImplementation(async () => passedNotes)
 
@@ -270,9 +272,9 @@ describe('Test 5: Overview provider count uses shared truth', () => {
     const truth = await getProviderRuntimeTruth()
 
     const activeConnected = truth.filter(
-      (e) => (ACTIVE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
+      (e) => (VISIBLE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
     )
-    expect(activeConnected).toHaveLength(ACTIVE_PROVIDERS.length)
+    expect(activeConnected).toHaveLength(VISIBLE_PROVIDERS.length)
   })
 
   it('connected count matches between Settings truth and runtime truth', async () => {
@@ -294,7 +296,7 @@ describe('Test 5: Overview provider count uses shared truth', () => {
 
     const settingsCount = settings.providers.filter((e) => e.connected).length
     const runtimeCount = truth.filter(
-      (e) => (ACTIVE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
+      (e) => (VISIBLE_PROVIDERS as readonly string[]).includes(e.providerId) && e.connected,
     ).length
 
     expect(settingsCount).toBe(runtimeCount)

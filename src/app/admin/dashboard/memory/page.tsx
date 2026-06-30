@@ -3,6 +3,7 @@ import { Database, FileSearch, Globe2, Layers3, Search } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { listRecords } from '@/lib/local-json-store'
 import MemoryKnowledgeTools from '@/components/dashboard/MemoryKnowledgeTools'
+import { CAPABILITY_STUDIOS } from '@/lib/dashboard-control-room'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,16 +36,17 @@ export default async function MemoryKnowledgePage() {
   const ragSources = listRecords<RagSource>('rag/sources.json').slice(-20).reverse()
   const scrapeResults = listRecords<ScrapeResult>('research/scrape-results.json').slice(-20).reverse()
   const brandMemoryRecords = listRecords<BrandMemoryRecord>('brand-memory.json').slice(-20).reverse()
+  const agentsStudio = CAPABILITY_STUDIOS.find((studio) => studio.id === 'agents-learning')!
 
   return (
     <div className="space-y-5">
       <section className="rounded-lg border border-cyan-300/15 bg-[#071019] p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Memory & Knowledge</p>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Context, memory, RAG, and website knowledge</h1>
+            <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Agents / Learning</p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-white">Controlled agents, learning foundations, memory, RAG, and website knowledge</h1>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-400">
-              App memory, brand memory, user memory, RAG sources, website scrape results, and knowledge ingestion state are managed together because they all feed runtime context.
+              App memory, brand memory, user memory, RAG sources, website scrape results, and controlled learning state feed runtime context. This page does not claim uncontrolled self-learning.
             </p>
           </div>
           <StatusPill status={snapshot.database === 'working' ? 'database working' : 'database unavailable'} />
@@ -64,6 +66,7 @@ export default async function MemoryKnowledgePage() {
           ['Brand Memory', '#brand-memory'],
           ['Knowledge/RAG', '#knowledge-rag'],
           ['Website Scrapes', '#website-scrapes'],
+          ['Agents/Learning', '#agents-learning'],
         ].map(([label, href]) => (
           <a key={label} href={href} className="rounded-lg px-3 py-2 text-xs font-black text-slate-300 hover:bg-slate-800 hover:text-white">
             {label}
@@ -79,6 +82,25 @@ export default async function MemoryKnowledgePage() {
       </section>
 
       <MemoryKnowledgeTools />
+
+      <Panel id="agents-learning" title="Agents / Learning Studio">
+        <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <StatusPill status={agentsStudio.proofStatus} />
+            <p className="mt-3 text-sm leading-7 text-slate-400">{agentsStudio.purpose}</p>
+            <p className="mt-3 rounded-lg border border-amber-300/20 bg-amber-300/8 p-3 text-xs font-bold leading-6 text-amber-100">
+              {agentsStudio.currentBlocker}
+            </p>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {agentsStudio.controls.map((control) => (
+              <span key={control} className="rounded-lg border border-slate-800 bg-slate-950/55 px-3 py-2 text-xs font-bold text-slate-300">
+                {control}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Panel>
 
       <section className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
         <Panel id="brand-memory" title="Brand Memory">

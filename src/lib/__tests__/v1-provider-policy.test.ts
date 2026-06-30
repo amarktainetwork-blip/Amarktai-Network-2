@@ -57,7 +57,8 @@ describe('corrected V1 provider policy', () => {
       expect(entry?.executionRoute).toBeNull()
     }
 
-    expect(source('lib/dashboard-nav.ts')).toContain('Deferred from active V1 runtime')
+    expect(source('lib/dashboard-nav.ts')).not.toMatch(/Adult Private|Adult active/i)
+    expect(source('app/admin/dashboard/adult/page.tsx')).toContain('Deferred from active V1 runtime')
   })
 
   it('keeps SDK app request types free of provider and model overrides', () => {

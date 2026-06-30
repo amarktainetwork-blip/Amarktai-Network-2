@@ -1,4 +1,5 @@
 import { getQueueStatus } from '@/lib/job-queue'
+import { JOB_LIFECYCLE_STATES } from '@/lib/dashboard-control-room'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,9 +9,27 @@ export default async function AutomationPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-slate-800 bg-[#071019] p-6">
-        <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Admin</p>
-        <h1 className="mt-2 text-2xl font-black text-white">Automation</h1>
-        <p className="mt-1 text-sm text-slate-400">Scheduler, approvals, job flows, worker health, and publishing readiness.</p>
+        <p className="font-mono text-xs font-black uppercase tracking-[0.22em] text-cyan-300">Operate</p>
+        <h1 className="mt-2 text-2xl font-black text-white">Webhooks / Handoff</h1>
+        <p className="mt-1 text-sm text-slate-400">Callback delivery, retries, approvals, artifact handoff, app destinations, queue health, and scheduler readiness.</p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/55 p-5">
+        <h2 className="font-black text-white">Handoff contract</h2>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {['webhook URL', 'webhook secret status', 'callback domain allowlist', 'artifact delivery policy', 'signed URL expiry', 'webhook delivery state', 'app destination', 'retry count'].map((item) => (
+            <span key={item} className="rounded-xl border border-slate-800 bg-slate-950/55 px-3 py-2 text-xs font-bold text-slate-300">
+              {item}
+            </span>
+          ))}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {JOB_LIFECYCLE_STATES.map((state) => (
+            <span key={state} className="rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-1 text-[10px] font-bold text-slate-400">
+              {state}
+            </span>
+          ))}
+        </div>
       </section>
 
       {/* Scheduler */}
