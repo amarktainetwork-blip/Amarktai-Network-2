@@ -1,0 +1,1 @@
+{"version":3,"file":"voice-simulation.d.ts","sourceRoot":"","sources":["../../src/adapters/voice-simulation.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AAIH,OAAO,KAAK,EAAE,eAAe,EAAE,wBAAwB,EAAE,uBAAuB,EAAE,MAAM,uBAAuB,CAAA;AAmC/G,qBAAa,sBAAuB,YAAW,eAAe;IAC5D,IAAI,SAAoB;IACxB,iBAAiB,WAAY;IAEvB,OAAO,CAAC,OAAO,EAAE,wBAAwB,GAAG,OAAO,CAAC,uBAAuB,CAAC;YAsDpE,eAAe;CAkB9B"}

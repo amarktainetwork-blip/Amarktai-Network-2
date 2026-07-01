@@ -1,0 +1,1 @@
+{"version":3,"file":"image-simulation.d.ts","sourceRoot":"","sources":["../../src/adapters/image-simulation.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AAGH,OAAO,KAAK,EAAE,eAAe,EAAE,wBAAwB,EAAE,uBAAuB,EAAE,MAAM,uBAAuB,CAAA;AAQ/G,qBAAa,sBAAuB,YAAW,eAAe;IAC5D,IAAI,SAAoB;IACxB,iBAAiB,WAAY;IAEvB,OAAO,CAAC,OAAO,EAAE,wBAAwB,GAAG,OAAO,CAAC,uBAAuB,CAAC;CAuCnF"}

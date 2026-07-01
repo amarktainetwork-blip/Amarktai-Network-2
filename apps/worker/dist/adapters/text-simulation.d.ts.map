@@ -1,0 +1,1 @@
+{"version":3,"file":"text-simulation.d.ts","sourceRoot":"","sources":["../../src/adapters/text-simulation.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;GAUG;AAGH,OAAO,KAAK,EAAE,eAAe,EAAE,wBAAwB,EAAE,uBAAuB,EAAE,MAAM,uBAAuB,CAAA;AAE/G,qBAAa,qBAAsB,YAAW,eAAe;IAC3D,IAAI,SAAmB;IACvB,iBAAiB,WAAW;IAEtB,OAAO,CAAC,OAAO,EAAE,wBAAwB,GAAG,OAAO,CAAC,uBAAuB,CAAC;IAmClF,OAAO,CAAC,kBAAkB;CA2B3B"}

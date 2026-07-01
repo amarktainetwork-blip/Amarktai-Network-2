@@ -1739,3 +1739,71 @@ model RecurringCampaignSchedule {
   @@index([nextRunAt])
   @@map("recurring_campaign_schedules")
 }
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PHASE 2 — App Connection, API Keys, and Job Pipeline
+// ════════════════════════════════════════════════════════════════════════════════
+
+/// External app connection — links an external product to the AmarktAI Network engine.
+/// Each connection gets its own API keys, capability allowlist, and budget limits.
+model AppConnection {
+  id                   Int      @id @default(autoincrement())
+  appSlug              String   @unique @map("app_slug")
+  appName              String   @map("app_name")
+  status               String   @default("active") // active | paused | suspended | unconfigured
+  /// JSON array of allowed capability keys for this app
+  allowedCapabilities  String   @default("[]") @map("allowed_capabilities")
+  dailyBudgetCents     Int      @default(0) @map("daily_budget_cents") // 0 = unlimited
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  apiKeys AppApiKey[]
+
+  @@index([status])
+  @@map("app_connections")
+}
+
+/// API key for authenticating external apps against the job pipeline.
+/// Keys are hashed at rest; only the prefix is stored for identification.
+model AppApiKey {
+  id              Int      @id @default(autoincrement())
+  connectionId    Int      @map("connection_id")
+  appConnection   AppConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  key             String   @unique
+  label           String   @default("default")
+  active          Boolean  @default(true)
+  lastUsedAt      DateTime? @map("last_used_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([connectionId])
+  @@map("app_api_keys")
+}
+
+/// Job record — tracks every capability request flowing through the pipeline.
+model Job {
+  id              String    @id @default(uuid())
+  appSlug         String    @map("app_slug")
+  capability      String
+  prompt          String
+  inputJson       String    @default("{}") @map("input_json")
+  metadataJson    String    @default("{}") @map("metadata_json")
+  traceId         String    @default("") @map("trace_id")
+  status          String    @default("queued") // queued | processing | completed | failed | cancelled
+  provider        String?   @default("")
+  model           String?   @default("")
+  artifactId      String?   @map("artifact_id")
+  progress        Int       @default(0) // 0-100
+  output          String?   @default("")
+  error           String?
+  callbackUrl     String?   @map("callback_url")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  startedAt       DateTime? @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([appSlug])
+  @@index([status])
+  @@index([traceId])
+  @@index([createdAt])
+  @@map("jobs")
+}
